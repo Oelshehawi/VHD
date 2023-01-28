@@ -8,8 +8,8 @@ const Layout = ({ children }) => {
     <div id="Wrapper">
       <TopNavBar  />
       <div className="layout">
-        <main >{children}</main>
         <SideNavBar />
+        <main >{children}</main>
       </div>
     </div>
   );
