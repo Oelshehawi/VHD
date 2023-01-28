@@ -5,7 +5,7 @@ import * as FaIcons from "react-icons/fa";
 const IndexPage = () => {
   return (
     <Layout>
-      
+      <div className="text"> Main Content</div>
     </Layout>
   );
 };
