@@ -4,7 +4,7 @@ import "../style/layout.css";
 const SideNavBar = () => {
   return(
   <nav >
-    SideBar
+    SideBarssss
   </nav>
   );
 };
