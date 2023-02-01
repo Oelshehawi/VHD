@@ -23,9 +23,8 @@
 }
 
 .HeaderBar {
-    background-color: coral;
+    background-color: red;
     height: 120px;
-    
 }
 
 main {
@@ -34,9 +33,9 @@ main {
 }
 
 nav{
-    background-color: coral;
     flex-shrink: 0;
     width: 230px;
-    
+    border-width: 50px;
+    border-color: blue;
 }
 
