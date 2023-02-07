@@ -6,10 +6,10 @@ import "../style/layout.css";
 const Layout = ({ children }) => {
   return (
     <div id="Wrapper">
-      <TopNavBar  />
+      {/* <TopNavBar  /> */}
       <div className="layout">
         <SideNavBar />
-        <main >{children}</main>
+        <main>{children}</main>
       </div>
     </div>
   );
