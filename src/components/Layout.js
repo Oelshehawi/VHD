@@ -6,7 +6,6 @@ import "../style/layout.css";
 const Layout = ({ children }) => {
   return (
     <div id="Wrapper">
-      {/* <TopNavBar  /> */}
       <div className="layout">
         <SideNavBar />
         <main>{children}</main>

@@ -27,8 +27,8 @@
 }
 
 .HeaderBar {
-    /* background-color: red; */
-    height: 120px;
+    background-color: whitesmoke;
+    height: 15%;
     border-bottom: 5px solid lightgray;
     
 }
@@ -39,6 +39,7 @@ main {
 }
 
 nav{
+    background-color: whitesmoke;
     flex-shrink: 0;
     width: 14%;
     border-right: 5px solid lightgray;
@@ -46,12 +47,14 @@ nav{
 
 #user-icon
 {
-    margin-left: 5%;
+    margin-left: 25%;
+    margin-right: 5%;
     padding-top: 4%;
 }
 
 .line {
     border-bottom: 3px solid lightgray;
-    margin-top: 15px;
+    margin-left: 5%;
+    margin-top: 25%;
     width: 90%;
 }
