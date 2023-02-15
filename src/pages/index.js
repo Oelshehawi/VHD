@@ -6,7 +6,6 @@ import TopNavBar from "../components/TopNavBar"
 const IndexPage = () => {
   return (
     <Layout>
-      <TopNavBar  />
       <div className="text"></div>
     </Layout>
   );

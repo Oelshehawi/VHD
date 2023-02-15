@@ -1,0 +1,45 @@
+#user{
+    text-align: center;
+}
+
+#iconUser{
+    font-size: 15px;
+    vertical-align: middle;
+}
+#user-icon
+{
+    font-size: 150px;
+    margin-top: 30px;
+    margin-left: 40px;
+    vertical-align: top;
+    
+    
+} 
+
+.line {
+    border-bottom: 3px solid lightgray;
+    margin-left: 5%;
+    margin-top: 30px;
+    width: 90%;
+}
+
+.tab{
+    margin-left: 20px;
+    margin-right: 20px;
+    margin-top: 20px;
+    padding: 10px;
+    text-align: center;
+    border-radius: 20px;
+    
+}
+
+.tab:hover{
+    background-color: #D9D9D9;
+   
+}
+
+.icon{
+    font-size: 35px;
+    vertical-align: middle;
+    padding: 5px;
+}
