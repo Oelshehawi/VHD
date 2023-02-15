@@ -28,33 +28,28 @@
 
 .HeaderBar {
     background-color: whitesmoke;
-    height: 15%;
+    height: 100px;
+    width: 100%;
+    margin-left: 240px ;
     border-bottom: 5px solid lightgray;
+    position: fixed;
+    top: 0;
+    left: 0;
     
 }
 
 main {
     background-color: moccasin;
     flex-grow: 1;
+    margin-top: 100px;
 }
 
-nav{
+#sidebar{
     background-color: whitesmoke;
     flex-shrink: 0;
-    width: 14%;
+    width: 240px;
     border-right: 5px solid lightgray;
 }
 
-#user-icon
-{
-    margin-left: 25%;
-    margin-right: 5%;
-    padding-top: 4%;
-}
 
-.line {
-    border-bottom: 3px solid lightgray;
-    margin-left: 5%;
-    margin-top: 25%;
-    width: 90%;
-}
+
