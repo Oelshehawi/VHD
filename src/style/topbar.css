@@ -1,0 +1,23 @@
+/* .vLine{
+    border-left: 5px solid lightgray;
+    margin-left: 20px;
+    height: 100px;
+}
+.vLine2{
+    border-left: 5px solid lightgray;
+    margin-left: 40px;
+    height: 100px;
+}
+.vLine3{
+    border-left: 5px solid lightgray;
+    margin-left: 700px;
+    height: 100px;
+} */
+
+.text{
+margin-left: 40px;
+margin-top: 40px;
+font-size: 20px;
+font-weight: bold;
+vertical-align: middle;
+}

@@ -1,7 +1,5 @@
 import * as React from "react";
 import Layout from "../components/Layout";
-import * as FaIcons from "react-icons/fa";
-import TopNavBar from "../components/TopNavBar"
 
 const IndexPage = () => {
   return (
