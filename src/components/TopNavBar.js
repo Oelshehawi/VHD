@@ -1,15 +1,23 @@
 import * as React from "react";
-import "../style/topbar.css"
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { library } from "@fortawesome/fontawesome-svg-core";
-import { faUser } from "@fortawesome/free-solid-svg-icons";
-
-library.add(faUser);
+import "../style/topbar.css";
 
 const TopNavBar = () => {
-  return(
+  return (
     <nav className="HeaderBar">
-      <div className="text"> Hi there</div>
+      <div className="text">
+        <img
+          src="../images/9925.png"
+          alt="Vancouver Hood Doctors"
+          width="40px"
+          height="400px"
+          margin-left="300px"
+        />
+      </div>
+      {/* <div className="vLine">
+        <div className="vLine2">
+          <div className="vLine3"></div>
+        </div>
+      </div> */}
     </nav>
   );
 };
