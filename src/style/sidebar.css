@@ -1,3 +1,6 @@
+
+
+
 #user{
     text-align: center;
 }
@@ -23,6 +26,12 @@
     width: 90%;
 }
 
+.links{
+    display: flex;
+    flex-flow: column nowrap;
+    text-decoration: none;
+}
+
 .tab{
     margin-left: 20px;
     margin-right: 20px;
@@ -30,6 +39,8 @@
     padding: 10px;
     text-align: center;
     border-radius: 20px;
+    color: inherit;
+    text-decoration: inherit;
     
 }
 

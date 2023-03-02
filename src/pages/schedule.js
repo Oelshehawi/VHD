@@ -1,11 +1,12 @@
 import * as React from "react";
+import Layout from "../components/Layout"
 
-const database = () => {
+const schedule = () => {
   return (
-    <>
-      <h1> This is Schedule page</h1>
-    </>
+   <Layout>
+
+    </Layout>
   );
 };
 
-export default database;
+export default schedule;
