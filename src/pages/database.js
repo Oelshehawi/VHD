@@ -13,6 +13,9 @@ const database = () => {
           <input type="search" placeholder="Search..." className="searchBar" />
         </div>
       </div>
+      <div className="jobTable">
+        
+      </div>
     </Layout>
   );
 };
