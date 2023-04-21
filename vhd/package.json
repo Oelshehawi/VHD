@@ -1,0 +1,31 @@
+{
+  "name": "vhd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "vhd",
+  "author": "oelsheha",
+  "keywords": [
+    "gatsby"
+  ],
+  "scripts": {
+    "develop": "gatsby develop",
+    "start": "gatsby develop",
+    "build": "gatsby build",
+    "serve": "gatsby serve",
+    "clean": "gatsby clean"
+  },
+  "dependencies": {
+    "@fortawesome/react-fontawesome": "^0.2.0",
+    "axios": "^1.3.5",
+    "babel-plugin-macros": "^3.1.0",
+    "bootstrap": "^5.2.3",
+    "gatsby": "^5.3.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.43.9",
+    "react-icons": "^4.7.1"
+  },
+  "devDependencies": {
+    "eslint-plugin-react": "^7.32.0"
+  }
+}
