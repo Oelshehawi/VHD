@@ -1,15 +1,47 @@
 import React from "react";
-import { useState,useRef } from "react";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import Axios from "axios";
 
 const Modal = ({ open, onClose }) => {
+  //Setting variables for displaying file name in Attach invoice button
   const [file, setfile] = useState("Attach Invoice");
 
-  const fileInputField = useRef(null)
+  //Assigning empty input to clear form
+  const emptyInput = {};
 
-  const handleFileChange = (e) => {
-    setfile(e.target.files[0].name)
+  const { register, handleSubmit, reset } = useForm();
+
+  //Function that handles form submit
+  const handleSave = (values) => {
+    // Print out form values
+    console.log({ values });
+    
+    //Send data using Axios
+    Axios.post("http://127.0.0.1:4000/insert", {
+      clientName: values.clientName,
+      jobTitle: values.jobTitle,
+      email: values.email,
+      phoneNumber: values.phoneNumber,
+      date: values.Date,
+      location: values.location,
+      notes: values.Notes,
+      invoice: values.invoice[0],
+    },{
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      } 
+    }).then((response) => {
+      console.log(response);
+    });
+
+    //Empty form input
+    reset({ ...emptyInput });
+    setfile("Attach Invoice");
+
+    //Close Modal
+    onClose();
   };
-
 
   if (!open) return null;
   return (
@@ -26,33 +58,68 @@ const Modal = ({ open, onClose }) => {
             X
           </p>
         </div>
-        <form id="addClientForm" className="modalContent">
+        <form
+          id="addClientForm"
+          className="modalContent"
+          onSubmit={handleSubmit(handleSave)}
+        >
           <label htmlFor="clientName">Client's Name: </label>
-          <input Name="clientName" className="mediumInput" type="text" />
+          <input
+            {...register("clientName")}
+            className="mediumInput"
+            type="text"
+          />
           <label htmlFor="jobTitle">Job Title: </label>
-          <input Name="jobTitle" className="mediumInput" type="text" />
+          <input
+            {...register("jobTitle")}
+            className="mediumInput"
+            type="text"
+          />
           <label htmlFor="email">Email: </label>
-          <input Name="email" className="mediumInput" type="email" />
+          <input {...register("email")} className="mediumInput" type="email" />
           <label htmlFor="phoneNumber">Phone Number: </label>
-          <input Name="phoneNumber" className="mediumInput" type="text" />
+          <input
+            {...register("phoneNumber")}
+            className="mediumInput"
+            type="text"
+          />
           <label htmlFor="Date">Date: </label>
-          <input Name="Date" className="smallInput" type="datetime-local" />
+          <input
+            {...register("Date")}
+            className="smallInput"
+            type="datetime-local"
+          />
           <label htmlFor="location">Location: </label>
-          <input Name="location" className="mediumInput" type="text" />
+          <input
+            {...register("location")}
+            className="mediumInput"
+            type="text"
+          />
           <label htmlFor="Notes">Notes: </label>
-          <textarea Name="Notes" className="largeInput" type="text" />
-          <label className="attach" htmlFor="attachInvoice">
-          {file}
+          <textarea {...register("Notes")} className="largeInput" type="text" />
+          <label className="attach" htmlFor="invoice">
+            {file}
           </label>
-          <input type="file" name="attachInvoice" id="attachInvoice" onClick={() => fileInputField.current.click()} onChange={handleFileChange} ref={fileInputField}/>
+          <input
+            type="file"
+            name="invoice"
+            {...register("invoice", {
+              onChange: (e) => {
+                setfile(e.target.files[0].name);
+              },
+            })}
+            id="invoice"
+          />
         </form>
         <div className="modalFooter">
-          <input
+          <button
             id="submitButtonForm"
             type="submit"
             value="submit"
             form="addClientForm"
-          />
+          >
+            Submit
+          </button>
         </div>
       </div>
     </div>
