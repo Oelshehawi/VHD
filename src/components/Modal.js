@@ -8,9 +8,7 @@ const Modal = ({ open, onClose }) => {
   const [file, setfile] = useState("Attach Invoice");
 
   //Assigning empty input to clear form
-  const emptyInput = {
-    clientName: "",
-  };
+  const emptyInput = {};
 
   const { register, handleSubmit, reset } = useForm();
 
@@ -18,6 +16,24 @@ const Modal = ({ open, onClose }) => {
   const handleSave = (values) => {
     // Print out form values
     console.log({ values });
+    
+    //Send data using Axios
+    Axios.post("http://127.0.0.1:4000/insert", {
+      clientName: values.clientName,
+      jobTitle: values.jobTitle,
+      email: values.email,
+      phoneNumber: values.phoneNumber,
+      date: values.Date,
+      location: values.location,
+      notes: values.Notes,
+      invoice: values.invoice[0],
+    },{
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      } 
+    }).then((response) => {
+      console.log(response);
+    });
 
     //Empty form input
     reset({ ...emptyInput });
@@ -81,17 +97,18 @@ const Modal = ({ open, onClose }) => {
           />
           <label htmlFor="Notes">Notes: </label>
           <textarea {...register("Notes")} className="largeInput" type="text" />
-          <label className="attach" htmlFor="attachInvoice">
+          <label className="attach" htmlFor="invoice">
             {file}
           </label>
           <input
             type="file"
-            {...register("attachInvoice", {
+            name="invoice"
+            {...register("invoice", {
               onChange: (e) => {
                 setfile(e.target.files[0].name);
               },
             })}
-            id="attachInvoice"
+            id="invoice"
           />
         </form>
         <div className="modalFooter">
