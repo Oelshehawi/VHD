@@ -5,7 +5,6 @@ module.exports = {
   siteMetadata: {
     siteUrl: `https://www.yourdomain.tld`,
   },
-  plugins: [`gatsby-plugin-fontawesome-css`],
 }
 
 exports.onCreateWebpackConfig = ({ actions }) => {
