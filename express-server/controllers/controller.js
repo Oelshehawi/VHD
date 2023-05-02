@@ -1,9 +1,5 @@
 const Client = require("../models/reactDataSchema");
 
-// For downloading file
-const { createReadStream } = require("fs");
-const { join } = require("path");
-
 // Posting Data to MongoDB from Axios post request and Add client Modal form
 exports.insert = async (req, res) => {
   const ClientName = req.body.clientName;
