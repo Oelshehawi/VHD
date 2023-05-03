@@ -10,8 +10,7 @@ const Tab = () => {
   useEffect(() => {
     axios
       .get("http://127.0.0.1:4000/api/Clients/")
-      .then((res) => 
-      setclientData(res.data))
+      .then((res) => setclientData(res.data))
       .catch((err) => console.error(err));
   }, []);
 
@@ -32,16 +31,18 @@ const Tab = () => {
       {
         accessor: "jobTitle",
         width: 1500,
+        Cell: ({ value }) => <div className="jobTitle">{value}</div>,
       },
       {
         accessor: "date",
         width: 300,
+        Cell: ({ value }) => <div className="dateValue">{value.split('T')[0]}</div>,
       },
       {
         accessor: "_id",
         Cell: ({ value }) => (
           <div className="invoice">
-            <DownloadInvoice size= "2x" fileId={value} />
+            <DownloadInvoice size="2x" fileId={value} />
           </div>
         ),
       },

@@ -97,7 +97,7 @@ const Modal = ({ open, onClose }) => {
           <input
             {...register("Date")}
             className="smallInput"
-            type="datetime-local"
+            type="date"
           />
           <label htmlFor="location">Location: </label>
           <input
