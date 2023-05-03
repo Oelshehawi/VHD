@@ -10,28 +10,38 @@ const Modal = ({ open, onClose }) => {
   //Assigning empty input to clear form
   const emptyInput = {};
 
-  const { register, handleSubmit, reset } = useForm();
+  //values used to submit and manipulate form
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm();
 
   //Function that handles form submit
   const handleSave = (values) => {
     // Print out form values
     console.log({ values });
-    
+
     //Send data using Axios
-    Axios.post("http://127.0.0.1:4000/insert", {
-      clientName: values.clientName,
-      jobTitle: values.jobTitle,
-      email: values.email,
-      phoneNumber: values.phoneNumber,
-      date: values.Date,
-      location: values.location,
-      notes: values.Notes,
-      invoice: values.invoice[0],
-    },{
-      headers: {
-        'Content-Type': 'multipart/form-data'
-      } 
-    }).then((response) => {
+    Axios.post(
+      "http://127.0.0.1:4000/api/Clients/",
+      {
+        clientName: values.clientName,
+        jobTitle: values.jobTitle,
+        email: values.email,
+        phoneNumber: values.phoneNumber,
+        date: values.Date,
+        location: values.location,
+        notes: values.Notes,
+        invoice: values.invoice[0]
+      },
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    ).then((response) => {
       console.log(response);
     });
 
@@ -87,7 +97,7 @@ const Modal = ({ open, onClose }) => {
           <input
             {...register("Date")}
             className="smallInput"
-            type="datetime-local"
+            type="date"
           />
           <label htmlFor="location">Location: </label>
           <input
@@ -107,9 +117,13 @@ const Modal = ({ open, onClose }) => {
               onChange: (e) => {
                 setfile(e.target.files[0].name);
               },
+              required: true,
             })}
             id="invoice"
           />
+          {errors.invoice && (
+            <p style={{ color: "red", padding:"5px" }}>Invoice is required </p>
+          )}
         </form>
         <div className="modalFooter">
           <button
