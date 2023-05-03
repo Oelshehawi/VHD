@@ -99,6 +99,16 @@
     font-size: large;
 }
 
+.jobTitle{
+    font-size: large;
+    font-weight: bolder;
+}
+
+.dateValue{
+    font-size: large;
+    font-weight: bolder;
+}
+
 table{
     border-collapse: collapse;
     width: 100%;
