@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import Layout from "../components/Layout";
-import Tabs from "../components/Tabs";
+import Tabs from "../components/Tabletabs";
 import "../style/database.css";
 import { FaSearch } from "react-icons/fa";
 import { FaFileImport } from "react-icons/fa";
