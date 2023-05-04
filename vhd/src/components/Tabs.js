@@ -14,13 +14,25 @@ const Tab = ({ filter }) => {
     <div className="jobTableContainer">
       <div className="tabs">
         <div className="btn-box">
-          <button type="button" onClick={() => handleTabClick(1)} autoFocus>
+          <button
+            type="button"
+            className={currentTab === 1 ? "active-tab" : "databaseTab"}
+            onClick={() => handleTabClick(1)}
+          >
             All
           </button>
-          <button type="button" onClick={() => handleTabClick(2)}>
+          <button
+            type="button"
+            className={currentTab === 2 ? "active-tab" : "databaseTab"}
+            onClick={() => handleTabClick(2)}
+          >
             Recently Viewed
           </button>
-          <button type="button" onClick={() => handleTabClick(3)}>
+          <button
+            type="button"
+            className={currentTab === 3 ? "active-tab" : "databaseTab"}
+            onClick={() => handleTabClick(3)}
+          >
             Favorites
           </button>
         </div>
