@@ -57,9 +57,10 @@
 }
 
 .btn-box button{
-    background: transparent;
     width: 15%;
-    border: none;
+    border-top: none;
+    border-right: none;
+    border-left: none;
     outline: none;
     cursor: pointer;
     padding: 14px 16px;
@@ -68,17 +69,14 @@
 }
 
 .btn-box button:hover{
-    background-color: #3be9a6;
-    color: red;
-    border-radius: 25px;
-    transition: 2s;
+    background-color:  #d9d9d9;
+    border-bottom: 1px solid red;
+    transition: 0.5s;
 }
 
-.btn-box button:focus{
-    color: red;
-    background-color:  #3be9a6;
-    border-radius: 25px;
-    transition: 2s;
+.active-tab{
+    background-color:  #d9d9d9;
+    border-bottom: 3px solid red;
 }
 
 .content{

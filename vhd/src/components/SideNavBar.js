@@ -1,4 +1,4 @@
-import * as React from "react";
+import React from "react";
 import "../style/sidebar.css";
 import { Link } from "gatsby";
 import { FaRegUserCircle } from "react-icons/fa";
@@ -17,15 +17,15 @@ const SideNavBar = () => {
       </div>
       <div className="line"></div>
       <div className="links">
-        <Link to="/" className="tab">
+        <Link id="theLink" activeClassName="sideNavTabActive" to="/">
           <FaHome className="icon" />
           {"Dashboard"}
         </Link>
-        <Link to="/database" className="tab">
+        <Link id="theLink" activeClassName="sideNavTabActive" to="/database">
           <FaDatabase className="icon" />
           {"Database "}
         </Link>
-        <Link to="/schedule" className="tab">
+        <Link id="theLink" activeClassName="sideNavTabActive" to="/schedule">
           <FaRegCalendarAlt className="icon" />
           {"Schedule"}
         </Link>
