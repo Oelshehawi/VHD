@@ -2,17 +2,15 @@
 .dataContainer{
     display: flex;
     flex-flow: row nowrap;
-    font-size: 30px;
+    font-size: larger;
     margin: 70px 70px 0px 70px; 
     justify-content: space-between;
     height: 12%;
 }
 
 .searchContainer{
-   position: absolute; 
    width: 50%;
-   top: 15%;
-   left: 30%;
+   height: 50%;
    background-color: white; 
    display: flex;
    align-items: center;
@@ -21,10 +19,11 @@
    border-radius: 5px;
 }
 .searchBar{
-    width: 100%;
-    height: 100%;
+    width: 50%;
+    height: 50%;
     font-size: x-large;
     padding: 10px;
+    flex: 1;
     border: none;
     outline: none;
 }
@@ -40,9 +39,6 @@
     outline: 0px;
 }
 
-.fileimport{
-    font-size: 20px;
-}
 .fileImport:hover{
     font-size: 150%;
 }
