@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
 import { useTable, useGlobalFilter } from "react-table";
 import DownloadInvoice from "./downloadInvoice";
-import { FaSearch } from "react-icons/fa";
 
-const Table = () => {
+const Table = ({ filter }) => {
   // data fetched from MongoDB
   const [clientData, setclientData] = useState([]);
 
@@ -57,65 +56,52 @@ const Table = () => {
 
   const { globalFilter } = state;
 
+  const memoizedFilter = useMemo(() => filter, [filter]);
+
   useEffect(() => {
-    axios
-      .get("http://127.0.0.1:4000/api/Clients/")
-      .then((res) => setclientData(res.data))
-      .catch((err) => console.error(err));
-  }, []);
+    setGlobalFilter(memoizedFilter || "");
+  }, [memoizedFilter, setGlobalFilter]);
 
   return (
-    <>
-      <div className="searchContainer">
-        <FaSearch />
-        <input
-          type="search"
-          placeholder="Search..."
-          className="searchBar"
-          value={globalFilter || ""}
-          onChange={(e) => setGlobalFilter(e.target.value)}
-        />
-      </div>
-      <table {...getTableProps()}>
-        <thead>
-          {/* Looping through Header Groups and choosing what react should render*/}
-          {headerGroups.map((headerGroup) => (
-            <tr {...headerGroup.getHeaderGroupProps()}>
-              {headerGroup.headers.map((column) => (
-                <th
-                  {...column.getHeaderProps({
-                    style: { minWidth: column.minWidth, width: column.width },
+    <table {...getTableProps()}>
+      <thead>
+        {/* Looping through Header Groups and choosing what react should render*/}
+        {headerGroups.map((headerGroup) => (
+          <tr {...headerGroup.getHeaderGroupProps()}>
+            {headerGroup.headers.map((column) => (
+              <th
+                {...column.getHeaderProps({
+                  style: { minWidth: column.minWidth, width: column.width },
+                })}
+              >
+                {column.render("Header")}
+              </th>
+            ))}
+          </tr>
+        ))}
+      </thead>
+      <tbody {...getTableBodyProps()}>
+        {rows.map((row) => {
+          prepareRow(row);
+          return (
+            <tr {...row.getRowProps()}>
+              {row.cells.map((cell) => (
+                <td
+                  {...cell.getCellProps({
+                    style: {
+                      minWidth: cell.column.minWidth,
+                      width: cell.column.width,
+                    },
                   })}
                 >
-                  {column.render("Header")}
-                </th>
+                  {cell.render("Cell")}
+                </td>
               ))}
             </tr>
-          ))}
-        </thead>
-        <tbody {...getTableBodyProps()}>
-          {rows.map((row) => {
-            prepareRow(row);
-            return (
-              <tr {...row.getRowProps()}>
-                {row.cells.map((cell) => (
-                  <td
-                    {...cell.getCellProps({
-                      style: {
-                        minWidth: cell.column.minWidth,
-                        width: cell.column.width,
-                      },
-                    })}
-                  >
-                    {cell.render("Cell")}
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </>
+          );
+        })}
+      </tbody>
+    </table>
   );
 };
 

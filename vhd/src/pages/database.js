@@ -1,11 +1,14 @@
 import React, { useState } from "react";
 import Layout from "../components/Layout";
-import Tabs from "../components/tabs";
+import Tabs from "../components/Tabs";
 import "../style/database.css";
+import { FaSearch } from "react-icons/fa";
 import { FaFileImport } from "react-icons/fa";
 import Modal from "../components/Modal";
 const Database = () => {
   const [openModal, setopenModal] = useState(false);
+
+  const [filter, setfilter] = useState("");
 
   return (
     <>
@@ -13,12 +16,22 @@ const Database = () => {
       <Layout>
         <div className="dataContainer">
           {"Database"}
-          <FaFileImport
-            className="fileImport"
-            onClick={() => setopenModal(true)}
-          />
+          <div className="searchContainer">
+            <FaSearch />
+            <input
+              type="search"
+              placeholder="Search..."
+              className="searchBar"
+              value={filter || ""}
+              onChange={(e) => setfilter(e.target.value)}
+            />
+            <FaFileImport
+              className="fileImport"
+              onClick={() => setopenModal(true)}
+            />
+          </div>
         </div>
-        <Tabs />
+        <Tabs filter={filter} />
       </Layout>
     </>
   );
