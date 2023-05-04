@@ -9,6 +9,7 @@
     font-size: 15px;
     vertical-align: middle;
 }
+
 #user-icon
 {
     font-size: 150px;
@@ -29,24 +30,29 @@
 .links{
     display: flex;
     flex-flow: column nowrap;
-    text-decoration: none;
+    align-items: center;
 }
 
-.tab{
+.sideNavTabActive{
+    background-color: #D9D9D9;
+    border-radius: 25px;
+}
+
+#theLink{
+    width: 70%;
+    color: inherit;
+    text-decoration: inherit;
     margin-left: 20px;
     margin-right: 20px;
     margin-top: 20px;
     padding: 10px;
+    border: none;
     text-align: center;
-    border-radius: 20px;
-    color: inherit;
-    text-decoration: inherit;
-    
 }
 
-.tab:hover{
+#theLink:hover{
     background-color: #D9D9D9;
-   
+    border-radius: 25px;
 }
 
 .icon{

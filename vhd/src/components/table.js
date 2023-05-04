@@ -50,11 +50,8 @@ const Table = ({ filter }) => {
     headerGroups,
     rows,
     prepareRow,
-    state,
     setGlobalFilter,
   } = useTable({ columns, data }, useGlobalFilter);
-
-  const { globalFilter } = state;
 
   const memoizedFilter = useMemo(() => filter, [filter]);
 
