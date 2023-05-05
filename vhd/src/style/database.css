@@ -109,7 +109,6 @@
 
 table{
     border-collapse: collapse;
-    width: 100%;
     font-size: 14px;
     overflow-y: scroll;  
 }
@@ -129,7 +128,8 @@ td {
     padding: 8px;
     border-bottom: 1px solid #ddd;
     height: 80px;
-  } 
+
+} 
 
 tr:hover{
     background-color: #d9d9d9;
