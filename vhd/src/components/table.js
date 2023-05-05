@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
-import { useTable, useGlobalFilter } from "react-table";
+import {
+  useReactTable,
+  createColumnHelper,
+  flexRender,
+  getCoreRowModel,
+  getFilteredRowModel,
+} from "@tanstack/react-table";
 import DownloadInvoice from "./downloadInvoice";
 
 const Table = ({ filter }) => {
   // data fetched from MongoDB
   const [clientData, setclientData] = useState([]);
+
+  const [globalFilter, setglobalFilter] = useState("");
 
   useEffect(() => {
     axios
@@ -13,90 +21,90 @@ const Table = ({ filter }) => {
       .then((res) => setclientData(res.data))
       .catch((err) => console.error(err));
   }, []);
-  //React table initialization
+
+  const columnHelper = createColumnHelper();
+
+  const columns = [
+    columnHelper.accessor("jobTitle", {
+      size: 5500,
+      cell: (info) => <div className="jobTitle">{info.getValue()}</div>,
+    }),
+    columnHelper.accessor("date", {
+      size: 500,
+      cell: (info) => {
+        const value = info.getValue();
+        if (value) {
+          return <div className="dateValue">{value.split("T")[0]}</div>;
+        }
+      },
+    }),
+    columnHelper.accessor("_id", {
+      size: 500,
+      cell: (info) => (
+        <div className="invoice">
+          <DownloadInvoice size="2x" fileId={info.getValue()} />
+        </div>
+      ),
+    }),
+  ];
+
+  //React table data initialization
   const data = React.useMemo(() => clientData, [clientData]);
-
-  //Setting up columns for table changing the displayed name
-  const columns = React.useMemo(
-    () => [
-      {
-        accessor: "jobTitle",
-        width: 1500,
-        Cell: ({ value }) => <div className="jobTitle">{value}</div>,
-      },
-      {
-        accessor: "date",
-        width: 300,
-        Cell: ({ value }) => (
-          <div className="dateValue">{value.split("T")[0]}</div>
-        ),
-      },
-      {
-        accessor: "_id",
-        Cell: ({ value }) => (
-          <div className="invoice">
-            <DownloadInvoice size="2x" fileId={value} />
-          </div>
-        ),
-      },
-    ],
-    []
-  );
-
-  // Initalizing useTable hook
-  const {
-    getTableProps,
-    getTableBodyProps,
-    headerGroups,
-    rows,
-    prepareRow,
-    setGlobalFilter,
-  } = useTable({ columns, data }, useGlobalFilter);
 
   const memoizedFilter = useMemo(() => filter, [filter]);
 
+  const table = useReactTable({
+    data,
+    columns,
+    state: {
+      globalFilter,
+    },
+    getCoreRowModel: getCoreRowModel(),
+    onGlobalFilterChange: setglobalFilter,
+    getFilteredRowModel: getFilteredRowModel(),
+  });
+
   useEffect(() => {
-    setGlobalFilter(memoizedFilter || "");
-  }, [memoizedFilter, setGlobalFilter]);
+    setglobalFilter(memoizedFilter ?? "");
+  }, [memoizedFilter, setglobalFilter]);
 
   return (
-    <table {...getTableProps()}>
+    <table>
       <thead>
         {/* Looping through Header Groups and choosing what react should render*/}
-        {headerGroups.map((headerGroup) => (
-          <tr {...headerGroup.getHeaderGroupProps()}>
-            {headerGroup.headers.map((column) => (
-              <th
-                {...column.getHeaderProps({
-                  style: { minWidth: column.minWidth, width: column.width },
-                })}
-              >
-                {column.render("Header")}
+        {table.getHeaderGroups().map((headerGroup) => (
+          <tr key={headerGroup.id}>
+            {headerGroup.headers.map((header) => (
+              <th key={header.id}>
+                {header.isPlaceholder
+                  ? null
+                  : flexRender(
+                      header.column.columnDef.header,
+                      header.getContext()
+                    )}
               </th>
             ))}
           </tr>
         ))}
       </thead>
-      <tbody {...getTableBodyProps()}>
-        {rows.map((row) => {
-          prepareRow(row);
-          return (
-            <tr {...row.getRowProps()}>
-              {row.cells.map((cell) => (
-                <td
-                  {...cell.getCellProps({
-                    style: {
-                      minWidth: cell.column.minWidth,
-                      width: cell.column.width,
-                    },
-                  })}
-                >
-                  {cell.render("Cell")}
-                </td>
-              ))}
-            </tr>
-          );
-        })}
+      <tbody>
+        {table.getRowModel().rows.map((row) => (
+          <tr key={row.id}>
+            {row.getVisibleCells().map((cell) => (
+              <td
+                key={cell.id}
+                style={{
+                  width:
+                    cell.column.getSize() !== 0
+                      ? cell.column.getSize()
+                      : undefined,
+                }}
+              >
+                {flexRender(cell.column.columnDef.cell, cell.getContext())}
+              </td>
+            ))}
+          </tr>
+        ))}
       </tbody>
     </table>
   );
