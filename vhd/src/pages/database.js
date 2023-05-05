@@ -22,7 +22,7 @@ const Database = () => {
               type="search"
               placeholder="Search..."
               className="searchBar"
-              value={filter || ""}
+              value={filter ?? ''}
               onChange={(e) => setfilter(e.target.value)}
             />
             <FaFileImport
@@ -31,7 +31,7 @@ const Database = () => {
             />
           </div>
         </div>
-        <Tabs filter={filter} />
+        <Tabs filter={filter}/>
       </Layout>
     </>
   );
