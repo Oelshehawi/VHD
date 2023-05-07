@@ -2,7 +2,7 @@ import React from "react";
 import axios from "axios";
 import { FaDownload } from "react-icons/fa";
 
-const downloadInvoice = ({ fileId }) => {
+const DownloadInvoice = ({ fileId }) => {
   const handleDownload = () => {
     axios
       .get(`http://127.0.0.1:4000/api/Clients/${fileId}`, {
@@ -21,7 +21,7 @@ const downloadInvoice = ({ fileId }) => {
       })
       .catch((err) => console.error(err));
   };
-  return <FaDownload onClick={handleDownload} />;
+  return <FaDownload onClick={handleDownload} className="icon-hover" />;
 };
 
-export default downloadInvoice;
+export default DownloadInvoice;
