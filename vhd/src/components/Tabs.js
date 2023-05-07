@@ -1,7 +1,7 @@
 import React, { useState } from "react";
-import Table from "./table";
+import Table from "./Table";
 
-const Tab = ({ filter }) => {
+const Tabs = ({ filter }) => {
   // Used to set the current working Tab
   const [currentTab, setcurrentTab] = useState(1);
 
@@ -46,6 +46,6 @@ const Tab = ({ filter }) => {
   );
 };
 
-export default Tab;
+export default Tabs;
 
 export const Head = () => <title>VHD</title>;

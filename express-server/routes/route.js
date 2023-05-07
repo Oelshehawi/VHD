@@ -12,11 +12,11 @@ module.exports = (app) => {
   // Retrieve Client with specific id
   router.get("/:id", Clients.findOne);
 
-  //   // Update Client with specific id
-  //   router.put("/:id", Clients.update);
+  // Update Client with specific id
+  router.put("/:id", Clients.update);
 
-  //   // Delete Client with specific id
-  //   router.delete("/:id", Clients.delete);
+  // Delete Client with specific id
+  router.delete("/:id", Clients.delete);
 
   app.use("/api/Clients", router);
 };

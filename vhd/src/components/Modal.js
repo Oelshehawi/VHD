@@ -1,4 +1,5 @@
 import React from "react";
+import "../style/modal.css";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Axios from "axios";
@@ -31,10 +32,12 @@ const Modal = ({ open, onClose }) => {
         jobTitle: values.jobTitle,
         email: values.email,
         phoneNumber: values.phoneNumber,
-        date: values.Date,
+        date: values.date,
+        price: values.price,
+        frequency: values.frequency,
         location: values.location,
-        notes: values.Notes,
-        invoice: values.invoice[0]
+        notes: values.notes,
+        invoice: values.invoice[0],
       },
       {
         headers: {
@@ -55,58 +58,117 @@ const Modal = ({ open, onClose }) => {
 
   if (!open) return null;
   return (
-    <div onClick={onClose} className="overlay">
+    <div
+      onClick={onClose}
+      className="overlay"
+      role="button"
+      tabIndex={0}
+      onKeyDown={onClose}
+    >
       <div
         onClick={(e) => {
           e.stopPropagation();
         }}
         className="modalContainer"
+        role="button"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          e.stopPropagation();
+        }}
       >
         <div className="modalHeader">
           Add New Client
-          <p className="closeBtn" onClick={onClose}>
+          <button className="closeBtn" onClick={onClose}>
             X
-          </p>
+          </button>
         </div>
         <form
           id="addClientForm"
           className="modalContent"
           onSubmit={handleSubmit(handleSave)}
         >
-          <label htmlFor="clientName">Client's Name: </label>
-          <input
-            {...register("clientName")}
-            className="mediumInput"
-            type="text"
-          />
-          <label htmlFor="jobTitle">Job Title: </label>
-          <input
-            {...register("jobTitle")}
-            className="mediumInput"
-            type="text"
-          />
-          <label htmlFor="email">Email: </label>
-          <input {...register("email")} className="mediumInput" type="email" />
-          <label htmlFor="phoneNumber">Phone Number: </label>
-          <input
-            {...register("phoneNumber")}
-            className="mediumInput"
-            type="text"
-          />
-          <label htmlFor="Date">Date: </label>
-          <input
-            {...register("Date")}
-            className="smallInput"
-            type="date"
-          />
-          <label htmlFor="location">Location: </label>
-          <input
-            {...register("location")}
-            className="mediumInput"
-            type="text"
-          />
-          <label htmlFor="Notes">Notes: </label>
-          <textarea {...register("Notes")} className="largeInput" type="text" />
+          <div className="modal-content-input-container">
+            <input
+              {...register("clientName")}
+              className="modal-content-input"
+              type="text"
+              placeholder="Client's Name"
+            />
+            <span className="modal-content-input-focus"></span>
+          </div>
+          <div className="modal-content-input-container">
+            <input
+              {...register("jobTitle")}
+              className="modal-content-input"
+              type="text"
+              placeholder="Job Title"
+            />
+            <span className="modal-content-input-focus"></span>
+          </div>
+          <div className="modal-content-input-container">
+            <input
+              {...register("email")}
+              className="modal-content-input"
+              type="email"
+              placeholder="Email"
+            />
+            <span className="modal-content-input-focus"></span>
+          </div>
+          <div className="modal-content-input-container">
+            <input
+              {...register("phoneNumber")}
+              className="modal-content-input"
+              type="tel"
+              placeholder="Phone Number"
+            />
+            <span className="modal-content-input-focus"></span>
+          </div>
+          <div className="modal-content-input-container">
+            <input
+              {...register("date")}
+              className="modal-content-input"
+              type="date"
+              placeholder="Date"
+            />
+            <span className="modal-content-input-focus"></span>
+          </div>
+          <div className="modal-content-input-container">
+            <input
+              {...register("location")}
+              className="modal-content-input"
+              type="text"
+              placeholder="Location"
+            />
+            <span className="modal-content-input-focus"></span>
+          </div>
+          <div className="modal-content-input-container">
+            <input
+              {...register("price")}
+              className="modal-content-input"
+              type="number"
+              placeholder="Price"
+              step="any"
+              min="1"
+            />
+            <span className="modal-content-input-focus"></span>
+          </div>
+          <div className="modal-content-input-container">
+            <input
+              {...register("frequency")}
+              className="modal-content-input"
+              type="number"
+              placeholder="Frequency per Year"
+            />
+            <span className="modal-content-input-focus"></span>
+          </div>
+          <div className="modal-content-input-container">
+            <textarea
+              {...register("notes")}
+              className="modal-content-input"
+              placeholder="Notes"
+            />
+            <span className="modal-content-input-focus"></span>
+          </div>
           <label className="attach" htmlFor="invoice">
             {file}
           </label>
@@ -122,7 +184,7 @@ const Modal = ({ open, onClose }) => {
             id="invoice"
           />
           {errors.invoice && (
-            <p style={{ color: "red", padding:"5px" }}>Invoice is required </p>
+            <p style={{ color: "red", padding: "5px" }}>Invoice is required </p>
           )}
         </form>
         <div className="modalFooter">

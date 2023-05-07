@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
+import "../style/table.css";
 import {
   useReactTable,
   createColumnHelper,
@@ -7,13 +8,18 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
 } from "@tanstack/react-table";
-import DownloadInvoice from "./downloadInvoice";
+import DownloadInvoice from "./DownloadInvoice";
+import ClientModalDetailed from "./ClientModalDetailed";
 
 const Table = ({ filter }) => {
   // data fetched from MongoDB
   const [clientData, setclientData] = useState([]);
 
   const [globalFilter, setglobalFilter] = useState("");
+
+  const [modal, setmodal] = useState(false);
+
+  const [selectedrow, setselectedrow] = useState([]);
 
   useEffect(() => {
     axios
@@ -27,7 +33,11 @@ const Table = ({ filter }) => {
   const columns = [
     columnHelper.accessor("jobTitle", {
       size: 5500,
-      cell: (info) => <div className="jobTitle">{info.getValue()}</div>,
+      cell: (info, row) => (
+        <>
+          <div className="jobTitle">{info.getValue()}</div>
+        </>
+      ),
     }),
     columnHelper.accessor("date", {
       size: 500,
@@ -69,44 +79,60 @@ const Table = ({ filter }) => {
   }, [memoizedFilter, setglobalFilter]);
 
   return (
-    <table>
-      <thead>
-        {/* Looping through Header Groups and choosing what react should render*/}
-        {table.getHeaderGroups().map((headerGroup) => (
-          <tr key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <th key={header.id}>
-                {header.isPlaceholder
-                  ? null
-                  : flexRender(
-                      header.column.columnDef.header,
-                      header.getContext()
-                    )}
-              </th>
-            ))}
-          </tr>
-        ))}
-      </thead>
-      <tbody>
-        {table.getRowModel().rows.map((row) => (
-          <tr key={row.id}>
-            {row.getVisibleCells().map((cell) => (
-              <td
-                key={cell.id}
-                style={{
-                  width:
-                    cell.column.getSize() !== 0
-                      ? cell.column.getSize()
-                      : undefined,
-                }}
-              >
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </td>
-            ))}
-          </tr>
-        ))}
-      </tbody>
-    </table>
+    <>
+      <table>
+        <thead>
+          {/* Looping through Header Groups and choosing what react should render*/}
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <th key={header.id}>
+                  {header.isPlaceholder
+                    ? null
+                    : flexRender(
+                        header.column.columnDef.header,
+                        header.getContext()
+                      )}
+                </th>
+              ))}
+            </tr>
+          ))}
+        </thead>
+        <tbody>
+          {table.getRowModel().rows.map((row) => (
+            <tr
+              onClick={() => {
+                setmodal(true);
+                setselectedrow(row._valuesCache._id);
+              }}
+              key={row.id}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <td
+                  key={cell.id}
+                  style={{
+                    width:
+                      cell.column.getSize() !== 0
+                        ? cell.column.getSize()
+                        : undefined,
+                  }}
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <ClientModalDetailed
+        open={modal}
+        data={selectedrow}
+        clientData={clientData}
+        onClose={() => {
+          setmodal(false);
+        }}
+      />
+    </>
   );
 };
 
