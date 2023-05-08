@@ -2,7 +2,7 @@ import React from "react";
 import axios from "axios";
 import { FaDownload } from "react-icons/fa";
 
-const DownloadInvoice = ({ fileId }) => {
+const DownloadInvoice = ({ fileId, showDownloadToast }) => {
   const handleDownload = () => {
     axios
       .get(`http://127.0.0.1:4000/api/Clients/${fileId}`, {
@@ -17,6 +17,7 @@ const DownloadInvoice = ({ fileId }) => {
         link.href = url;
         link.setAttribute("download", `${fileName}`);
         document.body.appendChild(link);
+        showDownloadToast();
         link.click();
       })
       .catch((err) => console.error(err));

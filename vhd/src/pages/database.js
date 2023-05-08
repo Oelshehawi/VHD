@@ -5,15 +5,25 @@ import "../style/database.css";
 import { FaSearch } from "react-icons/fa";
 import { FaFileImport } from "react-icons/fa";
 import Modal from "../components/Modal";
+import { ToastContainer, toast, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const Database = () => {
   const [openModal, setopenModal] = useState(false);
 
-  const [filter, setfilter] = useState(""); 
+  const [filter, setfilter] = useState("");
+
+  const showToast = () => {
+    toast.success("Client Added Successfully!", {
+      position: "bottom-right",
+      transition: Slide,
+    })
+  }
 
   return (
     <>
-      <Modal open={openModal} onClose={() => setopenModal(false)} />
+      <Modal open={openModal} onClose={() => {setopenModal(false); showToast()}} />
+      <ToastContainer />
       <Layout>
         <div className="dataContainer">
           {"Database"}
