@@ -6,7 +6,9 @@ exports.insert = async (req, res) => {
   const JobTitle = req.body.jobTitle;
   const Email = req.body.email;
   const PhoneNumber = req.body.phoneNumber;
-  const Date = req.body.date;
+  const Dates = req.body.date;
+  const Price = req.body.price;
+  const Frequency = req.body.frequency;
   const Location = req.body.location;
   const Notes = req.body.notes;
   const Invoice = req.files.invoice;
@@ -16,7 +18,9 @@ exports.insert = async (req, res) => {
     jobTitle: JobTitle,
     email: Email,
     phoneNumber: PhoneNumber,
-    date: Date,
+    date: Dates,
+    price: Price,
+    frequency: Frequency,
     location: Location,
     notes: Notes,
     invoice: {
@@ -46,8 +50,7 @@ exports.findAll = async (req, res) => {
     })
     .catch((err) => {
       res.status(500).send({
-        message:
-          err.message || "Some error occurred while retrieving Clients.",
+        message: err.message || "Some error occurred while retrieving Clients.",
       });
     });
 };
@@ -78,4 +81,49 @@ exports.findOne = async (req, res) => {
     console.error(err);
     res.status(500).send("Server error");
   }
+};
+
+exports.delete = (req, res) => {
+  const id = req.params.id;
+
+  Client.findByIdAndRemove(id)
+    .then((data) => {
+      if (!data) {
+        res.status(404).send({
+          message: `Cannot delete Client with id=${id}. Maybe Client was not found!`,
+        });
+      } else {
+        res.send({
+          message: "Client was deleted successfully!",
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: "Could not delete Client with id=" + id,
+      });
+    });
+};
+
+exports.update = async (req, res) => {
+  if (!req.body) {
+    return res.status(400).send({
+      message: "Data to update can not be empty!",
+    });
+  }
+  const id = req.params.id;
+
+  Client.findByIdAndUpdate(id, req.body, { useFindAndModify: false })
+    .then((data) => {
+      if (!data) {
+        res.status(404).send({
+          message: `Cannot update Client with id=${id}. Maybe Client was not found!`,
+        });
+      } else res.send({ message: "Client was updated successfully." });
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: "Error updating Client with id=" + id,
+      });
+    });
 };

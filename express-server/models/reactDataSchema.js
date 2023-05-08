@@ -16,6 +16,12 @@ const reactFormDataSchema = new mongoose.Schema({
   date: {
     type: Date,
   },
+  price: {
+    type: Number,
+  },
+  frequency: {
+    type: Number,
+  },
   location: {
     type: String,
   },
