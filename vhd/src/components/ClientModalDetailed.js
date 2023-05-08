@@ -12,8 +12,8 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
   let base64Image = "";
 
   const [disabled, setDisabled] = useState(true);
-  const [name, setName] = useState("")
-  const [jobtitle, setJobtitle] = useState("")
+  const [name, setName] = useState("");
+  const [jobtitle, setJobtitle] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [date, setDate] = useState("");
@@ -21,6 +21,18 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
   const [frequency, setFrequency] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+
+  const updateAll = () => {
+    setName(client.clientName);
+    setJobtitle(client.jobTitle);
+    setEmail(client.email);
+    setPhoneNumber(client.phoneNumber);
+    setDate(client.date);
+    setPrice(client.price);
+    setFrequency(client.frequency);
+    setLocation(client.location);
+    setNotes(client.notes);
+  };
 
   if (client) {
     base64Image = Buffer.from(client.invoice.data).toString("base64");
@@ -31,7 +43,6 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
   };
 
   const handleDelete = () => {
-    console.log(client._id);
     axios
       .delete(`http://127.0.0.1:4000/api/Clients/${client._id}`)
       .then((response) => {
@@ -40,12 +51,21 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
       .catch((error) => {
         console.log("Error deleting record:", error);
       });
+      onClose()
   };
 
   const handleUpdate = () => {
     axios
       .put(`http://127.0.0.1:4000/api/Clients/${client._id}`, {
         clientName: name,
+        jobTitle: jobtitle,
+        email: email,
+        phoneNumber: phoneNumber,
+        date: date,
+        price: price,
+        frequency: frequency,
+        location: location,
+        notes: notes,
       })
       .then((response) => {
         console.log("Record Updated successfully");
@@ -53,6 +73,7 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
       .catch((error) => {
         console.log("Error Updating record:", error);
       });
+      onClose()
   };
 
   if (!open) return null;
@@ -184,13 +205,17 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
             <FaTrashAlt className="icon-hover" onClick={handleDelete} />
             <FaPenSquare
               className="icon-hover"
-              onClick={() => setDisabled(false)}
+              onClick={() => {
+                setDisabled(false);
+                updateAll();
+              }}
             />
           </div>
           <button
             id="modal-footer-update"
             value="Update"
             onClick={handleUpdate}
+            disabled={disabled}
           >
             Update entry{" "}
           </button>
