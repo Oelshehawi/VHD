@@ -1,8 +1,17 @@
 import React from "react";
 import axios from "axios";
 import { FaDownload } from "react-icons/fa";
+import { toast, Flip } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
-const DownloadInvoice = ({ fileId, showDownloadToast }) => {
+const DownloadInvoice = ({ fileId }) => {
+  const showDownloadToast = () => {
+    toast.info("Invoice Downloaded.", {
+      transition: Flip,
+      position: "bottom-right",
+    });
+  };
+
   const handleDownload = () => {
     axios
       .get(`http://127.0.0.1:4000/api/Clients/${fileId}`, {
@@ -17,12 +26,16 @@ const DownloadInvoice = ({ fileId, showDownloadToast }) => {
         link.href = url;
         link.setAttribute("download", `${fileName}`);
         document.body.appendChild(link);
-        showDownloadToast();
         link.click();
       })
       .catch((err) => console.error(err));
   };
-  return <FaDownload onClick={handleDownload} className="icon-hover" />;
+  return (
+    <>
+      <FaDownload onClick={() => {handleDownload(); showDownloadToast()}} className="icon-hover" />
+      
+    </>
+  );
 };
 
 export default DownloadInvoice;

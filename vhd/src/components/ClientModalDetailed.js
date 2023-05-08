@@ -5,7 +5,7 @@ import { FaTrashAlt } from "react-icons/fa";
 import { FaPenSquare } from "react-icons/fa";
 import { Buffer } from "buffer";
 import axios from "axios";
-import { ToastContainer, toast, Slide, Flip } from "react-toastify";
+import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
 const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
@@ -27,23 +27,16 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
   const showDeleteToast = () => {
     toast.success("Client Deleted Successfully!", {
       transition: Slide,
-      position: "bottom-right"
-    })
-  }
+      position: "bottom-right",
+    });
+  };
 
   const showUpdateToast = () => {
     toast.success("Client Updated Successfully!", {
       transition: Slide,
-      position: "bottom-right"
-    })
-  }
-
-  const showDownloadToast = () => {
-    toast.info("Invoice Downloaded.", {
-      transition: Flip,
-      position: "top-right"
-    })
-  }
+      position: "bottom-right",
+    });
+  };
 
   const updateAll = () => {
     setName(client.clientName);
@@ -74,8 +67,8 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
       .catch((error) => {
         console.log("Error deleting record:", error);
       });
-      onClose()
-      showDeleteToast()
+    onClose();
+    showDeleteToast();
   };
 
   const handleUpdate = () => {
@@ -97,8 +90,8 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
       .catch((error) => {
         console.log("Error Updating record:", error);
       });
-      onClose()
-      showUpdateToast()
+    onClose();
+    showUpdateToast();
   };
 
   if (!open) return null;
@@ -244,7 +237,7 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
           >
             Update entry{" "}
           </button>
-          <DownloadInvoice fileId={client._id} showDownloadToast={showDownloadToast} />
+          <DownloadInvoice fileId={client._id} />
         </div>
       </div>
       <ToastContainer />
