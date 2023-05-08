@@ -5,6 +5,8 @@ import { FaTrashAlt } from "react-icons/fa";
 import { FaPenSquare } from "react-icons/fa";
 import { Buffer } from "buffer";
 import axios from "axios";
+import { ToastContainer, toast, Slide } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
   const client = clientData.find((obj) => obj._id === data);
@@ -21,6 +23,20 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
   const [frequency, setFrequency] = useState("");
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
+
+  const showDeleteToast = () => {
+    toast.success("Client Deleted Successfully!", {
+      transition: Slide,
+      position: "bottom-right",
+    });
+  };
+
+  const showUpdateToast = () => {
+    toast.success("Client Updated Successfully!", {
+      transition: Slide,
+      position: "bottom-right",
+    });
+  };
 
   const updateAll = () => {
     setName(client.clientName);
@@ -51,7 +67,8 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
       .catch((error) => {
         console.log("Error deleting record:", error);
       });
-      onClose()
+    onClose();
+    showDeleteToast();
   };
 
   const handleUpdate = () => {
@@ -73,7 +90,8 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
       .catch((error) => {
         console.log("Error Updating record:", error);
       });
-      onClose()
+    onClose();
+    showUpdateToast();
   };
 
   if (!open) return null;
@@ -222,6 +240,7 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
           <DownloadInvoice fileId={client._id} />
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };
