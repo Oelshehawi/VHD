@@ -1,12 +1,12 @@
 import * as React from "react";
-import "../style/topbar.css";
-import logo from "../images/9925.png";
+import logo from "../public/9925.png";
+import Image from "next/image";
 
 const TopNavBar = () => {
   return (
     <nav className="HeaderBar">
       <div className="imgcontainer">
-        <img src={logo} alt="Vancouver Hood Doctors" />
+        <Image src={logo} alt="Vancouver Hood Doctors" />
         <div className="text">{"Vancouver Hood Doctors"}</div>
       </div>
       {/* <div className="vLine">

@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
 import axios from "axios";
-import "../style/table.css";
 import {
   useReactTable,
   createColumnHelper,
