@@ -18,7 +18,7 @@ const Table = ({ filter }) => {
 
   const [modal, setmodal] = useState(false);
 
-  const [selectedrow, setselectedrow] = useState([]);
+  const [selectedrow, setselectedrow] = useState("");
 
   useEffect(() => {
     axios
@@ -32,11 +32,7 @@ const Table = ({ filter }) => {
   const columns = [
     columnHelper.accessor("jobTitle", {
       size: 5500,
-      cell: (info, row) => (
-        <>
-          <div className="jobTitle">{info.getValue()}</div>
-        </>
-      ),
+      cell: (info) => <div className="jobTitle">{info.getValue()}</div>,
     }),
     columnHelper.accessor("date", {
       size: 500,
@@ -47,13 +43,11 @@ const Table = ({ filter }) => {
         }
       },
     }),
-    columnHelper.accessor("_id", {
+    columnHelper.accessor("phoneNumber", {
       size: 500,
-      cell: (info) => (
-        <div className="invoice">
-          <DownloadInvoice size="2x" fileId={info.getValue()} />
-        </div>
-      ),
+      cell: (info) => {
+        return <div className="phone">{info.getValue()}</div>;
+      },
     }),
   ];
 
@@ -101,8 +95,8 @@ const Table = ({ filter }) => {
           {table.getRowModel().rows.map((row) => (
             <tr
               onClick={() => {
+                setselectedrow(row.original._id);
                 setmodal(true);
-                setselectedrow(row._valuesCache._id);
               }}
               key={row.id}
             >
@@ -123,14 +117,16 @@ const Table = ({ filter }) => {
           ))}
         </tbody>
       </table>
-      <ClientModalDetailed
-        open={modal}
-        data={selectedrow}
-        clientData={clientData}
-        onClose={() => {
-          setmodal(false);
-        }}
-      />
+      {selectedrow !== "" ? (
+        <ClientModalDetailed
+          open={modal}
+          rowId={selectedrow}
+          clientData={clientData}
+          onClose={() => {
+            setmodal(false);
+          }}
+        />
+      ) : null}
     </>
   );
 };
