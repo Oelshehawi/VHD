@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import DownloadInvoice from "./DownloadInvoice";
 import { FaTrashAlt } from "react-icons/fa";
 import { FaPenSquare } from "react-icons/fa";
@@ -8,10 +8,10 @@ import Image from "next/image";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
-  const client = clientData.find((obj) => obj._id === data);
+const ClientModalDetailed = ({ open, onClose, rowId, clientData }) => {
+  const client = clientData.find((obj) => obj._id === rowId);
 
-  let base64Image = "";
+  const base64Image = Buffer.from(client.invoice.data).toString("base64");
 
   const [disabled, setDisabled] = useState(true);
   const [name, setName] = useState("");
@@ -49,10 +49,6 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
     setLocation(client.location);
     setNotes(client.notes);
   };
-
-  if (client) {
-    base64Image = Buffer.from(client.invoice.data).toString("base64");
-  }
 
   const handleChange = (e) => {
     e.target.setAttribute("type", "date");
@@ -94,6 +90,63 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
     showUpdateToast();
   };
 
+  const inputFields = [
+    {
+      name: "clientName",
+      type: "text",
+      placeholder: client.clientName,
+      setter: setName,
+    },
+    {
+      name: "jobTitle",
+      type: "text",
+      placeholder: client.jobTitle,
+      setter: setJobtitle,
+    },
+    {
+      name: "email",
+      type: "email",
+      placeholder: client.email,
+      setter: setEmail,
+    },
+    {
+      name: "phoneNumber",
+      type: "tel",
+      placeholder: client.phoneNumber,
+      setter: setPhoneNumber,
+    },
+    {
+      name: "date",
+      type: "text",
+      placeholder: client.date ? client.date.split("T")[0] : null,
+      setter: setDate,
+    },
+    {
+      name: "location",
+      type: "text",
+      placeholder: client.location,
+      setter: setLocation,
+    },
+    {
+      name: "price",
+      type: "number",
+      placeholder: client.price,
+      setter: setPrice,
+    },
+    {
+      name: "frequency",
+      type: "number",
+      placeholder: client.frequency,
+      setter: setFrequency,
+    },
+    {
+      name: "notes",
+      type: "textarea",
+      placeholder: client.notes,
+      setter: setNotes,
+    },
+  ];
+
   if (!open) return null;
   return (
     <div
@@ -131,97 +184,41 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
             />
           </div>
           <div className="modal-content-details">
-            <div className="modal-content-input-container">
-              <input
-                className="modal-content-input"
-                type="text"
-                placeholder={client.clientName}
-                disabled={disabled}
-                onChange={(e) => setName(e.target.value)}
-              />
-              <span className="modal-content-input-focus"></span>
-            </div>
-            <div className="modal-content-input-container">
-              <input
-                className="modal-content-input"
-                type="text"
-                placeholder={client.jobTitle}
-                disabled={disabled}
-                onChange={(e) => setJobtitle(e.target.value)}
-              />
-              <span className="modal-content-input-focus"></span>
-            </div>
-            <div className="modal-content-input-container">
-              <input
-                className="modal-content-input"
-                type="email"
-                placeholder={client.email}
-                disabled={disabled}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <span className="modal-content-input-focus"></span>
-            </div>
-            <div className="modal-content-input-container">
-              <input
-                className="modal-content-input"
-                type="text"
-                placeholder={client.phoneNumber}
-                disabled={disabled}
-                onChange={(e) => setPhoneNumber(e.target.value)}
-              />
-              <span className="modal-content-input-focus"></span>
-            </div>
-            <div className="modal-content-input-container">
-              <input
-                className="modal-content-input"
-                type="text"
-                placeholder={client.date ? client.date.split("T")[0] : null}
-                disabled={disabled}
-                onClick={handleChange}
-                onChange={(e) => setDate(e.target.value)}
-              />
-              <span className="modal-content-input-focus"></span>
-            </div>
-            <div className="modal-content-input-container">
-              <input
-                className="modal-content-input"
-                type="number"
-                placeholder={client.price}
-                disabled={disabled}
-                onChange={(e) => setPrice(e.target.value)}
-              />
-              <span className="modal-content-input-focus"></span>
-            </div>
-            <div className="modal-content-input-container">
-              <input
-                className="modal-content-input"
-                type="number"
-                placeholder={client.frequency}
-                disabled={disabled}
-                onChange={(e) => setFrequency(e.target.value)}
-              />
-              <span className="modal-content-input-focus"></span>
-            </div>
-            <div className="modal-content-input-container">
-              <input
-                className="modal-content-input"
-                type="text"
-                placeholder={client.location}
-                disabled={disabled}
-                onChange={(e) => setLocation(e.target.value)}
-              />
-              <span className="modal-content-input-focus"></span>
-            </div>
-            <div className="modal-content-input-container">
-              <textarea
-                className="modal-content-input"
-                type="text"
-                placeholder={client.notes}
-                disabled={disabled}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-              <span className="modal-content-input-focus"></span>
-            </div>
+            {inputFields.map(({ name, placeholder, type, setter }) => (
+              <div className="modal-content-input-container" key={name}>
+                {type === "textarea" ? (
+                  <textarea
+                    className="modal-content-input"
+                    name={name}
+                    type={type}
+                    placeholder={placeholder}
+                    disabled={disabled}
+                    onChange={(e) => setter(e.target.value)}
+                  />
+                ) : name === "date" ? (
+                  <input
+                    className="modal-content-input"
+                    name={name}
+                    type={type}
+                    placeholder={placeholder}
+                    disabled={disabled}
+                    onClick={handleChange}
+                    onChange={(e) => setter(e.target.value)}
+                  />
+                ) : (
+                  <input
+                    className="modal-content-input"
+                    name={name}
+                    type={type}
+                    placeholder={placeholder}
+                    disabled={disabled}
+                    onChange={(e) => setter(e.target.value)}
+                  />
+                )}
+
+                <span className="modal-content-input-focus"></span>
+              </div>
+            ))}
           </div>
         </div>
         <div className="modal-footer">

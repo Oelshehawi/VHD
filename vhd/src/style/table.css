@@ -1,7 +1,8 @@
-.invoice{
+.phone{
     display: flex;
     justify-content: center;
     font-size: large;
+    font-weight: bolder;
 }
 
 .jobTitle{
