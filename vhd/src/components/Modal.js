@@ -18,6 +18,25 @@ const Modal = ({ open, onClose, showToast }) => {
     formState: { errors },
   } = useForm();
 
+  // Setting input field properties
+  const inputFields = [
+    { name: "clientName", type: "text", placeholder: "Client's Name" },
+    { name: "jobTitle", type: "text", placeholder: "Job Title" },
+    { name: "email", type: "email", placeholder: "Email" },
+    { name: "phoneNumber", type: "tel", placeholder: "Phone Number" },
+    { name: "date", type: "date", placeholder: "Date" },
+    { name: "location", type: "text", placeholder: "Location" },
+    {
+      name: "price",
+      type: "number",
+      placeholder: "Price",
+      step: "any",
+      min: "1",
+    },
+    { name: "frequency", type: "number", placeholder: "Frequency per Year" },
+    { name: "notes", type: "textarea", placeholder: "Notes" },
+  ];
+
   //Function that handles form submit
   const handleSave = (values) => {
     // Print out form values
@@ -87,88 +106,27 @@ const Modal = ({ open, onClose, showToast }) => {
           className="modalContent"
           onSubmit={handleSubmit(handleSave)}
         >
-          <div className="modal-content-input-container">
-            <input
-              {...register("clientName")}
-              className="modal-content-input"
-              type="text"
-              placeholder="Client's Name"
-            />
-            <span className="modal-content-input-focus"></span>
-          </div>
-          <div className="modal-content-input-container">
-            <input
-              {...register("jobTitle")}
-              className="modal-content-input"
-              type="text"
-              placeholder="Job Title"
-            />
-            <span className="modal-content-input-focus"></span>
-          </div>
-          <div className="modal-content-input-container">
-            <input
-              {...register("email")}
-              className="modal-content-input"
-              type="email"
-              placeholder="Email"
-            />
-            <span className="modal-content-input-focus"></span>
-          </div>
-          <div className="modal-content-input-container">
-            <input
-              {...register("phoneNumber")}
-              className="modal-content-input"
-              type="tel"
-              placeholder="Phone Number"
-            />
-            <span className="modal-content-input-focus"></span>
-          </div>
-          <div className="modal-content-input-container">
-            <input
-              {...register("date")}
-              className="modal-content-input"
-              type="date"
-              placeholder="Date"
-            />
-            <span className="modal-content-input-focus"></span>
-          </div>
-          <div className="modal-content-input-container">
-            <input
-              {...register("location")}
-              className="modal-content-input"
-              type="text"
-              placeholder="Location"
-            />
-            <span className="modal-content-input-focus"></span>
-          </div>
-          <div className="modal-content-input-container">
-            <input
-              {...register("price")}
-              className="modal-content-input"
-              type="number"
-              placeholder="Price"
-              step="any"
-              min="1"
-            />
-            <span className="modal-content-input-focus"></span>
-          </div>
-          <div className="modal-content-input-container">
-            <input
-              {...register("frequency")}
-              className="modal-content-input"
-              type="number"
-              placeholder="Frequency per Year"
-            />
-            <span className="modal-content-input-focus"></span>
-          </div>
-          <div className="modal-content-input-container">
-            <textarea
-              {...register("notes")}
-              className="modal-content-input"
-              placeholder="Notes"
-            />
-            <span className="modal-content-input-focus"></span>
-          </div>
+          {inputFields.map(({ name, type, placeholder, ...rest }) => (
+            <div className="modal-content-input-container" key={name}>
+              {type === "textarea" ? (
+                <textarea
+                  {...register(name)}
+                  className="modal-content-input"
+                  placeholder={placeholder}
+                  {...rest}
+                />
+              ) : (
+                <input
+                  {...register(name)}
+                  className="modal-content-input"
+                  type={type}
+                  placeholder={placeholder}
+                  {...rest}
+                />
+              )}
+              <span className="modal-content-input-focus"></span>
+            </div>
+          ))}
           <label className="attach" htmlFor="invoice">
             {file}
           </label>
