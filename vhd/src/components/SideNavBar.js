@@ -1,6 +1,5 @@
 import React from "react";
-import "../style/sidebar.css";
-import { Link } from "gatsby";
+import Link from "next/link";
 import { FaRegUserCircle } from "react-icons/fa";
 import { FaHome } from "react-icons/fa";
 import { FaRegCalendarAlt } from "react-icons/fa";
@@ -17,15 +16,15 @@ const SideNavBar = () => {
       </div>
       <div className="line"></div>
       <div className="links">
-        <Link id="theLink" activeClassName="sideNavTabActive" to="/">
+        <Link id="theLink" href="/">
           <FaHome className="icon" />
           {"Dashboard"}
         </Link>
-        <Link id="theLink" activeClassName="sideNavTabActive" to="/database">
+        <Link id="theLink" href="/database">
           <FaDatabase className="icon" />
           {"Database "}
         </Link>
-        <Link id="theLink" activeClassName="sideNavTabActive" to="/schedule">
+        <Link id="theLink" href="/schedule">
           <FaRegCalendarAlt className="icon" />
           {"Schedule"}
         </Link>
