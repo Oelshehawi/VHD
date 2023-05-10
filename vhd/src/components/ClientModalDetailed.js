@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import "../style/modal.css";
 import DownloadInvoice from "./DownloadInvoice";
 import { FaTrashAlt } from "react-icons/fa";
 import { FaPenSquare } from "react-icons/fa";
 import { Buffer } from "buffer";
 import axios from "axios";
+import Image from "next/image";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
@@ -122,7 +122,13 @@ const ClientModalDetailed = ({ open, onClose, data, clientData }) => {
         </div>
         <div className="modal-content">
           <div className="modal-content-invoice">
-            <img src={`data:image/png;base64,${base64Image}`} alt="" />
+            <Image
+              src={`data:image/png;base64,${base64Image}`}
+              alt=""
+              width={500}
+              height={500}
+              className="full-width-height"
+            />
           </div>
           <div className="modal-content-details">
             <div className="modal-content-input-container">
