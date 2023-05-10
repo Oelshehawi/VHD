@@ -1,7 +1,6 @@
 import * as React from "react";
 import TopNavBar from "../components/TopNavBar";
 import SideNavBar from "../components/SideNavBar";
-import "../style/layout.css";
 
 const Layout = ({ children }) => {
   return (

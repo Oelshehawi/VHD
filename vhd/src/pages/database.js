@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import Layout from "../components/Layout";
 import Tabs from "../components/Tabs";
-import "../style/database.css";
 import { FaSearch } from "react-icons/fa";
 import { FaFileImport } from "react-icons/fa";
 import Modal from "../components/Modal";
@@ -17,12 +16,18 @@ const Database = () => {
     toast.success("Client Added Successfully!", {
       position: "bottom-right",
       transition: Slide,
-    })
-  }
+    });
+  };
 
   return (
     <>
-      <Modal open={openModal} onClose={() => {setopenModal(false); showToast()}} />
+      <Modal
+        open={openModal}
+        onClose={() => {
+          setopenModal(false);
+        }}
+        showToast={showToast}
+      />
       <ToastContainer />
       <Layout>
         <div className="dataContainer">
