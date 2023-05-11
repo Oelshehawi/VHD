@@ -35,10 +35,11 @@
 
 .closeBtn{
     position: fixed;
-    top: 8px;
-    right: 12px;
+    top: 12px;
+    right: 14px;
     border: none;
     background-color: #d9d9d9;
+    font-weight: bold;
 }
 
 .closeBtn:hover,
@@ -62,6 +63,7 @@
     width: 100%;
     height: 10%;
     padding: 10px;
+    font-weight: bolder;
 
 }
 
