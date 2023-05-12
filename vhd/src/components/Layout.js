@@ -6,7 +6,7 @@ const Layout = ({ children }) => {
   return (
     <div id="Wrapper">
       <div className="layout">
-        <TopNavBar />
+        {/* <TopNavBar /> */}
         <SideNavBar />
         <main>{children}</main>
       </div>

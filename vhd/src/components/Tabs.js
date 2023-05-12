@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Table from "./Table";
 
-const Tabs = ({ filter }) => {
+const Tabs = ({ filter, onUpdate }) => {
   // Used to set the current working Tab
   const [currentTab, setcurrentTab] = useState(1);
 
@@ -38,7 +38,7 @@ const Tabs = ({ filter }) => {
         </div>
       </div>
       <div className={currentTab === 1 ? "show-content" : "content"}>
-        <Table filter={filter} />
+        <Table filter={filter} onUpdate={onUpdate} />
       </div>
       <div className={currentTab === 2 ? "show-content" : "content"}>test2</div>
       <div className={currentTab === 3 ? "show-content" : "content"}>test3</div>

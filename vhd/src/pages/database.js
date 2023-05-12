@@ -12,6 +12,8 @@ const Database = () => {
 
   const [filter, setfilter] = useState("");
 
+  const [onUpdate, setOnUpdate] = useState(false)
+
   const showToast = () => {
     toast.success("Client Added Successfully!", {
       position: "bottom-right",
@@ -27,6 +29,7 @@ const Database = () => {
           setopenModal(false);
         }}
         showToast={showToast}
+        onUpdate={() => setOnUpdate(!onUpdate)}
       />
       <ToastContainer />
       <Layout>
@@ -47,7 +50,7 @@ const Database = () => {
             />
           </div>
         </div>
-        <Tabs filter={filter} />
+        <Tabs filter={filter} onUpdate={() => setOnUpdate(!onUpdate)} />
       </Layout>
     </>
   );

@@ -8,7 +8,13 @@ import Image from "next/image";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 
-const ClientModalDetailed = ({ open, onClose, rowId, clientData }) => {
+const ClientModalDetailed = ({
+  open,
+  onClose,
+  rowId,
+  clientData,
+  onUpdate,
+}) => {
   const client = clientData.find((obj) => obj._id === rowId);
 
   const base64Image = Buffer.from(client.invoice.data).toString("base64");
@@ -65,6 +71,7 @@ const ClientModalDetailed = ({ open, onClose, rowId, clientData }) => {
       });
     onClose();
     showDeleteToast();
+    onUpdate();
   };
 
   const handleUpdate = () => {
@@ -82,12 +89,14 @@ const ClientModalDetailed = ({ open, onClose, rowId, clientData }) => {
       })
       .then((response) => {
         console.log("Record Updated successfully");
+        console.log(response.data);
       })
       .catch((error) => {
         console.log("Error Updating record:", error);
       });
     onClose();
     showUpdateToast();
+    onUpdate()
   };
 
   const inputFields = [
