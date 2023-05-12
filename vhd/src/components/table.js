@@ -10,9 +10,9 @@ import {
 import DownloadInvoice from "./DownloadInvoice";
 import ClientModalDetailed from "./ClientModalDetailed";
 
-const Table = ({ filter }) => {
+const Table = ({ filter, onUpdate }) => {
   // data fetched from MongoDB
-  const [clientData, setclientData] = useState([]);
+  const [clientData, setClientData] = useState([]);
 
   const [globalFilter, setglobalFilter] = useState("");
 
@@ -23,9 +23,10 @@ const Table = ({ filter }) => {
   useEffect(() => {
     axios
       .get("http://127.0.0.1:4000/api/Clients/")
-      .then((res) => setclientData(res.data))
+      .then((res) => setClientData(res.data))
       .catch((err) => console.error(err));
-  }, []);
+      console.log(clientData)
+  }, [onUpdate]);
 
   const columnHelper = createColumnHelper();
 
@@ -122,7 +123,9 @@ const Table = ({ filter }) => {
           open={modal}
           rowId={selectedrow}
           clientData={clientData}
+          onUpdate={onUpdate}
           onClose={() => {
+            setselectedrow("")
             setmodal(false);
           }}
         />
