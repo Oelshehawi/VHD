@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Axios from "axios";
 
-const Modal = ({ open, onClose, showToast }) => {
+const Modal = ({ open, onClose, showToast, onUpdate }) => {
   //Setting variables for displaying file name in Attach invoice button
   const [file, setfile] = useState("Attach Invoice");
 
@@ -73,6 +73,7 @@ const Modal = ({ open, onClose, showToast }) => {
     //Close Modal
     onClose();
     showToast();
+    onUpdate()
   };
 
   if (!open) return null;
