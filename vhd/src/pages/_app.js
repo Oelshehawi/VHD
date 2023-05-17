@@ -5,6 +5,7 @@ import "../style/modal.css";
 import "../style/sidebar.css";
 import "../style/topbar.css";
 import "../style/table.css";
+import "../style/schedule.css"
 
 function MyApp({ Component, pageProps }) {
   return (
