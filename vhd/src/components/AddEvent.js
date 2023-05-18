@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 
-const AddEvent = ({ open, onClose, onUpdate }) => {
+const AddEvent = ({ open, onClose, onUpdate, showAddEventToast }) => {
   const [jobTitle, setJobTitle] = useState("");
   const [location, setLocation] = useState("");
   const [time, setTime] = useState("");
@@ -38,7 +38,8 @@ const AddEvent = ({ open, onClose, onUpdate }) => {
     setNumber("");
   };
 
-  const handleSave = () => {
+  const handleSave = (e) => {
+    e.preventDefault();
     if (jobTitle) {
       const eventData = {
         jobTitle: jobTitle,
@@ -57,6 +58,7 @@ const AddEvent = ({ open, onClose, onUpdate }) => {
           console.error(error);
         });
     }
+    showAddEventToast();
   };
 
   const handleClose = () => {
@@ -75,29 +77,31 @@ const AddEvent = ({ open, onClose, onUpdate }) => {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="event-modal-header">Add Event</div>
-        {inputs.map(({ type, placeholder, setter }) => (
-          <div className="event-content-input-container" key={placeholder}>
-            <input
-              type={type}
-              className="event-content-input"
-              placeholder={placeholder}
-              onChange={(e) => setter(e.target.value)}
-            />
-            <span className="event-content-input-focus"></span>
+        <form
+          className="event-modal-content"
+          onSubmit={(e) => {
+            handleSave(e);
+            handleClose();
+          }}
+        >
+          {inputs.map(({ type, placeholder, setter }) => (
+            <div className="event-content-input-container" key={placeholder}>
+              <input
+                type={type}
+                className="event-content-input"
+                placeholder={placeholder}
+                onChange={(e) => setter(e.target.value)}
+                required
+              />
+              <span className="event-content-input-focus"></span>
+            </div>
+          ))}
+          <div className="event-modal-footer">
+            <button id="event-save" type="submit" value="submit">
+              SAVE
+            </button>
           </div>
-        ))}
-        <div className="event-modal-footer">
-          <button
-            id="event-save"
-            className="event-buttons"
-            onClick={() => {
-              handleSave();
-              handleClose();
-            }}
-          >
-            SAVE
-          </button>
-        </div>
+        </form>
       </div>
     </div>
   );

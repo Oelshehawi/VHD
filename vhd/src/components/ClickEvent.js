@@ -6,7 +6,7 @@ import { FaPhoneAlt } from "react-icons/fa";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import axios from "axios";
 
-const ClickEvent = ({ open, onClose, event, onUpdate }) => {
+const ClickEvent = ({ open, onClose, event, onUpdate, showDeleteEventToast, convertTime }) => {
   const [animationClass, setAnimationClass] = useState("growin");
 
   const handleClose = () => {
@@ -14,10 +14,8 @@ const ClickEvent = ({ open, onClose, event, onUpdate }) => {
     setTimeout(() => {
       setAnimationClass("growin");
       onClose();
-    }, 400); // Wait for the animation duration
+    }, 100); // Wait for the animation duration
   };
-
-  console.log(event);
 
   const handleDelete = () => {
     axios
@@ -30,6 +28,7 @@ const ClickEvent = ({ open, onClose, event, onUpdate }) => {
       .catch((error) => {
         console.log("unable to delete event", error);
       });
+      showDeleteEventToast();
   };
 
   if (!open) return null;
@@ -48,13 +47,13 @@ const ClickEvent = ({ open, onClose, event, onUpdate }) => {
               <div id="click-modal-close">X</div>
             </div>
           </div>
-          <div className="click-modal-title">{event.jobTitle}</div>
+          <div className={`click-modal-title ${animationClass}`}>{event.jobTitle}</div>
         </div>
         <div className="click-modal-footer">
           {event.time && (
             <div className="click-modal-time">
               <FaCalendarAlt id="click-calendar" />
-              {event.time}
+              {convertTime(event.time)}
             </div>
           )}
           {event.number && (
