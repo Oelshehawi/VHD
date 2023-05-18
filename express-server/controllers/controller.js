@@ -1,4 +1,4 @@
-const Client = require("../models/reactDataSchema");
+const { Client, Event } = require("../models/reactDataSchema");
 
 // Posting Data to MongoDB from Axios post request and Add client Modal form
 exports.insert = async (req, res) => {
@@ -124,6 +124,69 @@ exports.update = async (req, res) => {
     .catch((err) => {
       res.status(500).send({
         message: "Error updating Client with id=" + id,
+      });
+    });
+};
+
+// Events Routers
+
+exports.insertEvent = async (req, res) => {
+  const JobTitle = req.body.jobTitle;
+  const Location = req.body.location;
+  const Number = req.body.number;
+  const Time = req.body.time;
+
+  const eventData = new Event({
+    jobTitle: JobTitle,
+    location: Location,
+    number: Number,
+    time: Time,
+  });
+
+  try {
+    await eventData.save();
+    res.send("Inserted data.");
+  } catch (err) {
+    console.log(err);
+    res.status(500).send("Error inserting data.");
+  }
+};
+
+exports.findAllEvents = async (req, res) => {
+  const jobTitle = req.query.jobTitle;
+  var condition = jobTitle
+    ? { jobTitle: { $regex: new RegExp(jobTitle), $options: "i" } }
+    : {};
+
+  Event.find(condition)
+    .then((data) => {
+      res.send(data);
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: err.message || "Some error occurred while retrieving Events.",
+      });
+    });
+};
+
+exports.deleteEvent = (req, res) => {
+  const id = req.params.id;
+
+  Event.findByIdAndRemove(id)
+    .then((data) => {
+      if (!data) {
+        res.status(404).send({
+          message: `Cannot delete Event with id=${id}. Maybe Eventt was not found!`,
+        });
+      } else {
+        res.send({
+          message: "Event was deleted successfully!",
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: "Could not Event Client with id=" + id,
       });
     });
 };

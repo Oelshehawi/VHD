@@ -22,10 +22,9 @@ const Table = ({ filter, onUpdate }) => {
 
   useEffect(() => {
     axios
-      .get("http://127.0.0.1:4000/api/Clients/")
+      .get("http://127.0.0.1:4000/api/clients/")
       .then((res) => setClientData(res.data))
       .catch((err) => console.error(err));
-      console.log(clientData)
   }, [onUpdate]);
 
   const columnHelper = createColumnHelper();

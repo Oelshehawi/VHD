@@ -6,6 +6,7 @@ import "../style/sidebar.css";
 import "../style/topbar.css";
 import "../style/table.css";
 import "../style/schedule.css"
+import "../style/event.css"
 
 function MyApp({ Component, pageProps }) {
   return (

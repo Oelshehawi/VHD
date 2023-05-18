@@ -1,22 +1,22 @@
 module.exports = (app) => {
   const Clients = require("../controllers/controller");
+  const Events = require("../controllers/controller");
 
   const router = require("express").Router();
 
-  // Insert new client
-  router.post("/", Clients.insert);
+  // Clients routes
+  router.post("/clients", Clients.insert);
+  router.get("/clients", Clients.findAll);
+  router.get("/clients/:id", Clients.findOne);
+  router.put("/clients/:id", Clients.update);
+  router.delete("/clients/:id", Clients.delete);
 
-  // Retrieve all Clients
-  router.get("/", Clients.findAll);
+  // Events routes
+  router.post("/events", Events.insertEvent);
+  router.get("/events", Events.findAllEvents);
+  // router.get("/events/:id", Events.findOneEvent);
+  // router.put("/events/:id", Events.updateEvent);
+  router.delete("/events/:id", Events.deleteEvent);
 
-  // Retrieve Client with specific id
-  router.get("/:id", Clients.findOne);
-
-  // Update Client with specific id
-  router.put("/:id", Clients.update);
-
-  // Delete Client with specific id
-  router.delete("/:id", Clients.delete);
-
-  app.use("/api/Clients", router);
+  app.use("/api", router);
 };

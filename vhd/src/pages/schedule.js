@@ -1,10 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Layout from "../components/Layout";
 import { FaArrowLeft } from "react-icons/fa";
 import { FaArrowRight } from "react-icons/fa";
 import { FaPlus } from "react-icons/fa";
 import Event from "../components/Event";
 import AddEvent from "../components/AddEvent";
+import axios from "axios"
 
 const Schedule = () => {
   const date = new Date();
@@ -35,10 +36,21 @@ const Schedule = () => {
 
   const days = [];
   const [events, setEvents] = useState([]);
+  const [onUpdate, setOnUpdate] = useState(false)
+
+  useEffect(() => {
+    axios
+      .get("http://127.0.0.1:4000/api/events/")
+      .then((res) => setEvents(res.data))
+      .catch((err) => console.error(err));
+  }, [onUpdate]);
+
+  console.log(startOfWeek.toISOString().slice(0, 16))
 
   // Adding days of the week to days array
   for (let i = 0; i < 6; i++) {
     days.push({
+      fullDate: startOfWeek.toISOString().slice(0, 16),
       dayName: startOfWeek.toLocaleDateString("en-US", { weekday: "short" }),
       dayNumber: startOfWeek.getDate(),
     });
@@ -46,15 +58,13 @@ const Schedule = () => {
   }
 
   const [open, setOpen] = useState(false);
-
-  console.log(events)
   
   return (
     <Layout>
       <AddEvent
         open={open}
         onClose={() => setOpen(false)}
-        setEvents={setEvents}
+        onUpdate={() => setOnUpdate(!onUpdate)}
       />
       <div className="schedule">
         <div className="schedule-header">
@@ -66,7 +76,7 @@ const Schedule = () => {
           <FaPlus id="icon-plus" onClick={() => setOpen(true)} />
         </div>
         <div className="schedule-content">
-          {days.map(({ dayName, dayNumber }) => (
+          {days.map(({ dayName, dayNumber, fullDate }) => (
             <div className="schedule-content-day" key={dayName}>
               <div className="schedule-content-daynumber">
                 {dayNumber}
@@ -74,7 +84,8 @@ const Schedule = () => {
               </div>
               {events && (
                 <Event
-                  events={events.filter((event) => event.dayName === dayName)}
+                  events={events.filter((event) => event.time.split("T")[0] === fullDate.split("T")[0])}
+                  onUpdate={() => setOnUpdate(!onUpdate)}
                 />
               )}
             </div>
