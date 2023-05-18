@@ -34,7 +34,22 @@ const reactFormDataSchema = new mongoose.Schema({
     filename: String,
   },
 });
+const eventSchema = new mongoose.Schema({
+  jobTitle: {
+    type: String,
+  },
+  location: {
+    type: String,
+  },
+  number: {
+    type: String,
+  },
+  time: {
+    type: Date,
+  },
+});
 
 const Client = mongoose.model("Client", reactFormDataSchema);
+const Event = mongoose.model("Event", eventSchema);
 
-module.exports = Client;
+module.exports = { Client, Event };
