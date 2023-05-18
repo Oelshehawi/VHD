@@ -1,11 +1,12 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 
-const AddEvent = ({ open, onClose, setEvents }) => {
+const AddEvent = ({ open, onClose, onUpdate }) => {
   const [jobTitle, setJobTitle] = useState("");
   const [location, setLocation] = useState("");
-  const [eventDay, setEventDay] = useState("");
   const [time, setTime] = useState("");
   const [number, setNumber] = useState("");
+  const [animationClass, setAnimationClass] = useState("growin2");
 
   const inputs = [
     {
@@ -19,7 +20,7 @@ const AddEvent = ({ open, onClose, setEvents }) => {
       setter: setLocation,
     },
     {
-      type: "time",
+      type: "datetime-local",
       placeholder: "Time",
       setter: setTime,
     },
@@ -30,24 +31,47 @@ const AddEvent = ({ open, onClose, setEvents }) => {
     },
   ];
 
-  const event = {
-    jobTitle: jobTitle,
-    location: location,
-    eventDay: eventDay,
-    time: time,
-    number: number,
+  const resetForm = () => {
+    setJobTitle("");
+    setLocation("");
+    setTime("");
+    setNumber("");
   };
 
-  const updateEventObject = () => {
-    setEvents((prevEvents) => [...prevEvents, event]);
-    onClose();
+  const handleSave = () => {
+    if (jobTitle) {
+      const eventData = {
+        jobTitle: jobTitle,
+        location: location,
+        time: time,
+        number: number,
+      };
+      axios
+        .post("http://127.0.0.1:4000/api/events/", eventData)
+        .then((response) => {
+          onUpdate();
+          resetForm();
+          console.log(response);
+        })
+        .catch((error) => {
+          console.error(error);
+        });
+    }
+  };
+
+  const handleClose = () => {
+    setAnimationClass("growout2");
+    setTimeout(() => {
+      setAnimationClass("growin2");
+      onClose();
+    }, 400);
   };
 
   if (!open) return null;
   return (
-    <div className="overlay2" onClick={onClose}>
+    <div className="overlay2" onClick={handleClose}>
       <div
-        className="event-modal-container"
+        className={`event-modal-container ${animationClass}`}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="event-modal-header">Add Event</div>
@@ -62,29 +86,14 @@ const AddEvent = ({ open, onClose, setEvents }) => {
             <span className="event-content-input-focus"></span>
           </div>
         ))}
-        <div className="event-content-input-container">
-          <select
-            className="event-content-input"
-            onChange={(e) => setEventDay(e.target.value)}
-          >
-            <option>-Please choose a day-</option>
-            <option value="Sun">Sun</option>
-            <option value="Mon">Mon</option>
-            <option value="Tue">Tue</option>
-            <option value="Wed">Wed</option>
-            <option value="Thu">Thu</option>
-            <option value="Fri">Fri</option>
-          </select>
-          <span className="event-content-input-focus"></span>
-        </div>
         <div className="event-modal-footer">
-          <button id="event-delete" className="event-buttons" onClick={onClose}>
-            DELETE
-          </button>
           <button
             id="event-save"
             className="event-buttons"
-            onClick={updateEventObject}
+            onClick={() => {
+              handleSave();
+              handleClose();
+            }}
           >
             SAVE
           </button>

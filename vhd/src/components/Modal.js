@@ -44,7 +44,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
 
     //Send data using Axios
     Axios.post(
-      "http://127.0.0.1:4000/api/Clients/",
+      "http://127.0.0.1:4000/api/clients/",
       {
         clientName: values.clientName,
         jobTitle: values.jobTitle,
