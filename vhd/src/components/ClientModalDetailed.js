@@ -62,7 +62,7 @@ const ClientModalDetailed = ({
 
   const handleDelete = () => {
     axios
-      .delete(`http://127.0.0.1:4000/api/Clients/${client._id}`)
+      .delete(`http://127.0.0.1:4000/api/clients/${client._id}`)
       .then((response) => {
         console.log("Record deleted successfully");
       })
@@ -76,7 +76,7 @@ const ClientModalDetailed = ({
 
   const handleUpdate = () => {
     axios
-      .put(`http://127.0.0.1:4000/api/Clients/${client._id}`, {
+      .put(`http://127.0.0.1:4000/api/clients/${client._id}`, {
         clientName: name,
         jobTitle: jobtitle,
         email: email,
