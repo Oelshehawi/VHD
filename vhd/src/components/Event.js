@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ClickEvent from "./ClickEvent";
 
-const Event = ({ events, onUpdate }) => {
+const Event = ({ events, onUpdate, showDeleteEventToast }) => {
   const [open, setOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
@@ -9,6 +9,21 @@ const Event = ({ events, onUpdate }) => {
     setSelectedEvent(event);
     console.log(event);
   };
+
+  const dateTimeToLocalTime = (datetime) => {
+    const date = new Date(datetime);
+    const options = { hour: 'numeric', minute: 'numeric', hour12: true };
+    const timeString = date.toLocaleTimeString('en-US', options);
+    
+    // Extracting the hour and AM/PM indicator
+    const [time, period] = timeString.split(' ');
+    
+    // Removing leading zeros from the hour (e.g., "09" -> "9")
+    const formattedTime = time.replace(/^0+/, '');
+    
+    return formattedTime + period.toLowerCase();
+  };
+
 
   return (
     <>
@@ -23,7 +38,7 @@ const Event = ({ events, onUpdate }) => {
             }}
           >
             {jobTitle}
-            <p>{time}</p>
+            <p>{dateTimeToLocalTime(time)}</p>
           </div>
         ))}
       </div>
@@ -36,6 +51,8 @@ const Event = ({ events, onUpdate }) => {
           }}
           event={selectedEvent}
           onUpdate={onUpdate}
+          showDeleteEventToast={showDeleteEventToast}
+          convertTime={dateTimeToLocalTime}
         />
       )}
     </>
