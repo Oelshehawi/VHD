@@ -8,6 +8,7 @@ import AddEvent from "../components/AddEvent";
 import axios from "axios";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { API_URL } from "../../../shared/config";
 
 const populateDaysArray = (currentDateStart, currentDateEnd) => {
   const days = [];
@@ -40,6 +41,7 @@ const Schedule = () => {
       currentDate.getDate() - currentDate.getDay()
     )
   );
+
   const [currentDateEnd, setCurrentDateEnd] = useState(
     new Date(
       currentDate.getFullYear(),
@@ -62,7 +64,7 @@ const Schedule = () => {
   // fetching all events
   useEffect(() => {
     axios
-      .get("http://127.0.0.1:4000/api/events/")
+      .get(`${API_URL}/events/`)
       .then((res) => setEvents(res.data))
       .catch((err) => console.error(err));
   }, [onUpdate]);

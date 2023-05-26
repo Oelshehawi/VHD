@@ -7,6 +7,7 @@ import axios from "axios";
 import Image from "next/image";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { API_URL } from "../../../shared/config";
 
 const ClientModalDetailed = ({
   open,
@@ -62,7 +63,7 @@ const ClientModalDetailed = ({
 
   const handleDelete = () => {
     axios
-      .delete(`http://127.0.0.1:4000/api/clients/${client._id}`)
+      .delete(`${API_URL}/clients/${client._id}`)
       .then((response) => {
         console.log("Record deleted successfully");
       })
@@ -76,7 +77,7 @@ const ClientModalDetailed = ({
 
   const handleUpdate = () => {
     axios
-      .put(`http://127.0.0.1:4000/api/clients/${client._id}`, {
+      .put(`${API_URL}/clients/${client._id}`, {
         clientName: name,
         jobTitle: jobtitle,
         email: email,
