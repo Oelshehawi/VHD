@@ -11,7 +11,6 @@ import "../style/event.css"
 function MyApp({ Component, pageProps }) {
   return (
     <>
-      {/* Add your layout here */}
       <Component {...pageProps} />
     </>
   );

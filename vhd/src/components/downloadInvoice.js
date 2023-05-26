@@ -3,6 +3,7 @@ import axios from "axios";
 import { FaDownload } from "react-icons/fa";
 import { toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { API_URL } from "../../../shared/config";
 
 const DownloadInvoice = ({ fileId }) => {
   const showDownloadToast = () => {
@@ -14,7 +15,7 @@ const DownloadInvoice = ({ fileId }) => {
 
   const handleDownload = () => {
     axios
-      .get(`http://127.0.0.1:4000/api/clients/${fileId}`, {
+      .get(`${API_URL}/clients/${fileId}`, {
         responseType: "blob",
       })
       .then((res) => {
@@ -32,8 +33,13 @@ const DownloadInvoice = ({ fileId }) => {
   };
   return (
     <>
-      <FaDownload onClick={() => {handleDownload(); showDownloadToast()}} className="icon-hover" />
-      
+      <FaDownload
+        onClick={() => {
+          handleDownload();
+          showDownloadToast();
+        }}
+        className="icon-hover"
+      />
     </>
   );
 };
