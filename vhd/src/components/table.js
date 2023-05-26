@@ -9,6 +9,7 @@ import {
 } from "@tanstack/react-table";
 import DownloadInvoice from "./DownloadInvoice";
 import ClientModalDetailed from "./ClientModalDetailed";
+import { API_URL } from "../../../shared/config";
 
 const Table = ({ filter, onUpdate }) => {
   // data fetched from MongoDB
@@ -22,7 +23,7 @@ const Table = ({ filter, onUpdate }) => {
 
   useEffect(() => {
     axios
-      .get("http://127.0.0.1:4000/api/clients/")
+      .get(`${API_URL}/clients/`)
       .then((res) => setClientData(res.data))
       .catch((err) => console.error(err));
   }, [onUpdate]);
