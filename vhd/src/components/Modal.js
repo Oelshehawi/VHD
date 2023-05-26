@@ -2,6 +2,7 @@ import React from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Axios from "axios";
+import { API_URL } from "../../../shared/config";
 
 const Modal = ({ open, onClose, showToast, onUpdate }) => {
   //Setting variables for displaying file name in Attach invoice button
@@ -44,7 +45,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
 
     //Send data using Axios
     Axios.post(
-      "http://127.0.0.1:4000/api/clients/",
+      `${API_URL}/clients/`,
       {
         clientName: values.clientName,
         jobTitle: values.jobTitle,

@@ -5,6 +5,7 @@ import { FaCalendarAlt } from "react-icons/fa";
 import { FaPhoneAlt } from "react-icons/fa";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import axios from "axios";
+import { API_URL } from "../../../shared/config";
 
 const ClickEvent = ({ open, onClose, event, onUpdate, showDeleteEventToast, convertTime }) => {
   const [animationClass, setAnimationClass] = useState("growin");
@@ -19,7 +20,7 @@ const ClickEvent = ({ open, onClose, event, onUpdate, showDeleteEventToast, conv
 
   const handleDelete = () => {
     axios
-      .delete(`http://127.0.0.1:4000/api/events/${event._id}`)
+      .delete(`${API_URL}/events/${event._id}`)
       .then((res) => {
         onUpdate();
         handleClose();

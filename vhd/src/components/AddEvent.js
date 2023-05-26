@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { API_URL } from "../../../shared/config";
 
 const AddEvent = ({ open, onClose, onUpdate, showAddEventToast }) => {
   const [jobTitle, setJobTitle] = useState("");
@@ -48,7 +49,7 @@ const AddEvent = ({ open, onClose, onUpdate, showAddEventToast }) => {
         number: number,
       };
       axios
-        .post("http://127.0.0.1:4000/api/events/", eventData)
+        .post(`${API_URL}/events/`, eventData)
         .then((response) => {
           onUpdate();
           resetForm();
