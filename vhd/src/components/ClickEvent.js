@@ -24,12 +24,12 @@ const ClickEvent = ({ open, onClose, event, onUpdate, showDeleteEventToast, conv
       .then((res) => {
         onUpdate();
         handleClose();
+        showDeleteEventToast();
         console.log("event deleted successfully");
       })
       .catch((error) => {
         console.log("unable to delete event", error);
       });
-      showDeleteEventToast();
   };
 
   if (!open) return null;

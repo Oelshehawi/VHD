@@ -102,7 +102,7 @@ const ClientModalDetailed = ({
 
   const inputFields = [
     {
-      name: "clientName",
+      name: "Client's Name",
       type: "text",
       placeholder: client.clientName,
       setter: setName,
@@ -201,7 +201,7 @@ const ClientModalDetailed = ({
                     className="modal-content-input"
                     name={name}
                     type={type}
-                    placeholder={placeholder}
+                    placeholder={placeholder !== "" && placeholder !== null ? placeholder : name}
                     disabled={disabled}
                     onChange={(e) => setter(e.target.value)}
                   />
@@ -210,7 +210,7 @@ const ClientModalDetailed = ({
                     className="modal-content-input"
                     name={name}
                     type={type}
-                    placeholder={placeholder}
+                    placeholder={placeholder !== "" && placeholder !== null ? placeholder : name}
                     disabled={disabled}
                     onClick={handleChange}
                     onChange={(e) => setter(e.target.value)}
@@ -220,7 +220,7 @@ const ClientModalDetailed = ({
                     className="modal-content-input"
                     name={name}
                     type={type}
-                    placeholder={placeholder}
+                    placeholder={placeholder !== "" && placeholder !== null ? placeholder : name}
                     disabled={disabled}
                     onChange={(e) => setter(e.target.value)}
                   />
