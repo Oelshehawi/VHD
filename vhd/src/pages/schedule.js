@@ -13,10 +13,19 @@ import { API_URL } from "../../../shared/config";
 const populateDaysArray = (currentDateStart, currentDateEnd) => {
   const days = [];
   const tempDate = new Date(currentDateStart);
+  const pdtOptions = {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    timeZone: 'America/Los_Angeles',
+  };
+
 
   for (let i = 0; tempDate <= currentDateEnd; i++) {
     days.push({
-      fullDate: tempDate.toISOString().slice(0, 16),
+      fullDate: tempDate.toLocaleString('en-US', pdtOptions),
       dayName: tempDate.toLocaleDateString("en-US", { weekday: "short" }),
       dayNumber: tempDate.getDate(),
     });
@@ -65,7 +74,24 @@ const Schedule = () => {
   useEffect(() => {
     axios
       .get(`${API_URL}/events/`)
-      .then((res) => setEvents(res.data))
+      .then((res) => {
+        const pdtOptions = {
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'America/Los_Angeles',
+        };
+  
+        const updatedEvents = res.data.map((event) => {
+          const utcDate = new Date(event.time);
+          const pdtDate = utcDate.toLocaleString('en-US', pdtOptions);
+          return { ...event, time: pdtDate };
+        });
+  
+        setEvents(updatedEvents);
+      })
       .catch((err) => console.error(err));
   }, [onUpdate]);
 
@@ -89,7 +115,6 @@ const Schedule = () => {
       position: "bottom-right",
       transition: Slide,
     });
-    console.log("tities")
   };
 
   const showDeleteEventToast = () => {
@@ -97,9 +122,10 @@ const Schedule = () => {
       position: "bottom-right",
       transition: Slide,
     });
-    console.log("tittties")
   };
 
+  // console.log(event.time.split("T")[0])
+ 
 
   return (
     <Layout>
@@ -130,7 +156,7 @@ const Schedule = () => {
                 <Event
                   events={events.filter(
                     (event) =>
-                      event.time.split("T")[0] === fullDate.split("T")[0]
+                      event.time.split(",")[0] === fullDate.split(",")[0]
                   )}
                   onUpdate={() => setOnUpdate(!onUpdate)}
                   showDeleteEventToast={showDeleteEventToast}
