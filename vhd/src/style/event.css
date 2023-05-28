@@ -24,6 +24,36 @@
 
 .event:hover{
     background-color: #d9d9d9;
+    cursor: pointer;
+}
+
+.event-container2{
+  display: flex;
+  flex-flow: column nowrap;
+  justify-content: space-between;
+  overflow-y: auto;
+  width: 100%;
+  height: 100%;
+  margin-left: 3%;
+}
+
+.event2{
+  display: flex;
+  flex-flow: column nowrap;
+  justify-content: center;
+  font-size: larger;
+  height: 100%;
+  width: 100%;
+  padding: 8px;
+}
+
+.event2:not(:first-child) {
+  margin-top: 15px; 
+}
+
+.event2:hover{
+  background-color: #d9d9d9;
+  cursor: pointer;
 }
 
   #icon-plus{
@@ -132,13 +162,10 @@
     position: relative;
 }
 
-input[type="text"],
-input[type="datetime-local"],
-input[type="tel"],
-select
+input[type="datetime-local"]
 {
     font: 15px/24px "Lato", Arial, sans-serif; 
-    color: #333; 
+    font-weight: bolder;
     width: 100%;
     box-sizing: border-box; 
     letter-spacing: 1px;
