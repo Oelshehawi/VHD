@@ -20,9 +20,9 @@ const SideNavBar = () => {
       <div className="links">
         <Link
           id="theLink"
-          href="/"
+          href="/dashboard"
           className={
-            isActive("/") ? "sidebar-link-active" : "sidebar-link-notActive"
+            isActive("/dashboard") ? "sidebar-link-active" : "sidebar-link-notActive"
           }
         >
           <FaHome className="icon" />

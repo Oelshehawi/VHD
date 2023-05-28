@@ -1,22 +1,23 @@
-import React, { useState } from "react";
-import Layout from "../components/Layout";
-import Tabs from "../components/Tabs";
-import { FaSearch } from "react-icons/fa";
-import { FaFileImport } from "react-icons/fa";
-import Modal from "../components/Modal";
-import { ToastContainer, toast, Slide } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import React, { useState } from 'react';
+import Layout from '../components/Layout';
+import Tabs from '../components/Tabs';
+import { FaSearch } from 'react-icons/fa';
+import { FaFileImport } from 'react-icons/fa';
+import Modal from '../components/Modal';
+import { ToastContainer, toast, Slide } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 
 const Database = () => {
   const [openModal, setopenModal] = useState(false);
 
-  const [filter, setfilter] = useState("");
+  const [filter, setfilter] = useState('');
 
-  const [onUpdate, setOnUpdate] = useState(false)
+  const [onUpdate, setOnUpdate] = useState(false);
 
   const showToast = () => {
-    toast.success("Client Added Successfully!", {
-      position: "bottom-right",
+    toast.success('Client Added Successfully!', {
+      position: 'bottom-right',
       transition: Slide,
     });
   };
@@ -34,14 +35,14 @@ const Database = () => {
       <ToastContainer />
       <Layout>
         <div className="dataContainer">
-          {"Database"}
+          {'Database'}
           <div className="searchContainer">
             <FaSearch />
             <input
               type="search"
               placeholder="Search..."
               className="searchBar"
-              value={filter ?? ""}
+              value={filter ?? ''}
               onChange={(e) => setfilter(e.target.value)}
             />
             <FaFileImport
