@@ -21,7 +21,7 @@ const Tabs = ({ filter, onUpdate }) => {
           >
             All
           </button>
-          <button
+          {/* <button
             type="button"
             className={currentTab === 2 ? "active-tab" : "databaseTab"}
             onClick={() => handleTabClick(2)}
@@ -34,14 +34,14 @@ const Tabs = ({ filter, onUpdate }) => {
             onClick={() => handleTabClick(3)}
           >
             Favorites
-          </button>
+          </button> */}
         </div>
       </div>
       <div className={currentTab === 1 ? "show-content" : "content"}>
         <Table filter={filter} onUpdate={onUpdate} />
       </div>
-      <div className={currentTab === 2 ? "show-content" : "content"}>test2</div>
-      <div className={currentTab === 3 ? "show-content" : "content"}>test3</div>
+      {/* <div className={currentTab === 2 ? "show-content" : "content"}>test2</div>
+      <div className={currentTab === 3 ? "show-content" : "content"}>test3</div> */}
     </div>
   );
 };

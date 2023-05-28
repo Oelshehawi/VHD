@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import ClickEvent from "./ClickEvent";
 
-const Event = ({ events, onUpdate, showDeleteEventToast }) => {
+const Event = ({ events, onUpdate, showDeleteEventToast, eventSchedule }) => {
   const [open, setOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
 
@@ -24,13 +24,14 @@ const Event = ({ events, onUpdate, showDeleteEventToast }) => {
     return formattedTime + period.toLowerCase();
   };
 
+  console.log(events)
 
   return (
     <>
-      <div className="event-container">
+      <div className={ !eventSchedule ? "event-container" : "event-container2"}>
         {events.map(({ jobTitle, time, location, _id, number }) => (
           <div
-            className="event"
+            className={ !eventSchedule ? "event" : "event2"}
             key={time}
             onClick={() => {
               handleClick({ jobTitle, time, location, _id, number });

@@ -34,6 +34,7 @@ const reactFormDataSchema = new mongoose.Schema({
     filename: String,
   },
 });
+
 const eventSchema = new mongoose.Schema({
   jobTitle: {
     type: String,
@@ -49,7 +50,21 @@ const eventSchema = new mongoose.Schema({
   },
 });
 
+const userSchema = new mongoose.Schema({
+  username: {
+    type: String,
+  },
+  password: {
+    type: String,
+  },
+  isAdmin: {
+    type: Boolean,
+  },
+});
+
+
 const Client = mongoose.model("Client", reactFormDataSchema);
 const Event = mongoose.model("Event", eventSchema);
+const User = mongoose.model("User", userSchema);
 
-module.exports = { Client, Event };
+module.exports = { Client, Event , User };

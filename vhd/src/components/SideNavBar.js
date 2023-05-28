@@ -16,12 +16,7 @@ const SideNavBar = () => {
 
   return (
     <aside id="sidebar">
-      <FaRegUserCircle id="user-icon" />
-      <div id="user">
-        {"User name"}
-        <FaAngleDown id="iconUser" />
-      </div>
-      <div className="line"></div>
+      <div className="user"> Hi There, Admin</div>
       <div className="links">
         <Link
           id="theLink"
