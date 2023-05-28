@@ -1,4 +1,4 @@
-const { Client, Event } = require("../models/reactDataSchema");
+const { Client, Event, User } = require('../models/reactDataSchema');
 
 // Posting Data to MongoDB from Axios post request and Add client Modal form
 exports.insert = async (req, res) => {
@@ -31,7 +31,7 @@ exports.insert = async (req, res) => {
   });
   try {
     await formData.save();
-    res.send("inserted data..");
+    res.send('inserted data..');
   } catch (err) {
     console.log(err);
   }
@@ -41,7 +41,7 @@ exports.insert = async (req, res) => {
 exports.findAll = async (req, res) => {
   const jobTitle = req.query.jobTitle;
   var condition = jobTitle
-    ? { jobTitle: { $regex: new RegExp(jobTitle), $options: "i" } }
+    ? { jobTitle: { $regex: new RegExp(jobTitle), $options: 'i' } }
     : {};
 
   Client.find(condition)
@@ -50,7 +50,7 @@ exports.findAll = async (req, res) => {
     })
     .catch((err) => {
       res.status(500).send({
-        message: err.message || "Some error occurred while retrieving Clients.",
+        message: err.message || 'Some error occurred while retrieving Clients.',
       });
     });
 };
@@ -65,21 +65,21 @@ exports.findOne = async (req, res) => {
     if (invoiceFound) {
       // Set headers for file download
       res.setHeader(
-        "Access-Control-Expose-Headers",
-        "Content-Type, Content-Disposition"
+        'Access-Control-Expose-Headers',
+        'Content-Type, Content-Disposition'
       );
       res.set({
-        "Content-Type": invoiceFound.invoice.contentType,
-        "Content-Disposition": `attachment; filename=${invoiceFound.invoice.filename}`,
+        'Content-Type': invoiceFound.invoice.contentType,
+        'Content-Disposition': `attachment; filename=${invoiceFound.invoice.filename}`,
       });
       // Send file to client as a stream
       res.send(invoiceFound.invoice.data);
     } else {
-      res.status(500).send("File data is missing");
+      res.status(500).send('File data is missing');
     }
   } catch (err) {
     console.error(err);
-    res.status(500).send("Server error");
+    res.status(500).send('Server error');
   }
 };
 
@@ -94,13 +94,13 @@ exports.delete = (req, res) => {
         });
       } else {
         res.send({
-          message: "Client was deleted successfully!",
+          message: 'Client was deleted successfully!',
         });
       }
     })
     .catch((err) => {
       res.status(500).send({
-        message: "Could not delete Client with id=" + id,
+        message: 'Could not delete Client with id=' + id,
       });
     });
 };
@@ -108,7 +108,7 @@ exports.delete = (req, res) => {
 exports.update = async (req, res) => {
   if (!req.body) {
     return res.status(400).send({
-      message: "Data to update can not be empty!",
+      message: 'Data to update can not be empty!',
     });
   }
   const id = req.params.id;
@@ -119,11 +119,11 @@ exports.update = async (req, res) => {
         res.status(404).send({
           message: `Cannot update Client with id=${id}. Maybe Client was not found!`,
         });
-      } else res.send({ message: "Client was updated successfully." });
+      } else res.send({ message: 'Client was updated successfully.' });
     })
     .catch((err) => {
       res.status(500).send({
-        message: "Error updating Client with id=" + id,
+        message: 'Error updating Client with id=' + id,
       });
     });
 };
@@ -145,17 +145,17 @@ exports.insertEvent = async (req, res) => {
 
   try {
     await eventData.save();
-    res.send("Inserted data.");
+    res.send('Inserted data.');
   } catch (err) {
     console.log(err);
-    res.status(500).send("Error inserting data.");
+    res.status(500).send('Error inserting data.');
   }
 };
 
 exports.findAllEvents = async (req, res) => {
   const jobTitle = req.query.jobTitle;
   var condition = jobTitle
-    ? { jobTitle: { $regex: new RegExp(jobTitle), $options: "i" } }
+    ? { jobTitle: { $regex: new RegExp(jobTitle), $options: 'i' } }
     : {};
 
   Event.find(condition)
@@ -164,7 +164,7 @@ exports.findAllEvents = async (req, res) => {
     })
     .catch((err) => {
       res.status(500).send({
-        message: err.message || "Some error occurred while retrieving Events.",
+        message: err.message || 'Some error occurred while retrieving Events.',
       });
     });
 };
@@ -180,13 +180,31 @@ exports.deleteEvent = (req, res) => {
         });
       } else {
         res.send({
-          message: "Event was deleted successfully!",
+          message: 'Event was deleted successfully!',
         });
       }
     })
     .catch((err) => {
       res.status(500).send({
-        message: "Could not Event Client with id=" + id,
+        message: 'Could not Event Client with id=' + id,
       });
+    });
+};
+
+exports.checkAdminAuthentication = (req, res) => {
+  User.collection
+    .findOne({ isAdmin: true, username: req.body.username, password: req.body.password })
+    .then((adminUser) => {
+      if (adminUser) {
+        // Authentication successful
+        res.status(200).json({ isAdmin: true });
+      } else {
+        // Authentication failed
+        res.status(401).json({ isAdmin: false });
+      }
+    })
+    .catch((error) => {
+      // Handle any error that occurs during the query or authentication process
+      res.status(500).json({ error: "Internal server error." });
     });
 };

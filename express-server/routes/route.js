@@ -1,6 +1,7 @@
 module.exports = (app) => {
   const Clients = require("../controllers/controller");
   const Events = require("../controllers/controller");
+  const Users = require("../controllers/controller")
 
   const router = require("express").Router();
 
@@ -17,6 +18,11 @@ module.exports = (app) => {
   // router.get("/events/:id", Events.findOneEvent);
   // router.put("/events/:id", Events.updateEvent);
   router.delete("/events/:id", Events.deleteEvent);
+
+  router.get("/users/checkAdmin", Users.checkAdminAuthentication)
+  router.post("/users/checkAdmin", Users.checkAdminAuthentication)
+  
+
 
   app.use("/api", router);
 };
