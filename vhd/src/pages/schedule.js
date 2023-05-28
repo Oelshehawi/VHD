@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from "react";
-import Layout from "../components/Layout";
-import { FaArrowLeft } from "react-icons/fa";
-import { FaArrowRight } from "react-icons/fa";
-import { FaPlus } from "react-icons/fa";
-import Event from "../components/Event";
-import AddEvent from "../components/AddEvent";
-import axios from "axios";
-import { ToastContainer, toast, Slide } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { API_URL } from "../../../shared/config";
+import React, { useState, useEffect } from 'react';
+import Layout from '../components/Layout';
+import { FaArrowLeft } from 'react-icons/fa';
+import { FaArrowRight } from 'react-icons/fa';
+import { FaPlus } from 'react-icons/fa';
+import Event from '../components/Event';
+import AddEvent from '../components/AddEvent';
+import axios from 'axios';
+import { ToastContainer, toast, Slide } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { API_URL } from '../../../shared/config';
 
 const populateDaysArray = (currentDateStart, currentDateEnd) => {
   const days = [];
@@ -22,11 +22,10 @@ const populateDaysArray = (currentDateStart, currentDateEnd) => {
     timeZone: 'America/Los_Angeles',
   };
 
-
   for (let i = 0; tempDate <= currentDateEnd; i++) {
     days.push({
       fullDate: tempDate.toLocaleString('en-US', pdtOptions),
-      dayName: tempDate.toLocaleDateString("en-US", { weekday: "short" }),
+      dayName: tempDate.toLocaleDateString('en-US', { weekday: 'short' }),
       dayNumber: tempDate.getDate(),
     });
     tempDate.setDate(tempDate.getDate() + 1);
@@ -83,13 +82,13 @@ const Schedule = () => {
           minute: '2-digit',
           timeZone: 'America/Los_Angeles',
         };
-  
+
         const updatedEvents = res.data.map((event) => {
           const utcDate = new Date(event.time);
           const pdtDate = utcDate.toLocaleString('en-US', pdtOptions);
           return { ...event, time: pdtDate };
         });
-  
+
         setEvents(updatedEvents);
       })
       .catch((err) => console.error(err));
@@ -111,21 +110,20 @@ const Schedule = () => {
 
   // Toast for adding event
   const showAddEventToast = () => {
-    toast.success("Event Added Successfully!", {
-      position: "bottom-right",
+    toast.success('Event Added Successfully!', {
+      position: 'bottom-right',
       transition: Slide,
     });
   };
 
   const showDeleteEventToast = () => {
-    toast.success("Event Deleted Successfully!", {
-      position: "bottom-right",
+    toast.success('Event Deleted Successfully!', {
+      position: 'bottom-right',
       transition: Slide,
     });
   };
 
   // console.log(event.time.split("T")[0])
- 
 
   return (
     <Layout>
@@ -156,7 +154,7 @@ const Schedule = () => {
                 <Event
                   events={events.filter(
                     (event) =>
-                      event.time.split(",")[0] === fullDate.split(",")[0]
+                      event.time.split(',')[0] === fullDate.split(',')[0]
                   )}
                   onUpdate={() => setOnUpdate(!onUpdate)}
                   showDeleteEventToast={showDeleteEventToast}
