@@ -1,8 +1,6 @@
 {
     "version": 2,
     "routes": [
-      { "src": "/_next/(.*)", "dest": "/vhd/_next/$1" },
-      { "src": "/(.*)", "dest": "/vhd/src/pages/$1" },
       { "src": "/api/.*", "dest": "/express-server/routes/route.js" }
     ],
     "builds": [
