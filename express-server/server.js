@@ -15,7 +15,7 @@ app.use(fileupload());
 
 // Connecting to MongoDB
 mongoose
-  .connect("mongodb://127.0.0.1:27017/VHD", {
+  .connect("mongodb+srv://vercel-admin-user:xkyghym1J16uorVO@cluster1.kov3enq.mongodb.net/myFirstDatabase?retryWrites=true&w=majority", {
     useNewUrlParser: true,
   })
   .then(() => {
