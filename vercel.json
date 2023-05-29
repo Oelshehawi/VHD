@@ -1,7 +1,7 @@
 {
     "version": 2,
     "routes": [
-       { "src": "/pages", "dest": "/vhd/src/$1" }
+      { "src": "/pages/(.*)", "dest": "/vhd/src/pages/$1" }
     ],
     "builds": [
       { "src": "/vhd/package.json", "use": "@vercel/next" }
