@@ -1,1 +1,1 @@
-export const API_URL = "http://127.0.0.1:4000/api"; // Set your default API URL here
+export const API_URL = "https://vhd-27lbukhjq-oelshehawi.vercel.app/vhd/api"; // Set your default API URL here
