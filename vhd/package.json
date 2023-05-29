@@ -1,0 +1,31 @@
+{
+  "name": "vhd",
+  "version": "1.0.0",
+  "private": true,
+  "description": "vhd",
+  "author": "oelsheha",
+  "keywords": [],
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@fortawesome/react-fontawesome": "^0.2.0",
+    "@tanstack/react-table": "^8.9.1",
+    "axios": "^1.3.5",
+    "babel-plugin-macros": "^3.1.0",
+    "bootstrap": "^5.2.3",
+    "next": "^13.4.1",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.43.9",
+    "react-icons": "^4.7.1",
+    "react-table": "^7.8.0",
+    "react-toastify": "^9.1.2",
+    "vercel": "^30.0.0"
+  },
+  "devDependencies": {
+    "eslint-plugin-react": "^7.32.0"
+  }
+}
