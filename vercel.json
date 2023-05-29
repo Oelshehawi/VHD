@@ -1,0 +1,11 @@
+{
+    "version": 2,
+    "routes": [
+      { "src": "/api/.*", "dest": "/express-server/server.js" },
+      { "src": "/(.*)", "dest": "/vhd/$1" }
+    ],
+    "builds": [
+      { "src": "/express-server/server.js", "use": "@vercel/node" },
+      { "src": "vhd/src/**/*", "use": "@vercel/next" }
+    ]
+  }
