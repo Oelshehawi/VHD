@@ -3,7 +3,7 @@
     "routes": [
       { "src": "/_next/(.*)", "dest": "/vhd/_next/$1" },
       { "src": "/(.*)", "dest": "/vhd/src/pages/$1" },
-      { "src": "/api/.*", "dest": "/express-server/server.js" }
+      { "src": "/api/.*", "dest": "/express-server/routes/route.js" }
     ],
     "builds": [
       { "src": "/vhd/package.json", "use": "@vercel/next" },
