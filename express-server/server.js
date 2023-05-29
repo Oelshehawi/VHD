@@ -40,7 +40,7 @@ app.use(
 const port = process.env.PORT || 4000;
 
 // Including routes
-require("../express-server/routes/route")(app);
+require("./routes/route.js")(app);
 
 app.listen(port, () => {
   console.log(`Server started on port ${port}`);
