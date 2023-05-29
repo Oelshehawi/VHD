@@ -6,7 +6,7 @@
       { "src": "/api/.*", "dest": "/express-server/routes/route.js" }
     ],
     "builds": [
-      { "src": "/vhd/package.json", "use": "@vercel/next" },
+      { "src": "/vhd", "use": "@vercel/next" },
       { "src": "express-server/server.js", "use": "@vercel/node" }
     ]
   }
