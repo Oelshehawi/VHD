@@ -1,1 +1,1 @@
-export const API_URL = "https://vhd-api-oelshehawi.vercel.app/api"; // Set your default API URL here
+export const API_URL = "https://vhd-gold.vercel.app/api"; // Set your default API URL here
