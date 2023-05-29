@@ -8,7 +8,7 @@ import AddEvent from '../components/AddEvent';
 import axios from 'axios';
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { API_URL } from '../../../shared/config';
+import { API_URL } from '../config';
 
 const populateDaysArray = (currentDateStart, currentDateEnd) => {
   const days = [];
