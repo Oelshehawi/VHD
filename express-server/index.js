@@ -15,7 +15,7 @@ app.use(fileupload());
 
 // Connecting to MongoDB
 mongoose
-  .connect("mongodb://127.0.0.1:27017/VHD", {
+  .connect("mongodb+srv://vercel-admin-user:dYzjvQE4eQ3jwncR@cluster0.dp154aw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority", {
     useNewUrlParser: true,
   })
   .then(() => {
@@ -40,7 +40,7 @@ app.use(
 const port = process.env.PORT || 4000;
 
 // Including routes
-require("../express-server/routes/route")(app);
+require("./routes/route.js")(app);
 
 app.listen(port, () => {
   console.log(`Server started on port ${port}`);

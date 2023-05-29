@@ -7,8 +7,8 @@ import { FaFacebook } from 'react-icons/fa';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/router';
-import axios from "axios";
-import { API_URL } from '../../../shared/config';
+import axios from 'axios';
+import { API_URL } from '../config';
 
 const LoginPage = () => {
   const {
@@ -61,9 +61,9 @@ const LoginPage = () => {
                 className={login.inputLogin}
                 placeholder={name}
               />
-              <span className={login.error}>{errors[id] && (
-                name + ' is required' 
-              )}</span>
+              <span className={login.error}>
+                {errors[id] && name + ' is required'}
+              </span>
             </div>
           ))}
         </div>
