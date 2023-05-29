@@ -6,6 +6,6 @@
     ],
     "builds": [
       { "src": "/express-server/server.js", "use": "@vercel/node" },
-      { "src": "vhd/src/**/*", "use": "@vercel/next" }
+      { "src": "/(.*)", "use": "@vercel/next" }
     ]
   }
