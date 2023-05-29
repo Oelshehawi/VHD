@@ -15,7 +15,7 @@ app.use(fileupload());
 
 // Connecting to MongoDB
 mongoose
-  .connect("mongodb+srv://vercel-admin-user:xkyghym1J16uorVO@cluster1.kov3enq.mongodb.net/myFirstDatabase?retryWrites=true&w=majority", {
+  .connect("mongodb+srv://vercel-admin-user:dYzjvQE4eQ3jwncR@cluster0.dp154aw.mongodb.net/myFirstDatabase?retryWrites=true&w=majority", {
     useNewUrlParser: true,
   })
   .then(() => {
