@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import Table from "./Table";
+import Table from "./table";
 
 const Tabs = ({ filter, onUpdate }) => {
   // Used to set the current working Tab
