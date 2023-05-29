@@ -1,9 +1,9 @@
 {
     "version": 2,
     "routes": [
+       { "src": "/pages", "dest": "/vhd/src/$1" },
     ],
     "builds": [
-      { "src": "/express-server/server.js", "use": "@vercel/node" },
       { "src": "/vhd/package.json", "use": "@vercel/next" }
     ]
   }
