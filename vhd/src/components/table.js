@@ -7,7 +7,7 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
 } from "@tanstack/react-table";
-import DownloadInvoice from "./DownloadInvoice";
+import DownloadInvoice from "./downloadInvoice";
 import ClientModalDetailed from "./ClientModalDetailed";
 import { API_URL } from "../../../shared/config";
 

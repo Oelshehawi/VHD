@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import DownloadInvoice from "./DownloadInvoice";
+import DownloadInvoice from "./downloadInvoice";
 import { FaTrashAlt } from "react-icons/fa";
 import { FaPenSquare } from "react-icons/fa";
 import { Buffer } from "buffer";
