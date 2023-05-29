@@ -1,8 +1,6 @@
 {
     "version": 2,
     "routes": [
-      { "src": "/api/.*", "dest": "/express-server/server.js" },
-      { "src": "/pages", "dest": "/vhd/src/$1" }
     ],
     "builds": [
       { "src": "/express-server/server.js", "use": "@vercel/node" },
