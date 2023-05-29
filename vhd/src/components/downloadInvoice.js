@@ -3,7 +3,7 @@ import axios from "axios";
 import { FaDownload } from "react-icons/fa";
 import { toast, Flip } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { API_URL } from "../../../shared/config";
+import { API_URL } from "../config";
 
 const DownloadInvoice = ({ fileId }) => {
   const showDownloadToast = () => {

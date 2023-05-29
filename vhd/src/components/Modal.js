@@ -2,7 +2,7 @@ import React from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import Axios from "axios";
-import { API_URL } from "../../../shared/config";
+import { API_URL } from "../config";
 
 const Modal = ({ open, onClose, showToast, onUpdate }) => {
   //Setting variables for displaying file name in Attach invoice button

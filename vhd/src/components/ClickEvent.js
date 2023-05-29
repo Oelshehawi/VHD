@@ -5,7 +5,7 @@ import { FaCalendarAlt } from "react-icons/fa";
 import { FaPhoneAlt } from "react-icons/fa";
 import { FaMapMarkerAlt } from "react-icons/fa";
 import axios from "axios";
-import { API_URL } from "../../../shared/config";
+import { API_URL } from "../config";
 
 const ClickEvent = ({ open, onClose, event, onUpdate, showDeleteEventToast, convertTime }) => {
   const [animationClass, setAnimationClass] = useState("growin");
