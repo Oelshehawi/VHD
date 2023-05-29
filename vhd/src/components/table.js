@@ -9,7 +9,7 @@ import {
 } from "@tanstack/react-table";
 import DownloadInvoice from "./downloadInvoice";
 import ClientModalDetailed from "./ClientModalDetailed";
-import { API_URL } from "../../../shared/config";
+import { API_URL } from "../config";
 
 const Table = ({ filter, onUpdate }) => {
   // data fetched from MongoDB

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-import { API_URL } from "../../../shared/config";
+import { API_URL } from "../config";
 
 const AddEvent = ({ open, onClose, onUpdate, showAddEventToast }) => {
   const [jobTitle, setJobTitle] = useState("");

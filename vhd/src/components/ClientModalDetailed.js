@@ -7,7 +7,7 @@ import axios from "axios";
 import Image from "next/image";
 import { ToastContainer, toast, Slide } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { API_URL } from "../../../shared/config";
+import { API_URL } from "../config";
 
 const ClientModalDetailed = ({
   open,
