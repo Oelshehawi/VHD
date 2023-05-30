@@ -1,9 +1,9 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-const session = require("express-session");
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+const session = require('express-session');
 const app = express();
-const fileupload = require("express-fileupload");
+const fileupload = require('express-fileupload');
 
 app.use(cors());
 
@@ -15,32 +15,36 @@ app.use(fileupload());
 
 // Connecting to MongoDB
 mongoose
-  .connect("mongodb+srv://vercel-admin-user:dYzjvQE4eQ3jwncR@cluster0.dp154aw.mongodb.net/VHD?retryWrites=true&w=majority", {
-    useNewUrlParser: true,
-  })
+  .connect(
+    'mongodb+srv://vercel-admin-user:dYzjvQE4eQ3jwncR@cluster0.dp154aw.mongodb.net/VHD?retryWrites=true&w=majority',
+    {
+      useNewUrlParser: true,
+    }
+  )
   .then(() => {
-    console.log("Connected to the database!");
+    console.log('Connected to the database!');
   })
   .catch((err) => {
-    console.log("Cannot connect to the database!", err);
+    console.log('Cannot connect to the database!', err);
     process.exit();
   });
 
 // Session middleware configuration
-app.use(
-  session({
-    secret: "VHD-1990", // Replace with a secure secret key
-    resave: false,
-    saveUninitialized: false,
-    // Add any other session options you need
-  })
-);
+app.use(function (req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, x-client-key, x-client-token, x-client-secret, Authorization'
+  );
+  next();
+});
 
 // Setting port that server will connect to can be accessed at 127.0.0.1:{port}
 const port = process.env.PORT || 5000;
 
 // Including routes
-require("./routes/route.js")(app);
+require('./routes/route.js')(app);
 
 app.listen(port, () => {
   console.log(`Server started on port ${port}`);
