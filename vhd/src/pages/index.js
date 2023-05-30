@@ -30,14 +30,19 @@ const LoginPage = () => {
     },
   ];
 
+  console.log("words")
+
   const onSubmit = async (data) => {
     try {
-      const response = await axios.get(`${API_URL}/users/checkAdmin`);
+      console.log("before response")
+      const response = await axios.post(`${API_URL}/users/checkAdmin`, data);
+      console.log("after response")
       // Check the response data for isAdmin status
       const { isAdmin } = response.data;
+      console.log(response.data)
       if (isAdmin) {
         // Authentication successful, redirect to the dashboard page
-        router.push('/dashboard');
+        router.replace('/dashboard');
       } else {
         // Authentication failed, handle the error
         console.error('User is not an admin');
