@@ -37,7 +37,7 @@ app.use(
 );
 
 // Setting port that server will connect to can be accessed at 127.0.0.1:{port}
-const port = process.env.PORT || 4000;
+const port = process.env.PORT || 5000;
 
 // Including routes
 require("./routes/route.js")(app);
