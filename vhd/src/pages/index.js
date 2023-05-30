@@ -32,7 +32,7 @@ const LoginPage = () => {
 
   const onSubmit = async (data) => {
     try {
-      const response = await axios.post(`${API_URL}/users/checkAdmin`, data);
+      const response = await axios.get(`${API_URL}/users/checkAdmin`);
       // Check the response data for isAdmin status
       const { isAdmin } = response.data;
       if (isAdmin) {
