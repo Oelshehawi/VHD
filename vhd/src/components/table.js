@@ -24,7 +24,10 @@ const Table = ({ filter, onUpdate }) => {
   useEffect(() => {
     axios
       .get(`${API_URL}/clients/`)
-      .then((res) => setClientData(res.data))
+      .then((res) =>{ 
+        setClientData(res.data)
+        console.log("just updated")
+      })
       .catch((err) => console.error(err));
   }, [onUpdate]);
 

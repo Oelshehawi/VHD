@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import Layout from '../components/Layout';
-import Tabs from '../components/Tabs';
+import Table from '../components/table';
 import { FaSearch } from 'react-icons/fa';
 import { FaFileImport } from 'react-icons/fa';
 import Modal from '../components/Modal';
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
 
 const Database = () => {
   const [openModal, setopenModal] = useState(false);
@@ -51,7 +50,18 @@ const Database = () => {
             />
           </div>
         </div>
-        <Tabs filter={filter} onUpdate={() => setOnUpdate(!onUpdate)} />
+        <div className="jobTableContainer">
+          <div className="tabs">
+            <div className="btn-box">
+              <button type="button" className="active-tab">
+                All
+              </button>
+            </div>
+          </div>
+          <div className="show-content">
+            <Table filter={filter} onUpdate={() => setOnUpdate(!onUpdate)} />
+          </div>
+        </div>
       </Layout>
     </>
   );

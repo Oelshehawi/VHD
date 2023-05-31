@@ -13,18 +13,20 @@ import { API_URL } from '../config';
 const populateDaysArray = (currentDateStart, currentDateEnd) => {
   const days = [];
   const tempDate = new Date(currentDateStart);
-  const pdtOptions = {
+  const utcOptions = {
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
-    timeZone: 'America/Los_Angeles',
+    timeZone: 'UTC',
   };
+  
+  
 
   for (let i = 0; tempDate <= currentDateEnd; i++) {
     days.push({
-      fullDate: tempDate.toLocaleString('en-US', pdtOptions),
+      fullDate: tempDate.toLocaleString('en-US', utcOptions),
       dayName: tempDate.toLocaleDateString('en-US', { weekday: 'short' }),
       dayNumber: tempDate.getDate(),
     });
@@ -74,19 +76,19 @@ const Schedule = () => {
     axios
       .get(`${API_URL}/events/`)
       .then((res) => {
-        const pdtOptions = {
+        const utcOptions = {
           year: 'numeric',
           month: '2-digit',
           day: '2-digit',
           hour: '2-digit',
           minute: '2-digit',
-          timeZone: 'America/Los_Angeles',
+          timeZone: 'UTC',
         };
-
+      
         const updatedEvents = res.data.map((event) => {
           const utcDate = new Date(event.time);
-          const pdtDate = utcDate.toLocaleString('en-US', pdtOptions);
-          return { ...event, time: pdtDate };
+          const utcString = utcDate.toLocaleString('en-US', utcOptions);
+          return { ...event, time: utcString };
         });
 
         setEvents(updatedEvents);
@@ -122,8 +124,6 @@ const Schedule = () => {
       transition: Slide,
     });
   };
-
-  // console.log(event.time.split("T")[0])
 
   return (
     <Layout>
