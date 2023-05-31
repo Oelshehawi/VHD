@@ -200,7 +200,7 @@ exports.checkAdminAuthentication = (req, res) => {
         res.status(200).json({ isAdmin: true });
       } else {
         // Authentication failed
-        res.status(401).json({ isAdmin: false });
+        res.status(401).json({ isAdmin: false, error: "User is not an admin." });
       }
     })
     .catch((error) => {
