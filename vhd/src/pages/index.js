@@ -30,27 +30,29 @@ const LoginPage = () => {
     },
   ];
 
-  console.log("words")
+  console.log('words');
 
-  const onSubmit = async (data) => {
-    try {
-      console.log("before response")
-      // const response = await axios.post(`${API_URL}/users/checkAdmin`, data);
-      console.log("after response")
-      // Check the response data for isAdmin status
-      // const { isAdmin } = response.data;
-      // console.log(response.data)
-      // if (isAdmin) {
-        // Authentication successful, redirect to the dashboard page
-        router.replace('/dashboard');
-      // } else {
-      //   // Authentication failed, handle the error
-      //   console.error('User is not an admin');
-      // }
-    } catch (error) {
-      // Handle any errors that occur during the authentication process
-      console.error('Error during authentication:', error);
-    }
+  const onSubmit = (data) => {
+    console.log('before response');
+    axios
+      .post(`${API_URL}/users/checkAdmin`, data)
+      .then((response) => {
+        console.log('after response');
+        // Check the response data for isAdmin status
+        const { isAdmin, error } = response.data;
+        console.log(response.data);
+        if (isAdmin) {
+          // Authentication successful, redirect to the dashboard page
+          router.replace('/dashboard');
+        } else {
+          // Authentication failed, handle the error
+          alert(error);
+        }
+      })
+      .catch((error) => {
+        // Handle any errors that occur during the authentication process
+        console.error('Error during authentication:', error);
+      });
   };
 
   return (

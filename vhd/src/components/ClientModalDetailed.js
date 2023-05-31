@@ -1,13 +1,13 @@
-import React, { useState, useEffect } from "react";
-import DownloadInvoice from "./downloadInvoice";
-import { FaTrashAlt } from "react-icons/fa";
-import { FaPenSquare } from "react-icons/fa";
-import { Buffer } from "buffer";
-import axios from "axios";
-import Image from "next/image";
-import { ToastContainer, toast, Slide } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
-import { API_URL } from "../config";
+import React, { useState, useEffect } from 'react';
+import DownloadInvoice from './downloadInvoice';
+import { FaTrashAlt } from 'react-icons/fa';
+import { FaPenSquare } from 'react-icons/fa';
+import { Buffer } from 'buffer';
+import axios from 'axios';
+import Image from 'next/image';
+import { ToastContainer, toast, Slide } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { API_URL } from '../config';
 
 const ClientModalDetailed = ({
   open,
@@ -18,30 +18,30 @@ const ClientModalDetailed = ({
 }) => {
   const client = clientData.find((obj) => obj._id === rowId);
 
-  const base64Image = Buffer.from(client.invoice.data).toString("base64");
+  const base64Image = Buffer.from(client.invoice.data).toString('base64');
 
   const [disabled, setDisabled] = useState(true);
-  const [name, setName] = useState("");
-  const [jobtitle, setJobtitle] = useState("");
-  const [email, setEmail] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [date, setDate] = useState("");
-  const [price, setPrice] = useState("");
-  const [frequency, setFrequency] = useState("");
-  const [location, setLocation] = useState("");
-  const [notes, setNotes] = useState("");
+  const [name, setName] = useState('');
+  const [jobtitle, setJobtitle] = useState('');
+  const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [date, setDate] = useState('');
+  const [price, setPrice] = useState('');
+  const [frequency, setFrequency] = useState('');
+  const [location, setLocation] = useState('');
+  const [notes, setNotes] = useState('');
 
   const showDeleteToast = () => {
-    toast.success("Client Deleted Successfully!", {
+    toast.success('Client Deleted Successfully!', {
       transition: Slide,
-      position: "bottom-right",
+      position: 'bottom-right',
     });
   };
 
   const showUpdateToast = () => {
-    toast.success("Client Updated Successfully!", {
+    toast.success('Client Updated Successfully!', {
       transition: Slide,
-      position: "bottom-right",
+      position: 'bottom-right',
     });
   };
 
@@ -58,21 +58,21 @@ const ClientModalDetailed = ({
   };
 
   const handleChange = (e) => {
-    e.target.setAttribute("type", "date");
+    e.target.setAttribute('type', 'date');
   };
 
   const handleDelete = () => {
     axios
       .delete(`${API_URL}/clients/${client._id}`)
       .then((response) => {
-        console.log("Record deleted successfully");
+        console.log('Record deleted successfully');
+        onUpdate();
+        onClose();
+        showDeleteToast();
       })
       .catch((error) => {
-        console.log("Error deleting record:", error);
+        console.log('Error deleting record:', error);
       });
-    onClose();
-    showDeleteToast();
-    onUpdate();
   };
 
   const handleUpdate = () => {
@@ -89,69 +89,68 @@ const ClientModalDetailed = ({
         notes: notes,
       })
       .then((response) => {
-        console.log("Record Updated successfully");
-        console.log(response.data);
+        console.log('Record Updated successfully');
+        onClose();
+        showUpdateToast();
+        onUpdate();
       })
       .catch((error) => {
-        console.log("Error Updating record:", error);
+        console.log('Error Updating record:', error);
       });
-    onClose();
-    showUpdateToast();
-    onUpdate()
   };
 
   const inputFields = [
     {
       name: "Client's Name",
-      type: "text",
+      type: 'text',
       placeholder: client.clientName,
       setter: setName,
     },
     {
-      name: "jobTitle",
-      type: "text",
+      name: 'jobTitle',
+      type: 'text',
       placeholder: client.jobTitle,
       setter: setJobtitle,
     },
     {
-      name: "email",
-      type: "email",
+      name: 'email',
+      type: 'email',
       placeholder: client.email,
       setter: setEmail,
     },
     {
-      name: "phoneNumber",
-      type: "tel",
+      name: 'phoneNumber',
+      type: 'tel',
       placeholder: client.phoneNumber,
       setter: setPhoneNumber,
     },
     {
-      name: "date",
-      type: "text",
-      placeholder: client.date ? client.date.split("T")[0] : null,
+      name: 'date',
+      type: 'text',
+      placeholder: client.date ? client.date.split('T')[0] : null,
       setter: setDate,
     },
     {
-      name: "location",
-      type: "text",
+      name: 'location',
+      type: 'text',
       placeholder: client.location,
       setter: setLocation,
     },
     {
-      name: "price",
-      type: "number",
+      name: 'price',
+      type: 'number',
       placeholder: client.price,
       setter: setPrice,
     },
     {
-      name: "frequency",
-      type: "number",
+      name: 'frequency',
+      type: 'number',
       placeholder: client.frequency,
       setter: setFrequency,
     },
     {
-      name: "notes",
-      type: "textarea",
+      name: 'notes',
+      type: 'textarea',
       placeholder: client.notes,
       setter: setNotes,
     },
@@ -196,21 +195,29 @@ const ClientModalDetailed = ({
           <div className="modal-content-details">
             {inputFields.map(({ name, placeholder, type, setter }) => (
               <div className="modal-content-input-container" key={name}>
-                {type === "textarea" ? (
+                {type === 'textarea' ? (
                   <textarea
                     className="modal-content-input"
                     name={name}
                     type={type}
-                    placeholder={placeholder !== "" && placeholder !== null ? placeholder : name}
+                    placeholder={
+                      placeholder !== '' && placeholder !== null
+                        ? placeholder
+                        : name
+                    }
                     disabled={disabled}
                     onChange={(e) => setter(e.target.value)}
                   />
-                ) : name === "date" ? (
+                ) : name === 'date' ? (
                   <input
                     className="modal-content-input"
                     name={name}
                     type={type}
-                    placeholder={placeholder !== "" && placeholder !== null ? placeholder : name}
+                    placeholder={
+                      placeholder !== '' && placeholder !== null
+                        ? placeholder
+                        : name
+                    }
                     disabled={disabled}
                     onClick={handleChange}
                     onChange={(e) => setter(e.target.value)}
@@ -220,7 +227,11 @@ const ClientModalDetailed = ({
                     className="modal-content-input"
                     name={name}
                     type={type}
-                    placeholder={placeholder !== "" && placeholder !== null ? placeholder : name}
+                    placeholder={
+                      placeholder !== '' && placeholder !== null
+                        ? placeholder
+                        : name
+                    }
                     disabled={disabled}
                     onChange={(e) => setter(e.target.value)}
                   />
@@ -248,7 +259,7 @@ const ClientModalDetailed = ({
             onClick={handleUpdate}
             disabled={disabled}
           >
-            Update entry{" "}
+            Update entry{' '}
           </button>
           <DownloadInvoice fileId={client._id} />
         </div>

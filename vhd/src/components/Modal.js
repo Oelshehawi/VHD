@@ -1,12 +1,12 @@
-import React from "react";
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import Axios from "axios";
-import { API_URL } from "../config";
+import React from 'react';
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import Axios from 'axios';
+import { API_URL } from '../config';
 
 const Modal = ({ open, onClose, showToast, onUpdate }) => {
   //Setting variables for displaying file name in Attach invoice button
-  const [file, setfile] = useState("Attach Invoice");
+  const [file, setfile] = useState('Attach Invoice');
 
   //Assigning empty input to clear form
   const emptyInput = {};
@@ -21,21 +21,21 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
 
   // Setting input field properties
   const inputFields = [
-    { name: "clientName", type: "text", placeholder: "Client's Name" },
-    { name: "jobTitle", type: "text", placeholder: "Job Title" },
-    { name: "email", type: "email", placeholder: "Email" },
-    { name: "phoneNumber", type: "tel", placeholder: "Phone Number" },
-    { name: "date", type: "date", placeholder: "Date" },
-    { name: "location", type: "text", placeholder: "Location" },
+    { name: 'clientName', type: 'text', placeholder: "Client's Name" },
+    { name: 'jobTitle', type: 'text', placeholder: 'Job Title' },
+    { name: 'email', type: 'email', placeholder: 'Email' },
+    { name: 'phoneNumber', type: 'tel', placeholder: 'Phone Number' },
+    { name: 'date', type: 'date', placeholder: 'Date' },
+    { name: 'location', type: 'text', placeholder: 'Location' },
     {
-      name: "price",
-      type: "number",
-      placeholder: "Price",
-      step: "any",
-      min: "1",
+      name: 'price',
+      type: 'number',
+      placeholder: 'Price',
+      step: 'any',
+      min: '1',
     },
-    { name: "frequency", type: "number", placeholder: "Frequency per Year" },
-    { name: "notes", type: "textarea", placeholder: "Notes" },
+    { name: 'frequency', type: 'number', placeholder: 'Frequency per Year' },
+    { name: 'notes', type: 'textarea', placeholder: 'Notes' },
   ];
 
   //Function that handles form submit
@@ -60,21 +60,19 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       },
       {
         headers: {
-          "Content-Type": "multipart/form-data",
+          'Content-Type': 'multipart/form-data',
         },
       }
     ).then((response) => {
-      console.log(response);
+      //Close Modal
+      onUpdate();
+      onClose();
+      showToast();
     });
 
     //Empty form input
     reset({ ...emptyInput });
-    setfile("Attach Invoice");
-
-    //Close Modal
-    onClose();
-    showToast();
-    onUpdate()
+    setfile('Attach Invoice');
   };
 
   if (!open) return null;
@@ -110,7 +108,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
         >
           {inputFields.map(({ name, type, placeholder, ...rest }) => (
             <div className="modal-content-input-container" key={name}>
-              {type === "textarea" ? (
+              {type === 'textarea' ? (
                 <textarea
                   {...register(name)}
                   className="modal-content-input"
@@ -135,7 +133,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
           <input
             type="file"
             name="invoice"
-            {...register("invoice", {
+            {...register('invoice', {
               onChange: (e) => {
                 setfile(e.target.files[0].name);
               },
@@ -144,7 +142,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
             id="invoice"
           />
           {errors.invoice && (
-            <p style={{ color: "red", padding: "5px" }}>Invoice is required </p>
+            <p style={{ color: 'red', padding: '5px' }}>Invoice is required </p>
           )}
         </form>
         <div className="modalFooter">

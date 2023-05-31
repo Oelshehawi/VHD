@@ -8,6 +8,7 @@ const AddEvent = ({ open, onClose, onUpdate, showAddEventToast }) => {
   const [time, setTime] = useState("");
   const [number, setNumber] = useState("");
   const [animationClass, setAnimationClass] = useState("growin2");
+  const [formattedDate, setFormattedDate] = useState('');
 
   const inputs = [
     {
@@ -45,7 +46,7 @@ const AddEvent = ({ open, onClose, onUpdate, showAddEventToast }) => {
       const eventData = {
         jobTitle: jobTitle,
         location: location,
-        time: time,
+        time: time, // Use the formatted date in PST
         number: number,
       };
       axios
@@ -53,7 +54,6 @@ const AddEvent = ({ open, onClose, onUpdate, showAddEventToast }) => {
         .then((response) => {
           onUpdate();
           resetForm();
-          console.log(response);
         })
         .catch((error) => {
           console.error(error);
