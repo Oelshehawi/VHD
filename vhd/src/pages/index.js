@@ -51,7 +51,19 @@ const LoginPage = () => {
       })
       .catch((error) => {
         // Handle any errors that occur during the authentication process
-        console.error('Error during authentication:', error);
+        if (error.response) {
+          // The request was made and the server responded with an error status
+          console.error('Error during authentication:', error.response.data);
+          alert(error.response.data.error);
+        } else if (error.request) {
+          // The request was made but no response was received
+          console.error('No response received:', error.request);
+          alert('No response received from the server.');
+        } else {
+          // Something happened in setting up the request that triggered an Error
+          console.error('Error setting up the request:', error.message);
+          alert('Error setting up the request.');
+        }
       });
   };
 

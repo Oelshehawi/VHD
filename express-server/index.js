@@ -4,9 +4,6 @@ const cors = require('cors');
 const session = require('express-session');
 const app = express();
 const fileupload = require('express-fileupload');
-
-app.use(cors());
-
 // parse requests of content-type - application/json
 app.use(express.json());
 
@@ -39,6 +36,10 @@ app.use(function (req, res, next) {
   );
   next();
 });
+
+
+app.use(cors());
+app.options('*', cors());
 
 // Setting port that server will connect to can be accessed at 127.0.0.1:{port}
 const port = process.env.PORT || 5000;
