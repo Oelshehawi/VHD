@@ -26,20 +26,17 @@ mongoose
     process.exit();
   });
 
-// Session middleware configuration
-app.use(function (req, res, next) {
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT');
-  res.header(
-    'Access-Control-Allow-Headers',
-    'Origin, X-Requested-With, Content-Type, Accept, x-client-key, x-client-token, x-client-secret, Authorization'
-  );
-  next();
-});
-
-
-app.use(cors());
-app.options('*', cors());
+// Set allowed origin for CORS
+const allowedOrigins = ['https://vhd-99rk.vercel.app'];
+app.use(cors({
+  origin: function (origin, callback) {
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
+}));
 
 // Setting port that server will connect to can be accessed at 127.0.0.1:{port}
 const port = process.env.PORT || 5000;
