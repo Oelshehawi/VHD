@@ -4,6 +4,17 @@ const cors = require('cors');
 const session = require('express-session');
 const app = express();
 const fileupload = require('express-fileupload');
+
+// Session middleware configuration
+app.use(function (req, res, next) {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET,HEAD,OPTIONS,POST,PUT');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, x-client-key, x-client-token, x-client-secret, Authorization'
+  );
+  next();
+});
 // parse requests of content-type - application/json
 app.use(express.json());
 
@@ -25,18 +36,6 @@ mongoose
     console.log('Cannot connect to the database!', err);
     process.exit();
   });
-
-// Set allowed origin for CORS
-const allowedOrigins = ['https://vhd-99rk.vercel.app'];
-app.use(cors({
-  origin: function (origin, callback) {
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  }
-}));
 
 // Setting port that server will connect to can be accessed at 127.0.0.1:{port}
 const port = process.env.PORT || 5000;
