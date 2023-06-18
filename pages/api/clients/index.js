@@ -1,7 +1,8 @@
 import connectMongo from '../../../lib/connect';
 import { Client } from '../../../models/reactDataSchema';
 import { IncomingForm } from 'formidable';
-import { promisify } from 'util';
+import { tmpdir } from 'os';
+import { join } from 'path';
 
 export const config = {
   api: {
@@ -28,20 +29,14 @@ export default async function handler(req, res) {
       });
     }
   } else if (req.method === 'POST') {
-    const form = new IncomingForm();
+    const form = new IncomingForm({ uploadDir: tmpdir() });
 
     try {
       const { fields, files } = await new Promise((resolve, reject) => {
         form.parse(req, (err, fields, files) => {
           if (err) {
-            console.log('there was an error in formparse')
-            console.log(fields)
-            console.log(files)
             reject(err);
           } else {
-            console.log('there was no error in formparse')
-            console.log(fields)
-            console.log(files)
             resolve({ fields, files });
           }
         });
@@ -85,8 +80,18 @@ export default async function handler(req, res) {
 
       // Get the binary data of the invoice file
       if (invoiceFile) {
-        console.log(invoiceFile)
-        binaryData = await fs.promises.readFile(invoiceFile[0].filepath);
+        console.log(form.uploadDir)
+        console.log(invoiceFile[0])
+        const tempFilePath = join(tmpdir(), invoiceFile[0].originalFilename);
+
+        // Move the uploaded file to the temporary directory
+        fs.renameSync(invoiceFile[0].filepath, tempFilePath);
+      
+        // Read the binary data from the temporary file
+        binaryData = fs.readFileSync(tempFilePath);
+      
+        // Remove the temporary file
+        fs.unlinkSync(tempFilePath);
       }
 
       const formData = new Client({
@@ -101,8 +106,8 @@ export default async function handler(req, res) {
         notes,
         invoice: {
           data: invoiceFile ? binaryData : null,
-          contentType: invoiceFile ? invoiceFile[0].mimetype : null,
-          filename: invoiceFile ? invoiceFile[0].originalFilename : null,
+          contentType: invoiceFile ? invoiceFile.type : null,
+          filename: invoiceFile ? invoiceFile.name : null,
         },
       });
 
