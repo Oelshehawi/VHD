@@ -5,9 +5,9 @@ import modal from './styles/modal.module.css';
 
 const Modal = ({ open, onClose, showToast, onUpdate }) => {
   const [file, setFile] = useState('Attach Invoice');
-  const [invoiceData, setInvoiceData] = useState(null);
-  const [invoiceType, setInvoiceType] = useState(null);
-  const [invoiceName, setInvoiceName] = useState(null);
+  // const [invoiceData, setInvoiceData] = useState(null);
+  // const [invoiceType, setInvoiceType] = useState(null);
+  // const [invoiceName, setInvoiceName] = useState(null);
 
   const emptyInput = {};
 
@@ -80,15 +80,15 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       formData.append('location', values.location);
       formData.append('notes', values.notes);
 
-      if (invoiceData) {
-        formData.append('invoice', invoiceData); // Pass the invoice data
-        formData.append('invoiceType', invoiceType); // Pass the invoice type
-        formData.append('invoiceName', invoiceName); // Pass the invoice name
-      } else {
-        formData.append('invoice', null); // Pass null if no invoice data is available
-        formData.append('invoiceType', null); // Pass null if no invoice type is available
-        formData.append('invoiceName', null); // Pass null if no invoice name is available
-      }
+      // if (invoiceData) {
+      //   formData.append('invoice', invoiceData); // Pass the invoice data
+      //   formData.append('invoiceType', invoiceType); // Pass the invoice type
+      //   formData.append('invoiceName', invoiceName); // Pass the invoice name
+      // } else {
+      //   formData.append('invoice', null); // Pass null if no invoice data is available
+      //   formData.append('invoiceType', null); // Pass null if no invoice type is available
+      //   formData.append('invoiceName', null); // Pass null if no invoice name is available
+      // }
       // Send data using Axios
       await Axios.post(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, formData);
 
@@ -109,17 +109,17 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
     const selectedFile = event.target.files[0];
     if (selectedFile) {
       setFile(selectedFile.name);
-      setInvoiceType(selectedFile.type);
-      setInvoiceName(selectedFile.name);
+      // setInvoiceType(selectedFile.type);
+      // setInvoiceName(selectedFile.name);
 
-      const fileReader = new FileReader();
+      // const fileReader = new FileReader();
 
-      fileReader.onload = (e) => {
-        const base64Data = e.target.result.split(',')[1]; // Extract base64 data from the result
-        setInvoiceData(base64Data);
-      };
+      // fileReader.onload = (e) => {
+      //   const base64Data = e.target.result.split(',')[1]; // Extract base64 data from the result
+      //   setInvoiceData(base64Data);
+      // };
 
-      fileReader.readAsDataURL(selectedFile);
+      // fileReader.readAsDataURL(selectedFile);
     }
   };
 

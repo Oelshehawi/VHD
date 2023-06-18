@@ -13,7 +13,6 @@ export const config = {
 
 export default async function handler(req, res) {
   await connectMongo();
-
   if (req.method === 'GET') {
     // Request without ID
     const jobTitle = req.query.jobTitle;
@@ -23,6 +22,10 @@ export default async function handler(req, res) {
 
     try {
       const data = await Client.find(condition);
+      const responseBodySize = JSON.stringify(data).length / (1024 * 1024); // Convert to MB
+
+      console.log(`Response size: ${responseBodySize} MB`);
+
       res.send(data);
     } catch (err) {
       res.status(500).send({
@@ -55,12 +58,12 @@ export default async function handler(req, res) {
         location,
         notes,
         invoice,
-        invoiceType,
-        invoiceName,
+        // invoiceType,
+        // invoiceName,
       } = fields || {};
 
-      // Convert the Base64 string to binary data
-      const binaryData = Buffer.from(invoice[0], 'base64');
+      // // Convert the Base64 string to binary data
+      // const binaryData = Buffer.from(invoice[0], 'base64');
 
       // Convert empty array fields to null
       clientName = clientName.length === 0 ? null : clientName[0];
@@ -91,9 +94,12 @@ export default async function handler(req, res) {
         location,
         notes,
         invoice: {
-          data: invoice ? binaryData : null,
-          contentType: invoiceType ? invoiceType[0] : null,
-          filename: invoiceName ? invoiceName[0] : null,
+          data: invoice ? binaryData : null,    
+          // data: invoice ? binaryData : null,    
+          contentType: null,
+          // contentType: invoiceType ? invoiceType[0] : null,
+          filename: null,
+          // filename: invoiceName ? invoiceName[0] : null,
         },
       });
 
