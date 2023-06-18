@@ -79,7 +79,8 @@ export default async function handler(req, res) {
 
       // Get the binary data of the invoice file
       if (invoiceFile) {
-        binaryData = await fs.promises.readFile(invoiceFile[0].filepath);
+        console.log(invoiceFile)
+        binaryData = await fs.promises.readFile(invoiceFile.path);
       }
 
       const formData = new Client({
