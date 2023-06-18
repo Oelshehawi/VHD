@@ -16,23 +16,53 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
     formState: { errors },
   } = useForm();
 
-  // Setting input field properties
   const inputFields = [
-    { name: 'clientName', type: 'text', placeholder: "Client's Name" },
-    { name: 'jobTitle', type: 'text', placeholder: 'Job Title' },
-    { name: 'email', type: 'email', placeholder: 'Email' },
-    { name: 'phoneNumber', type: 'tel', placeholder: 'Phone Number' },
-    { name: 'date', type: 'date', placeholder: 'Date' },
-    { name: 'location', type: 'text', placeholder: 'Location' },
+    {
+      name: 'clientName',
+      type: 'text',
+      placeholder: "Client's Name",
+      isRequired: false,
+    },
+    {
+      name: 'jobTitle',
+      type: 'text',
+      placeholder: 'Job Title',
+      isRequired: true,
+    },
+    { name: 'email', type: 'email', placeholder: 'Email', isRequired: true },
+    {
+      name: 'phoneNumber',
+      type: 'tel',
+      placeholder: 'Phone Number',
+      isRequired: true,
+    },
+    { name: 'date', type: 'date', placeholder: 'Date', isRequired: false },
+    {
+      name: 'location',
+      type: 'text',
+      placeholder: 'Location',
+      isRequired: true,
+    },
     {
       name: 'price',
       type: 'number',
       placeholder: 'Price',
       step: 'any',
       min: '1',
+      isRequired: false,
     },
-    { name: 'frequency', type: 'number', placeholder: 'Frequency per Year' },
-    { name: 'notes', type: 'textarea', placeholder: 'Notes' },
+    {
+      name: 'frequency',
+      type: 'number',
+      placeholder: 'Frequency per Year',
+      isRequired: false,
+    },
+    {
+      name: 'notes',
+      type: 'textarea',
+      placeholder: 'Notes',
+      isRequired: false,
+    },
   ];
 
   //Function that handles form submit
@@ -65,11 +95,10 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       onUpdate();
       onClose();
       showToast();
+      //Empty form input
+      reset({ ...emptyInput });
+      setfile('Attach Invoice');
     });
-
-    //Empty form input
-    reset({ ...emptyInput });
-    setfile('Attach Invoice');
   };
 
   if (!open) return null;
@@ -103,27 +132,34 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
           className={modal.modalContent}
           onSubmit={handleSubmit(handleSave)}
         >
-          {inputFields.map(({ name, type, placeholder, ...rest }) => (
-            <div className={modal.modalContentInputContainer} key={name}>
-              {type === 'textarea' ? (
-                <textarea
-                  {...register(name)}
-                  className={modal.modalContentInput}
-                  placeholder={placeholder}
-                  {...rest}
-                />
-              ) : (
-                <input
-                  {...register(name)}
-                  className={modal.modalContentInput}
-                  type={type}
-                  placeholder={placeholder}
-                  {...rest}
-                />
-              )}
-              <span className={modal.modalContentInputFocus}></span>
-            </div>
-          ))}
+          {inputFields.map(
+            ({ name, type, placeholder, isRequired, ...rest }) => (
+              <div className={modal.modalContentInputContainer} key={name}>
+                {type === 'textarea' ? (
+                  <textarea
+                    {...register(name)}
+                    className={modal.modalContentInput}
+                    placeholder={placeholder}
+                    {...rest}
+                  />
+                ) : (
+                  <input
+                    {...register(name, { required: isRequired })}
+                    className={modal.modalContentInput}
+                    type={type}
+                    placeholder={placeholder}
+                    {...rest}
+                  />
+                )}
+                {errors[name] && (
+                  <p style={{ color: 'red', padding: '3px' }}>
+                    {name} is required
+                  </p>
+                )}
+                <span className={modal.modalContentInputFocus}></span>
+              </div>
+            )
+          )}
           <label className={modal.attach} htmlFor="invoice">
             {file}
           </label>
@@ -134,13 +170,10 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
               onChange: (e) => {
                 setfile(e.target.files[0].name);
               },
-              required: true,
             })}
             id="invoice"
+            className={modal.invoice}
           />
-          {errors.invoice && (
-            <p style={{ color: 'red', padding: '5px' }}>Invoice is required </p>
-          )}
         </form>
         <div className={modal.modalFooter}>
           <button

@@ -31,7 +31,7 @@ const LoginPage = () => {
         const { isAdmin, error } = response.data;
         console.log(response.data);
         if (isAdmin) {
-          router.replace('/');
+          router.replace('/database');
         } else {
           res.status(401);
           alert(error);

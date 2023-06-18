@@ -8,7 +8,6 @@
 .jobTitle{
     font-size: large;
     font-weight: bolder;
-    background-color: red;
 }
 
 .dateValue{
@@ -20,7 +19,7 @@
     border-collapse: collapse;
     font-size: 14px;
     overflow-y: scroll;  
-    background-color: rebeccapurple;
+    background-color: transparent;
 }
   
 .tbody{
