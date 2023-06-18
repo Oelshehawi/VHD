@@ -7,11 +7,7 @@ import { User } from '../../../models/reactDataSchema';
  */
 
 export default async function Login(req, res) {
-  console.log('CONNECTING TO MONGO');
-
   await connectMongo();
-
-  console.log('CONNECTED TO MONGO');
 
   try {
     const adminUser = await User.collection.findOne({

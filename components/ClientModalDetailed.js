@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import DownloadInvoice from './DownloadInvoice';
 import { FaTrashAlt } from 'react-icons/fa';
 import { FaPenSquare } from 'react-icons/fa';
@@ -7,7 +7,7 @@ import axios from 'axios';
 import Image from 'next/image';
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import modalDetailed from "./styles/modalDetailed.module.css"
+import modalDetailed from './styles/modalDetailed.module.css';
 
 const ClientModalDetailed = ({
   open,
@@ -18,7 +18,11 @@ const ClientModalDetailed = ({
 }) => {
   const client = clientData.find((obj) => obj._id === rowId);
 
-  const base64Image = Buffer.from(client.invoice.data).toString('base64');
+  let base64Image = '';
+
+  if (client.invoice.data) {
+    base64Image = Buffer.from(client.invoice.data).toString('base64');
+  }
 
   const [disabled, setDisabled] = useState(true);
   const [name, setName] = useState('');
@@ -185,7 +189,11 @@ const ClientModalDetailed = ({
         <div className={modalDetailed.modalContent}>
           <div className={modalDetailed.modalContentInvoice}>
             <Image
-              src={`data:image/png;base64,${base64Image}`}
+              src={
+                base64Image
+                  ? `data:image/png;base64,${base64Image}`
+                  : '/images.png'
+              }
               alt=""
               width={500}
               height={500}
@@ -246,7 +254,7 @@ const ClientModalDetailed = ({
           </div>
         </div>
         <div className={modalDetailed.modalFooter}>
-          <div >
+          <div>
             <FaTrashAlt
               className={modalDetailed.iconHover}
               onClick={handleDelete}

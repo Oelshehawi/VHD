@@ -164,29 +164,18 @@
     position: relative;
 }
 
-/* input[type="text"],
-input[type="date"],
-input[type="tel"],
-input[type="email"],
-input[type="number"],
-textarea
-{
-    font: 15px/24px "Lato", Arial, sans-serif; 
-    font-weight: bolder;
-    width: 100%;
-    box-sizing: border-box; 
-    letter-spacing: 1px;
-} */
-
 .modalContentInput{
     border: 0; 
     padding: 7px 15px; 
     border: 1px solid #ccc; 
     position: relative; 
     background: transparent;
+    font: 15px/24px "Lato", Arial, sans-serif; 
+    font-weight: bolder;
+    width: 100%;
+    box-sizing: border-box; 
+    letter-spacing: 1px;
 }
-
-/* :focus{outline: none;} */
 
 .closeBtn{
     position: fixed;
