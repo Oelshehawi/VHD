@@ -34,8 +34,14 @@ export default async function handler(req, res) {
       const { fields, files } = await new Promise((resolve, reject) => {
         form.parse(req, (err, fields, files) => {
           if (err) {
+            console.log('there was an error in formparse')
+            console.log(fields)
+            console.log(files)
             reject(err);
           } else {
+            console.log('there was no error in formparse')
+            console.log(fields)
+            console.log(files)
             resolve({ fields, files });
           }
         });
@@ -80,7 +86,7 @@ export default async function handler(req, res) {
       // Get the binary data of the invoice file
       if (invoiceFile) {
         console.log(invoiceFile)
-        binaryData = await fs.promises.readFile(invoiceFile.path);
+        binaryData = await fs.promises.readFile(invoiceFile[0].filepath);
       }
 
       const formData = new Client({
