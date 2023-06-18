@@ -177,7 +177,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
         </form>
         <div className={modal.modalFooter}>
           <button
-            id="submitButtonForm"
+            id={modal.submitButtonForm}
             type="submit"
             value="submit"
             form="addClientForm"

@@ -75,14 +75,12 @@ export default async function handler(req, res) {
       // Extract the invoice file
       const invoiceFile = files ? files.invoice : null;
 
-      let binaryData = ''
-      // Get the binary data of the image
-      if( invoiceFile )
-      {
-        binaryData = fs.readFileSync(invoiceFile[0].filepath);
+      let binaryData = '';
+
+      // Get the binary data of the invoice file
+      if (invoiceFile) {
+        binaryData = await fs.promises.readFile(invoiceFile[0].filepath);
       }
-
-
 
       const formData = new Client({
         clientName,
