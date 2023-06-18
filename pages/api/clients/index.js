@@ -80,8 +80,6 @@ export default async function handler(req, res) {
 
       // Get the binary data of the invoice file
       if (invoiceFile) {
-        console.log(form.uploadDir)
-        console.log(invoiceFile[0])
         const tempFilePath = join(tmpdir(), invoiceFile[0].originalFilename);
 
         // Move the uploaded file to the temporary directory
@@ -106,8 +104,8 @@ export default async function handler(req, res) {
         notes,
         invoice: {
           data: invoiceFile ? binaryData : null,
-          contentType: invoiceFile ? invoiceFile.type : null,
-          filename: invoiceFile ? invoiceFile.name : null,
+          contentType: invoiceFile ? invoiceFile[0].mimetype : null,
+          filename: invoiceFile ? invoiceFile[0].originalFilename : null,
         },
       });
 
