@@ -7,6 +7,7 @@ import { join } from 'path';
 export const config = {
   api: {
     bodyParser: false,
+    responseLimit: false,
   },
 };
 
