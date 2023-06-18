@@ -29,15 +29,15 @@ export default async function handler(req, res) {
       });
     }
   } else if (req.method === 'POST') {
-    const form = new IncomingForm({ uploadDir: tmpdir() });
+    const form = new IncomingForm();
 
     try {
-      const { fields, files } = await new Promise((resolve, reject) => {
-        form.parse(req, (err, fields, files) => {
+      const { fields } = await new Promise((resolve, reject) => {
+        form.parse(req, (err, fields) => {
           if (err) {
             reject(err);
           } else {
-            resolve({ fields, files });
+            resolve({ fields });
           }
         });
       });
@@ -53,7 +53,13 @@ export default async function handler(req, res) {
         frequency,
         location,
         notes,
+        invoice,
+        invoiceType,
+        invoiceName,
       } = fields || {};
+
+      // Convert the Base64 string to binary data
+      const binaryData = Buffer.from(invoice[0], 'base64');
 
       // Convert empty array fields to null
       clientName = clientName.length === 0 ? null : clientName[0];
@@ -73,45 +79,6 @@ export default async function handler(req, res) {
       location = location.length === 0 ? null : location[0];
       notes = notes.length === 0 ? null : notes[0];
 
-      // Extract the invoice file
-      const invoiceFile = files ? files.invoice : null;
-
-      let binaryData = '';
-
-      if (invoiceFile) {
-        const tempFilePath = join(tmpdir(), invoiceFile[0].originalFilename);
-      
-        // Move the uploaded file to the temporary directory
-        try {
-          fs.renameSync(invoiceFile[0].filepath, tempFilePath);
-        } catch (error) {
-          console.log('Error moving uploaded file:', error);
-          res.status(500).send({
-            message: 'Error moving uploaded file.',
-          });
-          return;
-        }
-      
-        // Read the binary data from the temporary file
-        try {
-          binaryData = fs.readFileSync(tempFilePath);
-          console.log('Invoice file contents:', binaryData);
-        } catch (error) {
-          console.log('Error reading invoice file:', error);
-          res.status(500).send({
-            message: 'Error reading invoice file.',
-          });
-          return;
-        }
-      
-        // Remove the temporary file
-        try {
-          fs.unlinkSync(tempFilePath);
-        } catch (error) {
-          console.log('Error removing temporary file:', error);
-        }
-      }
-
       const formData = new Client({
         clientName,
         jobTitle,
@@ -123,9 +90,9 @@ export default async function handler(req, res) {
         location,
         notes,
         invoice: {
-          data: invoiceFile ? binaryData : null,
-          contentType: invoiceFile ? invoiceFile[0].mimetype : null,
-          filename: invoiceFile ? invoiceFile[0].originalFilename : null,
+          data: invoice ? binaryData : null,
+          contentType: invoiceType ? invoiceType[0] : null,
+          filename: invoiceName ? invoiceName[0] : null,
         },
       });
 

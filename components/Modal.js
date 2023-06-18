@@ -4,8 +4,10 @@ import Axios from 'axios';
 import modal from './styles/modal.module.css';
 
 const Modal = ({ open, onClose, showToast, onUpdate }) => {
-  //Setting variables for displaying file name in Attach invoice button
-  const [file, setfile] = useState('Attach Invoice');
+  const [file, setFile] = useState('Attach Invoice');
+  const [invoiceData, setInvoiceData] = useState(null);
+  const [invoiceType, setInvoiceType] = useState(null);
+  const [invoiceName, setInvoiceName] = useState(null);
 
   const emptyInput = {};
 
@@ -65,40 +67,60 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
     },
   ];
 
-  //Function that handles form submit
-  const handleSave = (values) => {
-    // Print out form values
-    console.log({ values });
+  const handleSave = async (values) => {
+    try {
+      const formData = new FormData();
+      formData.append('clientName', values.clientName);
+      formData.append('jobTitle', values.jobTitle);
+      formData.append('email', values.email);
+      formData.append('phoneNumber', values.phoneNumber);
+      formData.append('date', values.date);
+      formData.append('price', values.price);
+      formData.append('frequency', values.frequency);
+      formData.append('location', values.location);
+      formData.append('notes', values.notes);
 
-    //Send data using Axios
-    Axios.post(
-      `${process.env.NEXT_PUBLIC_API_URL}/clients/`,
-      {
-        clientName: values.clientName,
-        jobTitle: values.jobTitle,
-        email: values.email,
-        phoneNumber: values.phoneNumber,
-        date: values.date,
-        price: values.price,
-        frequency: values.frequency,
-        location: values.location,
-        notes: values.notes,
-        invoice: values.invoice[0],
-      },
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      if (invoiceData) {
+        formData.append('invoice', invoiceData); // Pass the invoice data
+        formData.append('invoiceType', invoiceType); // Pass the invoice type
+        formData.append('invoiceName', invoiceName); // Pass the invoice name
+      } else {
+        formData.append('invoice', null); // Pass null if no invoice data is available
+        formData.append('invoiceType', null); // Pass null if no invoice type is available
+        formData.append('invoiceName', null); // Pass null if no invoice name is available
       }
-    ).then((response) => {
-      //Close Modal
+      // Send data using Axios
+      await Axios.post(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, formData);
+
       onUpdate();
       onClose();
       showToast();
-      //Empty form input
       reset({ ...emptyInput });
-      setfile('Attach Invoice');
-    });
+      setFile('Attach Invoice');
+      setInvoiceData(null);
+      setInvoiceType(null);
+    } catch (error) {
+      // Handle the error
+      console.log(error);
+    }
+  };
+
+  const handleFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile) {
+      setFile(selectedFile.name);
+      setInvoiceType(selectedFile.type);
+      setInvoiceName(selectedFile.name);
+
+      const fileReader = new FileReader();
+
+      fileReader.onload = (e) => {
+        const base64Data = e.target.result.split(',')[1]; // Extract base64 data from the result
+        setInvoiceData(base64Data);
+      };
+
+      fileReader.readAsDataURL(selectedFile);
+    }
   };
 
   if (!open) return null;
@@ -166,13 +188,13 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
           <input
             type="file"
             name="invoice"
-            {...register('invoice', {
-              onChange: (e) => {
-                setfile(e.target.files[0].name);
-              },
-            })}
+            {...register('invoice')}
             id="invoice"
             className={modal.invoice}
+            onChange={(e) => {
+              handleFileChange(e);
+              setFile(e.target.files[0].name);
+            }}
           />
         </form>
         <div className={modal.modalFooter}>
