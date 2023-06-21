@@ -32,11 +32,11 @@ const Table = ({ filter, onUpdate }) => {
 
   const columns = [
     columnHelper.accessor('jobTitle', {
-      size: 5500,
+      header: 'Job Title',
       cell: (info) => <div className={styles.jobTitle}>{info.getValue()}</div>,
     }),
     columnHelper.accessor('date', {
-      size: 500,
+      header: 'Date',
       cell: (info) => {
         const value = info.getValue();
         if (value) {
@@ -45,7 +45,7 @@ const Table = ({ filter, onUpdate }) => {
       },
     }),
     columnHelper.accessor('phoneNumber', {
-      size: 500,
+      header: 'Phone Number',
       cell: (info) => {
         return <div className={styles.phone}>{info.getValue()}</div>;
       },
@@ -75,7 +75,7 @@ const Table = ({ filter, onUpdate }) => {
   return (
     <>
       <table className={styles.table}>
-        <thead>
+        <thead className={styles.thead}>
           {/* Looping through Header Groups and choosing what react should render*/}
           {tableInstance.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className={styles.tr}>
@@ -104,13 +104,7 @@ const Table = ({ filter, onUpdate }) => {
             >
               {row.getVisibleCells().map((cell) => (
                 <td
-                  key={cell.id}
-                  style={{
-                    width:
-                      cell.column.getSize() !== 0
-                        ? cell.column.getSize()
-                        : undefined,
-                  }}
+                  key={cell.id} 
                   className={styles.td}
                 >
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}

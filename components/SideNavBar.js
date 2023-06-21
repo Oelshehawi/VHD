@@ -15,7 +15,6 @@ const SideNavBar = () => {
 
   return (
     <aside id={sideNav.sidebar}>
-      <div className={sideNav.user}> Hi There, Admin</div>
       <div className={sideNav.links}>
         <Link
           href="/dashboard"
