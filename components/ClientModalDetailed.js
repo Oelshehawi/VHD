@@ -18,19 +18,11 @@ const ClientModalDetailed = ({
 }) => {
   const client = clientData.find((obj) => obj._id === rowId);
 
-  let base64Image = '';
-
-  if (client.invoice.data) {
-    base64Image = Buffer.from(client.invoice.data).toString('base64');
-  }
-
   const [disabled, setDisabled] = useState(true);
   const [name, setName] = useState('');
   const [jobtitle, setJobtitle] = useState('');
   const [email, setEmail] = useState('');
   const [phoneNumber, setPhoneNumber] = useState('');
-  const [date, setDate] = useState('');
-  const [price, setPrice] = useState('');
   const [frequency, setFrequency] = useState('');
   const [location, setLocation] = useState('');
   const [notes, setNotes] = useState('');
@@ -129,22 +121,10 @@ const ClientModalDetailed = ({
       setter: setPhoneNumber,
     },
     {
-      name: 'date',
-      type: 'text',
-      placeholder: client.date ? client.date.split('T')[0] : null,
-      setter: setDate,
-    },
-    {
       name: 'location',
       type: 'text',
       placeholder: client.location,
       setter: setLocation,
-    },
-    {
-      name: 'price',
-      type: 'number',
-      placeholder: client.price,
-      setter: setPrice,
     },
     {
       name: 'frequency',
@@ -217,20 +197,6 @@ const ClientModalDetailed = ({
                         : name
                     }
                     disabled={disabled}
-                    onChange={(e) => setter(e.target.value)}
-                  />
-                ) : name === 'date' ? (
-                  <input
-                    className={modalDetailed.modalContentInput}
-                    name={name}
-                    type={type}
-                    placeholder={
-                      placeholder !== '' && placeholder !== null
-                        ? placeholder
-                        : name
-                    }
-                    disabled={disabled}
-                    onClick={handleChange}
                     onChange={(e) => setter(e.target.value)}
                   />
                 ) : (
