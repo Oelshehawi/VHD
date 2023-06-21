@@ -13,12 +13,6 @@ const reactFormDataSchema = new Schema({
   phoneNumber: {
     type: String,
   },
-  date: {
-    type: Date,
-  },
-  price: {
-    type: Number,
-  },
   frequency: {
     type: Number,
   },
@@ -27,11 +21,6 @@ const reactFormDataSchema = new Schema({
   },
   notes: {
     type: String,
-  },
-  invoice: {
-    data: Buffer,
-    contentType: String,
-    filename: String,
   },
 });
 
