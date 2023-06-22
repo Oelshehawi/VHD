@@ -1,66 +1,44 @@
-.phone{
-    display: flex;
-    justify-content: center;
-    font-size: large;
-    font-weight: bolder;
+.phone {
+  font-size: large;
+  font-weight: bolder;
 }
 
-.jobTitle{
-    font-size: large;
-    font-weight: bolder;
+.jobTitle {
+  font-size: large;
+  font-weight: bolder;
 }
 
-.dateValue{
-    font-size: large;
-    font-weight: bolder;
+.dateValue {
+  font-size: large;
+  font-weight: bolder;
 }
 
-.table{
-    border-collapse: collapse;
-    font-size: 14px;
-    overflow-y: scroll;  
-    background-color: transparent;
-}
-  
-.tbody{
-    overflow-y: scroll;
-    display: block;
-    height: 700px;
-    text-align: left;
-}
-
-.th{
-    display: none;
-}
-
-.td {
-    padding: 8px;
-    border-bottom: 1px solid #ddd;
-    height: 80px;
-
-} 
-
-.tr:hover{
-    background-color: #d9d9d9;
-    cursor: pointer;
-}
-
-/* Mobile view for Table */
-@media screen and (max-width: 767px) {
 .table {
-      display: block;
-      overflow-x: auto;
-      white-space: nowrap;
-    }
-    
-.th,
-.td {
-      display: inline-block;
-      border: none;
-      width: 200px;
-    }
-    
+  border-collapse: collapse;
+  font-size: 14px;
+  overflow-y: scroll;
+  width: 100%;
+}
+
+.tbody {
+  overflow-y: scroll;
+  
+}
+
 .th {
-      text-align: left;
-    }
-  }
+  text-align: left;
+  border-bottom: 2px groove #d9d9d9;
+  padding: 20px;
+  background-color: #f9f9f9;
+}
+
+.td {
+  padding: 20px;
+  border-bottom: 1.5px solid #d9d9d9;
+  text-align: left;
+}
+
+.tr:hover {
+  background-color: #d9d9d9;
+  cursor: pointer;
+}

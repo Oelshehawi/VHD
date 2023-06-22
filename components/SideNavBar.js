@@ -5,17 +5,16 @@ import { usePathname } from 'next/navigation';
 import { FaHome } from 'react-icons/fa';
 import { FaRegCalendarAlt } from 'react-icons/fa';
 import { FaDatabase } from 'react-icons/fa';
+import { FaFileInvoice } from 'react-icons/fa'
 
 const SideNavBar = () => {
-
   const isActive = (href) => {
     const pathname = usePathname();
-    return pathname === href;
+    return pathname === href || pathname.startsWith(`${href}/clientDetailed`);
   };
 
   return (
     <aside id={sideNav.sidebar}>
-      <div className={sideNav.user}> Hi There, Admin</div>
       <div className={sideNav.links}>
         <Link
           href="/dashboard"
@@ -24,7 +23,7 @@ const SideNavBar = () => {
           }
         >
           <FaHome className={sideNav.icon} />
-          {'Dashboard'}
+          {' Dashboard '}
         </Link>
         <Link
           href="/database"
@@ -33,7 +32,16 @@ const SideNavBar = () => {
           }
         >
           <FaDatabase className={sideNav.icon} />
-          {'Database '}
+          {' Database '}
+        </Link>
+        <Link
+          href="/invoices"
+          className={
+            isActive('/invoices') ? sideNav.sidebarLinkActive : sideNav.theLink
+          }
+        >
+          <FaFileInvoice className={sideNav.icon} />
+          {' Invoices '}
         </Link>
         <Link
           href="/schedule"
@@ -42,7 +50,7 @@ const SideNavBar = () => {
           }
         >
           <FaRegCalendarAlt className={sideNav.icon} />
-          {'Schedule'}
+          {' Schedule '}
         </Link>
       </div>
     </aside>
