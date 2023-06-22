@@ -4,9 +4,6 @@ const reactFormDataSchema = new Schema({
   clientName: {
     type: String,
   },
-  jobTitle: {
-    type: String,
-  },
   email: {
     type: String,
   },

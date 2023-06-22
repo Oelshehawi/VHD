@@ -10,7 +10,7 @@ const SideNavBar = () => {
 
   const isActive = (href) => {
     const pathname = usePathname();
-    return pathname === href;
+    return pathname === href || pathname.startsWith(`${href}/clientDetailed`);
   };
 
   return (

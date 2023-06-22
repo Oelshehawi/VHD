@@ -1,8 +1,6 @@
 import connectMongo from '../../../lib/connect';
 import { Client } from '../../../models/reactDataSchema';
 import { IncomingForm } from 'formidable';
-import { tmpdir } from 'os';
-import { join } from 'path';
 
 export const config = {
   api: {
@@ -49,33 +47,19 @@ export default async function handler(req, res) {
       // Extract form data
       let {
         clientName,
-        jobTitle,
         email,
         phoneNumber,
-        date,
-        price,
         frequency,
         location,
         notes,
-        invoice,
-        // invoiceType,
-        // invoiceName,
+    
       } = fields || {};
-
-      // // Convert the Base64 string to binary data
-      // const binaryData = Buffer.from(invoice[0], 'base64');
 
       // Convert empty array fields to null
       clientName = clientName.length === 0 ? null : clientName[0];
-      jobTitle = jobTitle.length === 0 ? null : jobTitle[0];
       email = email.length === 0 ? null : email[0];
       phoneNumber = phoneNumber.length === 0 ? null : phoneNumber[0];
-      date = date.length === 0 ? null : date[0];
       // Convert price and frequency to numbers
-      price =
-        price.length === 0 || isNaN(parseFloat(price[0]))
-          ? null
-          : parseFloat(price[0]);
       frequency =
         frequency.length === 0 || isNaN(parseFloat(frequency[0]))
           ? null
@@ -85,22 +69,11 @@ export default async function handler(req, res) {
 
       const formData = new Client({
         clientName,
-        jobTitle,
         email,
         phoneNumber,
-        date,
-        price,
         frequency,
         location,
         notes,
-        invoice: {
-          data: invoice ? binaryData : null,    
-          // data: invoice ? binaryData : null,    
-          contentType: null,
-          // contentType: invoiceType ? invoiceType[0] : null,
-          filename: null,
-          // filename: invoiceName ? invoiceName[0] : null,
-        },
       });
 
       await formData.save();

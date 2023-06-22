@@ -23,12 +23,6 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       placeholder: "Client's Name",
       isRequired: false,
     },
-    {
-      name: 'jobTitle',
-      type: 'text',
-      placeholder: 'Job Title',
-      isRequired: true,
-    },
     { name: 'email', type: 'email', placeholder: 'Email', isRequired: true },
     {
       name: 'phoneNumber',
@@ -60,7 +54,6 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
     try {
       const formData = new FormData();
       formData.append('clientName', values.clientName);
-      formData.append('jobTitle', values.jobTitle);
       formData.append('email', values.email);
       formData.append('phoneNumber', values.phoneNumber);
       formData.append('frequency', values.frequency);
@@ -70,7 +63,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       await Axios.post(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, formData);
 
       onUpdate();
-      onClose();
+      handleClose();
       showToast();
       reset({ ...emptyInput });
     } catch (error) {
@@ -88,8 +81,6 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       onClose();
     }, 500);
   };
-
-  console.log(animationClass);
 
   if (!open) return null;
   return (
