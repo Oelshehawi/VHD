@@ -1,0 +1,191 @@
+.overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  animation-duration: 0.5s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1.5;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1.5;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.fadeIn {
+  animation-name: fadeIn;
+}
+
+.fadeOut {
+  animation-name: fadeOut;
+}
+
+.modalContainer {
+  height: 100%;
+  width: 600px;
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  flex-flow: column nowrap;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0px 0px 18px 0px rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation-duration: 0.5s;
+  transform: translateX(0%);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0%);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.slideIn {
+  animation-name: slideIn;
+}
+
+.slideOut {
+  animation-name: slideOut;
+}
+
+.closeBtn {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  border: none;
+  background-color: #d9d9d9;
+  font-weight: bold;
+}
+
+.closeBtn:hover,
+.closeBtn:focus {
+  color: green;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.modalContent {
+  display: flex;
+  flex-flow: column wrap;
+  margin-top: 5px;
+  padding: 25px;
+  z-index: 2;
+  justify-content: center;
+}
+
+.modalHeader {
+  background-color: green;
+  width: 100%;
+  height: 10%;
+  padding: 10px;
+  font-weight: bolder;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modalFooter {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+  width: 100%;
+  height: 20%;
+  padding: 12px;
+}
+
+#submitButtonForm {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+  height: 20%;
+  width: 25%;
+  background-color: green;
+  color: white;
+  border-radius: 5px;
+  border: none;
+  align-items: center;
+  transition: transform 0.2s ease-in-out;
+  font-size: larger;
+}
+
+#submitButtonForm:hover {
+  cursor: pointer;
+  transform: scale(1.1);
+}
+
+.modalContentInput ~ .modalContentInputFocus:before,
+.modalContentInput ~ .modalContentInputFocus:after {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 100%;
+  background-color: #ededed;
+  transition: 0.3s;
+  z-index: -1;
+}
+
+.modalContentInput:focus ~ .modalContentInputFocus:before {
+  transition: 0.3s;
+  width: 50%;
+}
+
+.modalContentInput ~ .modalContentInputFocus:after {
+  left: auto;
+  right: 0;
+}
+
+.modalContentInput:focus ~ .modalContentInputFocus:after {
+  transition: 0.3s;
+  width: 50%;
+}
+
+.modalContentInputContainer {
+  float: left;
+  width: inherit;
+  margin: 8px 3%;
+  position: relative;
+}
+
+.modalContentInput {
+  border: 0;
+  padding: 7px 15px;
+  border: 1px solid #ccc;
+  position: relative;
+  background: transparent;
+  font: 15px/24px 'Lato', Arial, sans-serif;
+  font-weight: bolder;
+  width: 100%;
+  box-sizing: border-box;
+  letter-spacing: 1px;
+}
