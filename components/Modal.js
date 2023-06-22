@@ -4,10 +4,8 @@ import Axios from 'axios';
 import modal from './styles/modal.module.css';
 
 const Modal = ({ open, onClose, showToast, onUpdate }) => {
-  const [file, setFile] = useState('Attach Invoice');
-  // const [invoiceData, setInvoiceData] = useState(null);
-  // const [invoiceType, setInvoiceType] = useState(null);
-  // const [invoiceName, setInvoiceName] = useState(null);
+  const [animationClass, setAnimationClass] = useState('slideIn');
+  const [animationClass2, setAnimationClass2] = useState('fadeIn');
 
   const emptyInput = {};
 
@@ -26,9 +24,9 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       isRequired: false,
     },
     {
-      name: 'jobTitle',
+      name: 'prefix',
       type: 'text',
-      placeholder: 'Job Title',
+      placeholder: 'Invoice Prefix',
       isRequired: true,
     },
     { name: 'email', type: 'email', placeholder: 'Email', isRequired: true },
@@ -38,20 +36,11 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       placeholder: 'Phone Number',
       isRequired: true,
     },
-    { name: 'date', type: 'date', placeholder: 'Date', isRequired: false },
     {
       name: 'location',
       type: 'text',
       placeholder: 'Location',
       isRequired: true,
-    },
-    {
-      name: 'price',
-      type: 'number',
-      placeholder: 'Price',
-      step: 'any',
-      min: '1',
-      isRequired: false,
     },
     {
       name: 'frequency',
@@ -71,83 +60,55 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
     try {
       const formData = new FormData();
       formData.append('clientName', values.clientName);
-      formData.append('jobTitle', values.jobTitle);
+      formData.append('prefix', values.prefix);
       formData.append('email', values.email);
       formData.append('phoneNumber', values.phoneNumber);
-      formData.append('date', values.date);
-      formData.append('price', values.price);
       formData.append('frequency', values.frequency);
       formData.append('location', values.location);
       formData.append('notes', values.notes);
 
-      // if (invoiceData) {
-      //   formData.append('invoice', invoiceData); // Pass the invoice data
-      //   formData.append('invoiceType', invoiceType); // Pass the invoice type
-      //   formData.append('invoiceName', invoiceName); // Pass the invoice name
-      // } else {
-      //   formData.append('invoice', null); // Pass null if no invoice data is available
-      //   formData.append('invoiceType', null); // Pass null if no invoice type is available
-      //   formData.append('invoiceName', null); // Pass null if no invoice name is available
-      // }
-      // Send data using Axios
       await Axios.post(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, formData);
 
       onUpdate();
-      onClose();
+      handleClose();
       showToast();
       reset({ ...emptyInput });
-      setFile('Attach Invoice');
-      setInvoiceData(null);
-      setInvoiceType(null);
     } catch (error) {
       // Handle the error
       console.log(error);
     }
   };
 
-  const handleFileChange = (event) => {
-    const selectedFile = event.target.files[0];
-    if (selectedFile) {
-      setFile(selectedFile.name);
-      // setInvoiceType(selectedFile.type);
-      // setInvoiceName(selectedFile.name);
-
-      // const fileReader = new FileReader();
-
-      // fileReader.onload = (e) => {
-      //   const base64Data = e.target.result.split(',')[1]; // Extract base64 data from the result
-      //   setInvoiceData(base64Data);
-      // };
-
-      // fileReader.readAsDataURL(selectedFile);
-    }
+  const handleClose = () => {
+    setAnimationClass('slideOut');
+    setAnimationClass2('fadeOut');
+    setTimeout(() => {
+      setAnimationClass('slideIn');
+      setAnimationClass2('fadeIn');
+      onClose();
+    }, 500);
   };
 
   if (!open) return null;
   return (
     <div
-      onClick={onClose}
-      className={modal.overlay}
+      onClick={handleClose}
+      className={`${modal.overlay} ${modal[animationClass2]}`}
       role="button"
       tabIndex={0}
-      onKeyDown={onClose}
+      onKeyDown={handleClose}
     >
       <div
         onClick={(e) => {
           e.stopPropagation();
         }}
-        className={modal.modalContainer}
-        role="button"
-        tabIndex={0}
+        className={`${modal.modalContainer} ${modal[animationClass]}`}
         onKeyDown={(e) => {
           e.stopPropagation();
         }}
       >
         <div className={modal.modalHeader}>
           Add New Client
-          <button className={modal.closeBtn} onClick={onClose}>
-            X
-          </button>
         </div>
         <form
           id="addClientForm"
@@ -182,20 +143,6 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
               </div>
             )
           )}
-          <label className={modal.attach} htmlFor="invoice">
-            {file}
-          </label>
-          <input
-            type="file"
-            name="invoice"
-            {...register('invoice')}
-            id="invoice"
-            className={modal.invoice}
-            onChange={(e) => {
-              handleFileChange(e);
-              setFile(e.target.files[0].name);
-            }}
-          />
         </form>
         <div className={modal.modalFooter}>
           <button

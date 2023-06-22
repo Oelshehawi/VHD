@@ -8,22 +8,21 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
 } from '@tanstack/react-table';
-import DownloadInvoice from './DownloadInvoice';
-import ClientModalDetailed from './ClientModalDetailed';
+import { useRouter } from 'next/navigation';
 
 const Table = ({ filter, onUpdate }) => {
   // data fetched from MongoDB
   const [clientData, setClientData] = useState([]);
   const [globalFilter, setglobalFilter] = useState('');
   const [modal, setmodal] = useState(false);
-  const [selectedrow, setselectedrow] = useState('');
+  const [selectedRow, setSelectedRow] = useState('')
+  const router = useRouter();
 
   useEffect(() => {
     axios
       .get(`${process.env.NEXT_PUBLIC_API_URL}/clients/`)
       .then((res) => {
         setClientData(res.data);
-        console.log('just updated');
       })
       .catch((err) => console.error(err));
   }, [onUpdate]);
@@ -31,12 +30,12 @@ const Table = ({ filter, onUpdate }) => {
   const columnHelper = createColumnHelper();
 
   const columns = [
-    columnHelper.accessor('jobTitle', {
-      size: 5500,
+    columnHelper.accessor('clientName', {
+      header: 'Client Name',
       cell: (info) => <div className={styles.jobTitle}>{info.getValue()}</div>,
     }),
-    columnHelper.accessor('date', {
-      size: 500,
+    columnHelper.accessor('email', {
+      header: 'Email',
       cell: (info) => {
         const value = info.getValue();
         if (value) {
@@ -45,12 +44,22 @@ const Table = ({ filter, onUpdate }) => {
       },
     }),
     columnHelper.accessor('phoneNumber', {
-      size: 500,
+      header: 'Phone Number',
       cell: (info) => {
         return <div className={styles.phone}>{info.getValue()}</div>;
       },
     }),
   ];
+
+  const handleRowClick = (row) => {
+    if (row) {
+      redirectToClientDetails(row);
+    }
+  };
+
+  const redirectToClientDetails = (clientId) => {
+    router.push(`/database/clientDetailed?id=${clientId}`);
+  };
 
   //React table data initialization
   const data = React.useMemo(() => clientData, [clientData]);
@@ -75,7 +84,7 @@ const Table = ({ filter, onUpdate }) => {
   return (
     <>
       <table className={styles.table}>
-        <thead>
+        <thead className={styles.thead}>
           {/* Looping through Header Groups and choosing what react should render*/}
           {tableInstance.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className={styles.tr}>
@@ -95,24 +104,12 @@ const Table = ({ filter, onUpdate }) => {
         <tbody className={styles.tbody}>
           {tableInstance.getRowModel().rows.map((row) => (
             <tr
-              onClick={() => {
-                setselectedrow(row.original._id);
-                setmodal(true);
-              }}
+              onClick={() => handleRowClick(row.original._id)}
               key={row.id}
               className={styles.tr}
             >
               {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  style={{
-                    width:
-                      cell.column.getSize() !== 0
-                        ? cell.column.getSize()
-                        : undefined,
-                  }}
-                  className={styles.td}
-                >
+                <td key={cell.id} className={styles.td}>
                   {flexRender(cell.column.columnDef.cell, cell.getContext())}
                 </td>
               ))}
@@ -120,18 +117,6 @@ const Table = ({ filter, onUpdate }) => {
           ))}
         </tbody>
       </table>
-      {selectedrow !== '' ? (
-        <ClientModalDetailed
-          open={modal}
-          rowId={selectedrow}
-          clientData={clientData}
-          onUpdate={onUpdate}
-          onClose={() => {
-            setselectedrow('');
-            setmodal(false);
-          }}
-        />
-      ) : null}
     </>
   );
 };
