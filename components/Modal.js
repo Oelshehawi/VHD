@@ -23,6 +23,12 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       placeholder: "Client's Name",
       isRequired: false,
     },
+    {
+      name: 'prefix',
+      type: 'text',
+      placeholder: 'Invoice Prefix',
+      isRequired: true,
+    },
     { name: 'email', type: 'email', placeholder: 'Email', isRequired: true },
     {
       name: 'phoneNumber',
@@ -54,6 +60,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
     try {
       const formData = new FormData();
       formData.append('clientName', values.clientName);
+      formData.append('prefix', values.prefix);
       formData.append('email', values.email);
       formData.append('phoneNumber', values.phoneNumber);
       formData.append('frequency', values.frequency);

@@ -16,6 +16,30 @@ const reactFormDataSchema = new Schema({
   location: {
     type: String,
   },
+  prefix: {
+    type: String,
+  },
+  notes: {
+    type: String,
+  },
+});
+
+const invoiceSchema = new Schema({
+  clientName: {
+    type: String,
+  },
+  email: {
+    type: String,
+  },
+  phoneNumber: {
+    type: String,
+  },
+  dateIssued: {
+    type: Date,
+  },
+  dateDue: {
+    type: Date,
+  },
   notes: {
     type: String,
   },
@@ -49,7 +73,8 @@ const userSchema = new Schema({
 });
 
 const Client = models.Client || model('Client', reactFormDataSchema);
+const Invoice = models.Invoice || model('Invoice', invoiceSchema);
 const Event = models.Event || model('Event', eventSchema);
 const User = models.User || model('User', userSchema);
 
-export { Client, Event, User };
+export { Client, Event, User, Invoice };
