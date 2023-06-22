@@ -47,6 +47,7 @@ export default async function handler(req, res) {
       // Extract form data
       let {
         clientName,
+        prefix,
         email,
         phoneNumber,
         frequency,
@@ -58,6 +59,7 @@ export default async function handler(req, res) {
       // Convert empty array fields to null
       clientName = clientName.length === 0 ? null : clientName[0];
       email = email.length === 0 ? null : email[0];
+      prefix = prefix.length === 0 ? null : prefix[0];
       phoneNumber = phoneNumber.length === 0 ? null : phoneNumber[0];
       // Convert price and frequency to numbers
       frequency =
@@ -69,6 +71,7 @@ export default async function handler(req, res) {
 
       const formData = new Client({
         clientName,
+        prefix,
         email,
         phoneNumber,
         frequency,
