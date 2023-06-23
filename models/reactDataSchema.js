@@ -22,26 +22,44 @@ const reactFormDataSchema = new Schema({
   notes: {
     type: String,
   },
+
 });
 
 const invoiceSchema = new Schema({
-  clientName: {
+  invoiceId: {
     type: String,
+    required: true,
+    unique: true,
   },
-  email: {
+  jobTitle: {
     type: String,
-  },
-  phoneNumber: {
-    type: String,
+    required: true,
   },
   dateIssued: {
     type: Date,
+    required: true,
   },
   dateDue: {
     type: Date,
+    required: true,
   },
-  notes: {
+  items: [
+    {
+      description: {
+        type: String,
+        required: true,
+      },
+      price: {
+        type: Number,
+        required: true,
+      },
+    },
+  ],
+  notes: String,
+  status: {
     type: String,
+    enum: ['pending', 'overdue', 'paid'],
+    default: 'pending',
   },
 });
 

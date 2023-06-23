@@ -1,0 +1,77 @@
+.phone {
+  font-size: large;
+  font-weight: bolder;
+}
+
+.jobTitle {
+  font-size: large;
+  font-weight: bolder;
+}
+
+.invoiceId {
+  font-size: large;
+  font-weight: bolder;
+}
+
+.table {
+  border-collapse: collapse;
+  font-size: 14px;
+  overflow-y: scroll;
+  width: 100%;
+}
+
+.tbody {
+  overflow-y: scroll;
+}
+
+.th {
+  text-align: left;
+  border-bottom: 2px groove #d9d9d9;
+  padding: 20px;
+  background-color: #f9f9f9;
+}
+
+.td {
+  padding: 20px;
+  border-bottom: 1.5px solid #d9d9d9;
+  text-align: left;
+}
+
+.tr:hover {
+  background-color: #d9d9d9;
+  cursor: pointer;
+}
+
+/* Define the common styles for the status buttons */
+.statusButton {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 40%;
+    height: 40%;
+    padding: 8px 16px;
+    border-radius: 4px;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    opacity: 0.6;
+    font-weight: bolder;
+  }
+  
+  /* Define the specific styles for each status button */
+  .yellowButton {
+    background-color: yellow;
+    border: none;
+    color: black;
+    
+  }
+  
+  .redButton {
+    background-color: red;
+    color: white;
+  }
+  
+  .greenButton {
+    background-color: green;
+    color: white;
+  }
