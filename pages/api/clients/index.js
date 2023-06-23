@@ -52,7 +52,7 @@ export default async function handler(req, res) {
         phoneNumber,
         frequency,
         location,
-        notes,
+        notes,        
     
       } = fields || {};
 
@@ -76,7 +76,7 @@ export default async function handler(req, res) {
         phoneNumber,
         frequency,
         location,
-        notes,
+        notes,      
       });
 
       await formData.save();

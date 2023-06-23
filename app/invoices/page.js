@@ -1,10 +1,10 @@
 'use client';
 import { useState } from 'react';
-import Table from '../../components/Table';
+import InvoiceTable from '../../components/InvoiceTable';
 import { FaSearch } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
 import { FaFilter } from 'react-icons/fa';
-import Modal from '../../components/Modal';
+import AddInvoice from '../../components/AddInvoice';
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import invoice from './invoice.module.css';
@@ -25,7 +25,7 @@ const Invoice = () => {
 
   return (
     <>
-      <Modal
+      <AddInvoice
         open={openModal}
         onClose={() => {
           setopenModal(false);
@@ -68,7 +68,7 @@ const Invoice = () => {
         </div>
       </div>
       <div className={invoice.jobTableContainer}>
-        <Table filter={filter} onUpdate={() => setOnUpdate(!onUpdate)} />
+        <InvoiceTable filter={filter} onUpdate={() => setOnUpdate(!onUpdate)} />
       </div>
     </>
   );
