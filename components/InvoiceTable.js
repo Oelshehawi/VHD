@@ -89,10 +89,12 @@ const InvoiceTable = ({ filter, onUpdate }) => {
       header: 'Amount',
       cell: (info) => {
         const { original } = info.row;
-        const firstItem = original.items[0]; // Accessing the first item in the items array
-        const price = firstItem ? firstItem.price : null;
+        let Total = 0;
+        for (let i = 0; i < original.items.length; i++) {
+          Total += original.items[i].price;
+        }
 
-        return <div className={styles.phone}>{'$' + price}</div>;
+        return <div className={styles.phone}>${Total + Total * 0.05}</div>;
       },
     }),
   ];

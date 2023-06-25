@@ -13,16 +13,10 @@ export default async function handler(req, res) {
   await connectMongo();
   if (req.method === 'GET') {
     // Request without ID
-    const { prefix, jobTitle } = req.query;
+    const { prefix } = req.query;
     try {
       if (prefix) {
         const condition = { invoiceId: { $regex: `^${prefix}-` } };
-        const data = await Invoice.find(condition);
-        res.send(data);
-      } else if (jobTitle) {
-        const condition = {
-          jobTitle: { $regex: new RegExp(jobTitle), $options: 'i' },
-        };
         const data = await Invoice.find(condition);
         res.send(data);
       } else {

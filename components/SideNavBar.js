@@ -5,12 +5,16 @@ import { usePathname } from 'next/navigation';
 import { FaHome } from 'react-icons/fa';
 import { FaRegCalendarAlt } from 'react-icons/fa';
 import { FaDatabase } from 'react-icons/fa';
-import { FaFileInvoice } from 'react-icons/fa'
+import { FaFileInvoice } from 'react-icons/fa';
 
 const SideNavBar = () => {
   const isActive = (href) => {
     const pathname = usePathname();
-    return pathname === href || pathname.startsWith(`${href}/clientDetailed`);
+    return (
+      pathname === href ||
+      pathname.startsWith(`${href}/clientDetailed`) ||
+      pathname.startsWith(`${href}/invoiceDetailed`)
+    );
   };
 
   return (
