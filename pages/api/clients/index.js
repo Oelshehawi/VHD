@@ -12,22 +12,20 @@ export const config = {
 export default async function handler(req, res) {
   await connectMongo();
   if (req.method === 'GET') {
-    // Request without ID
-    const jobTitle = req.query.jobTitle;
-    const condition = jobTitle
-      ? { jobTitle: { $regex: new RegExp(jobTitle), $options: 'i' } }
-      : {};
-
+    const { prefix } = req.query;
     try {
-      const data = await Client.find(condition);
-      const responseBodySize = JSON.stringify(data).length / (1024 * 1024); // Convert to MB
-
-      console.log(`Response size: ${responseBodySize} MB`);
-
-      res.send(data);
+      if (prefix) {
+        const condition = { prefix };
+        const data = await Client.find(condition);
+        res.send(data);
+      } else {
+        const data = await Client.find({});
+        res.send(data);
+      }
     } catch (err) {
       res.status(500).send({
-        message: err.message || 'Some error occurred while retrieving Clients.',
+        message:
+          err.message || 'Some error occurred while retrieving invoices.',
       });
     }
   } else if (req.method === 'POST') {
@@ -52,8 +50,7 @@ export default async function handler(req, res) {
         phoneNumber,
         frequency,
         location,
-        notes,        
-    
+        notes,
       } = fields || {};
 
       // Convert empty array fields to null
@@ -76,7 +73,7 @@ export default async function handler(req, res) {
         phoneNumber,
         frequency,
         location,
-        notes,      
+        notes,
       });
 
       await formData.save();

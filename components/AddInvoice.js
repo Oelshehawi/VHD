@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import Axios from 'axios';
 import addInvoice from './styles/addInvoice.module.css';
+import Select from 'react-select';
 
 const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
   const [animationClass, setAnimationClass] = useState('slideIn');
@@ -85,21 +86,18 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
     try {
       const { clientId, jobTitle, dateIssued, dateDue, items, notes } = values;
 
-      const client = clients.find((client) => client._id === clientId);
+      const client = clients.find((client) => client._id === clientId.value);
 
       if (client) {
         const response = await Axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/invoices?prefix=${client.prefix}`
         );
-        const invoiceNumber = response.data.length + 1;
 
-        console.log(response.data)
+        const invoiceNumber = response.data.length + 1;
 
         const invoiceId = `${client.prefix}-${invoiceNumber
           .toString()
           .padStart(4, '0')}`;
-
-        
 
         const invoiceData = {
           invoiceId,
@@ -160,37 +158,33 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
       >
         <div className={addInvoice.addInvoiceHeader}>{'Add New Invoice'}</div>
         <form
-          id="addClientForm"
+          id="addInvoiceForm"
           className={addInvoice.addInvoiceContent}
           onSubmit={handleSubmit(handleSave)}
         >
           <div className={addInvoice.inputContainer}>
             <div className={addInvoice.recipientInput}>
               <Controller
-                name="clientId" // Set the name for the controller
+                name="clientId"
                 control={control}
-                rules={{ required: 'Client is required' }} // Add any validation rules
+                rules={{ required: 'Client is required' }}
                 render={({ field }) => (
-                  <select {...field} className={addInvoice.selectContentInput}>
-                    <option className={addInvoice.option} value="">
-                      {'Recipient Client'}
-                    </option>
-                    {clients.map((client, index) => (
-                      <option
-                        className={addInvoice.option}
-                        key={`clientOption-${client.id}-${index}`}
-                        value={client._id}
-                      >
-                        {client.clientName} - {client.email}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    {...field}
+                    className={addInvoice.selectContentInput}
+                    options={clients.map((client) => ({
+                      value: client._id,
+                      label: `${client.clientName} - ${client.email}`,
+                    }))}
+                    placeholder="Recipient Client"
+                    isSearchable={true}
+                  />
                 )}
               />
             </div>
             <div className={addInvoice.titleInputs}>
               <input
-                {...register('jobTitle')}
+                {...register('jobTitle', { required: 'Job Title is required' })} // Make jobTitle field required
                 className={addInvoice.titleContentInput}
                 type="text"
                 placeholder="Job Title"
@@ -199,12 +193,15 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
 
             <div className={addInvoice.dateInputs}>
               <input
-                {...register('dateIssued')}
+                {...register('dateIssued', {
+                  required: 'Date Issued is required',
+                })} 
                 className={addInvoice.dateContentInput}
                 type="date"
               />
+
               <input
-                {...register('dateDue')}
+                {...register('dateDue', { required: 'Date Due is required' })} 
                 className={addInvoice.dateContentInput}
                 type="date"
               />
@@ -214,13 +211,18 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
                 <div key={index} className={addInvoice.itemMain}>
                   <div className={addInvoice.itemMainInputs}>
                     <input
-                      {...register(`items[${index}].description`)}
+                      {...register(`items[${index}].description`, {
+                        required: 'Item Description is required',
+                      })} 
                       className={addInvoice.itemDescriptionInput}
                       type="text"
                       placeholder="Item Description"
                     />
+
                     <input
-                      {...register(`items[${index}].price`)}
+                      {...register(`items[${index}].price`, {
+                        required: 'Item Price is required',
+                      })} 
                       className={addInvoice.itemPriceInput}
                       type="number"
                       placeholder="Item Price"
@@ -272,7 +274,7 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
             id={addInvoice.submitButtonForm}
             type="submit"
             value="submit"
-            form="addClientForm"
+            form="addInvoiceForm"
             disabled={isLoading}
           >
             {isLoading ? 'Loading...' : 'Submit'}

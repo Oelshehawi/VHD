@@ -25,6 +25,7 @@ const Invoice = () => {
 
   return (
     <>
+      <ToastContainer />
       <AddInvoice
         open={openModal}
         onClose={() => {
@@ -33,7 +34,6 @@ const Invoice = () => {
         showToast={showToast}
         onUpdate={() => setOnUpdate(!onUpdate)}
       />
-      <ToastContainer />
       <div className={invoice.dataContainer}>
         <div className={invoice.dataTitle}>{'Invoices'}</div>
         <div className={invoice.interactContainer}>

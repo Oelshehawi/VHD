@@ -8,6 +8,7 @@ import 'react-toastify/dist/ReactToastify.css';
 const EditModal = ({ open, onClose, client, onUpdate }) => {
   const [animationClass, setAnimationClass] = useState('slideIn');
   const [animationClass2, setAnimationClass2] = useState('fadeIn');
+  const [isLoading, setIsLoading] = useState(false);
 
   const emptyInput = {};
 
@@ -136,8 +137,10 @@ const EditModal = ({ open, onClose, client, onUpdate }) => {
             type="submit"
             value="submit"
             form="addClientForm"
+            disabled={isLoading}
           >
-            Save Changes
+     
+            {isLoading ? 'Loading...' : 'Save Changes'}
           </button>
         </div>
       </div>

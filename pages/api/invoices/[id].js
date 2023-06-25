@@ -44,7 +44,6 @@ export default async function handler(req, res) {
         message: 'Data to update cannot be empty!',
       });
     }
-
     try {
       const data = await Invoice.findByIdAndUpdate(id, req.body, {
         useFindAndModify: false,

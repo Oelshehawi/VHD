@@ -44,34 +44,35 @@
 
 /* Define the common styles for the status buttons */
 .statusButton {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 40%;
-    height: 40%;
-    padding: 8px 16px;
-    border-radius: 4px;
-    font-weight: bold;
-    text-align: center;
-    cursor: pointer;
-    opacity: 0.6;
-    font-weight: bolder;
-  }
-  
-  /* Define the specific styles for each status button */
-  .yellowButton {
-    background-color: yellow;
-    border: none;
-    color: black;
-    
-  }
-  
-  .redButton {
-    background-color: red;
-    color: white;
-  }
-  
-  .greenButton {
-    background-color: green;
-    color: white;
-  }
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 40%;
+  height: 40%;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-weight: bold;
+  text-align: center;
+  cursor: pointer;
+  font-weight: bolder;
+}
+
+/* Define the specific styles for each status button */
+.yellowButton {
+  background-color: rgb(231, 231, 59);
+  border: none;
+  color: white;
+}
+
+.redButton {
+  background-color: red;
+  color: white;
+  border: none;
+}
+
+.greenButton {
+  background-color: green;
+  color: white;
+  border: none;
+
+}
