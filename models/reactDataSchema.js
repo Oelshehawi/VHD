@@ -10,19 +10,13 @@ const reactFormDataSchema = new Schema({
   phoneNumber: {
     type: String,
   },
-  frequency: {
-    type: Number,
-  },
-  location: {
-    type: String,
-  },
   prefix: {
     type: String,
+    unique: true,
   },
   notes: {
     type: String,
   },
-
 });
 
 const invoiceSchema = new Schema({
@@ -55,6 +49,14 @@ const invoiceSchema = new Schema({
       },
     },
   ],
+  frequency: {
+    type: Number,
+    required: true,
+  },
+  location: {
+    type: String,
+    required: true,
+  },
   notes: String,
   status: {
     type: String,

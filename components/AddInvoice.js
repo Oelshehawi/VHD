@@ -4,7 +4,7 @@ import Axios from 'axios';
 import addInvoice from './styles/addInvoice.module.css';
 import Select from 'react-select';
 
-const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
+const AddInvoice = ({ open, onClose, onUpdate }) => {
   const [animationClass, setAnimationClass] = useState('slideIn');
   const [animationClass2, setAnimationClass2] = useState('fadeIn');
   const [clients, setClients] = useState([]);
@@ -37,8 +37,6 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
       return updatedItems;
     });
   };
-
-  const emptyInput = {};
 
   const {
     register,
@@ -84,7 +82,16 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
     setIsLoading(true);
 
     try {
-      const { clientId, jobTitle, dateIssued, dateDue, items, notes } = values;
+      const {
+        clientId,
+        jobTitle,
+        dateIssued,
+        dateDue,
+        items,
+        frequency,
+        location,
+        notes,
+      } = values;
 
       const client = clients.find((client) => client._id === clientId.value);
 
@@ -93,12 +100,20 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
           `${process.env.NEXT_PUBLIC_API_URL}/invoices?prefix=${client.prefix}`
         );
 
-        const invoiceNumber = response.data.length + 1;
+        const invoiceNumbers = response.data.map((invoice) => {
+          const invoiceNumber = parseInt(invoice.invoiceId.split('-')[1]);
+          return isNaN(invoiceNumber) ? 0 : invoiceNumber;
+        });
 
-        const invoiceId = `${client.prefix}-${invoiceNumber
+        const maxInvoiceNumber = Math.max(...invoiceNumbers);
+        const nextInvoiceNumber =
+          maxInvoiceNumber === -Infinity ? 0 : maxInvoiceNumber + 1;
+
+        const invoiceId = `${client.prefix}-${nextInvoiceNumber
           .toString()
           .padStart(4, '0')}`;
 
+          console.log(location)
         const invoiceData = {
           invoiceId,
           jobTitle,
@@ -108,6 +123,8 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
             description: item.description,
             price: item.price,
           })),
+          frequency,
+          location,
           notes,
         };
 
@@ -118,8 +135,7 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
 
         onUpdate();
         handleClose();
-        showToast();
-        reset({ ...emptyInput });
+        reset();
       }
     } catch (error) {
       console.log(error);
@@ -190,18 +206,36 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
                 placeholder="Job Title"
               />
             </div>
-
+            <div className={addInvoice.detailInputs}>
+            <input
+                {...register('frequency', {
+                  required: 'Frequency is required',
+                })} 
+                className={addInvoice.detailContentInput}
+                type="number"
+                placeholder="Frequency"
+              />
+              <input
+                {...register('location', {
+                  required: 'Location is required',
+                })} 
+                className={addInvoice.detailContentInput}
+                type="text"
+                placeholder="Address"
+              />
+            </div>
+            
             <div className={addInvoice.dateInputs}>
               <input
                 {...register('dateIssued', {
                   required: 'Date Issued is required',
-                })} 
+                })}
                 className={addInvoice.dateContentInput}
                 type="date"
               />
 
               <input
-                {...register('dateDue', { required: 'Date Due is required' })} 
+                {...register('dateDue', { required: 'Date Due is required' })}
                 className={addInvoice.dateContentInput}
                 type="date"
               />
@@ -213,7 +247,7 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
                     <input
                       {...register(`items[${index}].description`, {
                         required: 'Item Description is required',
-                      })} 
+                      })}
                       className={addInvoice.itemDescriptionInput}
                       type="text"
                       placeholder="Item Description"
@@ -222,7 +256,7 @@ const AddInvoice = ({ open, onClose, showToast, onUpdate }) => {
                     <input
                       {...register(`items[${index}].price`, {
                         required: 'Item Price is required',
-                      })} 
+                      })}
                       className={addInvoice.itemPriceInput}
                       type="number"
                       placeholder="Item Price"

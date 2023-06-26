@@ -4,7 +4,14 @@ import Axios from 'axios';
 import editInvoice from './styles/editInvoice.module.css';
 import Select from 'react-select';
 
-const EditInvoiceModal = ({ open, onClose, showToast, onUpdate, invoice, client }) => {
+const EditInvoiceModal = ({
+  open,
+  onClose,
+  showToast,
+  onUpdate,
+  invoice,
+  client,
+}) => {
   const [animationClass, setAnimationClass] = useState('slideIn');
   const [animationClass2, setAnimationClass2] = useState('fadeIn');
   const [items, setItems] = useState([]);
@@ -61,7 +68,15 @@ const EditInvoiceModal = ({ open, onClose, showToast, onUpdate, invoice, client 
 
   useEffect(() => {
     if (invoice) {
-      const { jobTitle, dateIssued, dateDue, items, notes } = invoice;
+      const {
+        jobTitle,
+        dateIssued,
+        dateDue,
+        items,
+        frequency,
+        location,
+        notes,
+      } = invoice;
 
       reset({
         jobTitle,
@@ -71,6 +86,8 @@ const EditInvoiceModal = ({ open, onClose, showToast, onUpdate, invoice, client 
           description: item.description,
           price: item.price,
         })),
+        frequency,
+        location,
         notes,
       });
 
@@ -81,9 +98,7 @@ const EditInvoiceModal = ({ open, onClose, showToast, onUpdate, invoice, client 
   const handleEdit = async (data) => {
     setIsLoading(true);
 
-    try {
-      console.log('it ran');
-
+    try {3
       await Axios.put(
         `${process.env.NEXT_PUBLIC_API_URL}/invoices/${invoice._id}`,
         data
@@ -154,6 +169,24 @@ const EditInvoiceModal = ({ open, onClose, showToast, onUpdate, invoice, client 
                 className={editInvoice.titleContentInput}
                 type="text"
                 placeholder="Job Title"
+              />
+            </div>
+            <div className={editInvoice.detailInputs}>
+            <input
+                {...register('frequency', {
+                  required: 'Frequency is required',
+                })} 
+                className={editInvoice.detailContentInput}
+                type="number"
+                placeholder="Frequency"
+              />
+              <input
+                {...register('location', {
+                  required: 'Location is required',
+                })} 
+                className={editInvoice.detailContentInput}
+                type="text"
+                placeholder="Address"
               />
             </div>
 

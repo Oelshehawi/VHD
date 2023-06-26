@@ -75,14 +75,6 @@ const ClientDetailed = () => {
       value: client.email,
     },
     {
-      name: 'Address',
-      value: client.location,
-    },
-    {
-      name: 'frequency',
-      value: client.frequency,
-    },
-    {
       name: 'Notes',
       value: client.notes,
     },

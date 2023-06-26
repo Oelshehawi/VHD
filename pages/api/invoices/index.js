@@ -44,15 +44,17 @@ export default async function handler(req, res) {
       });
 
       // Extract form data
-      let { invoiceId, jobTitle, dateIssued, dateDue, items, notes, status } =
-        fields || {};
-
-      // Convert empty array fields to null
-      invoiceId = invoiceId.length === 0 ? null : invoiceId;
-      jobTitle = jobTitle.length === 0 ? null : jobTitle;
-      dateIssued = dateIssued.length === 0 ? null : dateIssued;
-      dateDue = dateDue.length === 0 ? null : dateDue;
-      notes = notes.length === 0 ? null : notes;
+      let {
+        invoiceId,
+        jobTitle,
+        dateIssued,
+        dateDue,
+        items,
+        frequency,
+        location,
+        notes,
+        status,
+      } = fields || {};
 
       // Convert items to an array of objects
       if (items.length === 0) {
@@ -70,6 +72,8 @@ export default async function handler(req, res) {
         dateIssued,
         dateDue,
         items,
+        frequency,
+        location,
         notes,
         status,
       });

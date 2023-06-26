@@ -18,6 +18,8 @@ const InvoiceTable = ({ filter, onUpdate }) => {
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
+  console.log(filter)
+
   useEffect(() => {
     const fetchData = async () => {
       try {

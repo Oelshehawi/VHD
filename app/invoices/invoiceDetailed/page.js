@@ -4,6 +4,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { FaTrashAlt } from 'react-icons/fa';
 import { FaPenSquare } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa';
+import { FaUser } from 'react-icons/fa';
+import { FaRegEnvelope } from 'react-icons/fa';
+import { FaPhoneAlt } from 'react-icons/fa';
 import axios from 'axios';
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -44,7 +47,9 @@ const InvoiceDetailed = () => {
         setInvoiceData(invoiceResponse.data);
 
         const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/clients?prefix=${invoiceResponse.data.invoiceId.split('-')[0]}`
+          `${process.env.NEXT_PUBLIC_API_URL}/clients?prefix=${
+            invoiceResponse.data.invoiceId.split('-')[0]
+          }`
         );
         setClientData(response.data);
       } catch (error) {
@@ -74,33 +79,6 @@ const InvoiceDetailed = () => {
       console.log('Error deleting record:', error);
     }
   };
-
-  const details = [
-    {
-      name: 'Invoice ID',
-      value: invoice.invoiceId,
-    },
-    {
-      name: 'Job Title',
-      value: invoice.jobTitle,
-    },
-    {
-      name: 'Date Issued',
-      value: invoice.dateIssued,
-    },
-    {
-      name: 'Date Due',
-      value: invoice.dateDue,
-    },
-    {
-      name: 'Status',
-      value: invoice.status,
-    },
-    {
-      name: 'Amount',
-      value: invoice.price,
-    },
-  ];
 
   let Total = 0;
   for (let i = 0; i < invoice.items.length; i++) {
@@ -162,6 +140,24 @@ const InvoiceDetailed = () => {
     router.push('/invoices');
   };
 
+  const redirectToClientDetails = (clientId) => {
+    router.push(`/database/clientDetailed?id=${clientId}`);
+  };
+
+  const issuedDate = new Date(invoice.dateIssued).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const dueDate = new Date(invoice.dateDue).toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+
+  const formattedDates = `Issued on ${issuedDate} - Due on ${dueDate}`;
+
   return (
     <>
       <ToastContainer />
@@ -211,18 +207,48 @@ const InvoiceDetailed = () => {
       <div className={invoiceDetailed.invoiceDetailsContainer}>
         <div className={invoiceDetailed.invoiceInformation}>
           <div className={invoiceDetailed.invoiceInformationHeader}>
-            {'invoice Information'}
+            <div className={invoiceDetailed.invoiceInformationTitle}>
+              {'Invoice #' + invoice.invoiceId}
+            </div>
+            <div className={invoiceDetailed.invoiceInformationSubtitle}>
+              <p>{formattedDates}</p>
+              <p>Address : {invoice.location}</p>
+              <p>Frequency : {invoice.frequency} Cleanings per Year</p>
+            </div>
           </div>
           <div className={invoiceDetailed.invoiceInformationContent}>
-            {details.map(({ name, value }) => (
-              <div
-                className={invoiceDetailed.invoiceInformationOrder}
-                key={name}
-              >
-                <p className={invoiceDetailed.invoiceDetailTitle}>{name}</p>
-                <p className={invoiceDetailed.invoiceDetailMain}>{value}</p>
+            <div className={invoiceDetailed.invoiceCostBreakdown}>
+              <div className={invoiceDetailed.invoiceCostHeader}>
+                {'Cost Breakdown'}
               </div>
-            ))}
+              <div className={invoiceDetailed.invoiceCostContent}>
+                {invoice.items.map((item, index) => (
+                  <div key={index} className={invoiceDetailed.invoiceCostItem}>
+                    <p className={invoiceDetailed.fullHeight}>
+                      {item.description} :
+                    </p>
+                    <p>${item.price}</p>
+                  </div>
+                ))}
+                <p className={invoiceDetailed.invoiceCostTax}>
+                  <span>GST (5%) :</span>$
+                  {(
+                    invoice.items.reduce(
+                      (acc, item) => acc + parseFloat(item.price),
+                      0
+                    ) * 0.05
+                  ).toFixed(2)}
+                </p>
+                <div className={invoiceDetailed.invoiceCostTotal}>
+                  <p>Amount Due :</p>
+                  <p>${Total + Total * 0.05}</p>
+                </div>
+              </div>
+            </div>
+            <div className={invoiceDetailed.invoiceInformationFooter}>
+              {'Additional Notes :'}
+              <p className={invoiceDetailed.lighterText}> {invoice.notes}</p>
+            </div>
           </div>
         </div>
         <div className={invoiceDetailed.invoiceContainer}>
@@ -242,7 +268,32 @@ const InvoiceDetailed = () => {
               />
             </div>
           </div>
-          <div className={invoiceDetailed.invoiceClient}></div>
+          <div className={invoiceDetailed.invoiceClient}>
+            <div className={invoiceDetailed.invoiceClientTitle}>
+              {'Client Details'}
+            </div>
+            <div className={invoiceDetailed.invoiceClientInfo}>
+              {client[0] && (
+                <>
+                  <p
+                    className={invoiceDetailed.invoiceClientPara}
+                    onClick={() => redirectToClientDetails(client[0]._id)}
+                  >
+                    <FaUser />
+                    {client[0].clientName}
+                  </p>
+                  <p className={invoiceDetailed.invoiceClientPara}>
+                    <FaRegEnvelope />
+                    {client[0].email}
+                  </p>
+                  <p className={invoiceDetailed.invoiceClientPara}>
+                    <FaPhoneAlt />
+                    {client[0].phoneNumber}
+                  </p>
+                </>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </>
