@@ -13,12 +13,10 @@ import { useRouter } from 'next/navigation';
 const InvoiceTable = ({ filter, onUpdate }) => {
   const [invoiceData, setInvoiceData] = useState([]);
   const [globalFilter, setglobalFilter] = useState('');
+  const [loading, setLoading] = useState(true);
   const [modal, setmodal] = useState(false);
   const [selectedRow, setSelectedRow] = useState('');
-  const [loading, setLoading] = useState(true);
   const router = useRouter();
-
-  console.log(filter)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -111,8 +109,7 @@ const InvoiceTable = ({ filter, onUpdate }) => {
     router.push(`/invoices/invoiceDetailed?id=${invoiceId}`);
   };
 
-  //React table data initialization
-  const data = React.useMemo(() => invoiceData, [invoiceData]);
+  const data = useMemo(() => invoiceData, [invoiceData]);
 
   const memoizedFilter = useMemo(() => filter, [filter]);
 
