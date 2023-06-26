@@ -10,14 +10,9 @@ const reactFormDataSchema = new Schema({
   phoneNumber: {
     type: String,
   },
-  frequency: {
-    type: Number,
-  },
-  location: {
-    type: String,
-  },
   prefix: {
     type: String,
+    unique: true,
   },
   notes: {
     type: String,
@@ -25,23 +20,48 @@ const reactFormDataSchema = new Schema({
 });
 
 const invoiceSchema = new Schema({
-  clientName: {
+  invoiceId: {
     type: String,
+    required: true,
+    unique: true,
   },
-  email: {
+  jobTitle: {
     type: String,
-  },
-  phoneNumber: {
-    type: String,
+    required: true,
   },
   dateIssued: {
     type: Date,
+    required: true,
   },
   dateDue: {
     type: Date,
+    required: true,
   },
-  notes: {
+  items: [
+    {
+      description: {
+        type: String,
+        required: true,
+      },
+      price: {
+        type: Number,
+        required: true,
+      },
+    },
+  ],
+  frequency: {
+    type: Number,
+    required: true,
+  },
+  location: {
     type: String,
+    required: true,
+  },
+  notes: String,
+  status: {
+    type: String,
+    enum: ['pending', 'overdue', 'paid'],
+    default: 'pending',
   },
 });
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import styles from './styles/table.module.css';
+import styles from './styles/invoiceTable.module.css';
 import axios from 'axios';
 import {
   useReactTable,
@@ -10,21 +10,23 @@ import {
 } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 
-const Table = ({ filter, onUpdate }) => {
-  const [clientData, setClientData] = useState([]);
-  const [globalFilter, setGlobalFilter] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(false);
+const InvoiceTable = ({ filter, onUpdate }) => {
+  const [invoiceData, setInvoiceData] = useState([]);
+  const [globalFilter, setglobalFilter] = useState('');
+  const [modal, setmodal] = useState(false);
   const [selectedRow, setSelectedRow] = useState('');
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
-  
+
+  console.log(filter)
+
   useEffect(() => {
     const fetchData = async () => {
       try {
         const res = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/clients/`
+          `${process.env.NEXT_PUBLIC_API_URL}/invoices/`
         );
-        setClientData(res.data);
+        setInvoiceData(res.data);
         setLoading(false);
       } catch (err) {
         console.error(err);
@@ -34,44 +36,86 @@ const Table = ({ filter, onUpdate }) => {
     fetchData();
   }, [onUpdate]);
 
-  const redirectToClientDetails = (clientId) => {
-    router.push(`/database/clientDetailed?id=${clientId}`);
-  };
-
-  const handleRowClick = (row) => {
-    if (row) {
-      redirectToClientDetails(row);
-    }
-  };
-
-  // Conditionally initialize react table data
-  const data = useMemo(() => clientData, [clientData]);
-
   const columnHelper = createColumnHelper();
 
   const columns = [
-    columnHelper.accessor('clientName', {
-      header: 'Client Name',
+    columnHelper.accessor('invoiceId', {
+      header: 'Invoice #',
+      cell: (info) => (
+        <div className={styles.invoiceId}>{'#' + info.getValue()}</div>
+      ),
+    }),
+    columnHelper.accessor('jobTitle', {
+      header: 'Job Title',
       cell: (info) => <div className={styles.jobTitle}>{info.getValue()}</div>,
     }),
-    columnHelper.accessor('email', {
-      header: 'Email',
+    columnHelper.accessor('dateDue', {
+      header: 'Due Date',
       cell: (info) => {
         const value = info.getValue();
         if (value) {
-          return <div className={styles.dateValue}>{value.split('T')[0]}</div>;
+          return <div className={styles.jobTitle}>{value.split('T')[0]}</div>;
         }
       },
     }),
-    columnHelper.accessor('phoneNumber', {
-      header: 'Phone Number',
+    columnHelper.accessor('status', {
+      header: 'Status',
       cell: (info) => {
-        return <div className={styles.phone}>{info.getValue()}</div>;
+        const status = info.getValue();
+        let buttonStyle = '';
+
+        switch (status) {
+          case 'pending':
+            buttonStyle = styles.yellowButton;
+            break;
+          case 'overdue':
+            buttonStyle = styles.redButton;
+            break;
+          case 'paid':
+            buttonStyle = styles.greenButton;
+            break;
+          default:
+            break;
+        }
+
+        return (
+          <div className={styles.phone}>
+            <button className={`${styles.statusButton} ${buttonStyle}`}>
+              {status.toUpperCase()}
+            </button>
+          </div>
+        );
+      },
+    }),
+    columnHelper.accessor('items', {
+      header: 'Amount',
+      cell: (info) => {
+        const { original } = info.row;
+        let Total = 0;
+        for (let i = 0; i < original.items.length; i++) {
+          Total += original.items[i].price;
+        }
+
+        return <div className={styles.phone}>${Total + Total * 0.05}</div>;
       },
     }),
   ];
 
-  // Conditionally initialize react table
+  const handleRowClick = (row) => {
+    if (row) {
+      redirectToInvoiceDetails(row);
+    }
+  };
+
+  const redirectToInvoiceDetails = (invoiceId) => {
+    router.push(`/invoices/invoiceDetailed?id=${invoiceId}`);
+  };
+
+  //React table data initialization
+  const data = React.useMemo(() => invoiceData, [invoiceData]);
+
+  const memoizedFilter = useMemo(() => filter, [filter]);
+
   const tableInstance = useReactTable({
     data,
     columns,
@@ -79,15 +123,13 @@ const Table = ({ filter, onUpdate }) => {
       globalFilter,
     },
     getCoreRowModel: getCoreRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
+    onGlobalFilterChange: setglobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  const memoizedFilter = useMemo(() => filter, [filter]);
-
   useEffect(() => {
-    setGlobalFilter(memoizedFilter ?? '');
-  }, [memoizedFilter, setGlobalFilter]);
+    setglobalFilter(memoizedFilter ?? '');
+  }, [memoizedFilter, setglobalFilter]);
 
   if (loading) {
     return (
@@ -137,4 +179,4 @@ const Table = ({ filter, onUpdate }) => {
   );
 };
 
-export default Table;
+export default InvoiceTable;

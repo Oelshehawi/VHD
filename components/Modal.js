@@ -7,8 +7,6 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
   const [animationClass, setAnimationClass] = useState('slideIn');
   const [animationClass2, setAnimationClass2] = useState('fadeIn');
 
-  const emptyInput = {};
-
   const {
     register,
     handleSubmit,
@@ -28,6 +26,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       type: 'text',
       placeholder: 'Invoice Prefix',
       isRequired: true,
+      maxLength: 3,
     },
     { name: 'email', type: 'email', placeholder: 'Email', isRequired: true },
     {
@@ -35,18 +34,6 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       type: 'tel',
       placeholder: 'Phone Number',
       isRequired: true,
-    },
-    {
-      name: 'location',
-      type: 'text',
-      placeholder: 'Location',
-      isRequired: true,
-    },
-    {
-      name: 'frequency',
-      type: 'number',
-      placeholder: 'Frequency per Year',
-      isRequired: false,
     },
     {
       name: 'notes',
@@ -63,8 +50,6 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       formData.append('prefix', values.prefix);
       formData.append('email', values.email);
       formData.append('phoneNumber', values.phoneNumber);
-      formData.append('frequency', values.frequency);
-      formData.append('location', values.location);
       formData.append('notes', values.notes);
 
       await Axios.post(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, formData);
@@ -72,7 +57,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
       onUpdate();
       handleClose();
       showToast();
-      reset({ ...emptyInput });
+      reset();
     } catch (error) {
       // Handle the error
       console.log(error);
@@ -107,9 +92,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
           e.stopPropagation();
         }}
       >
-        <div className={modal.modalHeader}>
-          Add New Client
-        </div>
+        <div className={modal.modalHeader}>Add New Client</div>
         <form
           id="addClientForm"
           className={modal.modalContent}
@@ -131,6 +114,7 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
                     className={modal.modalContentInput}
                     type={type}
                     placeholder={placeholder}
+                    maxLength={rest.maxLength}
                     {...rest}
                   />
                 )}

@@ -20,7 +20,7 @@
     display: flex;
     flex-flow: row nowrap;
     justify-content: space-evenly;
-    height: 50%;
+    height: 62%;
     width: 12%;
     background-color: green;
     color: white;
@@ -83,7 +83,7 @@
   
   .searchContainer {
     width: 30%;
-    height: 50%;
+    height: 62%;
     background-color: white;
     display: flex;
     align-items: center;

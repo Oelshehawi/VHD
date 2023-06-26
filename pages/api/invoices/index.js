@@ -1,5 +1,5 @@
 import connectMongo from '../../../lib/connect';
-import { Client } from '../../../models/reactDataSchema';
+import { Invoice } from '../../../models/reactDataSchema';
 import { IncomingForm } from 'formidable';
 
 export const config = {
@@ -12,14 +12,15 @@ export const config = {
 export default async function handler(req, res) {
   await connectMongo();
   if (req.method === 'GET') {
+    // Request without ID
     const { prefix } = req.query;
     try {
       if (prefix) {
-        const condition = { prefix };
-        const data = await Client.find(condition);
+        const condition = { invoiceId: { $regex: `^${prefix}-` } };
+        const data = await Invoice.find(condition);
         res.send(data);
       } else {
-        const data = await Client.find({});
+        const data = await Invoice.find({});
         res.send(data);
       }
     } catch (err) {
@@ -44,29 +45,40 @@ export default async function handler(req, res) {
 
       // Extract form data
       let {
-        clientName,
-        prefix,
-        email,
-        phoneNumber,
+        invoiceId,
+        jobTitle,
+        dateIssued,
+        dateDue,
+        items,
+        frequency,
+        location,
         notes,
+        status,
       } = fields || {};
 
-      // Convert empty array fields to null
-      clientName = clientName.length === 0 ? null : clientName[0];
-      email = email.length === 0 ? null : email[0];
-      prefix = prefix.length === 0 ? null : prefix[0];
-      phoneNumber = phoneNumber.length === 0 ? null : phoneNumber[0];
-      notes = notes.length === 0 ? null : notes[0];
+      // Convert items to an array of objects
+      if (items.length === 0) {
+        items = null;
+      } else {
+        items = items.map((item) => ({
+          description: item.description,
+          price: parseFloat(item.price) || 0,
+        }));
+      }
 
-      const formData = new Client({
-        clientName,
-        prefix,
-        email,
-        phoneNumber,
+      const invoiceData = new Invoice({
+        invoiceId,
+        jobTitle,
+        dateIssued,
+        dateDue,
+        items,
+        frequency,
+        location,
         notes,
+        status,
       });
 
-      await formData.save();
+      await invoiceData.save();
       res.send('Inserted data successfully.');
     } catch (err) {
       console.log(err);
