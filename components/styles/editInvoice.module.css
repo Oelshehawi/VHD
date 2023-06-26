@@ -1,0 +1,356 @@
+.overlay {
+  background-color: rgba(0, 0, 0, 0.5);
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  animation-duration: 0.5s;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1.5;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1.5;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.fadeIn {
+  animation-name: fadeIn;
+}
+
+.fadeOut {
+  animation-name: fadeOut;
+}
+
+.editInvoiceContainer {
+  height: 100%;
+  width: 600px;
+  position: fixed;
+  top: 0px;
+  right: 0px;
+  flex-flow: column nowrap;
+  overflow: hidden;
+  background-color: #ffffff;
+  box-shadow: 0px 0px 18px 0px rgba(0, 0, 0, 0.5);
+  z-index: 999;
+  animation-duration: 0.5s;
+  transform: translateX(0%);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0%);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    transform: translateX(0%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.slideIn {
+  animation-name: slideIn;
+}
+
+.slideOut {
+  animation-name: slideOut;
+}
+
+.closeBtn {
+  position: fixed;
+  top: 12px;
+  right: 14px;
+  border: none;
+  background-color: #d9d9d9;
+  font-weight: bold;
+}
+
+.closeBtn:hover,
+.closeBtn:focus {
+  color: green;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.editInvoiceContent {
+  display: flex;
+  flex-flow: column wrap;
+  margin-top: 5px;
+  padding: 25px;
+  z-index: 2;
+  justify-content: center;
+}
+
+.editInvoiceHeader {
+  background-color: green;
+  width: 100%;
+  height: 10%;
+  padding: 10px;
+  font-weight: bolder;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.editInvoiceFooter {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+  width: 100%;
+  height: 20%;
+  padding: 12px;
+}
+
+#updateButtonForm {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: center;
+  height: 20%;
+  width: 25%;
+  background-color: green;
+  color: white;
+  border-radius: 5px;
+  border: none;
+  align-items: center;
+  transition: transform 0.2s ease-in-out;
+  font-size: larger;
+}
+
+#updateButtonForm:hover {
+  cursor: pointer;
+  transform: scale(1.1);
+}
+
+.inputContainer {
+  display: flex;
+  flex-flow: column nowrap;
+  height: 75vh;
+}
+
+.titleInputs {
+  width: 100%;
+  height: 12%;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: flex-start;
+  align-items: center;
+}
+
+.titleContentInput {
+  width: 100%;
+  border: 2px solid lightblue;
+  border-radius: 5px;
+  height: 50%;
+  padding: 15px;
+  font-weight: bolder;
+}
+
+.titleContentInput:focus {
+  border: 2px solid rgb(25, 25, 247);
+  outline: none;
+}
+
+.detailInputs {
+  width: 100%;
+  height: 12%;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.detailContentInput {
+  width: 45%;
+  border: 2px solid lightblue;
+  border-radius: 5px;
+  height: 50%;
+  padding: 15px;
+  font-weight: bolder;
+}
+
+.detailContentInput:focus {
+  border: 2px solid rgb(25, 25, 247);
+  outline: none;
+}
+
+.selectContentInput {
+  width: 80%;
+}
+
+.recipientInput {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 12%;
+  background-color: rgba(164, 184, 194, 0.116);
+  border-radius: 5px;
+  border: 2px solid lightblue;
+}
+
+.dateInputs {
+  width: 100%;
+  height: 12%;
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.dateContentInput {
+  width: 45%;
+  border: 2px solid lightblue;
+  border-radius: 5px;
+  height: 50%;
+  padding: 15px;
+  font-weight: bolder;
+}
+
+.dateContentInput:focus {
+  border: 2px solid rgb(25, 25, 247);
+  outline: none;
+}
+
+.notesInputs {
+  width: 100%;
+  height: 20%;
+  display: flex;
+  flex-flow: row nowrap;
+  align-items: center;
+}
+
+.notesContentInput {
+  width: 100%;
+  border: 2px solid lightblue;
+  border-radius: 5px;
+  height: 60%;
+  padding: 15px;
+  font-weight: bolder;
+}
+
+.notesContentInput:focus {
+  border: 2px solid rgb(25, 25, 247);
+  outline: none;
+}
+
+.itemInputs {
+  width: 100%;
+  display: flex;
+  flex-flow: column nowrap;
+}
+
+.itemMain {
+  display: flex;
+  flex-flow: row nowrap;
+  justify-content: space-between;
+  height: 100%;
+  margin-bottom: 2%;
+}
+
+.itemMainInputs {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.itemDescriptionInput {
+  width: 35%;
+  border: 2px solid lightblue;
+  border-radius: 5px;
+  height: 100%;
+  padding: 5px;
+  font-weight: bolder;
+}
+
+.itemDescriptionInput:hover {
+  cursor: pointer;
+}
+
+.itemDescriptionInput:focus {
+  outline: none;
+  border: 2px solid rgb(25, 25, 247);
+}
+
+.itemPriceInput {
+  width: 35%;
+  border: 2px solid lightblue;
+  border-radius: 5px;
+  height: 100%;
+  padding: 5px;
+  font-weight: bolder;
+  margin-left: 15px;
+}
+
+.itemPriceInput:hover {
+  cursor: pointer;
+  outline: none;
+}
+
+.itemPriceInput:focus {
+  outline: none;
+  border: 2px solid rgb(25, 25, 247);
+}
+
+.itemFooter {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 2%;
+}
+
+.addButton {
+  display: flex;
+  justify-content: flex-start;
+  border: none;
+  background: none;
+  color: green;
+}
+
+.addButton:hover {
+  color: greenyellow;
+  cursor: pointer;
+}
+
+.deleteButton {
+  width: 10%;
+  height: 100%;
+  background-color: red;
+  border: none;
+  border-radius: 5px;
+  transition: ease-in-out 0.3s;
+  color: white;
+}
+
+.deleteButton:hover {
+  transform: scale(1.1);
+  cursor: pointer;
+}
+
+.itemTaxBreakdown {
+  display: flex;
+  flex-flow: column nowrap;
+  width: 40%;
+}
+
+.itemTotal {
+  font-weight: bolder;
+}

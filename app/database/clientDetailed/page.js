@@ -15,31 +15,38 @@ const ClientDetailed = () => {
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
   const [client, setClientData] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [openModal, setopenModal] = useState(false);
   const [onUpdate, setOnUpdate] = useState(false);
+  const [loadingInvoices, setLoadingInvoices] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await axios.get(
+        const clientResponse = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/clients/${id}`
         );
-        setClientData(response.data);
+        setClientData(clientResponse.data);
+
+        const response = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/invoices?prefix=${clientResponse.data.prefix}`
+        );
+        setInvoices(response.data);
+        setLoadingInvoices(false);
       } catch (error) {
         console.error(error);
       }
     };
-
     fetchData();
   }, [onUpdate]);
 
   // Fallback behavior if id is not available or clientData is empty
-  if (!id || client.length === 0) {
+  if (client.length === 0) {
     return (
       <div className={clientDetailed.loadingContainer}>
         <div className={clientDetailed.loader}></div>
       </div>
-    ); // You can replace this with appropriate loading or error message
+    );
   }
 
   const handleDelete = async () => {
@@ -68,14 +75,6 @@ const ClientDetailed = () => {
       value: client.email,
     },
     {
-      name: 'Address',
-      value: client.location,
-    },
-    {
-      name: 'frequency',
-      value: client.frequency,
-    },
-    {
       name: 'Notes',
       value: client.notes,
     },
@@ -83,6 +82,10 @@ const ClientDetailed = () => {
 
   const handleBack = () => {
     router.push('/database');
+  };
+
+  const redirectToInvoiceDetails = (invoiceId) => {
+    router.push(`/invoices/invoiceDetailed?id=${invoiceId}`);
   };
 
   return (
@@ -97,12 +100,15 @@ const ClientDetailed = () => {
       />
       <div className={clientDetailed.dataContainer}>
         <div className={clientDetailed.clientHeader}>
-          <div className={clientDetailed.clientTitle}>
+          <div className={clientDetailed.clientTitleContainer}>
             <FaArrowLeft
               className={clientDetailed.clientBackArrow}
               onClick={handleBack}
             />
-            {'CLIENT NAME'}
+            <div className={clientDetailed.clientTitle}>
+              {' '}
+              {client.clientName}
+            </div>
           </div>
           <div className={clientDetailed.clientButtons}>
             <div
@@ -143,6 +149,30 @@ const ClientDetailed = () => {
           <div className={clientDetailed.clientTransactionHistoryHeader}>
             {'Transaction History'}
           </div>
+          {loadingInvoices ? (
+            <div className={clientDetailed.loadingContainer}>
+              <div className={clientDetailed.loader}></div>
+            </div>
+          ) : (
+            <div className={clientDetailed.invoiceItemContainer}>
+              {invoices.length === 0 ? (
+                <p className={clientDetailed.notAvailable}>
+                  No invoices available
+                </p>
+              ) : (
+                invoices.map((invoice) => (
+                  <p
+                    key={invoice._id}
+                    className={clientDetailed.invoiceItem}
+                    onClick={() => redirectToInvoiceDetails(invoice._id)}
+                  >
+                    #{invoice.invoiceId} - {invoice.dateIssued.split('T')[0]} -{' '}
+                    {invoice.jobTitle}
+                  </p>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
     </>
