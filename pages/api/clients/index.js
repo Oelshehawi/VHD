@@ -48,8 +48,6 @@ export default async function handler(req, res) {
         prefix,
         email,
         phoneNumber,
-        frequency,
-        location,
         notes,
       } = fields || {};
 
@@ -58,12 +56,6 @@ export default async function handler(req, res) {
       email = email.length === 0 ? null : email[0];
       prefix = prefix.length === 0 ? null : prefix[0];
       phoneNumber = phoneNumber.length === 0 ? null : phoneNumber[0];
-      // Convert price and frequency to numbers
-      frequency =
-        frequency.length === 0 || isNaN(parseFloat(frequency[0]))
-          ? null
-          : parseFloat(frequency[0]);
-      location = location.length === 0 ? null : location[0];
       notes = notes.length === 0 ? null : notes[0];
 
       const formData = new Client({
@@ -71,8 +63,6 @@ export default async function handler(req, res) {
         prefix,
         email,
         phoneNumber,
-        frequency,
-        location,
         notes,
       });
 

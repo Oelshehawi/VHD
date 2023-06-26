@@ -34,18 +34,6 @@ const EditModal = ({ open, onClose, client, onUpdate }) => {
       value: client.phoneNumber,
     },
     {
-      name: 'location',
-      type: 'text',
-      placeholder: 'Location',
-      value: client.location,
-    },
-    {
-      name: 'frequency',
-      type: 'number',
-      placeholder: 'Frequency per Year',
-      value: client.frequency,
-    },
-    {
       name: 'notes',
       type: 'textarea',
       placeholder: 'Notes',
