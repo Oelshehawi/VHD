@@ -7,6 +7,8 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
+  PaginationState,
+  getPaginationRowModel
 } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 
@@ -122,6 +124,7 @@ const InvoiceTable = ({ filter, onUpdate }) => {
     getCoreRowModel: getCoreRowModel(),
     onGlobalFilterChange: setglobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
   });
 
   useEffect(() => {
@@ -172,6 +175,67 @@ const InvoiceTable = ({ filter, onUpdate }) => {
           ))}
         </tbody>
       </table>
+      <div className="flex items-center gap-2">
+        <button
+          className="border rounded p-1"
+          onClick={() => tableInstance.setPageIndex(0)}
+          disabled={!tableInstance.getCanPreviousPage()}
+        >
+          {'<<'}
+        </button>
+        <button
+          className="border rounded p-1"
+          onClick={() => tableInstance.previousPage()}
+          disabled={!tableInstance.getCanPreviousPage()}
+        >
+          {'<'}
+        </button>
+        <button
+          className="border rounded p-1"
+          onClick={() => tableInstance.nextPage()}
+          disabled={!tableInstance.getCanNextPage()}
+        >
+          {'>'}
+        </button>
+        <button
+          className="border rounded p-1"
+          onClick={() => tableInstance.setPageIndex(tableInstance.getPageCount() - 1)}
+          disabled={!tableInstance.getCanNextPage()}
+        >
+          {'>>'}
+        </button>
+        <span className="flex items-center gap-1">
+          <div>Page</div>
+          <strong>
+            {tableInstance.getState().pagination.pageIndex + 1} of{' '}
+            {tableInstance.getPageCount()}
+          </strong>
+        </span>
+        <span className="flex items-center gap-1">
+          | Go to page:
+          <input
+            type="number"
+            defaultValue={tableInstance.getState().pagination.pageIndex + 1}
+            onChange={e => {
+              const page = e.target.value ? Number(e.target.value) - 1 : 0
+              tableInstance.setPageIndex(page)
+            }}
+            className="border p-1 rounded w-16"
+          />
+        </span>
+        <select
+          value={tableInstance.getState().pagination.pageSize}
+          onChange={e => {
+            tableInstance.setPageSize(Number(e.target.value))
+          }}
+        >
+          {[10, 20, 30, 40, 50].map(pageSize => (
+            <option key={pageSize} value={pageSize}>
+              Show {pageSize}
+            </option>
+          ))}
+        </select>
+      </div>
     </>
   );
 };

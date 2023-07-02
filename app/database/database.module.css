@@ -20,7 +20,7 @@
   flex-flow: row nowrap;
   justify-content: space-evenly;
   height: 62%;
-  width: 12%;
+  width: 10.8%;
   background-color: green;
   color: white;
   border-radius: 5px;
@@ -39,8 +39,8 @@
   flex-flow: column nowrap;
   font-size: larger;
   justify-content: space-between;
-  margin: 50px 70px 20px 70px;
-  height: 12vh;
+  margin: 10px 70px 20px 70px;
+  height: 10vh;
 }
 
 .searchContainer {
@@ -75,7 +75,6 @@
 
 .searchContainer:focus-within {
   border: 2px solid green;
-
 }
 
 .fileImport:hover {
@@ -86,5 +85,5 @@
 
 .jobTableContainer {
   margin: 0px 70px 0px 70px;
-  height: 80vh;
+  height: 50vh;
 }

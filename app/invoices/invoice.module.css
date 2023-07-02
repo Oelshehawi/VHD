@@ -13,7 +13,6 @@
     border-radius: 5px;
     border: none;
     font-weight: bolder;
-    cursor: pointer;
   }
   
   .invoiceButtonContainer {
@@ -77,8 +76,8 @@
     flex-flow: column nowrap;
     font-size: larger;
     justify-content: space-between;
-    margin: 50px 70px 20px 70px;
-    height: 12vh;
+    margin: 10px 70px 20px 70px;
+    height: 10vh;
   }
   
   .searchContainer {
@@ -124,6 +123,5 @@
   
   .jobTableContainer {
     margin: 0px 70px 0px 70px;
-    height: 80vh;
   }
   

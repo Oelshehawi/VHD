@@ -16,7 +16,6 @@
 .table {
   border-collapse: collapse;
   font-size: 14px;
-  overflow-y: scroll;
   width: 100%;
 }
 
@@ -68,3 +67,5 @@
     transform: rotate(360deg);
   }
 }
+
+
