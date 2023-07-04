@@ -49,8 +49,8 @@ const InvoiceTable = ({ filter, onUpdate }) => {
       header: 'Job Title',
       cell: (info) => <div className={styles.jobTitle}>{info.getValue()}</div>,
     }),
-    columnHelper.accessor('dateDue', {
-      header: 'Due Date',
+    columnHelper.accessor('dateIssued', {
+      header: 'Issued Date',
       cell: (info) => {
         const value = info.getValue();
         if (value) {
