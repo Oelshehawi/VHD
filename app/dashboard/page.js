@@ -19,12 +19,22 @@ const DashboardPage = () => {
   const todaysDate = new Date().toLocaleString('en-US', utcOptions);
   const [eventSchedule, setEventSchedule] = useState(false);
   const [onUpdate, setOnUpdate] = useState(false);
+  const [invoices, setInvoices] = useState([]);
+  const [clients, setClients] = useState([]);
 
-  // fetching all events
   useEffect(() => {
-    axios
-      .get(`${process.env.NEXT_PUBLIC_API_URL}/events`)
-      .then((res) => {
+    const fetchData = async () => {
+      try {
+        const eventsRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/events`
+        );
+        const invoicesRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/invoices`
+        );
+        const clientsRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/clients`
+        );
+
         const utcOptions = {
           year: 'numeric',
           month: '2-digit',
@@ -34,16 +44,21 @@ const DashboardPage = () => {
           timeZone: 'UTC',
         };
 
-        const updatedEvents = res.data.map((event) => {
+        const updatedEvents = eventsRes.data.map((event) => {
           const utcDate = new Date(event.time);
           const utcString = utcDate.toLocaleString('en-US', utcOptions);
           return { ...event, time: utcString };
         });
 
-        console.log(updatedEvents);
         setEvents(updatedEvents);
-      })
-      .catch((err) => console.error(err));
+        setInvoices(invoicesRes);
+        setClients(clientsRes);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    fetchData();
   }, [onUpdate]);
 
   const showDeleteEventToast = () => {
@@ -53,25 +68,59 @@ const DashboardPage = () => {
     });
   };
 
+  const jobsToday = events.filter((event) => {
+    const eventDate = event.time.split(',')[0];
+    const currentDate = todaysDate.split(',')[0];
+    return eventDate === currentDate;
+  });
+
+  const totalClients = clients?.data?.length;
+
+  const totalOverdueInvoices = invoices?.data?.filter(
+    (invoice) => invoice.status === 'overdue'
+  );
+
   return (
     <>
       <div className={dashboard.dashboardContainer}>
+        <div className={dashboard.topLevel}>
+          <div className={dashboard.jobsDueContainer}>words</div>
+          <div className={dashboard.statsContainer}>
+            <div className={dashboard.clientNumber}>
+              Clients
+              {totalClients ? (
+                <p>{totalClients}</p>
+              ) : (
+                <div className={dashboard.loadingContainer}>
+                  <div className={dashboard.loader}></div>
+                </div>
+              )}
+            </div>
+            <div className={dashboard.clientNumber}>
+              Overdue
+              {totalOverdueInvoices ? (
+                <p>{totalOverdueInvoices.length}</p>
+              ) : (
+                <div className={dashboard.loadingContainer}>
+                  <div className={dashboard.loader}></div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
         <div className={dashboard.dashContainer}>
           Today's Schedule
           <div className={dashboard.innerContainer}>
-            <Event
-              eventSchedule={() => setEventSchedule(!eventSchedule)}
-              events={events.filter((event) => {
-                const eventDate = event.time.split(',')[0]; // Extract the date part from event.time
-                const currentDate = todaysDate.split(',')[0]; // Extract the date part from todaysDate
-                console.log('this is eventdate;', eventDate);
-                console.log('this is currentdate;', currentDate);
-                console.log(events);
-                return eventDate === currentDate;
-              })}
-              onUpdate={() => setOnUpdate(!onUpdate)}
-              showDeleteEventToast={showDeleteEventToast}
-            />
+            {jobsToday.length !== 0 ? (
+              <Event
+                eventSchedule={() => setEventSchedule(!eventSchedule)}
+                events={jobsToday}
+                onUpdate={() => setOnUpdate(!onUpdate)}
+                showDeleteEventToast={showDeleteEventToast}
+              />
+            ) : (
+              <p className={dashboard.center}> NO JOBS TODAY</p>
+            )}
           </div>
         </div>
       </div>
