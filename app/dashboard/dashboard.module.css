@@ -1,4 +1,5 @@
 .dashboardContainer {
+  background-color: #467061;
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -9,14 +10,70 @@
 .topLevel {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   flex-flow: row nowrap;
   width: 90%;
+  height: 40%;
+}
+
+.jobsDueContainer{
+  width: 50%;
+  background-color: #003e29;
+  border-radius: 20px;
+  padding: 30px;
+  height: 100%;
+  overflow-y: scroll;
+  display: flex;
+  flex-flow: column nowrap;
+  justify-content: space-around;
+ 
+}
+
+.innerJobsDueContainer {
+  display: flex;
+  flex-flow: column nowrap;
+  background-color: #467061;
+  height: 80%;
+  border-radius: 10px;
+  font-weight: bolder;
+  font-size: larger;
+  border: 2px solid gray;
+  padding: 10px;
+}
+
+.innerJobsDueContainer:hover {
+  animation: pulse 1.5s infinite;
+}
+
+.jobsDueHeader{
+  border-bottom: 2px solid gray;
+  height: 10%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  color: white;
+  padding: 20px;
+}
+
+.jobItem{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
   height: 20%;
+  color: white;
+  padding: 5px;
+}
+
+.jobItem:hover{
+  background-color: #003e29;
+  border-radius: 5px;
+  cursor: pointer;
 }
 
 .dashContainer {
-  background-color: #ededed;
+  background-color: #003e29;
   width: 90%;
   height: 40%;
   display: flex;
@@ -27,13 +84,13 @@
 
 .innerContainer {
   display: flex;
-  background-color: #d9d9d9;
+  background-color: #467061;
   height: 80%;
   border-radius: 10px;
   margin: 20px 0px 20px 0px;
   font-weight: bolder;
   font-size: larger;
-  box-shadow: 0 0 0 0 rgba(0, 0, 0, 1);
+  border: 2px solid gray;
 }
 
 .innerContainer:hover {
@@ -46,7 +103,7 @@
   }
 
   70% {
-    box-shadow: 0 0 0 10px rgba(0, 0, 0, 0);
+    box-shadow: 0 0 30px 30px rgba(0, 0, 0, 0);
   }
 
   100% {
@@ -63,12 +120,13 @@
   justify-content: center;
   align-items: center;
   width: 100%;
+  color: white;
 }
 
 .statsContainer {
-  background-color: #ededed;
+  background-color: #003e29;
   width: 40%;
-  height: 100%;
+  height: 50%;
   display: flex;
   flex-flow: row nowrap;
   justify-content: space-evenly;
@@ -76,22 +134,25 @@
   padding: 30px;
 }
 
-.clientNumber {
+
+.statBox {
   display: flex;
   flex-flow: column nowrap;
   justify-content: center;
   align-items: center;
   width: 40%;
-  background-color: #d9d9d9;
+  background-color: #467061;
   border-radius: 10px;
-  font-weight: bolder;
   font-size: medium;
-  box-shadow: 0 0 0 0 rgba(0, 0, 0, 1);
+  border: 2px solid gray;
+  color: white;
 }
 
-.clientNumber:hover {
+
+.statBox:hover {
   animation: pulse 1.5s infinite;
 }
+
 
 .loadingContainer {
   height: 5vh;
@@ -118,3 +179,4 @@
     transform: rotate(360deg);
   }
 }
+

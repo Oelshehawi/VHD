@@ -5,10 +5,10 @@
 }
 
 .sidebarLinkActive {
-  background-color: #d9d9d9;
+  background-color: #467061;
   border-radius: 25px;
   width: 70%;
-  color: inherit;
+  color: white;
   text-decoration: inherit;
   margin-left: 20px;
   margin-right: 20px;
@@ -20,7 +20,7 @@
 
 .theLink {
   width: 70%;
-  color: inherit;
+  color: white;
   text-decoration: inherit;
   margin-left: 20px;
   margin-right: 20px;
@@ -31,7 +31,7 @@
 }
 
 .theLink:hover {
-  background-color: #d9d9d9;
+  background-color: #467061;
   border-radius: 25px;
 }
 
@@ -42,8 +42,8 @@
 }
 
 #sidebar {
-  background-color: whitesmoke;
+  background-color: #003e29;
   flex-shrink: 0;
   width: 240px;
-  border-right: 5px solid lightgray;
+  border-right: 3px solid #467061;
 }
