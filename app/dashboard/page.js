@@ -112,6 +112,8 @@ const DashboardPage = () => {
 
   const dueInvoices = Object.values(groupedDueInvoices ?? []);
 
+  console.log(dueInvoices);
+
   return (
     <>
       <div className={dashboard.dashboardContainer}>
@@ -150,6 +152,7 @@ const DashboardPage = () => {
               {groupedLatestInvoices ? (
                 dueInvoices.map(({ jobTitle, invoiceId, dateDue, _id }) => {
                   const formattedDate = new Intl.DateTimeFormat('en-US', {
+                    timeZone: 'UTC',
                     month: 'long',
                     day: 'numeric',
                     year: 'numeric',
