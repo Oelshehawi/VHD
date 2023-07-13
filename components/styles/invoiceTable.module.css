@@ -37,12 +37,13 @@
   justify-content: center;
   align-items: center;
   width: 50%;
-  padding: 4%;
+  padding: 2.5%;
   border-radius: 4px;
   font-weight: bold;
   text-align: center;
   cursor: pointer;
   font-weight: bolder;
+  font-size: 15px;
 }
 
 /* Define the specific styles for each status button */
