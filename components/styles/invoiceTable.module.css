@@ -1,14 +1,4 @@
-.phone {
-  font-size: large;
-  font-weight: bolder;
-}
-
-.jobTitle {
-  font-size: large;
-  font-weight: bolder;
-}
-
-.invoiceId {
+.cell {
   font-size: large;
   font-weight: bolder;
 }
@@ -34,7 +24,6 @@
 .td {
   padding: 15px;
   border-bottom: 1.5px solid #d9d9d9;
-  text-align: left;
 }
 
 .tr:hover {
@@ -47,9 +36,8 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  width: 40%;
-  height: 40%;
-  padding: 8px 16px;
+  width: 50%;
+  padding: 4%;
   border-radius: 4px;
   font-weight: bold;
   text-align: center;
@@ -74,7 +62,6 @@
   background-color: green;
   color: white;
   border: none;
-
 }
 
 .loadingContainer {

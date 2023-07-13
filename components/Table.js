@@ -8,7 +8,7 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   PaginationState,
-  getPaginationRowModel
+  getPaginationRowModel,
 } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 
@@ -19,7 +19,7 @@ const Table = ({ filter, onUpdate }) => {
   const [modal, setModal] = useState(false);
   const [selectedRow, setSelectedRow] = useState('');
   const router = useRouter();
-  
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -54,21 +54,24 @@ const Table = ({ filter, onUpdate }) => {
   const columns = [
     columnHelper.accessor('clientName', {
       header: 'Client Name',
-      cell: (info) => <div className={styles.jobTitle}>{info.getValue()}</div>,
+      size: 300,
+      cell: (info) => <div className={styles.cell}>{info.getValue()}</div>,
     }),
     columnHelper.accessor('email', {
       header: 'Email',
+      size: 400,
       cell: (info) => {
         const value = info.getValue();
         if (value) {
-          return <div className={styles.dateValue}>{value.split('T')[0]}</div>;
+          return <div className={styles.cell}>{value.split('T')[0]}</div>;
         }
       },
     }),
     columnHelper.accessor('phoneNumber', {
       header: 'Phone Number',
+      size: 150,
       cell: (info) => {
-        return <div className={styles.phone}>{info.getValue()}</div>;
+        return <div className={styles.cell}>{info.getValue()}</div>;
       },
     }),
   ];
@@ -109,7 +112,14 @@ const Table = ({ filter, onUpdate }) => {
           {tableInstance.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className={styles.tr}>
               {headerGroup.headers.map((header) => (
-                <th key={header.id} className={styles.th}>
+                <th
+                  key={header.id}
+                  className={styles.th}
+                  style={{
+                    width:
+                      header.getSize() !== 100 ? header.getSize() : undefined,
+                  }}
+                >
                   {header.isPlaceholder
                     ? null
                     : flexRender(
@@ -161,7 +171,9 @@ const Table = ({ filter, onUpdate }) => {
         </button>
         <button
           className="border rounded p-1"
-          onClick={() => tableInstance.setPageIndex(tableInstance.getPageCount() - 1)}
+          onClick={() =>
+            tableInstance.setPageIndex(tableInstance.getPageCount() - 1)
+          }
           disabled={!tableInstance.getCanNextPage()}
         >
           {'>>'}
@@ -178,20 +190,20 @@ const Table = ({ filter, onUpdate }) => {
           <input
             type="number"
             defaultValue={tableInstance.getState().pagination.pageIndex + 1}
-            onChange={e => {
-              const page = e.target.value ? Number(e.target.value) - 1 : 0
-              tableInstance.setPageIndex(page)
+            onChange={(e) => {
+              const page = e.target.value ? Number(e.target.value) - 1 : 0;
+              tableInstance.setPageIndex(page);
             }}
             className="border p-1 rounded w-16"
           />
         </span>
         <select
           value={tableInstance.getState().pagination.pageSize}
-          onChange={e => {
-            tableInstance.setPageSize(Number(e.target.value))
+          onChange={(e) => {
+            tableInstance.setPageSize(Number(e.target.value));
           }}
         >
-          {[10, 20, 30, 40, 50].map(pageSize => (
+          {[10, 20, 30, 40, 50].map((pageSize) => (
             <option key={pageSize} value={pageSize}>
               Show {pageSize}
             </option>

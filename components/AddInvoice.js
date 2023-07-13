@@ -18,6 +18,7 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
   const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [frequency, setFrequency] = useState('');
 
   const addItem = () => {
     setItems((prevItems) => [...prevItems, { description: '', price: 0 }]);
@@ -113,7 +114,7 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
           .toString()
           .padStart(4, '0')}`;
 
-          console.log(location)
+        console.log(location);
         const invoiceData = {
           invoiceId,
           jobTitle,
@@ -207,24 +208,25 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
               />
             </div>
             <div className={addInvoice.detailInputs}>
-            <input
+              <input
                 {...register('frequency', {
                   required: 'Frequency is required',
-                })} 
+                })}
                 className={addInvoice.detailContentInput}
                 type="number"
                 placeholder="Frequency"
+                onChange={() => setFrequency(e.target.value)}
               />
               <input
                 {...register('location', {
                   required: 'Location is required',
-                })} 
+                })}
                 className={addInvoice.detailContentInput}
                 type="text"
                 placeholder="Address"
               />
             </div>
-            
+
             <div className={addInvoice.dateInputs}>
               <input
                 {...register('dateIssued', {
@@ -238,6 +240,8 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
                 {...register('dateDue', { required: 'Date Due is required' })}
                 className={addInvoice.dateContentInput}
                 type="date"
+                disabled
+                value={ frequency ? 'Please Input dateIssued First' : 'Please Input Frequency'}
               />
             </div>
             <div className={addInvoice.itemInputs}>
