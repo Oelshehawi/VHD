@@ -19,6 +19,8 @@ const EditInvoiceModal = ({
   const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [frequency, setFrequency] = useState('');
+  const [dateIssuedSet, setDateIssuedSet] = useState('');
 
   const addItem = () => {
     setItems((prevItems) => [...prevItems, { description: '', price: 0 }]);
@@ -98,10 +100,20 @@ const EditInvoiceModal = ({
   const handleEdit = async (data) => {
     setIsLoading(true);
 
-    try {3
+    try {
+      const { clientId, dateIssued, frequency, ...restData } = data;
+      const dateDue = calculateDueDate(dateIssued, frequency); // Calculate the dateDue value
+
+      const updatedData = {
+        ...restData,
+        dateIssued,
+        frequency,
+        dateDue,
+      };
+
       await Axios.put(
         `${process.env.NEXT_PUBLIC_API_URL}/invoices/${invoice._id}`,
-        data
+        updatedData
       );
 
       onUpdate();
@@ -122,6 +134,29 @@ const EditInvoiceModal = ({
       setAnimationClass2('fadeIn');
       onClose();
     }, 500);
+  };
+
+  const calculateDueDate = (dateIssued, frequency) => {
+    const dueDate = new Date(dateIssued);
+
+    // Adjust the due date based on the frequency
+    dueDate.setMonth(dueDate.getMonth() + 12 / frequency);
+
+    const dueDateString = dueDate.toLocaleDateString('en-US', {
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+
+    return dueDate.toISOString().split('T')[0];
+  };
+
+  const handleChange = (e) => {
+    if (e.target.value.length > 1) {
+      e.target.value = e.target.value.slice(0, 1);
+    }
+    setFrequency(e.target.value);
   };
 
   if (!open) return null;
@@ -172,18 +207,19 @@ const EditInvoiceModal = ({
               />
             </div>
             <div className={editInvoice.detailInputs}>
-            <input
+              <input
                 {...register('frequency', {
                   required: 'Frequency is required',
-                })} 
+                })}
                 className={editInvoice.detailContentInput}
                 type="number"
                 placeholder="Frequency"
+                onChange={handleChange}
               />
               <input
                 {...register('location', {
                   required: 'Location is required',
-                })} 
+                })}
                 className={editInvoice.detailContentInput}
                 type="text"
                 placeholder="Address"
@@ -195,11 +231,20 @@ const EditInvoiceModal = ({
                 {...register('dateIssued')}
                 className={editInvoice.dateContentInput}
                 type="date"
+                onChange={(e) => setDateIssuedSet(e.target.value)}
               />
               <input
                 {...register('dateDue')}
                 className={editInvoice.dateContentInput}
-                type="date"
+                type="text"
+                value={
+                  frequency
+                    ? dateIssuedSet
+                      ? calculateDueDate(dateIssuedSet, frequency)
+                      : 'Please Change Date Issued as well'
+                    : 'Please Change Frequency First'
+                }
+                disabled
               />
             </div>
             <div className={editInvoice.itemInputs}>
