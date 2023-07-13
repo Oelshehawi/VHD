@@ -54,6 +54,7 @@ export default async function handler(req, res) {
         location,
         notes,
         status,
+        isDue = false,
       } = fields || {};
 
       // Convert items to an array of objects
@@ -76,6 +77,7 @@ export default async function handler(req, res) {
         location,
         notes,
         status,
+        isDue,
       });
 
       await invoiceData.save();

@@ -63,6 +63,10 @@ const invoiceSchema = new Schema({
     enum: ['pending', 'overdue', 'paid'],
     default: 'pending',
   },
+  isDue: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const eventSchema = new Schema({

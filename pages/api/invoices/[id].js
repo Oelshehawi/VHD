@@ -48,6 +48,7 @@ export default async function handler(req, res) {
       const data = await Invoice.findByIdAndUpdate(id, req.body, {
         useFindAndModify: false,
       });
+
       if (!data) {
         res.status(404).send({
           message: `Cannot update Invoice with id=${id}. Maybe Invoice was not found!`,

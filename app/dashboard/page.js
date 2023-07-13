@@ -83,7 +83,6 @@ const DashboardPage = () => {
     (invoice) => invoice.status === 'overdue'
   );
 
-  // Group invoices by invoice ID prefix
   const groupedLatestInvoices = invoices?.data?.reduce((group, invoice) => {
     const prefix = invoice.invoiceId.split('-')[0];
     if (!group[prefix] || group[prefix].dateIssued < invoice.dateIssued) {
@@ -100,7 +99,7 @@ const DashboardPage = () => {
     const dueDate = new Date(invoice.dateDue);
     const daysRemaining = Math.floor((dueDate - today) / (24 * 60 * 60 * 1000));
 
-    if (daysRemaining >= 0 && daysRemaining <= 7) {
+    if (daysRemaining >= 0 && daysRemaining <= 7 && invoice.isDue !== true) {
       group.push(invoice);
     }
     return group;
@@ -112,7 +111,19 @@ const DashboardPage = () => {
 
   const dueInvoices = Object.values(groupedDueInvoices ?? []);
 
-  console.log(dueInvoices);
+  const handleCheckInvoice = async (invoiceId) => {
+    try {
+      await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/invoices/${invoiceId}`,
+        {
+          isDue: true,
+        }
+      );
+      onUpdate();
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   return (
     <>
@@ -146,29 +157,38 @@ const DashboardPage = () => {
             <p style={{ color: 'white' }}> Jobs Due Soon</p>
             <div className={dashboard.innerJobsDueContainer}>
               <div className={dashboard.jobsDueHeader}>
-                <span>Job Title</span>
-                <span> Due Date</span>
+                <span style={{ width: '250px' }}>Job Title</span>
+                <span style={{ width: '150px' }}> Due Date</span>
+                <span style={{ width: '150px' }}> Scheduled</span>
               </div>
               {groupedLatestInvoices ? (
-                dueInvoices.map(({ jobTitle, invoiceId, dateDue, _id }) => {
-                  const formattedDate = new Intl.DateTimeFormat('en-US', {
-                    timeZone: 'UTC',
-                    month: 'long',
-                    day: 'numeric',
-                    year: 'numeric',
-                  }).format(new Date(dateDue));
+                dueInvoices.map(
+                  ({ jobTitle, invoiceId, dateDue, _id, isDue }) => {
+                    const formattedDate = new Intl.DateTimeFormat('en-US', {
+                      timeZone: 'UTC',
+                      month: 'long',
+                      day: 'numeric',
+                      year: 'numeric',
+                    }).format(new Date(dateDue));
 
-                  return (
-                    <div
-                      className={dashboard.jobItem}
-                      key={invoiceId}
-                      onClick={() => redirectToInvoiceDetails(_id)}
-                    >
-                      <span>{jobTitle}</span>
-                      <span>{formattedDate}</span>
-                    </div>
-                  );
-                })
+                    return (
+                      <div
+                        className={dashboard.jobItem}
+                        key={invoiceId}
+                        onClick={() => redirectToInvoiceDetails(_id)}
+                      >
+                        <span style={{ width: '250px' }}>{jobTitle}</span>
+                        <span style={{ width: '150px' }}>{formattedDate}</span>
+                        <input
+                          style={{ width: '150px', height: '20px' }}
+                          type="checkbox"
+                          onClick={(e) => e.stopPropagation()}
+                          onChange={() => handleCheckInvoice(_id)}
+                        />
+                      </div>
+                    );
+                  }
+                )
               ) : (
                 <div className={dashboard.center}>
                   <div className={dashboard.loadingContainer}>
