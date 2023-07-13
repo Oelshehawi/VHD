@@ -145,12 +145,14 @@ const InvoiceDetailed = () => {
   };
 
   const issuedDate = new Date(invoice.dateIssued).toLocaleString('en-US', {
+    timeZone: 'UTC',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 
   const dueDate = new Date(invoice.dateDue).toLocaleString('en-US', {
+    timeZone: 'UTC',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -169,6 +171,7 @@ const InvoiceDetailed = () => {
           setopenModal(false);
         }}
         onUpdate={() => setOnUpdate(!onUpdate)}
+        showToast={showUpdateToast}
       />
       <div className={invoiceDetailed.dataContainer}>
         <div className={invoiceDetailed.invoiceHeader}>
@@ -178,7 +181,7 @@ const InvoiceDetailed = () => {
               onClick={handleBack}
             />
             <div className={invoiceDetailed.invoiceTitle}>
-              Invoice {invoice.invoiceId}
+              Invoice #{invoice.invoiceId}
             </div>
           </div>
           <div className={invoiceDetailed.invoiceButtons}>
