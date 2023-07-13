@@ -1,14 +1,4 @@
-.phone {
-  font-size: large;
-  font-weight: bolder;
-}
-
-.jobTitle {
-  font-size: large;
-  font-weight: bolder;
-}
-
-.dateValue {
+.cell {
   font-size: large;
   font-weight: bolder;
 }
@@ -21,7 +11,6 @@
 
 .tbody {
   overflow-y: scroll;
-  
 }
 
 .th {
@@ -67,5 +56,3 @@
     transform: rotate(360deg);
   }
 }
-
-

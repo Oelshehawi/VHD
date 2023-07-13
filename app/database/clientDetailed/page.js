@@ -166,8 +166,7 @@ const ClientDetailed = () => {
                     className={clientDetailed.invoiceItem}
                     onClick={() => redirectToInvoiceDetails(invoice._id)}
                   >
-                    #{invoice.invoiceId} - {invoice.dateIssued.split('T')[0]} -{' '}
-                    {invoice.jobTitle}
+                    #{invoice.invoiceId} - {invoice.jobTitle}
                   </p>
                 ))
               )}
