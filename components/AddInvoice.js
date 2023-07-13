@@ -4,7 +4,7 @@ import Axios from 'axios';
 import addInvoice from './styles/addInvoice.module.css';
 import Select from 'react-select';
 
-const AddInvoice = ({ open, onClose, onUpdate }) => {
+const AddInvoice = ({ open, onClose, onUpdate, showToast }) => {
   const [animationClass, setAnimationClass] = useState('slideIn');
   const [animationClass2, setAnimationClass2] = useState('fadeIn');
   const [clients, setClients] = useState([]);
@@ -18,6 +18,8 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
   const [tax, setTax] = useState(0);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [frequency, setFrequency] = useState('');
+  const [dateIssuedSet, setDateIssuedSet] = useState('');
 
   const addItem = () => {
     setItems((prevItems) => [...prevItems, { description: '', price: 0 }]);
@@ -86,7 +88,6 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
         clientId,
         jobTitle,
         dateIssued,
-        dateDue,
         items,
         frequency,
         location,
@@ -113,7 +114,8 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
           .toString()
           .padStart(4, '0')}`;
 
-          console.log(location)
+        const dateDue = calculateDueDate(dateIssued, frequency); // Calculate the dateDue value
+
         const invoiceData = {
           invoiceId,
           jobTitle,
@@ -135,6 +137,7 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
 
         onUpdate();
         handleClose();
+        showToast();
         reset();
       }
     } catch (error) {
@@ -152,6 +155,29 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
       setAnimationClass2('fadeIn');
       onClose();
     }, 500);
+  };
+
+  const calculateDueDate = (dateIssued, frequency) => {
+    const dueDate = new Date(dateIssued);
+
+    // Adjust the due date based on the frequency
+    dueDate.setMonth(dueDate.getMonth() + 12 / frequency);
+
+    const dueDateString = dueDate.toLocaleDateString('en-US', {
+      timeZone: 'UTC',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    });
+
+    return dueDate.toISOString().split('T')[0];
+  };
+
+  const handleChange = (e) => {
+    if (e.target.value.length > 1) {
+      e.target.value = e.target.value.slice(0, 1);
+    }
+    setFrequency(e.target.value);
   };
 
   if (!open) return null;
@@ -207,24 +233,25 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
               />
             </div>
             <div className={addInvoice.detailInputs}>
-            <input
+              <input
                 {...register('frequency', {
                   required: 'Frequency is required',
-                })} 
+                })}
                 className={addInvoice.detailContentInput}
                 type="number"
                 placeholder="Frequency"
+                onChange={handleChange}
               />
               <input
                 {...register('location', {
                   required: 'Location is required',
-                })} 
+                })}
                 className={addInvoice.detailContentInput}
                 type="text"
                 placeholder="Address"
               />
             </div>
-            
+
             <div className={addInvoice.dateInputs}>
               <input
                 {...register('dateIssued', {
@@ -232,12 +259,20 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
                 })}
                 className={addInvoice.dateContentInput}
                 type="date"
+                onChange={(e) => setDateIssuedSet(e.target.value)}
               />
-
               <input
-                {...register('dateDue', { required: 'Date Due is required' })}
+                {...register('dateDue')}
                 className={addInvoice.dateContentInput}
-                type="date"
+                type="text"
+                value={
+                  frequency
+                    ? dateIssuedSet
+                      ? calculateDueDate(dateIssuedSet, frequency)
+                      : 'Please Input Date Issued First'
+                    : 'Please Input Frequency First'
+                }
+                disabled
               />
             </div>
             <div className={addInvoice.itemInputs}>

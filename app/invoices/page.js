@@ -3,7 +3,6 @@ import { useState } from 'react';
 import InvoiceTable from '../../components/InvoiceTable';
 import { FaSearch } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
-import { FaFilter } from 'react-icons/fa';
 import AddInvoice from '../../components/AddInvoice';
 import { ToastContainer, toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -43,7 +42,7 @@ const Invoice = () => {
       marginLeft: '10px',
       textAlign: 'center',
       fontWeight: 'bolder',
-      fontSize: '12px', 
+      fontSize: '12px',
       ':hover': {
         backgroundColor: state.data.color,
         color: state.data.color === 'yellow' ? 'black' : 'white',
@@ -55,9 +54,9 @@ const Invoice = () => {
       borderRadius: '4px',
       marginLeft: '10px',
       textAlign: 'center',
-      width: '120px', 
-      height: '40px', 
-      fontSize: '12px', 
+      width: '120px',
+      height: '40px',
+      fontSize: '12px',
       fontWeight: 'bolder',
     }),
     singleValue: (provided, state) => ({
@@ -75,6 +74,7 @@ const Invoice = () => {
           setopenModal(false);
         }}
         onUpdate={() => setOnUpdate(!onUpdate)}
+        showToast={showToast}
       />
       <div className={invoice.dataContainer}>
         <div className={invoice.dataTitle}>{'Invoices'}</div>

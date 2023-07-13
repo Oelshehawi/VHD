@@ -8,7 +8,7 @@ import {
   getCoreRowModel,
   getFilteredRowModel,
   PaginationState,
-  getPaginationRowModel
+  getPaginationRowModel,
 } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 
@@ -16,8 +16,6 @@ const InvoiceTable = ({ filter, onUpdate }) => {
   const [invoiceData, setInvoiceData] = useState([]);
   const [globalFilter, setglobalFilter] = useState('');
   const [loading, setLoading] = useState(true);
-  const [modal, setmodal] = useState(false);
-  const [selectedRow, setSelectedRow] = useState('');
   const router = useRouter();
 
   useEffect(() => {
@@ -42,24 +40,28 @@ const InvoiceTable = ({ filter, onUpdate }) => {
     columnHelper.accessor('invoiceId', {
       header: 'Invoice #',
       cell: (info) => (
-        <div className={styles.invoiceId}>{'#' + info.getValue()}</div>
+        <div className={styles.cell}>{'#' + info.getValue()}</div>
       ),
+      size: 150,
     }),
     columnHelper.accessor('jobTitle', {
       header: 'Job Title',
-      cell: (info) => <div className={styles.jobTitle}>{info.getValue()}</div>,
+      cell: (info) => <div className={styles.cell}>{info.getValue()}</div>,
+      size: 500,
     }),
     columnHelper.accessor('dateIssued', {
       header: 'Issued Date',
       cell: (info) => {
         const value = info.getValue();
         if (value) {
-          return <div className={styles.jobTitle}>{value.split('T')[0]}</div>;
+          return <div className={styles.cell}>{value.split('T')[0]}</div>;
         }
       },
+      size: 150,
     }),
     columnHelper.accessor('status', {
       header: 'Status',
+      size: 200,
       cell: (info) => {
         const status = info.getValue();
         let buttonStyle = '';
@@ -79,7 +81,7 @@ const InvoiceTable = ({ filter, onUpdate }) => {
         }
 
         return (
-          <div className={styles.phone}>
+          <div className={styles.cell}>
             <button className={`${styles.statusButton} ${buttonStyle}`}>
               {status.toUpperCase()}
             </button>
@@ -89,6 +91,7 @@ const InvoiceTable = ({ filter, onUpdate }) => {
     }),
     columnHelper.accessor('items', {
       header: 'Amount',
+      size: 150,
       cell: (info) => {
         const { original } = info.row;
         let Total = 0;
@@ -96,7 +99,7 @@ const InvoiceTable = ({ filter, onUpdate }) => {
           Total += original.items[i].price;
         }
 
-        return <div className={styles.phone}>${Total + Total * 0.05}</div>;
+        return <div className={styles.cell}>${Total + Total * 0.05}</div>;
       },
     }),
   ];
@@ -147,7 +150,14 @@ const InvoiceTable = ({ filter, onUpdate }) => {
           {tableInstance.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className={styles.tr}>
               {headerGroup.headers.map((header) => (
-                <th key={header.id} className={styles.th}>
+                <th
+                  key={header.id}
+                  className={styles.th}
+                  style={{
+                    width:
+                      header.getSize() !== 150 ? header.getSize() : undefined,
+                  }}
+                >
                   {header.isPlaceholder
                     ? null
                     : flexRender(
@@ -199,7 +209,9 @@ const InvoiceTable = ({ filter, onUpdate }) => {
         </button>
         <button
           className="border rounded p-1"
-          onClick={() => tableInstance.setPageIndex(tableInstance.getPageCount() - 1)}
+          onClick={() =>
+            tableInstance.setPageIndex(tableInstance.getPageCount() - 1)
+          }
           disabled={!tableInstance.getCanNextPage()}
         >
           {'>>'}
@@ -216,20 +228,20 @@ const InvoiceTable = ({ filter, onUpdate }) => {
           <input
             type="number"
             defaultValue={tableInstance.getState().pagination.pageIndex + 1}
-            onChange={e => {
-              const page = e.target.value ? Number(e.target.value) - 1 : 0
-              tableInstance.setPageIndex(page)
+            onChange={(e) => {
+              const page = e.target.value ? Number(e.target.value) - 1 : 0;
+              tableInstance.setPageIndex(page);
             }}
             className="border p-1 rounded w-16"
           />
         </span>
         <select
           value={tableInstance.getState().pagination.pageSize}
-          onChange={e => {
-            tableInstance.setPageSize(Number(e.target.value))
+          onChange={(e) => {
+            tableInstance.setPageSize(Number(e.target.value));
           }}
         >
-          {[10, 20, 30, 40, 50].map(pageSize => (
+          {[10, 20, 30, 40, 50].map((pageSize) => (
             <option key={pageSize} value={pageSize}>
               Show {pageSize}
             </option>

@@ -13,6 +13,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import invoiceDetailed from './invoiceDetailed.module.css';
 import EditModal from '../../../components/EditInvoiceModal';
 import Select from 'react-select';
+import DeleteModal from '../../../components/DeleteModal';
 
 const InvoiceDetailed = () => {
   const router = useRouter();
@@ -22,6 +23,11 @@ const InvoiceDetailed = () => {
   const [invoice, setInvoiceData] = useState([]);
   const [openModal, setopenModal] = useState(false);
   const [onUpdate, setOnUpdate] = useState(false);
+  const [open, setOpen] = useState(false);
+
+  const handleCloseModal = () => {
+    setOpen(false);
+  };
 
   const showUpdateToast = () => {
     toast.success('Client Updated Successfully!', {
@@ -73,8 +79,9 @@ const InvoiceDetailed = () => {
         `${process.env.NEXT_PUBLIC_API_URL}/invoices/${invoice._id}`
       );
       console.log('Record deleted successfully');
-      router.push('/invoices');
+      setOpen(false);
       showDeleteEventToast();
+      router.push('/invoices');
     } catch (error) {
       console.log('Error deleting record:', error);
     }
@@ -145,12 +152,14 @@ const InvoiceDetailed = () => {
   };
 
   const issuedDate = new Date(invoice.dateIssued).toLocaleString('en-US', {
+    timeZone: 'UTC',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 
   const dueDate = new Date(invoice.dateDue).toLocaleString('en-US', {
+    timeZone: 'UTC',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -169,6 +178,7 @@ const InvoiceDetailed = () => {
           setopenModal(false);
         }}
         onUpdate={() => setOnUpdate(!onUpdate)}
+        showToast={showUpdateToast}
       />
       <div className={invoiceDetailed.dataContainer}>
         <div className={invoiceDetailed.invoiceHeader}>
@@ -178,7 +188,7 @@ const InvoiceDetailed = () => {
               onClick={handleBack}
             />
             <div className={invoiceDetailed.invoiceTitle}>
-              Invoice {invoice.invoiceId}
+              Invoice #{invoice.invoiceId}
             </div>
           </div>
           <div className={invoiceDetailed.invoiceButtons}>
@@ -193,7 +203,7 @@ const InvoiceDetailed = () => {
             </div>
             <div
               className={invoiceDetailed.invoiceButtonContainer}
-              onClick={handleDelete}
+              onClick={() => setOpen(true)}
             >
               <FaTrashAlt />
               <button className={invoiceDetailed.invoiceButton}>
@@ -211,9 +221,9 @@ const InvoiceDetailed = () => {
               {'Invoice #' + invoice.invoiceId}
             </div>
             <div className={invoiceDetailed.invoiceInformationSubtitle}>
-              <p>{formattedDates}</p>
-              <p>Address : {invoice.location}</p>
-              <p>Frequency : {invoice.frequency} Cleanings per Year</p>
+              <span>{formattedDates}</span>
+              <span>Address : {invoice.location}</span>
+              <span>Frequency : {invoice.frequency} Cleanings per Year</span>
             </div>
           </div>
           <div className={invoiceDetailed.invoiceInformationContent}>
@@ -296,6 +306,12 @@ const InvoiceDetailed = () => {
           </div>
         </div>
       </div>
+      <DeleteModal
+        showModal={open}
+        hideModal={handleCloseModal}
+        confirmModal={handleDelete}
+      >
+      </DeleteModal>
     </>
   );
 };

@@ -9,6 +9,7 @@ import { ToastContainer, toast, Slide } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import clientDetailed from './clientDetailed.module.css';
 import EditModal from '../../../components/EditClientModal';
+import DeleteModal from '../../../components/DeleteModal';
 
 const ClientDetailed = () => {
   const router = useRouter();
@@ -19,6 +20,11 @@ const ClientDetailed = () => {
   const [openModal, setopenModal] = useState(false);
   const [onUpdate, setOnUpdate] = useState(false);
   const [loadingInvoices, setLoadingInvoices] = useState(true);
+  const [open, setOpen] = useState(false);
+
+  const handleCloseModal = () => {
+    setOpen(false);
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -120,7 +126,7 @@ const ClientDetailed = () => {
             </div>
             <div
               className={clientDetailed.clientButtonContainer}
-              onClick={handleDelete}
+              onClick={() => setOpen(true)}
             >
               <FaTrashAlt />
               <button className={clientDetailed.clientButton}>
@@ -166,8 +172,7 @@ const ClientDetailed = () => {
                     className={clientDetailed.invoiceItem}
                     onClick={() => redirectToInvoiceDetails(invoice._id)}
                   >
-                    #{invoice.invoiceId} - {invoice.dateIssued.split('T')[0]} -{' '}
-                    {invoice.jobTitle}
+                    #{invoice.invoiceId} - {invoice.jobTitle}
                   </p>
                 ))
               )}
@@ -175,6 +180,11 @@ const ClientDetailed = () => {
           )}
         </div>
       </div>
+      <DeleteModal
+        showModal={open}
+        hideModal={handleCloseModal}
+        confirmModal={handleDelete}
+      ></DeleteModal>
     </>
   );
 };
