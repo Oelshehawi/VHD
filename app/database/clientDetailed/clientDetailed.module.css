@@ -132,8 +132,7 @@
 .invoiceItemContainer {
   display: flex;
   flex-flow: column nowrap;
-  justify-content: center;
-  flex-basis: auto;
+  justify-content: flex-start;
   overflow: auto;
 }
 
