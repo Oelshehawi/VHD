@@ -46,7 +46,6 @@ const ClientDetailed = () => {
     fetchData();
   }, [onUpdate]);
 
-  // Fallback behavior if id is not available or clientData is empty
   if (client.length === 0) {
     return (
       <div className={clientDetailed.loadingContainer}>
