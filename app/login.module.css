@@ -11,8 +11,8 @@
 }
 
 .loginButton {
-  background-color: #228B22; 
-  border-color: #228B22; 
+  background-color: #228B22 !important; 
+  border-color: #228B22 !important; 
   color: white; 
 }
 
@@ -20,7 +20,7 @@
 .loginButton:hover,
 .loginButton:active,
 .loginButton:disabled {
-  background-color: #006400; 
-  border-color: #006400; 
+  background-color: #006400 !important; 
+  border-color: #006400 !important; 
   color: white; 
 }
