@@ -1,7 +1,8 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
 
-export default NextAuth({
+export const authOptions = ({
+  secret: process.env.NEXTAUTH_SECRET,
   providers: [
     CredentialsProvider({
       async authorize(credentials, req) {
@@ -30,3 +31,5 @@ export default NextAuth({
     jwt: true,
   },
 });
+
+export default NextAuth(authOptions);
