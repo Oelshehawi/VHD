@@ -1,80 +1,119 @@
 'use client';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useForm } from 'react-hook-form';
 import login from './login.module.css';
-import axios from 'axios';
+import Row from 'react-bootstrap/Row';
+import Col from 'react-bootstrap/Col';
+import Container from 'react-bootstrap/Container';
+import Form from 'react-bootstrap/Form';
+import Button from 'react-bootstrap/Button';
+import FloatingLabel from 'react-bootstrap/FloatingLabel';
+import Spinner from 'react-bootstrap/Spinner';
+import { signIn } from 'next-auth/react';
 
 const LoginPage = () => {
   const router = useRouter();
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [signInError, setSignInError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const inputFields = [
-    {
-      name: 'Username',
-      id: 'username',
-    },
-    {
-      name: 'Password',
-      id: 'password',
-    },
-  ];
+  async function onSubmit(e) {
+    e.preventDefault();
+    setIsLoading(true); 
 
-  const onSubmit = (data) => {
-    axios
-      .post(`${process.env.NEXT_PUBLIC_API_URL}/users/checkAdmin`, data)
-      .then((response) => {
-        const { isAdmin, error } = response.data;
-        console.log(response.data);
-        if (isAdmin) {
-          router.replace('/dashboard');
-        } else {
-          res.status(401);
-          alert(error);
-        }
-      })
-      .catch((error) => {
-        if (error.response) {
-          console.error('Error during authentication:', error.response.data);
-          alert(error.response.data.error);
-        } else if (error.request) {
-          console.error('No response received:', error.request);
-          alert('No response received from the server.');
-        } else {
-          console.error('Error setting up the request:', error.message);
-          alert('Error setting up the request.');
-        }
-      });
-  };
+    const result = await signIn('credentials', {
+      redirect: false,
+      username,
+      password,
+    });
 
+    if (result.error) {
+      console.error('Error during authentication:', result.error);
+      setSignInError(result.error);
+    } else {
+      router.push('/dashboard');
+    }
+
+    setIsLoading(false); 
+  }
   return (
-    <div className={login.main}>
-      <form onSubmit={handleSubmit(onSubmit)}>
-        <div className={login.formContainer}>
-          {inputFields.map(({ name, type, id, placeholder }) => (
-            <div key={name} className={login.inputContainer}>
-              <input
-                key={name}
-                id={id}
-                {...register(id, { required: true })}
-                className={login.inputLogin}
-                placeholder={name}
-              />
-              <span className={login.error}>
-                {errors[id] && name + ' is required'}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className={login.buttonContainer}>
-          <button type="submit">Login</button>
-        </div>
-      </form>
-    </div>
+    <Container
+      fluid
+      className={`d-flex justify-content-center align-items-center ${login.background}`}
+    >
+      <Row>
+        <Col xs={12}>
+          <Container fluid className={`${login.loginCard}`}>
+            <Col className="text-center fw-bolder fs-4 m-5">
+              Vancouver Hood Doctors
+            </Col>
+            <Form
+              noValidate
+              className="d-flex flex-column p-5 pt-0"
+              onSubmit={onSubmit}
+            >
+              <FloatingLabel
+                controlId="floatingInput"
+                label="Username"
+                className="mb-3"
+              >
+                <Form.Control
+                  required
+                  type="text"
+                  placeholder="Username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  isInvalid={signInError}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {username
+                    ? 'Incorrect username or password.'
+                    : 'Please enter a username.'}
+                </Form.Control.Feedback>
+              </FloatingLabel>
+              <FloatingLabel controlId="floatingPassword" label="Password">
+                <Form.Control
+                  required
+                  type="password"
+                  placeholder="Password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  isInvalid={signInError}
+                />
+                <Form.Control.Feedback type="invalid">
+                  {password
+                    ? 'Incorrect username or password.'
+                    : 'Please enter a password.'}
+                </Form.Control.Feedback>
+              </FloatingLabel>
+              <Button
+                variant="primary"
+                type="submit"
+                className={`mt-4 ${login.loginButton}`}
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Spinner
+                      as="span"
+                      animation="border"
+                      size="sm"
+                      role="status"
+                      aria-hidden="true"
+                    />
+                    <span className="ms-2">Logging in...</span>
+                  </>
+                ) : (
+                  'Login'
+                )}
+              </Button>
+            </Form>
+          </Container>
+        </Col>
+      </Row>
+    </Container>
   );
 };
 

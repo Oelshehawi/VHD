@@ -17,16 +17,13 @@ export default async function Login(req, res) {
     });
 
     if (adminUser) {
-      // Authentication successful
-      return res.status(200).json({ isAdmin: true });
+      return res.status(200).json(req.body);
     } else {
-      // Authentication failed
       return res
         .status(401)
         .json({ isAdmin: false, error: 'User is not an admin.' });
     }
   } catch (error) {
-    // Handle any error that occurs during the query or authentication process
     return res.status(500).json({ error: 'Internal server error.' });
   }
 }
