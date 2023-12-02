@@ -9,7 +9,7 @@ const DashboardPage = () => {
   const router = useRouter();
 
   const [invoices, setInvoices] = useState([]);
-  const [clients, setClients] = useState([]);
+  const [clients, setClients] = useState();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -19,7 +19,7 @@ const DashboardPage = () => {
           `${process.env.NEXT_PUBLIC_API_URL}/invoices`
         );
         const clientsRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/clients`
+          `${process.env.NEXT_PUBLIC_API_URL}/clients/count`
         );
 
         setInvoices(invoicesRes.data);
@@ -33,7 +33,6 @@ const DashboardPage = () => {
 
     fetchData();
   }, []);
-  const totalClients = clients?.length;
 
   const totalOverdueInvoices = invoices?.filter(
     (invoice) => invoice.status === 'overdue'
@@ -99,7 +98,7 @@ const DashboardPage = () => {
                   />
                 </div>
               ) : (
-                <div className="p-2 text-center fs-3">{totalClients}</div>
+                <div className="p-2 text-center fs-3">{clients.total}</div>
               )}
             </Stack>
           </div>

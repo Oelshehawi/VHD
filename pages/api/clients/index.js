@@ -42,7 +42,6 @@ export default async function handler(req, res) {
         });
       });
 
-      // Extract form data
       let {
         clientName,
         prefix,
@@ -51,7 +50,6 @@ export default async function handler(req, res) {
         notes,
       } = fields || {};
 
-      // Convert empty array fields to null
       clientName = clientName.length === 0 ? null : clientName[0];
       email = email.length === 0 ? null : email[0];
       prefix = prefix.length === 0 ? null : prefix[0];
