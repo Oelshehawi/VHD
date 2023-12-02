@@ -1,36 +1,20 @@
 'use client';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import Event from '../../components/Event';
 import { useRouter } from 'next/navigation';
-import { ToastContainer, toast, Slide } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import dashboard from './dashboard.module.css';
+import { Container, Row, Col, Stack, Spinner } from 'react-bootstrap';
 
 const DashboardPage = () => {
-  const utcOptions = {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  };
-
   const router = useRouter();
 
-  const [events, setEvents] = useState([]);
-  const todaysDate = new Date().toLocaleString('en-US', utcOptions);
-  const [eventSchedule, setEventSchedule] = useState(false);
-  const [onUpdate, setOnUpdate] = useState(false);
   const [invoices, setInvoices] = useState([]);
   const [clients, setClients] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const eventsRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/events`
-        );
         const invoicesRes = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/invoices`
         );
@@ -38,48 +22,20 @@ const DashboardPage = () => {
           `${process.env.NEXT_PUBLIC_API_URL}/clients`
         );
 
-        const utcOptions = {
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: 'UTC',
-        };
-
-        const updatedEvents = eventsRes.data.map((event) => {
-          const utcDate = new Date(event.time);
-          const utcString = utcDate.toLocaleString('en-US', utcOptions);
-          return { ...event, time: utcString };
-        });
-
-        setEvents(updatedEvents);
-        setInvoices(invoicesRes);
-        setClients(clientsRes);
+        setInvoices(invoicesRes.data);
+        setClients(clientsRes.data);
       } catch (error) {
         console.error(error);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [onUpdate]);
+  }, []);
+  const totalClients = clients?.length;
 
-  const showDeleteEventToast = () => {
-    toast.success('Event Deleted Successfully!', {
-      position: 'bottom-right',
-      transition: Slide,
-    });
-  };
-
-  const jobsToday = events.filter((event) => {
-    const eventDate = event.time.split(',')[0];
-    const currentDate = todaysDate.split(',')[0];
-    return eventDate === currentDate;
-  });
-
-  const totalClients = clients?.data?.length;
-
-  const totalOverdueInvoices = invoices?.data?.filter(
+  const totalOverdueInvoices = invoices?.filter(
     (invoice) => invoice.status === 'overdue'
   );
 
@@ -126,97 +82,53 @@ const DashboardPage = () => {
   };
 
   return (
-    <>
-      <div className={dashboard.dashboardContainer}>
-        <div className={dashboard.topLevel}>
-          <div className={dashboard.statsContainer}>
-            <div className={dashboard.statBox}>
-              <p className={dashboard.statBoxHeader}>Clients</p>
-              {totalClients ? (
-                <p className={dashboard.statBoxParagraph}>{totalClients}</p>
-              ) : (
-                <div className={dashboard.loadingContainer}>
-                  <div className={dashboard.loader}></div>
+    <Container className="mt-4">
+      <Row>
+        <Col md={2}>
+          <div className={`p-2 ${dashboard.clientCounter}`}>
+            <Stack gap={2}>
+              <div className="p-2">Clients</div>
+              {isLoading ? (
+                <div className="p-2 text-center fs-3">
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="md"
+                    role="status"
+                    aria-hidden="true"
+                  />
                 </div>
+              ) : (
+                <div className="p-2 text-center fs-3">{totalClients}</div>
               )}
-            </div>
-            <div className={dashboard.statBox}>
-              <p className={dashboard.statBoxHeader}>Overdue</p>
-              {totalOverdueInvoices ? (
-                <p className={dashboard.statBoxParagraph}>
+            </Stack>
+          </div>
+        </Col>
+        <Col md={2}>
+          <div className={`p-2 ${dashboard.overdueCounter}`}>
+            <Stack gap={2}>
+              <div className="p-2">Overdue Invoices</div>
+              {isLoading ? (
+                <div className="p-2 text-center fs-3">
+                  <Spinner
+                    as="span"
+                    animation="border"
+                    size="md"
+                    role="status"
+                    aria-hidden="true"
+                  />
+                </div>
+              ) : (
+                <div className="p-2 text-center fs-3">
                   {totalOverdueInvoices.length}
-                </p>
-              ) : (
-                <div className={dashboard.loadingContainer}>
-                  <div className={dashboard.loader}></div>
                 </div>
               )}
-            </div>
+            </Stack>
           </div>
-          <div className={dashboard.jobsDueContainer}>
-            <p style={{ color: 'white' }}> Jobs Due Soon</p>
-            <div className={dashboard.innerJobsDueContainer}>
-              <div className={dashboard.jobsDueHeader}>
-                <span style={{ width: '250px' }}>Job Title</span>
-                <span style={{ width: '150px' }}> Due Date</span>
-                <span style={{ width: '150px' }}> Scheduled</span>
-              </div>
-              {groupedLatestInvoices ? (
-                dueInvoices.map(
-                  ({ jobTitle, invoiceId, dateDue, _id, isDue }) => {
-                    const formattedDate = new Intl.DateTimeFormat('en-US', {
-                      timeZone: 'UTC',
-                      month: 'long',
-                      day: 'numeric',
-                      year: 'numeric',
-                    }).format(new Date(dateDue));
-
-                    return (
-                      <div
-                        className={dashboard.jobItem}
-                        key={invoiceId}
-                        onClick={() => redirectToInvoiceDetails(_id)}
-                      >
-                        <span style={{ width: '250px' }}>{jobTitle}</span>
-                        <span style={{ width: '150px' }}>{formattedDate}</span>
-                        <input
-                          style={{ width: '150px', height: '20px' }}
-                          type="checkbox"
-                          onClick={(e) => e.stopPropagation()}
-                          onChange={() => handleCheckInvoice(_id)}
-                        />
-                      </div>
-                    );
-                  }
-                )
-              ) : (
-                <div className={dashboard.center}>
-                  <div className={dashboard.loadingContainer}>
-                    <div className={dashboard.loader}></div>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        <div className={dashboard.dashContainer}>
-          <p style={{ color: 'white' }}> Today's Schedule</p>
-          <div className={dashboard.innerContainer}>
-            {jobsToday.length !== 0 ? (
-              <Event
-                eventSchedule={() => setEventSchedule(!eventSchedule)}
-                events={jobsToday}
-                onUpdate={() => setOnUpdate(!onUpdate)}
-                showDeleteEventToast={showDeleteEventToast}
-              />
-            ) : (
-              <p className={dashboard.center}> NO JOBS TODAY</p>
-            )}
-          </div>
-        </div>
-      </div>
-      <ToastContainer />
-    </>
+        </Col>
+        <Col>words</Col>
+      </Row>
+    </Container>
   );
 };
 
