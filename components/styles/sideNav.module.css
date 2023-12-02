@@ -1,38 +1,21 @@
-.links {
-  display: flex;
-  flex-flow: column nowrap;
-  align-items: center;
-}
-
-.sidebarLinkActive {
-  background-color: #467061;
-  border-radius: 25px;
-  width: 70%;
-  color: white;
-  text-decoration: inherit;
-  margin-left: 20px;
-  margin-right: 20px;
-  margin-top: 20px;
-  padding: 10px;
-  border: none;
-  text-align: center;
-}
-
 .theLink {
-  width: 70%;
   color: white;
   text-decoration: inherit;
-  margin-left: 20px;
-  margin-right: 20px;
-  margin-top: 20px;
-  padding: 10px;
-  border: none;
-  text-align: center;
+  font-weight: bold;
 }
 
 .theLink:hover {
-  background-color: #467061;
-  border-radius: 25px;
+  background-color: #d9d9d9;
+  color: black;
+  border-radius: 10px;
+}
+
+.theLinkActive{
+  background-color: #d9d9d9;
+  color: black;
+  border-radius: 10px;
+  text-decoration: inherit;
+  font-weight: bold;
 }
 
 .icon {
@@ -41,9 +24,14 @@
   padding: 5px;
 }
 
-#sidebar {
+.sidebar {
   background-color: #003e29;
-  flex-shrink: 0;
-  width: 240px;
+  width: 15%;
   border-right: 3px solid #467061;
+}
+
+.signOut:hover {
+  cursor: pointer;
+  background-color: red !important;
+  color: black !important;
 }

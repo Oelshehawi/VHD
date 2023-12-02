@@ -11,6 +11,7 @@ import FloatingLabel from 'react-bootstrap/FloatingLabel';
 import Spinner from 'react-bootstrap/Spinner';
 import { signIn } from 'next-auth/react';
 
+
 const LoginPage = () => {
   const router = useRouter();
 
