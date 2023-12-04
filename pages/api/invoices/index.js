@@ -57,7 +57,6 @@ export default async function handler(req, res) {
         isDue = false,
       } = fields || {};
 
-      // Convert items to an array of objects
       if (items.length === 0) {
         items = null;
       } else {

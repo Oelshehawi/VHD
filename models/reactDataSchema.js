@@ -1,6 +1,6 @@
 import { Schema, model, models } from 'mongoose';
 
-const reactFormDataSchema = new Schema({
+const ClientSchema = new Schema({
   clientName: {
     type: String,
   },
@@ -96,9 +96,31 @@ const userSchema = new Schema({
   },
 });
 
-const Client = models.Client || model('Client', reactFormDataSchema);
+
+const jobsDueSoonSchema = new Schema({
+  invoiceId: {
+    type: String,
+    required: true,
+    unique: true,
+  },
+  jobTitle: {
+    type: String,
+    required: true,
+  },
+  dateDue: {
+    type: Date,
+    required: true,
+  },
+  isScheduled: {
+    type: Boolean,
+    default: false,
+  },
+});
+
+const Client = models.Client || model('Client', ClientSchema);
 const Invoice = models.Invoice || model('Invoice', invoiceSchema);
 const Event = models.Event || model('Event', eventSchema);
 const User = models.User || model('User', userSchema);
+const JobsDueSoon = models.JobsDueSoon || model('JobsDueSoon', jobsDueSoonSchema);
 
-export { Client, Event, User, Invoice };
+export { Client, Event, User, Invoice, JobsDueSoon };

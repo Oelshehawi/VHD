@@ -3,27 +3,51 @@ import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import dashboard from './dashboard.module.css';
-import { Container, Row, Col, Stack, Spinner } from 'react-bootstrap';
+import {
+  Container,
+  Row,
+  Col,
+  Stack,
+  Spinner,
+  Table,
+  Form,
+} from 'react-bootstrap';
 
 const DashboardPage = () => {
   const router = useRouter();
 
-  const [invoices, setInvoices] = useState([]);
+  const [dueInvoices, setDueInvoices] = useState([]);
+  const [overdueCounter, setOverdueCounter] = useState();
   const [clients, setClients] = useState();
   const [isLoading, setIsLoading] = useState(true);
+
+  const fetchDueInvoices = async () => {
+    try {
+      const invoicesRes = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/invoices/checkDue`
+      );
+      const updatedInvoices = invoicesRes.data.map((inv) => ({
+        ...inv,
+        isChecked: inv.isScheduled,
+      }));
+      setDueInvoices(updatedInvoices);
+    } catch (error) {
+      console.error('Error fetching due invoices:', error);
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const invoicesRes = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/invoices`
-        );
         const clientsRes = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/clients/count`
         );
+        const overdueCounter = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/invoices/overDue`
+        );
 
-        setInvoices(invoicesRes.data);
         setClients(clientsRes.data);
+        setOverdueCounter(overdueCounter.data);
       } catch (error) {
         console.error(error);
       } finally {
@@ -32,51 +56,31 @@ const DashboardPage = () => {
     };
 
     fetchData();
-  }, []);
-
-  const totalOverdueInvoices = invoices?.filter(
-    (invoice) => invoice.status === 'overdue'
-  );
-
-  const groupedLatestInvoices = invoices?.data?.reduce((group, invoice) => {
-    const prefix = invoice.invoiceId.split('-')[0];
-    if (!group[prefix] || group[prefix].dateIssued < invoice.dateIssued) {
-      group[prefix] = invoice;
-    }
-    return group;
-  }, []);
-
-  const latestInvoices = Object.values(groupedLatestInvoices ?? []);
-
-  const today = new Date();
-
-  const groupedDueInvoices = latestInvoices.reduce((group, invoice) => {
-    const dueDate = new Date(invoice.dateDue);
-    const daysRemaining = Math.floor((dueDate - today) / (24 * 60 * 60 * 1000));
-
-    if (daysRemaining >= 0 && daysRemaining <= 7 && invoice.isDue !== true) {
-      group.push(invoice);
-    }
-    return group;
+    fetchDueInvoices();
   }, []);
 
   const redirectToInvoiceDetails = (invoiceId) => {
     router.push(`/invoices/invoiceDetailed?id=${invoiceId}`);
   };
 
-  const dueInvoices = Object.values(groupedDueInvoices ?? []);
+  const handleCheckInvoice = async (invoiceId, isScheduled) => {
+    const updatedInvoices = dueInvoices.map((invoice) =>
+      invoice.invoiceId === invoiceId
+        ? { ...invoice, isChecked: isScheduled }
+        : invoice
+    );
 
-  const handleCheckInvoice = async (invoiceId) => {
+    setDueInvoices(updatedInvoices);
+
     try {
-      await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/invoices/${invoiceId}`,
-        {
-          isDue: true,
-        }
-      );
-      onUpdate();
+      await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/invoices/checkDue`, {
+        invoiceId,
+        isScheduled,
+      });
+
+      fetchDueInvoices();
     } catch (error) {
-      console.log(error);
+      console.error('Error updating invoice:', error);
     }
   };
 
@@ -119,13 +123,55 @@ const DashboardPage = () => {
                 </div>
               ) : (
                 <div className="p-2 text-center fs-3">
-                  {totalOverdueInvoices.length}
+                  {overdueCounter.count}
                 </div>
               )}
             </Stack>
           </div>
         </Col>
-        <Col>words</Col>
+        <Col className={``}>
+          <Row className={`ms-4 ${dashboard.jobsDueContainer}`}>
+            <h4>Jobs Due Soon</h4>
+          </Row>
+          <Row className={`ms-4 mt-4`}>
+            <div className={dashboard.scrollableTable}>
+              <Table bordered hover>
+                <tbody>
+                  {dueInvoices.map((invoice) => (
+                    <tr key={invoice.invoiceId}>
+                      <td
+                        onClick={() =>
+                          redirectToInvoiceDetails(invoice.invoiceId)
+                        }
+                        style={{ cursor: 'pointer' }}
+                        className={`fs-6 fw-bolder ${dashboard.tableCell}`}
+                      >
+                        {invoice.jobTitle} - Due:{' '}
+                        {new Date(invoice.dateDue).toLocaleDateString('en-US', {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        })}
+                      </td>
+                      <td className="text-center">
+                        <Form.Check
+                          type="checkbox"
+                          checked={invoice.isChecked}
+                          onChange={(e) =>
+                            handleCheckInvoice(
+                              invoice.invoiceId,
+                              e.target.checked
+                            )
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </Table>
+            </div>
+          </Row>
+        </Col>
       </Row>
     </Container>
   );
