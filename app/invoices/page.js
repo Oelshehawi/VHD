@@ -16,7 +16,7 @@ const Invoice = () => {
 
   return (
     <div className={`${invoice.verticalCenter}`}>
-      <Container className={`mx-auto ${invoice.tableContainer}`}>
+      <Container className={` ${invoice.tableContainer}`}>
         <AddInvoice
           open={openModal}
           onClose={() => {
@@ -35,22 +35,32 @@ const Invoice = () => {
           </Col>
         </Row>
         <Row className="mt-3 mx-3">
-          <InputGroup className='p-0'>
-            <InputGroup.Text>
-              <FaSearch />
-            </InputGroup.Text>
-            <Form.Control
-              type="search"
-              placeholder="Search For Invoice..."
-              onChange={(e) => setfilter(e.target.value)}
-            />
-          </InputGroup>
+          <Col>
+            <InputGroup className="p-0">
+              <InputGroup.Text>
+                <FaSearch />
+              </InputGroup.Text>
+              <Form.Control
+                type="search"
+                placeholder="Search For Invoice..."
+                onChange={(e) => setfilter(e.target.value)}
+              />
+            </InputGroup>
+          </Col>
+          <Col>
+            {' '}
+            <Form.Select>
+              <option value="Sort By"> Sort By</option>
+              <option value="Paid"> Paid</option>
+              <option value="Overdue">Overdue</option>
+              <option value="Pending">Pending</option>
+            </Form.Select>
+          </Col>
         </Row>
         <Row className="mx-3 mt-3">
-          <InvoiceTable
-            filter={filter}
-            onUpdate={() => setOnUpdate(!onUpdate)}
-          />
+          <Container>
+            <InvoiceTable filter={filter} />
+          </Container>
         </Row>
       </Container>
     </div>

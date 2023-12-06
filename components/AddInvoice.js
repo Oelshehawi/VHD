@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import Axios from 'axios';
 import addInvoice from './styles/addInvoice.module.css';
-import Select from 'react-select';
 
-const AddInvoice = ({ open, onClose, onUpdate, showToast }) => {
+
+const AddInvoice = ({ open, onClose, onUpdate }) => {
   const [animationClass, setAnimationClass] = useState('slideIn');
   const [animationClass2, setAnimationClass2] = useState('fadeIn');
   const [clients, setClients] = useState([]);
@@ -137,7 +137,6 @@ const AddInvoice = ({ open, onClose, onUpdate, showToast }) => {
 
         onUpdate();
         handleClose();
-        showToast();
         reset();
       }
     } catch (error) {
@@ -206,7 +205,7 @@ const AddInvoice = ({ open, onClose, onUpdate, showToast }) => {
         >
           <div className={addInvoice.inputContainer}>
             <div className={addInvoice.recipientInput}>
-              <Controller
+              {/* <Controller
                 name="clientId"
                 control={control}
                 rules={{ required: 'Client is required' }}
@@ -222,7 +221,7 @@ const AddInvoice = ({ open, onClose, onUpdate, showToast }) => {
                     isSearchable={true}
                   />
                 )}
-              />
+              /> */}
             </div>
             <div className={addInvoice.titleInputs}>
               <input

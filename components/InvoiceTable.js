@@ -11,11 +11,12 @@ import {
   getPaginationRowModel,
 } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
+import { Container, Row, Col, Spinner } from 'react-bootstrap';
 
-const InvoiceTable = ({ filter, onUpdate }) => {
+const InvoiceTable = ({ filter }) => {
   const [invoiceData, setInvoiceData] = useState([]);
   const [globalFilter, setglobalFilter] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -25,14 +26,19 @@ const InvoiceTable = ({ filter, onUpdate }) => {
           `${process.env.NEXT_PUBLIC_API_URL}/invoices/`
         );
         setInvoiceData(res.data);
-        setLoading(false);
       } catch (err) {
         console.error(err);
+      } finally {
+        setIsLoading(false);
       }
     };
 
     fetchData();
-  }, [onUpdate]);
+  }, []);
+
+  useEffect(() => {
+    setglobalFilter(filter);
+  }, [filter]);
 
   const columnHelper = createColumnHelper();
 
@@ -42,12 +48,10 @@ const InvoiceTable = ({ filter, onUpdate }) => {
       cell: (info) => (
         <div className={styles.cell}>{'#' + info.getValue()}</div>
       ),
-      size: 150,
     }),
     columnHelper.accessor('jobTitle', {
       header: 'Job Title',
       cell: (info) => <div className={styles.cell}>{info.getValue()}</div>,
-      size: 500,
     }),
     columnHelper.accessor('dateIssued', {
       header: 'Issued Date',
@@ -57,11 +61,9 @@ const InvoiceTable = ({ filter, onUpdate }) => {
           return <div className={styles.cell}>{value.split('T')[0]}</div>;
         }
       },
-      size: 150,
     }),
     columnHelper.accessor('status', {
       header: 'Status',
-      size: 200,
       cell: (info) => {
         const status = info.getValue();
         let buttonStyle = '';
@@ -91,7 +93,6 @@ const InvoiceTable = ({ filter, onUpdate }) => {
     }),
     columnHelper.accessor('items', {
       header: 'Amount',
-      size: 150,
       cell: (info) => {
         const { original } = info.row;
         let Total = 0;
@@ -116,8 +117,6 @@ const InvoiceTable = ({ filter, onUpdate }) => {
 
   const data = useMemo(() => invoiceData, [invoiceData]);
 
-  const memoizedFilter = useMemo(() => filter, [filter]);
-
   const tableInstance = useReactTable({
     data,
     columns,
@@ -130,15 +129,9 @@ const InvoiceTable = ({ filter, onUpdate }) => {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-  useEffect(() => {
-    setglobalFilter(memoizedFilter ?? '');
-  }, [memoizedFilter, setglobalFilter]);
-
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className={styles.loadingContainer}>
-        <div className={styles.loader}></div>
-      </div>
+      <Spinner animation="border" size="lg" role="status" aria-hidden="true" />
     );
   }
 
@@ -146,7 +139,6 @@ const InvoiceTable = ({ filter, onUpdate }) => {
     <>
       <table className={styles.table}>
         <thead className={styles.thead}>
-          {/* Looping through Header Groups and choosing what react should render*/}
           {tableInstance.getHeaderGroups().map((headerGroup) => (
             <tr key={headerGroup.id} className={styles.tr}>
               {headerGroup.headers.map((header) => (

@@ -2,12 +2,10 @@ import { useState, useEffect } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import Axios from 'axios';
 import editInvoice from './styles/editInvoice.module.css';
-import Select from 'react-select';
 
 const EditInvoiceModal = ({
   open,
   onClose,
-  showToast,
   onUpdate,
   invoice,
   client,
@@ -118,7 +116,6 @@ const EditInvoiceModal = ({
 
       onUpdate();
       handleClose();
-      showToast();
     } catch (error) {
       console.log(error);
     } finally {
@@ -185,7 +182,7 @@ const EditInvoiceModal = ({
         >
           <div className={editInvoice.inputContainer}>
             <div className={editInvoice.recipientInput}>
-              <Controller
+              {/* <Controller
                 name="clientId"
                 control={control}
                 render={({ field }) => (
@@ -196,7 +193,7 @@ const EditInvoiceModal = ({
                     isDisabled={true}
                   />
                 )}
-              />
+              /> */}
             </div>
             <div className={editInvoice.titleInputs}>
               <input

@@ -5,8 +5,6 @@ import { FaTrashAlt } from 'react-icons/fa';
 import { FaPenSquare } from 'react-icons/fa';
 import { FaArrowLeft } from 'react-icons/fa';
 import axios from 'axios';
-import { ToastContainer, toast, Slide } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import clientDetailed from './clientDetailed.module.css';
 import EditModal from '../../../components/EditClientModal';
 import DeleteModal from '../../../components/DeleteModal';
@@ -134,7 +132,6 @@ const ClientDetailed = () => {
             </div>
           </div>
         </div>
-        <ToastContainer />
       </div>
       <div className={clientDetailed.clientDetailsContainer}>
         <div className={clientDetailed.clientInformation}>

@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Axios from 'axios';
 import editModal from './styles/editModal.module.css';
-import { ToastContainer, toast, Slide } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+
 
 const EditModal = ({ open, onClose, client, onUpdate }) => {
   const [animationClass, setAnimationClass] = useState('slideIn');

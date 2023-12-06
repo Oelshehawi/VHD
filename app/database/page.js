@@ -5,8 +5,6 @@ import { FaSearch } from 'react-icons/fa';
 import { FaPlus } from 'react-icons/fa';
 import { FaFileImport } from 'react-icons/fa';
 import Modal from '../../components/Modal';
-import { ToastContainer, toast, Slide } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import database from './database.module.css';
 
 const Database = () => {
@@ -16,12 +14,6 @@ const Database = () => {
 
   const [onUpdate, setOnUpdate] = useState(false);
 
-  const showToast = () => {
-    toast.success('Client Added Successfully!', {
-      position: 'bottom-right',
-      transition: Slide,
-    });
-  };
 
   return (
     <>
@@ -30,10 +22,8 @@ const Database = () => {
         onClose={() => {
           setopenModal(false);
         }}
-        showToast={showToast}
         onUpdate={() => setOnUpdate(!onUpdate)}
       />
-      <ToastContainer />
       <div className={database.dataContainer}>
         <div className={database.dataTitle}>{'Clients'}</div>
         <div className={database.interactContainer}>

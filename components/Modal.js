@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import Axios from 'axios';
 import modal from './styles/modal.module.css';
 
-const Modal = ({ open, onClose, showToast, onUpdate }) => {
+const Modal = ({ open, onClose, onUpdate }) => {
   const [animationClass, setAnimationClass] = useState('slideIn');
   const [animationClass2, setAnimationClass2] = useState('fadeIn');
 
@@ -56,7 +56,6 @@ const Modal = ({ open, onClose, showToast, onUpdate }) => {
 
       onUpdate();
       handleClose();
-      showToast();
       reset();
     } catch (error) {
       // Handle the error

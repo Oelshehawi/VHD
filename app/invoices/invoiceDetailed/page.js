@@ -8,11 +8,8 @@ import { FaUser } from 'react-icons/fa';
 import { FaRegEnvelope } from 'react-icons/fa';
 import { FaPhoneAlt } from 'react-icons/fa';
 import axios from 'axios';
-import { ToastContainer, toast, Slide } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
 import invoiceDetailed from './invoiceDetailed.module.css';
 import EditModal from '../../../components/EditInvoiceModal';
-import Select from 'react-select';
 import DeleteModal from '../../../components/DeleteModal';
 
 const InvoiceDetailed = () => {
@@ -29,19 +26,13 @@ const InvoiceDetailed = () => {
     setOpen(false);
   };
 
-  const showUpdateToast = () => {
-    toast.success('Client Updated Successfully!', {
-      transition: Slide,
-      position: 'bottom-right',
-    });
-  };
+  // const showUpdateToast = () => {
+  
+  // };
 
-  const showDeleteEventToast = () => {
-    toast.success('Event Deleted Successfully!', {
-      position: 'bottom-right',
-      transition: Slide,
-    });
-  };
+  // const showDeleteEventToast = () => {
+
+  // };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -169,7 +160,6 @@ const InvoiceDetailed = () => {
 
   return (
     <>
-      <ToastContainer />
       <EditModal
         open={openModal}
         invoice={invoice}
@@ -178,7 +168,6 @@ const InvoiceDetailed = () => {
           setopenModal(false);
         }}
         onUpdate={() => setOnUpdate(!onUpdate)}
-        showToast={showUpdateToast}
       />
       <div className={invoiceDetailed.dataContainer}>
         <div className={invoiceDetailed.invoiceHeader}>
@@ -212,7 +201,6 @@ const InvoiceDetailed = () => {
             </div>
           </div>
         </div>
-        <ToastContainer />
       </div>
       <div className={invoiceDetailed.invoiceDetailsContainer}>
         <div className={invoiceDetailed.invoiceInformation}>
@@ -267,7 +255,7 @@ const InvoiceDetailed = () => {
               $ {Total + Total * 0.05}
             </div>
             <div className={invoiceDetailed.invoiceStatus}>
-              <Select
+              {/* <Select
                 options={statusOptions}
                 defaultValue={statusOptions.find(
                   (option) => option.value === invoice.status
@@ -275,7 +263,7 @@ const InvoiceDetailed = () => {
                 styles={customStyles}
                 onChange={handleStatusChange}
                 isSearchable={false}
-              />
+              /> */}
             </div>
           </div>
           <div className={invoiceDetailed.invoiceClient}>
