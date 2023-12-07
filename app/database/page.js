@@ -1,58 +1,51 @@
 'use client';
-import { useState } from 'react';
-import Table from '../../components/Table';
-import { FaSearch } from 'react-icons/fa';
-import { FaPlus } from 'react-icons/fa';
-import { FaFileImport } from 'react-icons/fa';
-import Modal from '../../components/Modal';
+import React, { useState } from 'react';
+import ClientTable from '../../components/ClientTable';
+import { FaSearch, FaPlus } from 'react-icons/fa';
+import AddClient from '../../components/AddClient';
 import database from './database.module.css';
+import { Container, Row, Col, Button, Form, InputGroup } from 'react-bootstrap';
 
 const Database = () => {
   const [openModal, setopenModal] = useState(false);
-
   const [filter, setfilter] = useState('');
 
-  const [onUpdate, setOnUpdate] = useState(false);
-
-
   return (
-    <>
-      <Modal
-        open={openModal}
-        onClose={() => {
-          setopenModal(false);
-        }}
-        onUpdate={() => setOnUpdate(!onUpdate)}
-      />
-      <div className={database.dataContainer}>
-        <div className={database.dataTitle}>{'Clients'}</div>
-        <div className={database.interactContainer}>
-          <div className={database.searchContainer}>
-            <FaSearch />
-            <input
+    <div className={database.verticalCenter}>
+      <Container className={database.tableContainer}>
+        <AddClient open={openModal} onClose={() => setopenModal(false)} />
+        <Row>
+          <Col className="p-2 m-3 ms-4 mb-0">
+            <div className="fs-4 fw-bolder">Clients</div>
+          </Col>
+          <Col className="d-flex p-2 m-3 me-4 mb-0 justify-content-end">
+            <Button
+              onClick={() => setopenModal(true)}
+              className={database.clientButton}
+            >
+              {'Add Client'}
+            </Button>
+          </Col>
+        </Row>
+        <Row className="mt-3 mx-3">
+          <InputGroup className="p-0">
+            <InputGroup.Text>
+              <FaSearch />
+            </InputGroup.Text>
+            <Form.Control
               type="search"
-              placeholder="Search..."
-              className={database.searchBar}
-              value={filter ?? ''}
+              placeholder="Search For Client..."
               onChange={(e) => setfilter(e.target.value)}
             />
-          </div>
-          <div
-            className={database.clientButtonContainer}
-            onClick={() => setopenModal(true)}
-          >
-            <FaPlus />
-            <button className={database.clientButton}> {'Add Client'} </button>
-          </div>
-        </div>
-      </div>
-      <div className={database.jobTableContainer}>
-        <Table filter={filter} onUpdate={() => setOnUpdate(!onUpdate)} />
-      </div>
-    </>
+          </InputGroup>
+        </Row>
+        <Row className="mx-3 mt-3">
+          <ClientTable filter={filter} />
+        </Row>
+      </Container>
+    </div>
   );
 };
 
 export default Database;
-
-export const Head = () => <title>VHD</title>;
+export const Head = () => <title>Clients</title>;

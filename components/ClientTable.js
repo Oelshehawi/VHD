@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import styles from './styles/invoiceTable.module.css';
+import styles from './styles/clientTable.module.css';
 import axios from 'axios';
 import {
   useReactTable,
@@ -7,24 +7,21 @@ import {
   flexRender,
   getCoreRowModel,
   getFilteredRowModel,
-  PaginationState,
   getPaginationRowModel,
 } from '@tanstack/react-table';
 import { useRouter } from 'next/navigation';
 import {
-  Container,
-  Row,
-  Col,
   Spinner,
   Table,
   Pagination,
   Form,
-  Button,
+  Container,
+  Row,
+  Col,
 } from 'react-bootstrap';
 
-const InvoiceTable = ({ filter }) => {
-  const [invoiceData, setInvoiceData] = useState([]);
-  const [globalFilter, setglobalFilter] = useState('');
+const ClientTable = ({ filter }) => {
+  const [clientData, setClientData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
@@ -32,104 +29,53 @@ const InvoiceTable = ({ filter }) => {
     const fetchData = async () => {
       try {
         const res = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/invoices/`
+          `${process.env.NEXT_PUBLIC_API_URL}/clients/`
         );
-        setInvoiceData(res.data);
+        setClientData(res.data);
       } catch (err) {
         console.error(err);
       } finally {
         setIsLoading(false);
       }
     };
-
     fetchData();
   }, []);
-
-  useEffect(() => {
-    setglobalFilter(filter);
-  }, [filter]);
 
   const columnHelper = createColumnHelper();
 
   const columns = [
-    columnHelper.accessor('invoiceId', {
-      header: 'Invoice #',
-      cell: (info) => (
-        <div className={styles.cell}>{'#' + info.getValue()}</div>
-      ),
-    }),
-    columnHelper.accessor('jobTitle', {
-      header: 'Job Title',
+    columnHelper.accessor('clientName', {
+      header: 'Client Name',
       cell: (info) => <div className={styles.cell}>{info.getValue()}</div>,
     }),
-    columnHelper.accessor('dateIssued', {
-      header: 'Issued Date',
-      cell: (info) => {
-        const value = info.getValue();
-        if (value) {
-          return <div className={styles.cell}>{value.split('T')[0]}</div>;
-        }
-      },
+    columnHelper.accessor('email', {
+      header: 'Email',
+      cell: (info) => <div className={styles.cell}>{info.getValue()}</div>,
     }),
-    columnHelper.accessor('status', {
-      header: 'Status',
-      cell: (info) => {
-        const status = info.getValue();
-        return (
-          <Col
-            className={`rounded-1 d-flex justify-content-center fw-bolder align-items-center ${
-              styles.statusButton
-            } ${
-              status === 'paid'
-                ? styles.greenButton
-                : status === 'pending'
-                ? styles.yellowButton
-                : styles.redButton
-            }`}
-          >
-            {status.toUpperCase()}
-          </Col>
-        );
-      },
-    }),
-    columnHelper.accessor('items', {
-      header: 'Amount',
-      cell: (info) => {
-        const { original } = info.row;
-        let Total = 0;
-        for (let i = 0; i < original.items.length; i++) {
-          Total += original.items[i].price;
-        }
-
-        return <div className={styles.cell}>${Total + Total * 0.05}</div>;
-      },
+    columnHelper.accessor('phoneNumber', {
+      header: 'Phone Number',
+      cell: (info) => <div className={styles.cell}>{info.getValue()}</div>,
     }),
   ];
 
-  const handleRowClick = (row) => {
-    router.push(`/invoices/invoiceDetailed?id=${invoiceId}`);
-  };
-
-  const data = useMemo(() => invoiceData, [invoiceData]);
-
   const tableInstance = useReactTable({
-    data,
+    data: clientData,
     columns,
     state: {
-      globalFilter: globalFilter,
+      globalFilter: filter,
     },
     getCoreRowModel: getCoreRowModel(),
-    onGlobalFilterChange: setglobalFilter,
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
   });
 
+  const handleRowClick = (clientId) => {
+    router.push(`/database/clientDetailed?id=${clientId}`);
+  };
+
   if (isLoading) {
     return (
-      <Container
-        fluid
-        className="d-flex justify-content-center align-items-center"
-      >
+      <Container fluid className='d-flex justify-content-center align-items-center'>
         <Spinner
           animation="border"
           size="lg"
@@ -141,7 +87,7 @@ const InvoiceTable = ({ filter }) => {
   }
 
   return (
-    <Container className="p-0">
+    <Container>
       <Row className={`mb-3 ${styles.tableContainer}`}>
         <Table striped bordered hover>
           <thead className={styles.thead}>
@@ -243,4 +189,4 @@ const InvoiceTable = ({ filter }) => {
   );
 };
 
-export default InvoiceTable;
+export default ClientTable;

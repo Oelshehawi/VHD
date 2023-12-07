@@ -35,7 +35,7 @@ const Invoice = () => {
           </Col>
         </Row>
         <Row className="mt-3 mx-3">
-          <Col>
+          <Col className='ps-0'>
             <InputGroup className="p-0">
               <InputGroup.Text>
                 <FaSearch />
@@ -47,9 +47,8 @@ const Invoice = () => {
               />
             </InputGroup>
           </Col>
-          <Col>
-            {' '}
-            <Form.Select>
+          <Col className='pe-0'>
+            <Form.Select onChange={(e) => setfilter(e.target.value)}>
               <option value="Sort By"> Sort By</option>
               <option value="Paid"> Paid</option>
               <option value="Overdue">Overdue</option>
