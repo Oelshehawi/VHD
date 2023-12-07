@@ -9,11 +9,12 @@ import { Container, Row, Col, Button, Form, InputGroup } from 'react-bootstrap';
 const Database = () => {
   const [openModal, setopenModal] = useState(false);
   const [filter, setfilter] = useState('');
+  const [onUpdate, setOnUpdate] = useState(false);
 
   return (
     <div className={database.verticalCenter}>
       <Container className={database.tableContainer}>
-        <AddClient open={openModal} onClose={() => setopenModal(false)} />
+        <AddClient show={openModal} onHide={() => setopenModal(false)} onUpdate={() => setOnUpdate(!onUpdate)} />
         <Row>
           <Col className="p-2 m-3 ms-4 mb-0">
             <div className="fs-4 fw-bolder">Clients</div>
@@ -40,7 +41,7 @@ const Database = () => {
           </InputGroup>
         </Row>
         <Row className="mx-3 mt-3">
-          <ClientTable filter={filter} />
+          <ClientTable filter={filter} onUpdate={onUpdate} />
         </Row>
       </Container>
     </div>

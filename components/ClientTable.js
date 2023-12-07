@@ -20,7 +20,7 @@ import {
   Col,
 } from 'react-bootstrap';
 
-const ClientTable = ({ filter }) => {
+const ClientTable = ({ filter, onUpdate }) => {
   const [clientData, setClientData] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
@@ -39,7 +39,7 @@ const ClientTable = ({ filter }) => {
       }
     };
     fetchData();
-  }, []);
+  }, [onUpdate]);
 
   const columnHelper = createColumnHelper();
 

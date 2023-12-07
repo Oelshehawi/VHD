@@ -1,87 +1,52 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FaTrashAlt } from 'react-icons/fa';
-import { FaPenSquare } from 'react-icons/fa';
-import { FaArrowLeft } from 'react-icons/fa';
 import axios from 'axios';
-import clientDetailed from './clientDetailed.module.css';
+import {
+  Container,
+  Row,
+  Col,
+  Button,
+  Card,
+  Spinner,
+  ListGroup,
+} from 'react-bootstrap';
+import { FaTrashAlt, FaPenSquare, FaArrowLeft } from 'react-icons/fa';
 import EditModal from '../../../components/EditClientModal';
 import DeleteModal from '../../../components/DeleteModal';
 
 const ClientDetailed = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const id = searchParams.get('id');
-  const [client, setClientData] = useState([]);
+  const clientId = searchParams.get('id');
+  const [client, setClient] = useState({});
   const [invoices, setInvoices] = useState([]);
-  const [openModal, setopenModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [onUpdate, setOnUpdate] = useState(false);
-  const [loadingInvoices, setLoadingInvoices] = useState(true);
-  const [open, setOpen] = useState(false);
-
-  const handleCloseModal = () => {
-    setOpen(false);
-  };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const clientResponse = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/clients/${id}`
+        const clientRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/clients/${clientId}`
         );
-        setClientData(clientResponse.data);
+        setClient(clientRes.data);
 
-        const response = await axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/invoices?prefix=${clientResponse.data.prefix}`
+        const invoicesRes = await axios.get(
+          `${process.env.NEXT_PUBLIC_API_URL}/invoices/clientInvoices?prefix=${clientRes.data.prefix}`
         );
-        setInvoices(response.data);
-        setLoadingInvoices(false);
+        setInvoices(invoicesRes.data);
+
+        setIsLoading(false);
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching data:', error);
       }
     };
+
     fetchData();
   }, [onUpdate]);
-
-  if (client.length === 0) {
-    return (
-      <div className={clientDetailed.loadingContainer}>
-        <div className={clientDetailed.loader}></div>
-      </div>
-    );
-  }
-
-  const handleDelete = async () => {
-    try {
-      await axios.delete(
-        `${process.env.NEXT_PUBLIC_API_URL}/clients/${client._id}`
-      );
-      console.log('Record deleted successfully');
-      router.push('/database');
-    } catch (error) {
-      console.log('Error deleting record:', error);
-    }
-  };
-
-  const details = [
-    {
-      name: 'Client Name',
-      value: client.clientName,
-    },
-    {
-      name: 'Phone Number',
-      value: client.phoneNumber,
-    },
-    {
-      name: 'Email',
-      value: client.email,
-    },
-    {
-      name: 'Notes',
-      value: client.notes,
-    },
-  ];
 
   const handleBack = () => {
     router.push('/database');
@@ -91,96 +56,108 @@ const ClientDetailed = () => {
     router.push(`/invoices/invoiceDetailed?id=${invoiceId}`);
   };
 
+  const handleDeleteClient = async () => {
+    try {
+      await axios.delete(`${process.env.NEXT_PUBLIC_API_URL}/clients/${clientId}`);
+      router.push('/database');
+    } catch (error) {
+      console.error('Error deleting client:', error);
+    }
+  };
+
+  const handleEdit = () => setOpenEditModal(true);
+  const handleDelete = () => setOpenDeleteModal(true);
+
+  if (isLoading) {
+    return (
+      <Container
+        fluid
+        className="d-flex justify-content-center align-items-center mt-5"
+      >
+        <Spinner
+          animation="border"
+          size="lg"
+          role="status"
+          aria-hidden="true"
+        />
+      </Container>
+    );
+  }
   return (
     <>
+      <Container className="mt-4">
+        <Row className="mb-4">
+          <Col>
+            <Button variant="secondary" onClick={handleBack}>
+              <FaArrowLeft /> Back
+            </Button>
+          </Col>
+          <Col className="d-flex justify-content-end">
+            <Button variant="info" onClick={handleEdit} className="me-2">
+              <FaPenSquare /> Edit
+            </Button>
+            <Button variant="danger" onClick={handleDelete}>
+              <FaTrashAlt /> Delete
+            </Button>
+          </Col>
+        </Row>
+        <Row>
+          <Col md={6} className="mb-4">
+            <Card>
+              <Card.Header>Client Information</Card.Header>
+              <Card.Body>
+                <ListGroup>
+                  <ListGroup.Item>
+                    <strong>Name:</strong> {client.clientName}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <strong>Email:</strong> {client.email}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <strong>Phone:</strong> {client.phoneNumber}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <strong>Notes:</strong> {client.notes}
+                  </ListGroup.Item>
+                </ListGroup>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={6}>
+            <Card>
+              <Card.Header>Transaction History</Card.Header>
+              <Card.Body>
+                <ListGroup>
+                  {invoices.length != 0 ? (
+                    invoices.map((invoice) => (
+                      <ListGroup.Item
+                        key={invoice._id}
+                        onClick={() => redirectToInvoiceDetails(invoice._id)}
+                        action
+                      >
+                        #{invoice.invoiceId} - {invoice.jobTitle}
+                      </ListGroup.Item>
+                    ))
+                  ) : (
+                    <Row className="p-2">No invoices for this client</Row>
+                  )}
+                </ListGroup>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
       <EditModal
-        open={openModal}
+        open={openEditModal}
+        onClose={() => setOpenEditModal(false)}
         client={client}
-        onClose={() => {
-          setopenModal(false);
-        }}
         onUpdate={() => setOnUpdate(!onUpdate)}
       />
-      <div className={clientDetailed.dataContainer}>
-        <div className={clientDetailed.clientHeader}>
-          <div className={clientDetailed.clientTitleContainer}>
-            <FaArrowLeft
-              className={clientDetailed.clientBackArrow}
-              onClick={handleBack}
-            />
-            <div className={clientDetailed.clientTitle}>
-              {' '}
-              {client.clientName}
-            </div>
-          </div>
-          <div className={clientDetailed.clientButtons}>
-            <div
-              className={clientDetailed.clientButtonContainer}
-              onClick={() => setopenModal(true)}
-            >
-              <FaPenSquare />
-              <button className={clientDetailed.clientButton}>{'Edit'}</button>
-            </div>
-            <div
-              className={clientDetailed.clientButtonContainer}
-              onClick={() => setOpen(true)}
-            >
-              <FaTrashAlt />
-              <button className={clientDetailed.clientButton}>
-                {'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className={clientDetailed.clientDetailsContainer}>
-        <div className={clientDetailed.clientInformation}>
-          <div className={clientDetailed.clientInformationHeader}>
-            {'Client Information'}
-          </div>
-          <div className={clientDetailed.clientInformationContent}>
-            {details.map(({ name, value }) => (
-              <div className={clientDetailed.clientInformationOrder} key={name}>
-                <p className={clientDetailed.clientDetailTitle}>{name}</p>
-                <p className={clientDetailed.clientDetailMain}>{value}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className={clientDetailed.clientTransactionHistory}>
-          <div className={clientDetailed.clientTransactionHistoryHeader}>
-            {'Transaction History'}
-          </div>
-          {loadingInvoices ? (
-            <div className={clientDetailed.loadingContainer}>
-              <div className={clientDetailed.loader}></div>
-            </div>
-          ) : (
-            <div className={clientDetailed.invoiceItemContainer}>
-              {invoices.length === 0 ? (
-                <p className={clientDetailed.notAvailable}>
-                  No invoices available
-                </p>
-              ) : (
-                invoices.map((invoice) => (
-                  <p
-                    key={invoice._id}
-                    className={clientDetailed.invoiceItem}
-                    onClick={() => redirectToInvoiceDetails(invoice._id)}
-                  >
-                    #{invoice.invoiceId} - {invoice.jobTitle}
-                  </p>
-                ))
-              )}
-            </div>
-          )}
-        </div>
-      </div>
       <DeleteModal
-        showModal={open}
-        hideModal={handleCloseModal}
-        confirmModal={handleDelete}
-      ></DeleteModal>
+        showModal={openDeleteModal}
+        hideModal={() => setOpenDeleteModal(false)}
+        confirmModal={handleDeleteClient}
+      />
     </>
   );
 };

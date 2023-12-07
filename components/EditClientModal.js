@@ -1,15 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import Axios from 'axios';
+import { Offcanvas, Form, Button, Row, Col } from 'react-bootstrap';
 import editModal from './styles/editModal.module.css';
-
+import { ToastContainer, Toast } from 'react-bootstrap';
 
 const EditModal = ({ open, onClose, client, onUpdate }) => {
-  const [animationClass, setAnimationClass] = useState('slideIn');
-  const [animationClass2, setAnimationClass2] = useState('fadeIn');
   const [isLoading, setIsLoading] = useState(false);
 
-  const emptyInput = {};
+  const [showToast, setShowToast] = useState(false);
 
   const {
     register,
@@ -18,120 +17,113 @@ const EditModal = ({ open, onClose, client, onUpdate }) => {
     formState: { errors },
   } = useForm();
 
-  const inputFields = [
-    {
-      name: 'clientName',
-      type: 'text',
-      placeholder: "Client's Name",
-      value: client.clientName,
-    },
-    { name: 'email', type: 'email', placeholder: 'Email', value: client.email },
-    {
-      name: 'phoneNumber',
-      type: 'tel',
-      placeholder: 'Phone Number',
-      value: client.phoneNumber,
-    },
-    {
-      name: 'notes',
-      type: 'textarea',
-      placeholder: 'Notes',
-      value: client.notes,
-    },
-  ];
-
-  const handleClose = () => {
-    setAnimationClass('slideOut');
-    setAnimationClass2('fadeOut');
-    setTimeout(() => {
-      setAnimationClass('slideIn');
-      setAnimationClass2('fadeIn');
-      onClose();
-    }, 500);
-  };
+  useEffect(() => {
+    reset({
+      clientName: client.clientName,
+      email: client.email,
+      phoneNumber: client.phoneNumber,
+      notes: client.notes,
+    });
+  }, [client, reset]);
 
   const handleUpdate = async (data) => {
+    setIsLoading(true);
     try {
       await Axios.put(
         `${process.env.NEXT_PUBLIC_API_URL}/clients/${client._id}`,
         data
       );
-      console.log('Record Updated successfully');
-      showUpdateToast();
+      setShowToast(true);
       onUpdate();
-      handleClose();
+      reset();
     } catch (error) {
-      console.log('Error Updating record:', error);
+      console.error('Error updating client:', error);
+    } finally {
+      setIsLoading(false);
+      onClose();
     }
   };
 
-  const showUpdateToast = () => {
-    toast.success('Client Updated Successfully!', {
-      transition: Slide,
-      position: 'bottom-right',
-    });
-  };
-
-  if (!open) return null;
   return (
-    <div
-      onClick={handleClose}
-      className={`${editModal.overlay} ${editModal[animationClass2]}`}
-      role="button"
-      tabIndex={0}
-      onKeyDown={handleClose}
-    >
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-        className={`${editModal.modalContainer} ${editModal[animationClass]}`}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        <div className={editModal.modalHeader}>Edit Client</div>
-        <form
-          id="addClientForm"
-          className={editModal.modalContent}
-          onSubmit={handleSubmit(handleUpdate)}
+    <>
+      <Offcanvas show={open} onHide={onClose} placement="end">
+        <Offcanvas.Header closeButton>
+          <Offcanvas.Title>Edit Client</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
+          <Form onSubmit={handleSubmit(handleUpdate)}>
+            <Form.Group className="mb-3">
+              <Form.Label>Client's Name</Form.Label>
+              <Form.Control
+                {...register('clientName')}
+                type="text"
+                isInvalid={!!errors.clientName}
+              />
+              <Form.Control.Feedback type="invalid">
+                Client name is required.
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Email</Form.Label>
+              <Form.Control
+                {...register('email')}
+                type="email"
+                isInvalid={!!errors.email}
+              />
+              <Form.Control.Feedback type="invalid">
+                Email is required.
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Phone Number</Form.Label>
+              <Form.Control
+                {...register('phoneNumber')}
+                type="tel"
+                isInvalid={!!errors.phoneNumber}
+              />
+              <Form.Control.Feedback type="invalid">
+                Phone number is required.
+              </Form.Control.Feedback>
+            </Form.Group>
+
+            <Form.Group className="mb-3">
+              <Form.Label>Notes</Form.Label>
+              <Form.Control {...register('notes')} as="textarea" rows={3} />
+            </Form.Group>
+
+            <Row>
+              <Col className="d-flex justify-content-center">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={isLoading}
+                  className={`${editModal.submitButton}`}
+                >
+                  {isLoading ? 'Updating...' : 'Save Changes'}
+                </Button>
+              </Col>
+            </Row>
+          </Form>
+        </Offcanvas.Body>
+      </Offcanvas>
+      <ToastContainer className="p-3" position="top-center">
+        <Toast
+          onClose={() => setShowToast(false)}
+          show={showToast}
+          delay={3000}
+          autohide
         >
-          {inputFields.map(({ name, type, placeholder, value, ...rest }) => (
-            <div className={editModal.modalContentInputContainer} key={name}>
-              {type === 'textarea' ? (
-                <textarea
-                  {...register(name)}
-                  className={editModal.modalContentInput}
-                  placeholder={placeholder}
-                  defaultValue={value}
-                />
-              ) : (
-                <input
-                  {...register(name)}
-                  className={editModal.modalContentInput}
-                  type={type}
-                  placeholder={placeholder}
-                  defaultValue={value}
-                />
-              )}
-              <span className={editModal.modalContentInputFocus}></span>
-            </div>
-          ))}
-        </form>
-        <div className={editModal.modalFooter}>
-          <button
-            id={editModal.submitButtonForm}
-            type="submit"
-            value="submit"
-            form="addClientForm"
-            disabled={isLoading}
-          >
-     
-            {isLoading ? 'Loading...' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    </div>
+          <Toast.Header>
+            <strong className="me-auto">Client Updated</strong>
+          </Toast.Header>
+          <Toast.Body>
+            Client details have been successfully updated.
+          </Toast.Body>
+        </Toast>
+      </ToastContainer>
+    </>
   );
 };
 

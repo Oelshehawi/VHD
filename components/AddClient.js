@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import Axios from 'axios';
-import modal from './styles/modal.module.css';
+import { Offcanvas, Form, Button, Row, Col, Toast, ToastContainer } from 'react-bootstrap';
+import addClient from './styles/addClient.module.css';
 
-const Modal = ({ open, onClose, onUpdate }) => {
-  const [animationClass, setAnimationClass] = useState('slideIn');
-  const [animationClass2, setAnimationClass2] = useState('fadeIn');
+const AddClient = ({ show, onHide, onUpdate }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [showToast, setShowToast] = useState(false);
 
   const {
     register,
@@ -44,102 +45,83 @@ const Modal = ({ open, onClose, onUpdate }) => {
   ];
 
   const handleSave = async (values) => {
+    setIsLoading(true);
     try {
-      const formData = new FormData();
-      formData.append('clientName', values.clientName);
-      formData.append('prefix', values.prefix);
-      formData.append('email', values.email);
-      formData.append('phoneNumber', values.phoneNumber);
-      formData.append('notes', values.notes);
+      await Axios.post(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, values);
 
-      await Axios.post(`${process.env.NEXT_PUBLIC_API_URL}/clients/`, formData);
-
-      onUpdate();
-      handleClose();
+      onHide();
       reset();
+      setShowToast(true); 
+      onUpdate();
     } catch (error) {
-      // Handle the error
-      console.log(error);
+      console.error('Error saving client:', error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setAnimationClass('slideOut');
-    setAnimationClass2('fadeOut');
-    setTimeout(() => {
-      setAnimationClass('slideIn');
-      setAnimationClass2('fadeIn');
-      onClose();
-    }, 500);
-  };
-
-  if (!open) return null;
   return (
-    <div
-      onClick={handleClose}
-      className={`${modal.overlay} ${modal[animationClass2]}`}
-      role="button"
-      tabIndex={0}
-      onKeyDown={handleClose}
-    >
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-        className={`${modal.modalContainer} ${modal[animationClass]}`}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        <div className={modal.modalHeader}>Add New Client</div>
-        <form
-          id="addClientForm"
-          className={modal.modalContent}
-          onSubmit={handleSubmit(handleSave)}
-        >
-          {inputFields.map(
-            ({ name, type, placeholder, isRequired, ...rest }) => (
-              <div className={modal.modalContentInputContainer} key={name}>
-                {type === 'textarea' ? (
-                  <textarea
-                    {...register(name)}
-                    className={modal.modalContentInput}
-                    placeholder={placeholder}
-                    {...rest}
-                  />
-                ) : (
-                  <input
-                    {...register(name, { required: isRequired })}
-                    className={modal.modalContentInput}
-                    type={type}
-                    placeholder={placeholder}
-                    maxLength={rest.maxLength}
-                    {...rest}
-                  />
-                )}
-                {errors[name] && (
-                  <p style={{ color: 'red', padding: '3px' }}>
+    <>
+      <Offcanvas show={show} onHide={onHide} placement="end">
+        <Offcanvas.Header closeButton>
+          <Offcanvas.Title>Add New Client</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
+          <Form onSubmit={handleSubmit(handleSave)}>
+            {inputFields.map(
+              ({ name, type, placeholder, isRequired, maxLength }) => (
+                <Form.Group key={name} className="mb-3">
+                  {type === 'textarea' ? (
+                    <Form.Control
+                      as="textarea"
+                      {...register(name)}
+                      placeholder={placeholder}
+                      isInvalid={!!errors[name]}
+                    />
+                  ) : (
+                    <Form.Control
+                      {...register(name, { required: isRequired })}
+                      type={type}
+                      placeholder={placeholder}
+                      maxLength={maxLength}
+                      isInvalid={!!errors[name]}
+                    />
+                  )}
+                  <Form.Control.Feedback type="invalid">
                     {name} is required
-                  </p>
-                )}
-                <span className={modal.modalContentInputFocus}></span>
-              </div>
-            )
-          )}
-        </form>
-        <div className={modal.modalFooter}>
-          <button
-            id={modal.submitButtonForm}
-            type="submit"
-            value="submit"
-            form="addClientForm"
-          >
-            Submit
-          </button>
-        </div>
-      </div>
-    </div>
+                  </Form.Control.Feedback>
+                </Form.Group>
+              )
+            )}
+            <Row>
+              <Col className="d-flex justify-content-center">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  className={` ${addClient.submitButton}`}
+                >
+                  {isLoading ? 'Adding Client...' : 'Add Client'}
+                </Button>
+              </Col>
+            </Row>
+          </Form>
+        </Offcanvas.Body>
+      </Offcanvas>
+      <ToastContainer className="p-3" position="top-center">
+        <Toast
+          onClose={() => setShowToast(false)}
+          show={showToast}
+          delay={3000}
+          autohide
+        >
+          <Toast.Header>
+            <strong className="me-auto">Client Added</strong>
+          </Toast.Header>
+          <Toast.Body>New client has been successfully added.</Toast.Body>
+        </Toast>
+      </ToastContainer>
+    </>
   );
 };
 
-export default Modal;
+export default AddClient;

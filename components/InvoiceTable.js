@@ -106,7 +106,7 @@ const InvoiceTable = ({ filter }) => {
     }),
   ];
 
-  const handleRowClick = (row) => {
+  const handleRowClick = (invoiceId) => {
     router.push(`/invoices/invoiceDetailed?id=${invoiceId}`);
   };
 

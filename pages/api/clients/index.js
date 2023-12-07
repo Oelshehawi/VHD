@@ -1,10 +1,9 @@
 import connectMongo from '../../../lib/connect';
 import { Client } from '../../../models/reactDataSchema';
-import { IncomingForm } from 'formidable';
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: true,
     responseLimit: false,
   },
 };
@@ -29,34 +28,10 @@ export default async function handler(req, res) {
       });
     }
   } else if (req.method === 'POST') {
-    const form = new IncomingForm();
-
     try {
-      const { fields } = await new Promise((resolve, reject) => {
-        form.parse(req, (err, fields) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve({ fields });
-          }
-        });
-      });
+      const { clientName, prefix, email, phoneNumber, notes } = req.body;
 
-      let {
-        clientName,
-        prefix,
-        email,
-        phoneNumber,
-        notes,
-      } = fields || {};
-
-      clientName = clientName.length === 0 ? null : clientName[0];
-      email = email.length === 0 ? null : email[0];
-      prefix = prefix.length === 0 ? null : prefix[0];
-      phoneNumber = phoneNumber.length === 0 ? null : phoneNumber[0];
-      notes = notes.length === 0 ? null : notes[0];
-
-      const formData = new Client({
+      const newClient = new Client({
         clientName,
         prefix,
         email,
@@ -64,13 +39,11 @@ export default async function handler(req, res) {
         notes,
       });
 
-      await formData.save();
-      res.send('Inserted data successfully.');
+      await newClient.save();
+      res.status(201).send('Client added successfully.');
     } catch (err) {
-      console.log(err);
-      res.status(500).send({
-        message: 'Some error occurred while inserting data.',
-      });
+      console.error(err);
+      res.status(500).send({ message: 'Error occurred while adding client.' });
     }
   }
 }
