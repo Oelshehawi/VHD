@@ -1,320 +1,226 @@
 import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm } from 'react-hook-form';
 import Axios from 'axios';
+import {
+  Offcanvas,
+  Form,
+  Button,
+  Row,
+  Col,
+  ToastContainer,
+  Toast,
+} from 'react-bootstrap';
 import editInvoice from './styles/editInvoice.module.css';
 
-const EditInvoiceModal = ({
-  open,
-  onClose,
-  onUpdate,
-  invoice,
-  client,
-}) => {
-  const [animationClass, setAnimationClass] = useState('slideIn');
-  const [animationClass2, setAnimationClass2] = useState('fadeIn');
+const EditInvoiceModal = ({ open, onClose, onUpdate, invoice }) => {
   const [items, setItems] = useState([]);
-  const [subtotal, setSubtotal] = useState(0);
-  const [tax, setTax] = useState(0);
-  const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
-  const [frequency, setFrequency] = useState('');
-  const [dateIssuedSet, setDateIssuedSet] = useState('');
-
-  const addItem = () => {
-    setItems((prevItems) => [...prevItems, { description: '', price: 0 }]);
-  };
-
-  const deleteItem = (index) => {
-    setItems(items.filter((_, i) => i !== index));
-  };
-
-  const handlePriceChange = (index, value) => {
-    setItems((prevItems) => {
-      const updatedItems = [...prevItems];
-      updatedItems[index] = {
-        ...updatedItems[index],
-        price: parseFloat(value),
-      };
-      return updatedItems;
-    });
-  };
-
-  const emptyInput = {};
-
+  const [showToast, setShowToast] = useState(false);
   const {
     register,
     handleSubmit,
-    reset,
+    setValue,
+    watch,
     formState: { errors },
-    control,
   } = useForm();
 
-  useEffect(() => {
-    const calculateTotals = () => {
-      const itemsSubtotal = items.reduce(
-        (acc, item) => acc + parseFloat(item.price || 0),
-        0
-      );
-      const itemsTax = itemsSubtotal * 0.05;
-      const itemsTotal = itemsSubtotal + itemsTax;
-
-      setSubtotal(itemsSubtotal);
-      setTax(itemsTax);
-      setTotal(itemsTotal);
-    };
-
-    calculateTotals();
-  }, [items]);
+  const dateIssued = watch('dateIssued');
+  const frequency = watch('frequency');
 
   useEffect(() => {
-    if (invoice) {
-      const {
-        jobTitle,
-        dateIssued,
-        dateDue,
-        items,
-        frequency,
-        location,
-        notes,
-      } = invoice;
+    const updatedDateDue = calculateDueDate(dateIssued, frequency);
+    setValue('dateDue', updatedDateDue);
+  }, [dateIssued, frequency, setValue]);
 
-      reset({
-        jobTitle,
-        dateIssued: new Date(dateIssued).toISOString().substr(0, 10),
-        dateDue: new Date(dateDue).toISOString().substr(0, 10),
-        items: items.map((item) => ({
-          description: item.description,
-          price: item.price,
-        })),
-        frequency,
-        location,
-        notes,
+  useEffect(() => {
+    if (invoice && Object.keys(invoice).length !== 1) {
+      Object.entries(invoice).forEach(([key, value]) => {
+        if (key === 'dateIssued') {
+          const formattedDateIssued = new Date(value)
+            .toISOString()
+            .split('T')[0];
+          setValue(key, formattedDateIssued, { shouldValidate: true });
+        } else {
+          setValue(key, value, { shouldValidate: true });
+        }
       });
-
-      setItems(items);
+      setItems(invoice.items || []);
     }
-  }, [invoice, reset]);
+  }, [invoice, setValue]);
 
-  const handleEdit = async (data) => {
+  const calculateDueDate = (issuedDate, freq) => {
+    if (issuedDate && freq) {
+      const dueDate = new Date(issuedDate);
+      dueDate.setMonth(dueDate.getMonth() + 12 / parseInt(freq));
+      return dueDate.toISOString().split('T')[0];
+    }
+    return '';
+  };
+
+  const addItem = () => {
+    const newItems = [...items, { description: '', price: '' }];
+    setItems(newItems);
+  };
+
+  const deleteItem = (index) => {
+    if (items.length > 1) {
+      const updatedItems = items.filter((_, i) => i !== index);
+      setItems(updatedItems);
+    }
+  };
+
+  const onSubmit = async (data) => {
     setIsLoading(true);
-
     try {
-      const { clientId, dateIssued, frequency, ...restData } = data;
-      const dateDue = calculateDueDate(dateIssued, frequency); // Calculate the dateDue value
-
-      const updatedData = {
-        ...restData,
-        dateIssued,
-        frequency,
-        dateDue,
-      };
-
+      const updatedData = { ...data, items };
+      console.log(updatedData)
       await Axios.put(
         `${process.env.NEXT_PUBLIC_API_URL}/invoices/${invoice._id}`,
         updatedData
       );
-
+      setShowToast(true);
       onUpdate();
-      handleClose();
+      onClose();
     } catch (error) {
-      console.log(error);
+      console.error('Error updating invoice:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleClose = () => {
-    setAnimationClass('slideOut');
-    setAnimationClass2('fadeOut');
-    setTimeout(() => {
-      setAnimationClass('slideIn');
-      setAnimationClass2('fadeIn');
-      onClose();
-    }, 500);
-  };
-
-  const calculateDueDate = (dateIssued, frequency) => {
-    const dueDate = new Date(dateIssued);
-
-    // Adjust the due date based on the frequency
-    dueDate.setMonth(dueDate.getMonth() + 12 / frequency);
-
-    const dueDateString = dueDate.toLocaleDateString('en-US', {
-      timeZone: 'UTC',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-
-    return dueDate.toISOString().split('T')[0];
-  };
-
-  const handleChange = (e) => {
-    if (e.target.value.length > 1) {
-      e.target.value = e.target.value.slice(0, 1);
-    }
-    setFrequency(e.target.value);
-  };
-
-  if (!open) return null;
   return (
-    <div
-      onClick={handleClose}
-      className={`${editInvoice.overlay} ${editInvoice[animationClass2]}`}
-      role="button"
-      tabIndex={0}
-      onKeyDown={handleClose}
-    >
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-        className={`${editInvoice.editInvoiceContainer} ${editInvoice[animationClass]}`}
-        onKeyDown={(e) => {
-          e.stopPropagation();
-        }}
+    <>
+      <Offcanvas
+        show={open}
+        onHide={onClose}
+        placement="end"
+        className={editInvoice.offCanvas}
       >
-        <div className={editInvoice.editInvoiceHeader}>{'Edit Invoice'}</div>
-        <form
-          id="editInvoiceForm"
-          className={editInvoice.editInvoiceContent}
-          onSubmit={handleSubmit(handleEdit)}
-        >
-          <div className={editInvoice.inputContainer}>
-            <div className={editInvoice.recipientInput}>
-              {/* <Controller
-                name="clientId"
-                control={control}
-                render={({ field }) => (
-                  <Select
-                    {...field}
-                    className={editInvoice.selectContentInput}
-                    placeholder={`${client[0].clientName} - ${client[0].email}`}
-                    isDisabled={true}
-                  />
-                )}
-              /> */}
-            </div>
-            <div className={editInvoice.titleInputs}>
-              <input
-                {...register('jobTitle')}
-                className={editInvoice.titleContentInput}
+        <Offcanvas.Header closeButton>
+          <Offcanvas.Title>Edit Invoice</Offcanvas.Title>
+        </Offcanvas.Header>
+        <Offcanvas.Body>
+          <Form onSubmit={handleSubmit(onSubmit)}>
+            <Form.Group className="mb-3">
+              <Form.Label>Job Title</Form.Label>
+              <Form.Control
                 type="text"
                 placeholder="Job Title"
+                {...register('jobTitle', { required: true })}
               />
-            </div>
-            <div className={editInvoice.detailInputs}>
-              <input
-                {...register('frequency', {
-                  required: 'Frequency is required',
-                })}
-                className={editInvoice.detailContentInput}
+              {errors.jobTitle && (
+                <p className="text-danger">Job title is required</p>
+              )}
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Frequency</Form.Label>
+              <Form.Control
                 type="number"
                 placeholder="Frequency"
-                onChange={handleChange}
+                {...register('frequency', { required: true })}
               />
-              <input
-                {...register('location', {
-                  required: 'Location is required',
-                })}
-                className={editInvoice.detailContentInput}
+              {errors.frequency && (
+                <p className="text-danger">Frequency is required</p>
+              )}
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Location</Form.Label>
+              <Form.Control
                 type="text"
-                placeholder="Address"
+                placeholder="Location"
+                {...register('location', { required: true })}
               />
-            </div>
-
-            <div className={editInvoice.dateInputs}>
-              <input
-                {...register('dateIssued')}
-                className={editInvoice.dateContentInput}
+              {errors.location && (
+                <p className="text-danger">Location is required</p>
+              )}
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Date Issued</Form.Label>
+              <Form.Control
                 type="date"
-                onChange={(e) => setDateIssuedSet(e.target.value)}
+                {...register('dateIssued', { required: true })}
               />
-              <input
-                {...register('dateDue')}
-                className={editInvoice.dateContentInput}
-                type="text"
-                value={
-                  frequency
-                    ? dateIssuedSet
-                      ? calculateDueDate(dateIssuedSet, frequency)
-                      : 'Please Change Date Issued as well'
-                    : 'Please Change Frequency First'
-                }
-                disabled
-              />
-            </div>
-            <div className={editInvoice.itemInputs}>
-              {items.map((item, index) => (
-                <div key={index} className={editInvoice.itemMain}>
-                  <div className={editInvoice.itemMainInputs}>
-                    <input
-                      {...register(`items[${index}].description`)}
-                      className={editInvoice.itemDescriptionInput}
-                      type="text"
-                      placeholder="Item Description"
-                    />
-                    <input
-                      {...register(`items[${index}].price`)}
-                      className={editInvoice.itemPriceInput}
-                      type="number"
-                      placeholder="Item Price"
-                      onChange={(e) => handlePriceChange(index, e.target.value)}
-                    />
-                  </div>
-                  <button
-                    className={editInvoice.deleteButton}
-                    type="button"
+              {errors.dateIssued && (
+                <p className="text-danger">Date issued is required</p>
+              )}
+            </Form.Group>
+            <Form.Group className="mb-3">
+              <Form.Label>Date Due</Form.Label>
+              <Form.Control type="text" {...register('dateDue')} disabled />
+            </Form.Group>
+            {items.map((item, index) => (
+              <Row key={index} className="align-items-center mb-3">
+                <Col>
+                  <Form.Control
+                    type="text"
+                    placeholder="Item Description"
+                    value={item.description}
+                    onChange={(e) => {
+                      const newItems = [...items];
+                      newItems[index].description = e.target.value;
+                      setItems(newItems);
+                    }}
+                  />
+                </Col>
+                <Col>
+                  <Form.Control
+                    type="number"
+                    placeholder="Item Price"
+                    value={item.price}
+                    onChange={(e) => {
+                      const newItems = [...items];
+                      newItems[index].price = e.target.value;
+                      setItems(newItems);
+                    }}
+                  />
+                </Col>
+                <Col xs="auto">
+                  <Button
+                    variant="danger"
                     onClick={() => deleteItem(index)}
+                    disabled={items.length === 1}
                   >
                     Delete
-                  </button>
-                </div>
-              ))}
-              <div className={editInvoice.itemFooter}>
-                <button
-                  className={editInvoice.addButton}
-                  type="button"
-                  onClick={addItem}
+                  </Button>
+                </Col>
+              </Row>
+            ))}
+            <Button variant="secondary" onClick={addItem}>
+              + Add Item
+            </Button>
+            <Form.Group className="mb-3 mt-3">
+              <Form.Label>Additional Notes</Form.Label>
+              <Form.Control as="textarea" rows={3} {...register('notes')} />
+            </Form.Group>
+            <Row>
+              <Col className="d-flex justify-content-center">
+                <Button
+                  variant="primary"
+                  type="submit"
+                  disabled={isLoading}
+                  className={editInvoice.submitButton}
                 >
-                  {'+ Add Item'}
-                </button>
-                <div className={editInvoice.itemTaxBreakdown}>
-                  <div className={editInvoice.itemTotal}>
-                    Subtotal: ${subtotal.toFixed(2)}
-                  </div>
-                  <div className={editInvoice.itemTotal}>
-                    Tax (0.5%): ${tax.toFixed(2)}
-                  </div>
-                  <div className={editInvoice.itemTotal}>
-                    Total: ${total.toFixed(2)}
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className={editInvoice.notesInputs}>
-              <input
-                {...register('notes')}
-                className={editInvoice.notesContentInput}
-                type="textarea"
-                placeholder="Additional Notes"
-              />
-            </div>
-          </div>
-        </form>
-        <div className={editInvoice.editInvoiceFooter}>
-          <button
-            id={editInvoice.updateButtonForm}
-            type="submit"
-            value="submit"
-            form="editInvoiceForm"
-            disabled={isLoading}
-          >
-            {isLoading ? 'Loading...' : 'Save Changes'}
-          </button>
-        </div>
-      </div>
-    </div>
+                  {isLoading ? 'Updating...' : 'Save Changes'}
+                </Button>
+              </Col>
+            </Row>
+          </Form>
+        </Offcanvas.Body>
+      </Offcanvas>
+      <ToastContainer position="top-center" className="p-3">
+        <Toast
+          onClose={() => setShowToast(false)}
+          show={showToast}
+          delay={3000}
+          autohide
+        >
+          <Toast.Header>
+            <strong className="me-auto">Invoice Updated</strong>
+          </Toast.Header>
+          <Toast.Body>Invoice has been successfully updated!</Toast.Body>
+        </Toast>
+      </ToastContainer>
+    </>
   );
 };
 

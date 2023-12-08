@@ -63,10 +63,6 @@ const invoiceSchema = new Schema({
     enum: ['pending', 'overdue', 'paid'],
     default: 'pending',
   },
-  isDue: {
-    type: Boolean,
-    default: false,
-  },
 });
 
 const eventSchema = new Schema({
@@ -96,7 +92,6 @@ const userSchema = new Schema({
   },
 });
 
-
 const jobsDueSoonSchema = new Schema({
   invoiceId: {
     type: String,
@@ -121,6 +116,7 @@ const Client = models.Client || model('Client', ClientSchema);
 const Invoice = models.Invoice || model('Invoice', invoiceSchema);
 const Event = models.Event || model('Event', eventSchema);
 const User = models.User || model('User', userSchema);
-const JobsDueSoon = models.JobsDueSoon || model('JobsDueSoon', jobsDueSoonSchema);
+const JobsDueSoon =
+  models.JobsDueSoon || model('JobsDueSoon', jobsDueSoonSchema);
 
 export { Client, Event, User, Invoice, JobsDueSoon };

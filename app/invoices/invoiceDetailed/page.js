@@ -1,38 +1,41 @@
 'use client';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { FaTrashAlt } from 'react-icons/fa';
-import { FaPenSquare } from 'react-icons/fa';
-import { FaArrowLeft } from 'react-icons/fa';
-import { FaUser } from 'react-icons/fa';
-import { FaRegEnvelope } from 'react-icons/fa';
-import { FaPhoneAlt } from 'react-icons/fa';
+import {
+  Container,
+  Row,
+  Col,
+  Button,
+  Card,
+  Spinner,
+  ListGroup,
+  ToastContainer,
+  Toast,
+  Form,
+} from 'react-bootstrap';
+import {
+  FaTrashAlt,
+  FaPenSquare,
+  FaArrowLeft,
+  FaUser,
+  FaRegEnvelope,
+  FaPhoneAlt,
+} from 'react-icons/fa';
 import axios from 'axios';
-import invoiceDetailed from './invoiceDetailed.module.css';
-import EditModal from '../../../components/EditInvoiceModal';
+import EditInvoiceModal from '../../../components/EditInvoiceModal';
 import DeleteModal from '../../../components/DeleteModal';
 
 const InvoiceDetailed = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const id = searchParams.get('id');
-  const [client, setClientData] = useState([]);
-  const [invoice, setInvoiceData] = useState([]);
-  const [openModal, setopenModal] = useState(false);
+  const [client, setClient] = useState({});
+  const [invoice, setInvoice] = useState({ items: [] });
+  const [openEditModal, setOpenEditModal] = useState(false);
+  const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [onUpdate, setOnUpdate] = useState(false);
-  const [open, setOpen] = useState(false);
-
-  const handleCloseModal = () => {
-    setOpen(false);
-  };
-
-  // const showUpdateToast = () => {
-  
-  // };
-
-  // const showDeleteEventToast = () => {
-
-  // };
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,266 +43,231 @@ const InvoiceDetailed = () => {
         const invoiceResponse = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/invoices/${id}`
         );
+        setInvoice(invoiceResponse.data);
 
-        setInvoiceData(invoiceResponse.data);
-
-        const response = await axios.get(
+        const clientResponse = await axios.get(
           `${process.env.NEXT_PUBLIC_API_URL}/clients?prefix=${
             invoiceResponse.data.invoiceId.split('-')[0]
           }`
         );
-        setClientData(response.data);
+        setClient(clientResponse.data[0]);
       } catch (error) {
-        console.error(error);
+        console.error('Error fetching data:', error);
       }
     };
     fetchData();
   }, [onUpdate]);
-
-  if (!id || invoice.length === 0) {
-    return (
-      <div className={invoiceDetailed.loadingContainer}>
-        <div className={invoiceDetailed.loader}></div>
-      </div>
-    );
-  }
 
   const handleDelete = async () => {
     try {
       await axios.delete(
         `${process.env.NEXT_PUBLIC_API_URL}/invoices/${invoice._id}`
       );
-      console.log('Record deleted successfully');
-      setOpen(false);
-      showDeleteEventToast();
+      setToastMessage('Invoice deleted successfully');
+      setShowToast(true);
       router.push('/invoices');
     } catch (error) {
-      console.log('Error deleting record:', error);
+      console.error('Error deleting invoice:', error);
     }
   };
 
-  let Total = 0;
-  for (let i = 0; i < invoice.items.length; i++) {
-    Total += invoice.items[i].price;
+  const handleStatusChange = async (newStatus) => {
+    try {
+      await axios.put(
+        `${process.env.NEXT_PUBLIC_API_URL}/invoices/updateState`,
+        {
+          invoiceId: invoice._id,
+          status: newStatus,
+        }
+      );
+      setInvoice({ ...invoice, status: newStatus });
+      setToastMessage('Invoice status updated successfully');
+      setShowToast(true);
+    } catch (error) {
+      console.error('Error updating invoice status:', error);
+    }
+  };
+
+  const handleBack = () => router.push('/invoices');
+  const handleEdit = () => setOpenEditModal(true);
+  const handleDeleteConfirm = () => setOpenDeleteModal(true);
+
+  if (!id || !invoice || !client) {
+    return (
+      <Container
+        fluid
+        className="d-flex justify-content-center align-items-center"
+      >
+        <Spinner
+          animation="border"
+          size="lg"
+          role="status"
+          aria-hidden="true"
+        />
+      </Container>
+    );
   }
 
-  const statusOptions = [
-    { value: 'pending', label: 'PENDING', color: 'yellow' },
-    { value: 'overdue', label: 'OVERDUE', color: 'red' },
-    { value: 'paid', label: 'PAID', color: 'green' },
-  ];
-
-  const customStyles = {
-    option: (provided, state) => ({
-      ...provided,
-      backgroundColor: state.data.color,
-      color: state.data.color === 'yellow' ? 'black' : 'white',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      marginBottom: '8px',
-      width: '90%',
-      marginLeft: '10px',
-      textAlign: 'center',
-      ':hover': {
-        backgroundColor: state.data.color,
-        color: state.data.color === 'yellow' ? 'black' : 'white',
-      },
-    }),
-    control: (provided, state) => ({
-      ...provided,
-      backgroundColor: state.selectProps.value?.color || 'white',
-      borderRadius: '4px',
-      width: '150px',
-      textAlign: 'center',
-    }),
-    singleValue: (provided, state) => ({
-      ...provided,
-      color: state.selectProps.value?.color === 'yellow' ? 'black' : 'white',
-    }),
-  };
-
-  const handleStatusChange = async (e) => {
-    const updatedStatus = e.value;
-
-    try {
-      const response = await axios.put(
-        `${process.env.NEXT_PUBLIC_API_URL}/invoices/${invoice._id}`,
-        { status: updatedStatus }
-      );
-      console.log('Invoice status updated successfully!');
-      setOnUpdate(!onUpdate);
-      showUpdateToast();
-    } catch (error) {
-      console.log('Error updating invoice status:', error);
-    }
-  };
-
-  const handleBack = () => {
-    router.push('/invoices');
-  };
-
-  const redirectToClientDetails = (clientId) => {
-    router.push(`/database/clientDetailed?id=${clientId}`);
-  };
-
-  const issuedDate = new Date(invoice.dateIssued).toLocaleString('en-US', {
-    timeZone: 'UTC',
+  const issuedDate = new Date(invoice.dateIssued).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+  const dueDate = new Date(invoice.dateDue).toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
   });
 
-  const dueDate = new Date(invoice.dateDue).toLocaleString('en-US', {
-    timeZone: 'UTC',
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const calculateTotal = (items) => {
+    const sum = items.reduce((acc, item) => acc + item.price, 0);
+    return (sum + sum * 0.05);
+  };
 
-  const formattedDates = `Issued on ${issuedDate} - Due on ${dueDate}`;
+  const calculateGST = (items) => {
+    const sum = items.reduce((acc, item) => acc + item.price, 0);
+    return sum * 0.05;
+  };
 
   return (
     <>
-      <EditModal
-        open={openModal}
-        invoice={invoice}
-        client={client}
-        onClose={() => {
-          setopenModal(false);
-        }}
-        onUpdate={() => setOnUpdate(!onUpdate)}
-      />
-      <div className={invoiceDetailed.dataContainer}>
-        <div className={invoiceDetailed.invoiceHeader}>
-          <div className={invoiceDetailed.invoiceTitleContainer}>
-            <FaArrowLeft
-              className={invoiceDetailed.invoiceBackArrow}
-              onClick={handleBack}
-            />
-            <div className={invoiceDetailed.invoiceTitle}>
-              Invoice #{invoice.invoiceId}
-            </div>
-          </div>
-          <div className={invoiceDetailed.invoiceButtons}>
-            <div
-              className={invoiceDetailed.invoiceButtonContainer}
-              onClick={() => setopenModal(true)}
-            >
-              <FaPenSquare />
-              <button className={invoiceDetailed.invoiceButton}>
-                {'Edit'}
-              </button>
-            </div>
-            <div
-              className={invoiceDetailed.invoiceButtonContainer}
-              onClick={() => setOpen(true)}
-            >
-              <FaTrashAlt />
-              <button className={invoiceDetailed.invoiceButton}>
-                {'Delete'}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-      <div className={invoiceDetailed.invoiceDetailsContainer}>
-        <div className={invoiceDetailed.invoiceInformation}>
-          <div className={invoiceDetailed.invoiceInformationHeader}>
-            <div className={invoiceDetailed.invoiceInformationTitle}>
-              {'Invoice #' + invoice.invoiceId}
-            </div>
-            <div className={invoiceDetailed.invoiceInformationSubtitle}>
-              <span>{formattedDates}</span>
-              <span>Address : {invoice.location}</span>
-              <span>Frequency : {invoice.frequency} Cleanings per Year</span>
-            </div>
-          </div>
-          <div className={invoiceDetailed.invoiceInformationContent}>
-            <div className={invoiceDetailed.invoiceCostBreakdown}>
-              <div className={invoiceDetailed.invoiceCostHeader}>
-                {'Cost Breakdown'}
-              </div>
-              <div className={invoiceDetailed.invoiceCostContent}>
-                {invoice.items.map((item, index) => (
-                  <div key={index} className={invoiceDetailed.invoiceCostItem}>
-                    <p className={invoiceDetailed.fullHeight}>
-                      {item.description} :
-                    </p>
-                    <p>${item.price}</p>
-                  </div>
-                ))}
-                <p className={invoiceDetailed.invoiceCostTax}>
-                  <span>GST (5%) :</span>$
-                  {(
-                    invoice.items.reduce(
-                      (acc, item) => acc + parseFloat(item.price),
-                      0
-                    ) * 0.05
-                  ).toFixed(2)}
-                </p>
-                <div className={invoiceDetailed.invoiceCostTotal}>
-                  <p>Amount Due :</p>
-                  <p>${Total + Total * 0.05}</p>
-                </div>
-              </div>
-            </div>
-            <div className={invoiceDetailed.invoiceInformationFooter}>
-              {'Additional Notes :'}
-              <p className={invoiceDetailed.lighterText}> {invoice.notes}</p>
-            </div>
-          </div>
-        </div>
-        <div className={invoiceDetailed.invoiceContainer}>
-          <div className={invoiceDetailed.invoiceStatusContainer}>
-            <div className={invoiceDetailed.invoiceTotal}>
-              $ {Total + Total * 0.05}
-            </div>
-            <div className={invoiceDetailed.invoiceStatus}>
-              {/* <Select
-                options={statusOptions}
-                defaultValue={statusOptions.find(
-                  (option) => option.value === invoice.status
-                )}
-                styles={customStyles}
-                onChange={handleStatusChange}
-                isSearchable={false}
-              /> */}
-            </div>
-          </div>
-          <div className={invoiceDetailed.invoiceClient}>
-            <div className={invoiceDetailed.invoiceClientTitle}>
-              {'Client Details'}
-            </div>
-            <div className={invoiceDetailed.invoiceClientInfo}>
-              {client[0] && (
-                <>
-                  <p
-                    className={invoiceDetailed.invoiceClientPara}
-                    onClick={() => redirectToClientDetails(client[0]._id)}
+      <Container className="mt-4">
+        <Row className="mb-4">
+          <Col>
+            <Button variant="secondary" onClick={handleBack}>
+              <FaArrowLeft /> Back
+            </Button>
+          </Col>
+          <Col className="d-flex justify-content-end">
+            <Button variant="info" onClick={handleEdit} className="me-2">
+              <FaPenSquare /> Edit
+            </Button>
+            <Button variant="danger" onClick={handleDeleteConfirm}>
+              <FaTrashAlt /> Delete
+            </Button>
+          </Col>
+        </Row>
+        <Row>
+          <Col md={6} className="mb-4">
+            <Card>
+              <Card.Header>Invoice Information</Card.Header>
+              <Card.Body>
+                <ListGroup variant="flush">
+                  <ListGroup.Item>
+                    <strong>Invoice ID:</strong> {invoice.invoiceId}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <strong>Job Title:</strong> {invoice.jobTitle}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <strong>Date Issued:</strong> {issuedDate}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <strong>Date Due:</strong> {dueDate}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <strong>Frequency:</strong> {invoice.frequency}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <strong>Location:</strong> {invoice.location}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <strong>Notes:</strong> {invoice.notes}
+                  </ListGroup.Item>
+                </ListGroup>
+              </Card.Body>
+            </Card>
+          </Col>
+          <Col md={6}>
+            <Card>
+              <Card.Header>Client Information</Card.Header>
+              <Card.Body>
+                <ListGroup variant="flush">
+                  <ListGroup.Item
+                    action
+                    onClick={() =>
+                      router.push(`/database/clientDetailed?id=${client._id}`)
+                    }
                   >
-                    <FaUser />
-                    {client[0].clientName}
-                  </p>
-                  <p className={invoiceDetailed.invoiceClientPara}>
-                    <FaRegEnvelope />
-                    {client[0].email}
-                  </p>
-                  <p className={invoiceDetailed.invoiceClientPara}>
-                    <FaPhoneAlt />
-                    {client[0].phoneNumber}
-                  </p>
-                </>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
+                    <FaUser /> {client.clientName}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <FaRegEnvelope /> {client.email}
+                  </ListGroup.Item>
+                  <ListGroup.Item>
+                    <FaPhoneAlt /> {client.phoneNumber}
+                  </ListGroup.Item>
+                </ListGroup>
+              </Card.Body>
+            </Card>
+            <Card className="mt-3">
+              <Card.Header>Amount Due</Card.Header>
+              <Card.Body>
+                <ListGroup variant="flush">
+                  <ListGroup.Item>
+                    <strong>Total:</strong> ${calculateTotal(invoice.items)}
+                  </ListGroup.Item>
+                  <Row>
+                    <Col md={12}>
+                      <Card className="mt-3">
+                        <Card.Header>Price Breakdown</Card.Header>
+                        <Card.Body>
+                          <ListGroup variant="flush">
+                            {invoice.items.map((item, index) => (
+                              <ListGroup.Item key={index}>
+                                {item.description}: ${item.price}
+                              </ListGroup.Item>
+                            ))}
+                            <ListGroup.Item>
+                              GST (5%): $
+                              {calculateGST(invoice.items)}
+                            </ListGroup.Item>
+                          </ListGroup>
+                        </Card.Body>
+                      </Card>
+                    </Col>
+                  </Row>
+                  <ListGroup.Item>
+                    <Form.Select
+                      value={invoice.status}
+                      onChange={(e) => handleStatusChange(e.target.value)}
+                    >
+                      <option value="pending">Pending</option>
+                      <option value="paid">Paid</option>
+                      <option value="overdue">Overdue</option>
+                    </Form.Select>
+                  </ListGroup.Item>
+                </ListGroup>
+              </Card.Body>
+            </Card>
+          </Col>
+        </Row>
+      </Container>
+      <EditInvoiceModal
+        open={openEditModal}
+        onClose={() => setOpenEditModal(false)}
+        onUpdate={() => setOnUpdate(!onUpdate)}
+        invoice={invoice}
+      />
       <DeleteModal
-        showModal={open}
-        hideModal={handleCloseModal}
+        showModal={openDeleteModal}
+        hideModal={() => setOpenDeleteModal(false)}
         confirmModal={handleDelete}
-      >
-      </DeleteModal>
+      />
+
+      <ToastContainer className="p-3" position="top-center">
+        <Toast
+          onClose={() => setShowToast(false)}
+          show={showToast}
+          delay={3000}
+          autohide
+        >
+          <Toast.Header>
+            <strong className="me-auto">Notification</strong>
+          </Toast.Header>
+          <Toast.Body>{toastMessage}</Toast.Body>
+        </Toast>
+      </ToastContainer>
     </>
   );
 };

@@ -1,10 +1,9 @@
 import connectMongo from '../../../lib/connect';
 import { Invoice } from '../../../models/reactDataSchema';
-import { IncomingForm } from 'formidable';
 
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: true,
     responseLimit: false,
   },
 };
@@ -12,7 +11,6 @@ export const config = {
 export default async function handler(req, res) {
   await connectMongo();
   if (req.method === 'GET') {
-    // Request without ID
     const { prefix } = req.query;
     try {
       if (prefix) {
@@ -30,21 +28,8 @@ export default async function handler(req, res) {
       });
     }
   } else if (req.method === 'POST') {
-    const form = new IncomingForm();
-
     try {
-      const { fields } = await new Promise((resolve, reject) => {
-        form.parse(req, (err, fields) => {
-          if (err) {
-            reject(err);
-          } else {
-            resolve({ fields });
-          }
-        });
-      });
-
-      // Extract form data
-      let {
+      const {
         invoiceId,
         jobTitle,
         dateIssued,
@@ -54,38 +39,36 @@ export default async function handler(req, res) {
         location,
         notes,
         status,
-        isDue = false,
-      } = fields || {};
+      } = req.body;
 
-      if (items.length === 0) {
-        items = null;
-      } else {
-        items = items.map((item) => ({
-          description: item.description,
-          price: parseFloat(item.price) || 0,
-        }));
+      if (!items || items.length === 0) {
+        return res.status(400).send({ message: 'Items are required.' });
       }
+
+      const formattedItems = items.map((item) => ({
+        description: item.description,
+        price: parseFloat(item.price) || 0,
+      }));
 
       const invoiceData = new Invoice({
         invoiceId,
         jobTitle,
         dateIssued,
         dateDue,
-        items,
+        items: formattedItems,
         frequency,
         location,
         notes,
         status,
-        isDue,
       });
 
       await invoiceData.save();
-      res.send('Inserted data successfully.');
-    } catch (err) {
-      console.log(err);
-      res.status(500).send({
-        message: 'Some error occurred while inserting data.',
-      });
+      res.status(201).send({ message: 'Invoice created successfully.' });
+    } catch (error) {
+      console.error(error);
+      res
+        .status(500)
+        .send({ message: 'Error occurred while creating the invoice.' });
     }
   }
 }

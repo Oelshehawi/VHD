@@ -22,7 +22,7 @@ import {
   Button,
 } from 'react-bootstrap';
 
-const InvoiceTable = ({ filter }) => {
+const InvoiceTable = ({ filter, onUpdate }) => {
   const [invoiceData, setInvoiceData] = useState([]);
   const [globalFilter, setglobalFilter] = useState('');
   const [isLoading, setIsLoading] = useState(true);
@@ -43,7 +43,7 @@ const InvoiceTable = ({ filter }) => {
     };
 
     fetchData();
-  }, []);
+  }, [onUpdate]);
 
   useEffect(() => {
     setglobalFilter(filter);

@@ -62,7 +62,7 @@ const AddClient = ({ show, onHide, onUpdate }) => {
 
   return (
     <>
-      <Offcanvas show={show} onHide={onHide} placement="end">
+      <Offcanvas show={show} onHide={onHide} placement="end" className={` ${addClient.offCanvas}`}>
         <Offcanvas.Header closeButton>
           <Offcanvas.Title>Add New Client</Offcanvas.Title>
         </Offcanvas.Header>
