@@ -108,20 +108,25 @@ const InvoiceDetailed = () => {
     );
   }
 
-  const issuedDate = new Date(invoice.dateIssued).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
-  const dueDate = new Date(invoice.dateDue).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric',
-  });
+  const formatDateToLocale = (dateString) => {
+    const date = new Date(dateString);
+    const utcDate = new Date(
+      date.getUTCFullYear(),
+      date.getUTCMonth(),
+      date.getUTCDate()
+    );
+    return utcDate.toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  };
 
+  const issuedDate = formatDateToLocale(invoice.dateIssued);
+  const dueDate = formatDateToLocale(invoice.dateDue);
   const calculateTotal = (items) => {
     const sum = items.reduce((acc, item) => acc + item.price, 0);
-    return (sum + sum * 0.05);
+    return sum + sum * 0.05;
   };
 
   const calculateGST = (items) => {
@@ -219,8 +224,7 @@ const InvoiceDetailed = () => {
                               </ListGroup.Item>
                             ))}
                             <ListGroup.Item>
-                              GST (5%): $
-                              {calculateGST(invoice.items)}
+                              GST (5%): ${calculateGST(invoice.items)}
                             </ListGroup.Item>
                           </ListGroup>
                         </Card.Body>

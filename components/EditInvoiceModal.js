@@ -35,11 +35,8 @@ const EditInvoiceModal = ({ open, onClose, onUpdate, invoice }) => {
   useEffect(() => {
     if (invoice && Object.keys(invoice).length !== 1) {
       Object.entries(invoice).forEach(([key, value]) => {
-        if (key === 'dateIssued') {
-          const formattedDateIssued = new Date(value)
-            .toISOString()
-            .split('T')[0];
-          setValue(key, formattedDateIssued, { shouldValidate: true });
+        if (key === 'dateIssued' || key === 'dateDue') {
+          setValue(key, new Date(value).toISOString().split('T')[0]);
         } else {
           setValue(key, value, { shouldValidate: true });
         }
@@ -51,12 +48,14 @@ const EditInvoiceModal = ({ open, onClose, onUpdate, invoice }) => {
   const calculateDueDate = (issuedDate, freq) => {
     if (issuedDate && freq) {
       const dueDate = new Date(issuedDate);
-      dueDate.setMonth(dueDate.getMonth() + 12 / parseInt(freq));
+      const monthsToAdd = Math.floor(12 / parseInt(freq));
+      dueDate.setUTCMonth(dueDate.getUTCMonth() + monthsToAdd);
+  
+
       return dueDate.toISOString().split('T')[0];
     }
     return '';
   };
-
   const addItem = () => {
     const newItems = [...items, { description: '', price: '' }];
     setItems(newItems);
