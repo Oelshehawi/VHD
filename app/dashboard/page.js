@@ -71,7 +71,6 @@ const DashboardPage = () => {
     );
 
     setDueInvoices(updatedInvoices);
-
     try {
       await axios.post(`${process.env.NEXT_PUBLIC_API_URL}/invoices/checkDue`, {
         invoiceId,
@@ -148,6 +147,7 @@ const DashboardPage = () => {
                       >
                         {invoice.jobTitle} - Due:{' '}
                         {new Date(invoice.dateDue).toLocaleDateString('en-US', {
+                          timeZone: 'UTC',
                           year: 'numeric',
                           month: 'long',
                           day: 'numeric',
