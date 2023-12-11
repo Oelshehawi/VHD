@@ -105,9 +105,15 @@ const AddInvoice = ({ open, onClose, onUpdate }) => {
   };
 
   const calculateDueDate = (issuedDate, freq) => {
-    const dueDate = new Date(issuedDate);
-    dueDate.setMonth(dueDate.getMonth() + 12 / freq);
-    return dueDate.toISOString().split('T')[0];
+    if (issuedDate && freq) {
+      const dueDate = new Date(issuedDate);
+      const monthsToAdd = Math.floor(12 / parseInt(freq));
+      dueDate.setUTCMonth(dueDate.getUTCMonth() + monthsToAdd);
+  
+
+      return dueDate.toISOString().split('T')[0];
+    }
+    return '';
   };
 
   return (
