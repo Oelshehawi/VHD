@@ -110,6 +110,10 @@ const jobsDueSoonSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  emailSent: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const Client = models.Client || model('Client', ClientSchema);

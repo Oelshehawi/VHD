@@ -1,0 +1,10 @@
+.emailButton {
+  background-color: green;
+  border-color: green;
+}
+
+.emailButton:hover,
+.emailButton:active {
+  background-color: rgb(0, 97, 0) !important;
+  border-color: rgb(0, 97, 0) !important;
+}
