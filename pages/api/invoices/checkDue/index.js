@@ -21,10 +21,16 @@ export default async function handler(req, res) {
       await Promise.all(
         dueInvoices.map(async (invoice) => {
           const { _id: invoiceId, jobTitle, dateDue } = invoice;
-      
+
           const jobExists = await JobsDueSoon.findOne({ invoiceId });
           if (!jobExists) {
-            await JobsDueSoon.create({ invoiceId, jobTitle, dateDue, isScheduled: false });
+            await JobsDueSoon.create({
+              invoiceId,
+              jobTitle,
+              dateDue,
+              isScheduled: false,
+              emailSent: false,
+            });
           }
         })
       );
@@ -39,7 +45,7 @@ export default async function handler(req, res) {
   } else if (req.method === 'POST') {
     try {
       const { invoiceId, isScheduled } = req.body;
-      
+
       await JobsDueSoon.findOneAndUpdate(
         { invoiceId },
         { $set: { isScheduled } },

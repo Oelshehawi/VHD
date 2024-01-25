@@ -54,13 +54,14 @@ const JobsDueContainer = () => {
       console.error('Error updating invoice:', error);
     } finally {
       setShowToast(true);
+      setToastMessage('Job Has Been Scheduled!')
     }
   };
 
   return (
     <>
-      <Col className={``}>
-        <Row className={`ms-4 ${styles.jobsDueContainer}`}>
+      <Col className={` `}>
+        <Row className={`ms-4 ${styles.jobsDueTitle}`}>
           <h4>Jobs Due Soon</h4>
         </Row>
         <Row className={`ms-4 mt-4`}>
@@ -112,6 +113,7 @@ const JobsDueContainer = () => {
                         setShowToast={setShowToast}
                         emailRecipient={invoice.jobTitle}
                         emailSent={invoice.emailSent}
+                        invoiceId={invoice.invoiceId}
                       />
                     </td>
                   </tr>
@@ -131,7 +133,7 @@ const JobsDueContainer = () => {
           <Toast.Header>
             <strong className="me-auto">Notification</strong>
           </Toast.Header>
-          <Toast.Body className=' fw-bolder '> {toastMessage}</Toast.Body>
+          <Toast.Body className=" fw-bolder "> {toastMessage}</Toast.Body>
         </Toast>
       </ToastContainer>
     </>
