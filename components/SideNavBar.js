@@ -1,14 +1,14 @@
-import { useState } from 'react';
-import sideNav from './styles/sideNav.module.css';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { FaHome } from 'react-icons/fa';
-import { FaRegCalendarAlt } from 'react-icons/fa';
-import { FaDatabase } from 'react-icons/fa';
-import { FaFileInvoice } from 'react-icons/fa';
-import { Container, Col, Row } from 'react-bootstrap';
+import {
+  HomeIcon,
+  CalendarIcon,
+  CircleStackIcon,
+  DocumentIcon,
+  PowerIcon
+} from '@heroicons/react/24/solid';
 import { signOut } from 'next-auth/react';
-
+import { motion, AnimatePresence } from 'framer-motion';
 
 const SideNavBar = () => {
   const isActive = (href) => {
@@ -20,37 +20,50 @@ const SideNavBar = () => {
     );
   };
 
-
   return (
-    <Container className={`min-vh-100 d-flex flex-column  ${sideNav.sidebar}`}>
-      <Row className="p-3 text-bg-dark text-center">
-        <Col>VHD Admin CRM</Col>
-      </Row>
-      <Col className={`d-flex flex-column mt-3 text-center`}>
-        <Link href="/dashboard" className={`p-2 fs-5 ${isActive('/dashboard') ? sideNav.theLinkActive : sideNav.theLink}`}>
-          <FaHome className="m-2" />
-          Dashboard
-        </Link>
-        <Link href="/database" className={`p-2 mt-3 fs-5 ${isActive('/database') ? sideNav.theLinkActive : sideNav.theLink}`}>
-          <FaDatabase className="m-2" />
-          Clients
-        </Link>
-        <Link href="/invoices" className={`p-2 mt-3 fs-5 ${isActive('/invoices') ? sideNav.theLinkActive : sideNav.theLink}`}>
-          <FaFileInvoice className="m-2" />
-          Invoices
-        </Link>
-        <Link href="/schedule" className={`p-2 mt-3 fs-5 ${isActive('/schedule') ? sideNav.theLinkActive : sideNav.theLink}`}>
-          <FaRegCalendarAlt className="m-2" />
-          Schedule
-        </Link>
-      </Col>
-      <Row
-        className={`p-3 text-bg-danger text-center fw-bolder ${sideNav.signOut}`}
+    <div className='flex flex-row items-center md:items-stretch md:!flex-col md:w-[15%] bg-darkGreen md:border-r-4 border-borderGreen text-xl text-white justify-between'>
+      <div className='flex-1 flex justify-center md:!justify-start md:flex-col'>
+        <div className='hidden p-3 bg-gray-700 text-center md:block'>
+          <div>VHD Admin CRM</div>
+        </div>
+        <div className='flex flex-row md:!flex-col md:mt-3 text-center md:space-y-5 mx-3'>
+          {[
+            { href: '/dashboard', icon: HomeIcon, label: 'Dashboard' },
+            { href: '/database', icon: CircleStackIcon, label: 'Clients' },
+            { href: '/invoices', icon: DocumentIcon, label: 'Invoices' },
+            { href: '/schedule', icon: CalendarIcon, label: 'Schedule' },
+          ].map(({ href, icon: Icon, label }) => (
+            <AnimatePresence key={href}>
+              <motion.div
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Link
+                  href={href}
+                  className={`flex items-center justify-center p-2 mx-2 text-xl rounded-lg font-bold ${
+                    isActive(href)
+                      ? 'bg-gray-200 text-black'
+                      : 'hover:bg-gray-200 hover:text-black'
+                  }`}
+                >
+                  <div className='flex items-center basis-full'>
+                    <Icon className='h-6 w-6 md:mr-2' />
+                    <span className='hidden md:block '>{label}</span>
+                  </div>
+                </Link>
+              </motion.div>
+            </AnimatePresence>
+          ))}
+        </div>
+      </div>
+      <div
+        className='p-3 bg-red-600 text-center font-bold hover:cursor-pointer hover:bg-red-700 hover:text-black'
         onClick={signOut}
       >
-        <Col>Sign Out</Col>
-      </Row>
-    </Container>
+        <PowerIcon className='h-6 block w-6 md:hidden' />
+        <span className='hidden md:block'>Sign Out</span>
+      </div>
+    </div>
   );
 };
 

@@ -13,22 +13,6 @@
  /************************************************************************/ 
  /**   Main Page layout                                                                  */
  /************************************************************************/ 
-#Wrapper {
-    text-decoration: none;
-    font-family: "Montserrat";
-    color: black;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-
-.layout {
-    display: flex;
-    flex-grow: 1;
-    overflow: hidden
-}
-
 
 main {
     background-color: #d9d9d934;
