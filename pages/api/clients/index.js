@@ -1,4 +1,4 @@
-import connectMongo from '../../../lib/connect';
+import connectMongo from '../../../app/lib/connect';
 import { Client } from '../../../models/reactDataSchema';
 
 export const config = {

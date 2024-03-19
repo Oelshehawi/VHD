@@ -1,4 +1,4 @@
-import connectMongo from '../../../../lib/connect';
+import connectMongo from '../../../../app/lib/connect';
 import { Invoice } from '../../../../models/reactDataSchema';
 import { JobsDueSoon } from '../../../../models/reactDataSchema';
 
