@@ -3,38 +3,36 @@
 @tailwind utilities;
 
 * {
-    box-sizing: border-box;
-    margin: 0;
-    padding: 0;
-    /* outline: red dotted 1px; */
-  }
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  /* outline: red dotted 1px; */
+}
 
-
- /************************************************************************/ 
- /**   Main Page layout                                                                  */
- /************************************************************************/ 
+/************************************************************************/
+/**   Main Page layout                                                                  */
+/************************************************************************/
 
 main {
-    background-color: #d9d9d934;
-    flex-grow: 1;
+  background-color: #d9d9d934;
+  flex-grow: 1;
 }
 
 ::-webkit-scrollbar {
-    width: 0px;
-    background: transparent; /* make scrollbar transparent */
+  width: 5px;
+  background-color: #003e29;
+  color: #003e29;
 }
-  
+
 ::-webkit-scrollbar-track {
-    background-color: #f1f1f1;
+  background-color: #f1f1f1;
 }
-  
+
 ::-webkit-scrollbar-thumb {
-    background-color: #888;
-    border-radius: 5px;
-}
-  
-::-webkit-scrollbar-thumb:hover{
-    background-color: #555;
+  background-color: #003e29;
+  border-radius: 5px;
 }
 
-
+::-webkit-scrollbar-thumb:hover {
+  background-color: #555;
+}

@@ -21,7 +21,7 @@ const SideNavBar = () => {
   };
 
   return (
-    <div className='flex flex-row items-center md:items-stretch md:!flex-col md:w-[15%] bg-darkGreen md:border-r-4 border-borderGreen text-xl text-white justify-between'>
+    <div className='flex flex-row md:h-screen items-center md:items-stretch md:!flex-col md:min-w-[15%] bg-darkGreen md:border-r-4 border-borderGreen text-xl text-white justify-between'>
       <div className='flex-1 flex justify-center md:!justify-start md:flex-col'>
         <div className='hidden p-3 bg-gray-700 text-center md:block'>
           <div>VHD Admin CRM</div>

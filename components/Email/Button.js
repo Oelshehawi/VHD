@@ -1,18 +1,16 @@
 'use client';
 import { useState } from 'react';
 import axios from 'axios';
-import styles from '../styles/buttonStyles.module.css';
 import { FaPaperPlane } from 'react-icons/fa';
+import {toast} from 'react-hot-toast'
 
 export function SendReminder({
-  setToastMessage,
-  setShowToast,
   emailRecipient,
   emailSent,
   invoiceId,
 }) {
   const [emailError, setEmailError] = useState(false);
-  const [emailAlreadySent, setEmailAlreadySent] = useState(false)
+  const [emailAlreadySent, setEmailAlreadySent] = useState(false);
 
   const sendEmail = async () => {
     try {
@@ -21,24 +19,22 @@ export function SendReminder({
         { invoiceId }
       );
 
-      setToastMessage(`Email has been sent successfully to ${emailRecipient}`);
-      setShowToast(true);
-      setEmailAlreadySent(true)
+      toast.success(`Email has been sent successfully to ${emailRecipient}`);
+      setEmailAlreadySent(true);
     } catch (error) {
       if (error.response && error.response.data && error.response.data.error) {
         setEmailError(true);
-        setToastMessage(error.response.data.error);
+        toast.error(error.response.data.error);
       } else {
         console.error('Error sending email:', error);
-        setToastMessage('Error sending email');
+        toast.error('Error sending email');
       }
-      setShowToast(true);
     }
   };
 
   if (emailSent || emailAlreadySent) {
     return (
-      <div className="alert alert-success p-0 m-0 fw-bolder" role="alert">
+      <div className='alert alert-success p-0 m-0 fw-bolder' role='alert'>
         Sent!
       </div>
     );
@@ -46,13 +42,18 @@ export function SendReminder({
 
   if (emailError) {
     return (
-      <div className="alert alert-danger p-0 m-0 fw-bolder" role="alert">
+      <div className='alert alert-danger p-0 m-0 fw-bolder' role='alert'>
         No Email!
       </div>
     );
   }
 
   return (
-    <FaPaperPlane className={`p-1 ${styles.emailButton}`} onClick={sendEmail} />
+    <div className='flex justify-center'>
+      <FaPaperPlane
+        className={`p-1 h-10 w-10 rounded border-gray-500 border-2 hover:animate-pulse hover:cursor-pointer`}
+        onClick={sendEmail}
+      />
+    </div>
   );
 }
