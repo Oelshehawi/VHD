@@ -1,8 +1,9 @@
 'use client';
 import { useState } from 'react';
 import axios from 'axios';
-import { FaPaperPlane } from 'react-icons/fa';
-import {toast} from 'react-hot-toast'
+import { FaPaperPlane, FaCheckCircle } from 'react-icons/fa';
+import { toast } from 'react-hot-toast';
+import { CgUnavailable } from 'react-icons/cg';
 
 export function SendReminder({
   emailRecipient,
@@ -11,8 +12,6 @@ export function SendReminder({
   emailExists,
 }) {
   const [emailAlreadySent, setEmailAlreadySent] = useState(false);
-
-
 
   const sendEmail = async () => {
     try {
@@ -35,17 +34,29 @@ export function SendReminder({
 
   if (emailSent || emailAlreadySent) {
     return (
-      <div className='alert alert-success p-0 m-0 fw-bolder' role='alert'>
-        Sent!
-      </div>
+      <>
+        <FaCheckCircle className='h-10 w-10 block md:hidden text-green-600' />
+        <div
+          className='alert alert-success p-0 m-0 fw-bolder hidden md:block'
+          role='alert'
+        >
+          Sent!
+        </div>
+      </>
     );
   }
 
   if (!emailExists) {
     return (
-      <div className='alert alert-danger p-0 m-0 fw-bolder' role='alert'>
-        No Email!
-      </div>
+      <>
+        <CgUnavailable className='h-10 w-10 block md:hidden text-red-700' />
+        <div
+          className='alert alert-danger p-0 m-0 fw-bolder hidden md:block'
+          role='alert'
+        >
+          No Email!
+        </div>
+      </>
     );
   }
 
