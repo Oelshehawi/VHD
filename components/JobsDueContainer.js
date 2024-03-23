@@ -1,5 +1,5 @@
 'use server'
-import { fetchDueInvoices } from '../app/lib/data';
+import { fetchDueInvoices} from '../app/lib/data';
 import InvoiceRow from './dashboard/InvoiceRow';
 
 const JobsDueContainer = async () => {

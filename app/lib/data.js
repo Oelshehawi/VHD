@@ -25,13 +25,15 @@ export const fetchDueInvoices = async () => {
       isScheduled: false,
     });
 
-    return unscheduledJobs.map((job) => ({
-      invoiceId: job.invoiceId,
-      jobTitle: job.jobTitle,
-      dateDue: job.dateDue.toISOString(),
-      isScheduled: job.isScheduled,
-      emailSent: job.emailSent,
-    }));
+   return await checkEmailPresence(
+      unscheduledJobs.map((job) => ({
+        invoiceId: job.invoiceId,
+        jobTitle: job.jobTitle,
+        dateDue: job.dateDue.toISOString(),
+        isScheduled: job.isScheduled,
+        emailSent: job.emailSent,
+      }))
+    );
   } catch (error) {
     console.error('Database Error:', error);
     throw new Error('Failed to fetch due invoices.');
@@ -115,5 +117,45 @@ export const getPendingInvoiceAmount = async () => {
   } catch (error) {
     console.error('Database Error:', error);
     Error('Failed to fetch pending invoice amount');
+  }
+};
+
+export const checkEmailPresence = async (dueInvoices) => {
+  await connectMongo();
+
+  const invoiceIds = dueInvoices.map((invoice) => invoice.invoiceId);
+  try {
+    const invoices = await Invoice.find({ _id: { $in: invoiceIds } }).lean();
+
+    const prefixes = invoices.map((prefix) => prefix.invoiceId.split('-')[0]);
+
+    const prefixesWithIds = invoices.map((invoice) => {
+      const prefix = invoice.invoiceId.split('-')[0];
+      return { _id: invoice._id, prefix };
+    });
+
+    const clients = await Client.find({ prefix: { $in: prefixes } }).lean();
+
+    const updatedPrefixesWithIds = prefixesWithIds.map((prefixWithId) => {
+      const client = clients.find(
+        (client) => client.prefix === prefixWithId.prefix
+      );
+      const emailExists = client && client.email !== '';
+      return { ...prefixWithId, emailExists };
+    });
+
+    const updatedDueInvoices = dueInvoices.map(invoice => {
+      const invoiceId = typeof invoice.invoiceId === 'string' ? invoice.invoiceId : invoice.invoiceId.toString();
+      const prefixWithId = updatedPrefixesWithIds.find(prefix => {
+        const prefixId = typeof prefix._id === 'string' ? prefix._id : prefix._id.toString();
+        return prefixId === invoiceId;
+      });
+    
+      const emailExists = !!prefixWithId && prefixWithId.emailExists;
+      return { ...invoice, emailExists };
+    });
+    return updatedDueInvoices;
+  } catch (error) {
+    console.error('Error finding invoices:', error);
   }
 };

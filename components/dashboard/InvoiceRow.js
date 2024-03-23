@@ -51,6 +51,7 @@ const InvoiceRow = ({ invoiceData }) => {
             emailRecipient={invoiceData.jobTitle}
             emailSent={invoiceData.emailSent}
             invoiceId={invoiceData.invoiceId}
+            emailExists={invoiceData.emailExists}
           />
         </td>
       </tr>

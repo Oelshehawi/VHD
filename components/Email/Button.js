@@ -8,9 +8,11 @@ export function SendReminder({
   emailRecipient,
   emailSent,
   invoiceId,
+  emailExists,
 }) {
-  const [emailError, setEmailError] = useState(false);
   const [emailAlreadySent, setEmailAlreadySent] = useState(false);
+
+
 
   const sendEmail = async () => {
     try {
@@ -23,7 +25,6 @@ export function SendReminder({
       setEmailAlreadySent(true);
     } catch (error) {
       if (error.response && error.response.data && error.response.data.error) {
-        setEmailError(true);
         toast.error(error.response.data.error);
       } else {
         console.error('Error sending email:', error);
@@ -40,7 +41,7 @@ export function SendReminder({
     );
   }
 
-  if (emailError) {
+  if (!emailExists) {
     return (
       <div className='alert alert-danger p-0 m-0 fw-bolder' role='alert'>
         No Email!
