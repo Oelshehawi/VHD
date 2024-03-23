@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import axios from 'axios';
 import {
   Container,
@@ -17,8 +17,8 @@ import DeleteModal from '../../../components/DeleteModal';
 
 const ClientDetailed = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const clientId = searchParams.get('id');
+  const params = useParams();
+  const clientId = params.id;
   const [client, setClient] = useState({});
   const [invoices, setInvoices] = useState([]);
   const [openEditModal, setOpenEditModal] = useState(false);
@@ -53,7 +53,7 @@ const ClientDetailed = () => {
   };
 
   const redirectToInvoiceDetails = (invoiceId) => {
-    router.push(`/invoices/invoiceDetailed?id=${invoiceId}`);
+    router.push(`/invoices/${invoiceId}`);
   };
 
   const handleDeleteClient = async () => {

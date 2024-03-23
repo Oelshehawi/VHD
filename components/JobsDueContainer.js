@@ -1,3 +1,4 @@
+'use client'
 import { useState, useEffect } from 'react';
 import { Col, Row, Table, Form, Toast, ToastContainer } from 'react-bootstrap';
 import styles from './styles/jobsDue.module.css';
@@ -60,69 +61,39 @@ const JobsDueContainer = () => {
 
   return (
     <>
-      <Col className={` `}>
-        <Row className={`ms-4 ${styles.jobsDueTitle}`}>
-          <h4>Jobs Due Soon</h4>
-        </Row>
-        <Row className={`ms-4 mt-4`}>
-          <div className={styles.scrollableTable}>
-            <Table bordered hover>
-              <thead>
-                <tr>
-                  <th> Job Name</th>
-                  <th> Due Date</th>
-                  <th> Scheduled?</th>
-                  <th>Send Email?</th>
+      <div className="mt-4">
+        <h4 className="ml-4 mt-4">Jobs Due Soon</h4>
+        <div className="ml-4 mt-4 overflow-x-auto">
+          <table className="table-auto border-collapse border border-slate-400 w-full">
+            <thead>
+              <tr>
+                <th className="border border-slate-300">Job Name</th>
+                <th className="border border-slate-300">Due Date</th>
+                <th className="border border-slate-300">Scheduled?</th>
+                <th className="border border-slate-300">Send Email?</th>
+              </tr>
+            </thead>
+            <tbody>
+              {dueInvoices.map((invoice) => (
+                <tr key={invoice.invoiceId} className="hover:bg-slate-100">
+                  <td className="border border-slate-300 p-2 cursor-pointer" onClick={() => redirectToInvoiceDetails(invoice.invoiceId)}>
+                    {invoice.jobTitle}
+                  </td>
+                  <td className="border border-slate-300 p-2">
+                    {new Date(invoice.dateDue).toLocaleDateString('en-US')}
+                  </td>
+                  <td className="border border-slate-300 p-2">
+                    <input type="checkbox" checked={invoice.isChecked} onChange={(e) => handleCheckInvoice(invoice.invoiceId, e.target.checked)} />
+                  </td>
+                  <td className="border border-slate-300 p-2">
+                    <SendReminder {...{setToastMessage, setShowToast, emailRecipient: invoice.jobTitle, emailSent: invoice.emailSent, invoiceId: invoice.invoiceId}} />
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {dueInvoices.map((invoice) => (
-                  <tr key={invoice.invoiceId}>
-                    <td
-                      onClick={() =>
-                        redirectToInvoiceDetails(invoice.invoiceId)
-                      }
-                      style={{ cursor: 'pointer' }}
-                      className={`fs-6 fw-bolder text-start ${styles.verticalCenter}`}
-                    >
-                      {invoice.jobTitle}
-                    </td>
-                    <td className={`fs-6 fw-bolder`}>
-                      {new Date(invoice.dateDue).toLocaleDateString('en-US', {
-                        timeZone: 'UTC',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
-                    </td>
-                    <td className={` ${styles.verticalCenter}`}>
-                      <Form.Check
-                        type="checkbox"
-                        checked={invoice.isChecked}
-                        onChange={(e) =>
-                          handleCheckInvoice(
-                            invoice.invoiceId,
-                            e.target.checked
-                          )
-                        }
-                      />
-                    </td>
-                    <td className={` ${styles.verticalCenter}`}>
-                      <SendReminder
-                        setToastMessage={setToastMessage}
-                        setShowToast={setShowToast}
-                        emailRecipient={invoice.jobTitle}
-                        emailSent={invoice.emailSent}
-                        invoiceId={invoice.invoiceId}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </div>
-        </Row>
-      </Col>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
       <ToastContainer className="p-3" position="top-center">
         <Toast
           onClose={() => setShowToast(false)}

@@ -1,6 +1,6 @@
 'use client';
 import React, { useState, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import {
   Container,
   Row,
@@ -24,11 +24,12 @@ import {
 import axios from 'axios';
 import EditInvoiceModal from '../../../components/EditInvoiceModal';
 import DeleteModal from '../../../components/DeleteModal';
+import { useRouter } from 'next/navigation';
 
 const InvoiceDetailed = () => {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const id = searchParams.get('id');
+  const params = useParams();
+  const id = params.id;
   const [client, setClient] = useState({});
   const [invoice, setInvoice] = useState({ items: [] });
   const [openEditModal, setOpenEditModal] = useState(false);
@@ -96,13 +97,13 @@ const InvoiceDetailed = () => {
     return (
       <Container
         fluid
-        className="d-flex justify-content-center align-items-center"
+        className='d-flex justify-content-center align-items-center'
       >
         <Spinner
-          animation="border"
-          size="lg"
-          role="status"
-          aria-hidden="true"
+          animation='border'
+          size='lg'
+          role='status'
+          aria-hidden='true'
         />
       </Container>
     );
@@ -136,28 +137,28 @@ const InvoiceDetailed = () => {
 
   return (
     <>
-      <Container className="mt-4">
-        <Row className="mb-4">
+      <Container className='mt-4'>
+        <Row className='mb-4'>
           <Col>
-            <Button variant="secondary" onClick={handleBack}>
+            <Button variant='secondary' onClick={handleBack}>
               <FaArrowLeft /> Back
             </Button>
           </Col>
-          <Col className="d-flex justify-content-end">
-            <Button variant="info" onClick={handleEdit} className="me-2">
+          <Col className='d-flex justify-content-end'>
+            <Button variant='info' onClick={handleEdit} className='me-2'>
               <FaPenSquare /> Edit
             </Button>
-            <Button variant="danger" onClick={handleDeleteConfirm}>
+            <Button variant='danger' onClick={handleDeleteConfirm}>
               <FaTrashAlt /> Delete
             </Button>
           </Col>
         </Row>
         <Row>
-          <Col md={6} className="mb-4">
+          <Col md={6} className='mb-4'>
             <Card>
               <Card.Header>Invoice Information</Card.Header>
               <Card.Body>
-                <ListGroup variant="flush">
+                <ListGroup variant='flush'>
                   <ListGroup.Item>
                     <strong>Invoice ID:</strong> {invoice.invoiceId}
                   </ListGroup.Item>
@@ -187,12 +188,10 @@ const InvoiceDetailed = () => {
             <Card>
               <Card.Header>Client Information</Card.Header>
               <Card.Body>
-                <ListGroup variant="flush">
+                <ListGroup variant='flush'>
                   <ListGroup.Item
                     action
-                    onClick={() =>
-                      router.push(`/database/clientDetailed?id=${client._id}`)
-                    }
+                    onClick={() => router.push(`/database/${client._id}`)}
                   >
                     <FaUser /> {client.clientName}
                   </ListGroup.Item>
@@ -205,19 +204,19 @@ const InvoiceDetailed = () => {
                 </ListGroup>
               </Card.Body>
             </Card>
-            <Card className="mt-3">
+            <Card className='mt-3'>
               <Card.Header>Amount Due</Card.Header>
               <Card.Body>
-                <ListGroup variant="flush">
+                <ListGroup variant='flush'>
                   <ListGroup.Item>
                     <strong>Total:</strong> ${calculateTotal(invoice.items)}
                   </ListGroup.Item>
                   <Row>
                     <Col md={12}>
-                      <Card className="mt-3">
+                      <Card className='mt-3'>
                         <Card.Header>Price Breakdown</Card.Header>
                         <Card.Body>
-                          <ListGroup variant="flush">
+                          <ListGroup variant='flush'>
                             {invoice.items.map((item, index) => (
                               <ListGroup.Item key={index}>
                                 {item.description}: ${item.price}
@@ -236,9 +235,9 @@ const InvoiceDetailed = () => {
                       value={invoice.status}
                       onChange={(e) => handleStatusChange(e.target.value)}
                     >
-                      <option value="pending">Pending</option>
-                      <option value="paid">Paid</option>
-                      <option value="overdue">Overdue</option>
+                      <option value='pending'>Pending</option>
+                      <option value='paid'>Paid</option>
+                      <option value='overdue'>Overdue</option>
                     </Form.Select>
                   </ListGroup.Item>
                 </ListGroup>
@@ -259,7 +258,7 @@ const InvoiceDetailed = () => {
         confirmModal={handleDelete}
       />
 
-      <ToastContainer className="p-3" position="top-center">
+      <ToastContainer className='p-3' position='top-center'>
         <Toast
           onClose={() => setShowToast(false)}
           show={showToast}
@@ -267,7 +266,7 @@ const InvoiceDetailed = () => {
           autohide
         >
           <Toast.Header>
-            <strong className="me-auto">Notification</strong>
+            <strong className='me-auto'>Notification</strong>
           </Toast.Header>
           <Toast.Body>{toastMessage}</Toast.Body>
         </Toast>

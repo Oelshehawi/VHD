@@ -19,6 +19,7 @@ import {
   Row,
   Col,
 } from 'react-bootstrap';
+import Link from 'next/link'
 
 const ClientTable = ({ filter, onUpdate }) => {
   const [clientData, setClientData] = useState([]);
@@ -56,6 +57,16 @@ const ClientTable = ({ filter, onUpdate }) => {
       header: 'Phone Number',
       cell: (info) => <div className={styles.cell}>{info.getValue()}</div>,
     }),
+    columnHelper.accessor('_id', {
+      header: 'Edit Client',
+      cell: (info) => {
+        return (
+          <Link href={`/database/${info.getValue()}`}>
+            <div className='rounded bg-darkGreen text-white'>Click to edit</div>
+          </Link>
+        );
+      },
+    }),
   ];
 
   const tableInstance = useReactTable({
@@ -69,9 +80,6 @@ const ClientTable = ({ filter, onUpdate }) => {
     getPaginationRowModel: getPaginationRowModel(),
   });
 
-  const handleRowClick = (clientId) => {
-    router.push(`/database/clientDetailed?id=${clientId}`);
-  };
 
   if (isLoading) {
     return (
@@ -109,9 +117,7 @@ const ClientTable = ({ filter, onUpdate }) => {
           <tbody className={styles.tbody}>
             {tableInstance.getRowModel().rows.map((row) => (
               <tr
-                onClick={() => handleRowClick(row.original._id)}
                 key={row.id}
-                className={` ${styles.tableRow}`}
               >
                 {row.getVisibleCells().map((cell) => (
                   <td key={cell.id} className={`text-center`}>
