@@ -1,10 +1,9 @@
 'use client';
-import { useState } from 'react';
-import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { SendReminder } from '../Email/Button';
 import { toast } from 'react-hot-toast';
 import { updateInvoiceScheduleStatus } from '../../app/lib/actions';
+import { formatDate } from '../../app/lib/utils';
 
 const InvoiceRow = ({ invoiceData }) => {
   const router = useRouter();
@@ -19,19 +18,20 @@ const InvoiceRow = ({ invoiceData }) => {
     }
   };
 
+ 
   return (
     <>
       <tr className='hover:bg-gray-100'>
         <td
-          className='py-4 px-6 border-b border-gray-200 cursor-pointer hover:bg-darkGreen hover:text-white'
+          className='py-4 px-3 border-b border-gray-200 cursor-pointer hover:bg-darkGreen hover:text-white'
           onClick={() => router.push(`/invoices/${invoiceData.invoiceId}`)}
         >
           {invoiceData.jobTitle}
         </td>
-        <td className='py-4 px-6 border-b border-gray-200'>
-          {invoiceData.dateDue.split('T')[0]}
+        <td className='py-4 px-3 border-b border-gray-200'>
+          {formatDate(invoiceData.dateDue.split('T')[0])}
         </td>
-        <td className='py-4 px-6 border-b border-gray-200 text-center hidden md:table-cell'>
+        <td className='py-4 px-3 border-b border-gray-200 text-center hidden md:table-cell'>
           <form
             action={updateInvoiceScheduleStatus.bind(
               null,
@@ -46,7 +46,7 @@ const InvoiceRow = ({ invoiceData }) => {
             />
           </form>
         </td>
-        <td className='text-center align-middle py-4 px-6 border-b border-gray-200'>
+        <td className='text-center align-middle py-4 px-3 border-b border-gray-200'>
           <SendReminder
             emailRecipient={invoiceData.jobTitle}
             emailSent={invoiceData.emailSent}

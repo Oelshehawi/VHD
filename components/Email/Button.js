@@ -15,7 +15,7 @@ export function SendReminder({
 
   const sendEmail = async () => {
     try {
-      const response = await axios.post(
+      await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/invoices/sendEmail`,
         { invoiceId }
       );

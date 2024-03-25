@@ -159,3 +159,58 @@ export const checkEmailPresence = async (dueInvoices) => {
     console.error('Error finding invoices:', error);
   }
 };
+
+
+export const fetchYearlySalesData = async () => {
+  await connectMongo();
+  const currentYear = new Date().getFullYear();
+  const lastYear = currentYear - 1;
+
+  const matchCurrentYear = {
+    $match: {
+      dateIssued: {
+        $gte: new Date(`${currentYear}-01-01`),
+        $lte: new Date(`${currentYear}-12-31`),
+      },
+    },
+  };
+
+  const matchLastYear = {
+    $match: {
+      dateIssued: {
+        $gte: new Date(`${lastYear}-01-01`),
+        $lte: new Date(`${lastYear}-12-31`),
+      },
+    },
+  };
+
+  const group = {
+    $group: {
+      _id: { month: { $month: '$dateIssued' } },
+      totalSales: { $sum: { $sum: '$items.price' } },
+    },
+  };
+
+  const sortByMonth = { $sort: { '_id.month': 1 } };
+
+  const currentYearSales = await Invoice.aggregate([
+    matchCurrentYear,
+    group,
+    sortByMonth,
+  ]);
+
+  const lastYearSales = await Invoice.aggregate([matchLastYear, group, sortByMonth]);
+
+  const months = Array.from({ length: 12 }, (_, i) => i + 1); 
+  const salesData = months.map(month => {
+    const currentYearSale = currentYearSales.find(sale => sale._id.month === month);
+    const lastYearSale = lastYearSales.find(sale => sale._id.month === month);
+    return {
+      date: new Date(currentYear, month - 1, 1).toLocaleString('default', { month: 'short' }) + ' ' + currentYear.toString().slice(-2),
+      'This Year': currentYearSale ? currentYearSale.totalSales : 0,
+      'Last Year': lastYearSale ? lastYearSale.totalSales : 0,
+    };
+  });
+
+  return salesData;
+};

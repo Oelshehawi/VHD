@@ -15,7 +15,6 @@
 
 main {
   background-color: #d9d9d934;
-  flex-grow: 1;
 }
 
 ::-webkit-scrollbar {

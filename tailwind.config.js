@@ -15,7 +15,8 @@ module.exports = {
         borderGreen: '#467061',
         darkWhite: '#d9d9d9',
         darkGray: '#222a27',
-        lightGray: '#dde2e0'
+        lightGray: '#dde2e0',
+        darkBlue: '#0a003e'
       },
       keyframes: {
         shimmer: {

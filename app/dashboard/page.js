@@ -5,13 +5,20 @@ import {
   getOverDueInvoiceAmount,
   getPendingInvoiceAmount,
 } from '../lib/data';
-import { InfoBoxSkeleton, JobsDueSkeleton } from '../../components/Skeletons';
+import {
+  InfoBoxSkeleton,
+  JobsDueContainerSkeleton,
+  YearlySalesSkeleton,
+} from '../../components/Skeletons';
 import { FaPeopleGroup, FaMoneyBill, FaFile } from 'react-icons/fa6';
+import YearlySales from '../../components/dashboard/YearlySales';
+import { fetchYearlySalesData } from '../lib/data';
 
-const DashboardPage = () => {
+const DashboardPage = async () => {
+  const salesData = await fetchYearlySalesData();
   return (
     <>
-      <div className='flex flex-row justify-between mt-4 max-h-[100vh] md:mx-10'>
+      <div className='flex flex-row h-[20vh] md:h-1/5 justify-between items-center md:px-6'>
         <div className='w-1/3 md:w-1/6 px-2 md:!px-0'>
           <Suspense fallback={<InfoBoxSkeleton />}>
             <ClientCount />
@@ -28,14 +35,15 @@ const DashboardPage = () => {
           </Suspense>
         </div>
       </div>
-      <div className='flex justify-center md:block'>
-        <h4 className=' bg-darkGray text-white text-xl w-3/4 md:w-1/6 rounded p-2 mt-2 md:ml-10'>
-          Jobs Due Soon
-        </h4>
+
+      <div className='flex h-4/5 flex-col justify-between lg:flex-row px-4'>
+        <Suspense fallback={<YearlySalesSkeleton />}>
+          <YearlySales salesData={salesData} />
+        </Suspense>
+        <Suspense fallback={<JobsDueContainerSkeleton />}>
+          <JobsDueContainer />
+        </Suspense>
       </div>
-      <Suspense fallback={<JobsDueSkeleton/>}> 
-        <JobsDueContainer />
-      </Suspense>
     </>
   );
 };

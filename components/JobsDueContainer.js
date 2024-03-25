@@ -1,15 +1,13 @@
-'use server'
-import { fetchDueInvoices} from '../app/lib/data';
+'use server';
+import { fetchDueInvoices } from '../app/lib/data';
 import InvoiceRow from './dashboard/InvoiceRow';
 
 const JobsDueContainer = async () => {
-
   const dueInvoices = await fetchDueInvoices();
 
   return (
-    <>
-    
-      <div className='shadow-lg rounded-lg h-96 md:!h-3/4 md:!mr-0 md:!ml-10 mt-2 mx-4 md:w-1/2 overflow-auto'>
+    <div className=' w-full lg:w-3/4 relative lg:h-[70vh] h-[50vh] md:p-4 border rounded-lg bg-white lg:ml-5 overflow-auto lg:mb-0 mb-5'>
+      <div className='shadow-md rounded-lg md:!h-full md:!ml-0 md:w-full overflow-auto'>
         <table className='w-full table-fixed'>
           <thead>
             <tr className='bg-gray-100'>
@@ -29,12 +27,12 @@ const JobsDueContainer = async () => {
           </thead>
           <tbody className='bg-white'>
             {dueInvoices.map((invoice) => (
-              <InvoiceRow key={invoice.invoiceId} invoiceData={invoice}/>
+              <InvoiceRow key={invoice.invoiceId} invoiceData={invoice} />
             ))}
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   );
 };
 
