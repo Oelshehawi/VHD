@@ -76,3 +76,86 @@ export const YearlySalesSkeleton = () => {
     </div>
   );
 };
+
+export const ClientContainerSkeleton = () => {
+  return (
+    <div className='flex items-center justify-center min-h-full'>
+      <div className='bg-white rounded-lg shadow-lg w-3/4 p-4 min-h-[80vh] animate-pulse'>
+        <div className='text-xl fw-bold h-6 bg-gray-300 rounded'></div>
+        <div className='flex flex-row items-center justify-between my-2'>
+          <div className='flex flex-row border rounded'>
+            <div className='h-full p-2 outline-none rounded w-full bg-gray-200'></div>
+            <div className='h-full w-8 rounded p-1 bg-gray-200'></div>
+          </div>
+          <div className=' text-white font-bold h-full py-2 px-4 rounded w-32 bg-gray-200'></div>
+        </div>
+
+        <div>
+          {Array(20)
+            .fill(0)
+            .map((_, index) => (
+              <div
+                key={index}
+                className='flex flex-row justify-between items-center py-2'
+              >
+                <div className='w-1/4 h-6 bg-gray-300 rounded'></div>
+                <div className='w-1/4 h-6 bg-gray-300 rounded'></div>
+                <div className='w-1/4 h-6 bg-gray-300 rounded'></div>
+                <div className='w-1/4 h-6 bg-gray-300 rounded'></div>
+              </div>
+            ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+export const ClientDetailedSkeleton = () => {
+  return (
+    <div className='mt-4 px-5 animate-pulse'>
+      <div className='flex mb-4 justify-between'>
+        <div className=' text-gray-600 py-2 px-4 rounded inline-flex items-center'>
+          <div className='h-4 w-4 bg-gray-300 rounded-full mr-2'></div>
+          <div className='h-4 w-24 bg-gray-300 rounded'></div>
+        </div>
+        <div className='bg-blue-500 text-white py-2 px-4 rounded inline-flex items-center mr-2'>
+          <div className='h-4 w-4 bg-gray-300 rounded-full mr-2'></div>
+          <div className='h-4 w-24 bg-gray-300 rounded'></div>
+        </div>
+      </div>
+      <div className='flex flex-wrap -mx-2'>
+        {/* InlineEditClient Skeleton */}
+        <div className='w-full md:w-1/2 px-2 mb-4'>
+          <div className='border rounded shadow'>
+            <div className='px-4 py-2 border-b bg-gray-300'></div>
+            <div className='p-4 space-y-2'>
+              {Array(4).fill(0).map((_, idx) => (
+                <div key={idx} className='flex items-center'>
+                  <div className='w-24 h-4 bg-gray-300 rounded mr-2'></div>
+                  <div className='flex-1 h-4 bg-gray-300 rounded'></div>
+                </div>
+              ))}
+              <div className='flex justify-end mt-4 space-x-2'>
+                <div className='px-4 py-2 bg-gray-200 rounded w-20 h-6'></div>
+                <div className='px-4 py-2 bg-blue-500 rounded w-20 h-6'></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* TransactionHistory Skeleton */}
+        <div className='w-full md:w-1/2 px-2 mb-2 lg:mb-0'>
+          <div className='border rounded shadow'>
+            <div className='px-4 py-2 border-b bg-gray-300'></div>
+            <div className='p-4 space-y-2'>
+              {Array(4).fill(0).map((_, idx) => (
+                <div key={idx} className='border rounded p-2 bg-gray-100'></div>
+              ))}
+              <div className='text-center p-2 bg-gray-100'></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};

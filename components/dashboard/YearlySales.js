@@ -72,7 +72,7 @@ const YearlySales = ({ salesData }) => {
       </div>
       <div className='flex justify-center items-center py-4'>
         <button
-          className='hover:bg-darkBlue bg-darkGreen text-darkWhite font-bold py-2 px-4 rounded'
+          className='hover:bg-darkBlue bg-darkGreen text-white font-bold py-2 px-4 rounded'
           onClick={() => setShowComparison(!showComparison)}
         >
           Toggle Year

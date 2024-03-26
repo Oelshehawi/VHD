@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import JobsDueContainer from '../../components/JobsDueContainer';
+import JobsDueContainer from '../../components/dashboard/JobsDueContainer';
 import {
   getClientCount,
   getOverDueInvoiceAmount,

@@ -1,4 +1,4 @@
-import { Schema, model, models } from 'mongoose';
+const { Schema, model, models, mongoose } =require('mongoose');
 
 const ClientSchema = new Schema({
   clientName: {
@@ -63,6 +63,11 @@ const invoiceSchema = new Schema({
     enum: ['pending', 'overdue', 'paid'],
     default: 'pending',
   },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    required: true
+  },
 });
 
 const eventSchema = new Schema({
@@ -114,6 +119,11 @@ const jobsDueSoonSchema = new Schema({
     type: Boolean,
     default: false,
   },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Client',
+    required: true
+  },
 });
 
 const Client = models.Client || model('Client', ClientSchema);
@@ -122,4 +132,4 @@ const User = models.User || model('User', userSchema);
 const JobsDueSoon = models.JobsDueSoon || model('JobsDueSoon', jobsDueSoonSchema);
 
 
-export { Client, User, Invoice, JobsDueSoon };
+module.exports = { Client, User, Invoice, JobsDueSoon };

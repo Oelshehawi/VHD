@@ -2,7 +2,7 @@ import connectMongo from '../lib/connect';
 import { unstable_noStore as noStore } from 'next/cache';
 import { Client, Invoice, JobsDueSoon } from '../../models/reactDataSchema';
 import { revalidatePath } from 'next/cache';
-
+import { formatPhoneNumber } from './utils';
 export const fetchDueInvoices = async () => {
   noStore();
   await connectMongo();
@@ -23,10 +23,11 @@ export const fetchDueInvoices = async () => {
 
     const unscheduledJobs = await JobsDueSoon.find({
       isScheduled: false,
-    });
+    }).sort({ dateDue: 1 });
 
-   return await checkEmailPresence(
+    return await checkEmailPresence(
       unscheduledJobs.map((job) => ({
+        clientId: job.clientId.toString(),
         invoiceId: job.invoiceId,
         jobTitle: job.jobTitle,
         dateDue: job.dateDue.toISOString(),
@@ -50,8 +51,10 @@ export const createOrUpdateJobsDueSoon = async (dueInvoices) => {
     let jobExists = await JobsDueSoon.findOne({
       invoiceId: _id.toString(),
     });
+
     if (!jobExists) {
       jobExists = await JobsDueSoon.create({
+        clientId: invoice.clientId,
         invoiceId: _id.toString(),
         jobTitle,
         dateDue,
@@ -123,43 +126,26 @@ export const getPendingInvoiceAmount = async () => {
 export const checkEmailPresence = async (dueInvoices) => {
   await connectMongo();
 
-  const invoiceIds = dueInvoices.map((invoice) => invoice.invoiceId);
   try {
-    const invoices = await Invoice.find({ _id: { $in: invoiceIds } }).lean();
+    const clientIds = dueInvoices.map((invoice) => invoice.clientId);
+    const clients = await Client.find({ _id: { $in: clientIds } });
 
-    const prefixes = invoices.map((prefix) => prefix.invoiceId.split('-')[0]);
+    const clientEmailMap = clients.reduce((map, client) => {
+      map[client._id.toString()] = client.email ? true : false;
+      return map;
+    }, {});
 
-    const prefixesWithIds = invoices.map((invoice) => {
-      const prefix = invoice.invoiceId.split('-')[0];
-      return { _id: invoice._id, prefix };
-    });
-
-    const clients = await Client.find({ prefix: { $in: prefixes } }).lean();
-
-    const updatedPrefixesWithIds = prefixesWithIds.map((prefixWithId) => {
-      const client = clients.find(
-        (client) => client.prefix === prefixWithId.prefix
-      );
-      const emailExists = client && client.email !== '';
-      return { ...prefixWithId, emailExists };
-    });
-
-    const updatedDueInvoices = dueInvoices.map(invoice => {
-      const invoiceId = typeof invoice.invoiceId === 'string' ? invoice.invoiceId : invoice.invoiceId.toString();
-      const prefixWithId = updatedPrefixesWithIds.find(prefix => {
-        const prefixId = typeof prefix._id === 'string' ? prefix._id : prefix._id.toString();
-        return prefixId === invoiceId;
-      });
-    
-      const emailExists = !!prefixWithId && prefixWithId.emailExists;
+    const updatedDueInvoices = dueInvoices.map((invoice) => {
+      const emailExists = clientEmailMap[invoice.clientId];
       return { ...invoice, emailExists };
     });
+
     return updatedDueInvoices;
   } catch (error) {
-    console.error('Error finding invoices:', error);
+    console.error('Error finding invoices and clients:', error);
+    throw new Error('Failed to check email presence for due invoices.');
   }
 };
-
 
 export const fetchYearlySalesData = async () => {
   await connectMongo();
@@ -199,18 +185,79 @@ export const fetchYearlySalesData = async () => {
     sortByMonth,
   ]);
 
-  const lastYearSales = await Invoice.aggregate([matchLastYear, group, sortByMonth]);
+  const lastYearSales = await Invoice.aggregate([
+    matchLastYear,
+    group,
+    sortByMonth,
+  ]);
 
-  const months = Array.from({ length: 12 }, (_, i) => i + 1); 
-  const salesData = months.map(month => {
-    const currentYearSale = currentYearSales.find(sale => sale._id.month === month);
-    const lastYearSale = lastYearSales.find(sale => sale._id.month === month);
+  const months = Array.from({ length: 12 }, (_, i) => i + 1);
+  const salesData = months.map((month) => {
+    const currentYearSale = currentYearSales.find(
+      (sale) => sale._id.month === month
+    );
+    const lastYearSale = lastYearSales.find((sale) => sale._id.month === month);
     return {
-      date: new Date(currentYear, month - 1, 1).toLocaleString('default', { month: 'short' }) + ' ' + currentYear.toString().slice(-2),
+      date:
+        new Date(currentYear, month - 1, 1).toLocaleString('default', {
+          month: 'short',
+        }) +
+        ' ' +
+        currentYear.toString().slice(-2),
       'This Year': currentYearSale ? currentYearSale.totalSales : 0,
       'Last Year': lastYearSale ? lastYearSale.totalSales : 0,
     };
   });
 
   return salesData;
+};
+
+export const fetchAllClients = async () => {
+  await connectMongo();
+  noStore();
+  try {
+    const clients = await Client.find();
+    return clients.map((client) => ({
+      _id: client._id.toString(),
+      clientName: client.clientName,
+      email: client.email,
+      phoneNumber: formatPhoneNumber(client.phoneNumber),
+      prefix: client.prefix,
+      notes: client.notes,
+    }));
+  } catch (error) {
+    console.error('Database Error:', Error);
+    Error('Failed to fetch all clients');
+  }
+};
+
+export const fetchClientById = async (clientId) => {
+  await connectMongo();
+  noStore();
+  try {
+    const client = await Client.findOne({ _id: clientId }).lean();
+    client._id = client._id.toString();
+    client.phoneNumber = formatPhoneNumber(client.phoneNumber)
+    return client;
+  } catch (error) {
+    console.error('Database Error:', Error);
+    Error('Client could not be found by Id');
+  }
+};
+
+export const fetchClientInvoices = async (clientId) => {
+  await connectMongo();
+  noStore();
+  try {
+    const invoices = await Invoice.find({ clientId: clientId }).lean();
+
+    return invoices.map((invoice) => ({
+      _id: invoice._id.toString(),
+      invoiceId: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+    }));
+  } catch (error) {
+    console.error('Database Error:', Error);
+    Error('Client Invoices could not be found by Id');
+  }
 };

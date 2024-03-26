@@ -1,49 +1,12 @@
-'use client';
-import React, { useState } from 'react';
-import ClientTable from '../../components/ClientTable';
-import { FaSearch, FaPlus } from 'react-icons/fa';
-import AddClient from '../../components/AddClient';
-import database from './database.module.css';
-import { Container, Row, Col, Button, Form, InputGroup } from 'react-bootstrap';
+import ClientContainer from '../../components/database/ClientContainer';
+import { fetchAllClients } from '../lib/data';
 
-const Database = () => {
-  const [openModal, setopenModal] = useState(false);
-  const [filter, setfilter] = useState('');
-  const [onUpdate, setOnUpdate] = useState(false);
+const Database = async () => {
+  const clientData = await fetchAllClients();
 
   return (
-    <div className={database.verticalCenter}>
-      <Container className={database.tableContainer}>
-        <AddClient show={openModal} onHide={() => setopenModal(false)} onUpdate={() => setOnUpdate(!onUpdate)} />
-        <Row>
-          <Col className="p-2 m-3 ms-4 mb-0">
-            <div className="fs-4 fw-bolder">Clients</div>
-          </Col>
-          <Col className="d-flex p-2 m-3 me-4 mb-0 justify-content-end">
-            <Button
-              onClick={() => setopenModal(true)}
-              className={database.clientButton}
-            >
-              {'Add Client'}
-            </Button>
-          </Col>
-        </Row>
-        <Row className="mt-3 mx-3">
-          <InputGroup className="p-0">
-            <InputGroup.Text>
-              <FaSearch />
-            </InputGroup.Text>
-            <Form.Control
-              type="search"
-              placeholder="Search For Client..."
-              onChange={(e) => setfilter(e.target.value)}
-            />
-          </InputGroup>
-        </Row>
-        <Row className="mx-3 mt-3">
-          <ClientTable filter={filter} onUpdate={onUpdate} />
-        </Row>
-      </Container>
+    <div className='flex items-center justify-center min-h-full'>
+      <ClientContainer clientData={clientData} />
     </div>
   );
 };

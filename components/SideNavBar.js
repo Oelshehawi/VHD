@@ -16,8 +16,8 @@ const SideNavBar = () => {
     const pathname = usePathname();
     return (
       pathname === href ||
-      pathname.startsWith(`${href}/clientDetailed`) ||
-      pathname.startsWith(`${href}/invoiceDetailed`)
+      pathname.startsWith(`${href}`) ||
+      pathname.startsWith(`${href}`)
     );
   };
 
