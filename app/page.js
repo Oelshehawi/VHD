@@ -2,13 +2,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import login from './login.module.css';
-import Row from 'react-bootstrap/Row';
-import Col from 'react-bootstrap/Col';
-import Container from 'react-bootstrap/Container';
-import Form from 'react-bootstrap/Form';
-import Button from 'react-bootstrap/Button';
-import FloatingLabel from 'react-bootstrap/FloatingLabel';
-import Spinner from 'react-bootstrap/Spinner';
 import { signIn } from 'next-auth/react';
 
 
@@ -40,81 +33,70 @@ const LoginPage = () => {
     setIsLoading(false); 
   }
   return (
-    <Container
-      fluid
-      className={`d-flex justify-content-center align-items-center ${login.background}`}
-    >
-      <Row>
-        <Col xs={12}>
-          <Container fluid className={`${login.loginCard}`}>
-            <Col className="text-center fw-bolder fs-4 m-5">
-              Vancouver Hood Doctors
-            </Col>
-            <Form
-              noValidate
-              className="d-flex flex-column p-5 pt-0"
-              onSubmit={onSubmit}
-            >
-              <FloatingLabel
-                controlId="floatingInput"
-                label="Username"
-                className="mb-3"
-              >
-                <Form.Control
-                  required
-                  type="text"
-                  placeholder="Username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  isInvalid={signInError}
-                />
-                <Form.Control.Feedback type="invalid">
-                  {username
-                    ? 'Incorrect username or password.'
-                    : 'Please enter a username.'}
-                </Form.Control.Feedback>
-              </FloatingLabel>
-              <FloatingLabel controlId="floatingPassword" label="Password">
-                <Form.Control
-                  required
-                  type="password"
-                  placeholder="Password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  isInvalid={signInError}
-                />
-                <Form.Control.Feedback type="invalid">
-                  {password
-                    ? 'Incorrect username or password.'
-                    : 'Please enter a password.'}
-                </Form.Control.Feedback>
-              </FloatingLabel>
-              <Button
-                variant="primary"
-                type="submit"
-                className={`mt-4 ${login.loginButton}`}
-                disabled={isLoading}
-              >
-                {isLoading ? (
-                  <>
-                    <Spinner
-                      as="span"
-                      animation="border"
-                      size="sm"
-                      role="status"
-                      aria-hidden="true"
-                    />
-                    <span className="ms-2">Logging in...</span>
-                  </>
-                ) : (
-                  'Login'
-                )}
-              </Button>
-            </Form>
-          </Container>
-        </Col>
-      </Row>
-    </Container>
+    <div className={`flex justify-center items-center ${login.background} w-full h-full`}>
+  <div className="w-full">
+    <div className={`w-full ${login.loginCard}`}>
+      <div className="text-center font-bold text-2xl my-5">
+        Vancouver Hood Doctors
+      </div>
+      <form
+        className="flex flex-col p-5 pt-0"
+        onSubmit={onSubmit}
+        noValidate
+      >
+        <label className="block mb-3">
+          <span className="block text-sm font-medium text-gray-700">Username</span>
+          <input
+            required
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className={`mt-1 block w-full px-3 py-2 border ${signInError ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+          />
+          {signInError && (
+            <p className="mt-2 text-sm text-red-600">
+              {username ? 'Incorrect username or password.' : 'Please enter a username.'}
+            </p>
+          )}
+        </label>
+        <label className="block">
+          <span className="block text-sm font-medium text-gray-700">Password</span>
+          <input
+            required
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className={`mt-1 block w-full px-3 py-2 border ${signInError ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm`}
+          />
+          {signInError && (
+            <p className="mt-2 text-sm text-red-600">
+              {password ? 'Incorrect username or password.' : 'Please enter a password.'}
+            </p>
+          )}
+        </label>
+        <button
+          type="submit"
+          className={`mt-4 ${login.loginButton} inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 disabled:opacity-50`}
+          disabled={isLoading}
+        >
+          {isLoading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Logging in...</span>
+            </>
+          ) : (
+            'Login'
+          )}
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
   );
 };
 

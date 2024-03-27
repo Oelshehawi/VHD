@@ -16,6 +16,19 @@ export const isNumberKey = (evt) => {
   return true;
 };
 
+export const formatDateToString = (dateString) => {
+  const [year, month, day] = dateString.split('-');
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  const monthName = monthNames[parseInt(month, 10) - 1]; // subtract 1 because array is zero-indexed
+
+  return `${monthName} ${parseInt(day, 10)}, ${year}`; // parseInt removes leading zeros from the day
+}
+
 export const isTextKey = (evt) => {
   var charCode = evt.which ? evt.which : evt.keyCode;
   if (

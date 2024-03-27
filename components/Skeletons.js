@@ -77,33 +77,48 @@ export const YearlySalesSkeleton = () => {
   );
 };
 
-export const ClientContainerSkeleton = () => {
+export const TableContainerSkeleton = () => {
   return (
     <div className='flex items-center justify-center min-h-full'>
       <div className='bg-white rounded-lg shadow-lg w-3/4 p-4 min-h-[80vh] animate-pulse'>
-        <div className='text-xl fw-bold h-6 bg-gray-300 rounded'></div>
-        <div className='flex flex-row items-center justify-between my-2'>
-          <div className='flex flex-row border rounded'>
-            <div className='h-full p-2 outline-none rounded w-full bg-gray-200'></div>
-            <div className='h-full w-8 rounded p-1 bg-gray-200'></div>
+        <div className='text-xl font-bold h-6 bg-gray-300 rounded'></div>
+        <div className='flex flex-col py-2 md:flex-row gap-3'>
+          {/* Search Input Skeleton */}
+          <div className='flex w-full md:w-80'>
+            <div className='w-full h-10 bg-gray-200 rounded-l-md'></div>
+            <div className='w-10 h-10 bg-gray-200 rounded-r-md'></div>
           </div>
-          <div className=' text-white font-bold h-full py-2 px-4 rounded w-32 bg-gray-200'></div>
+          {/* Select Skeleton */}
+          <div className='w-full h-10 bg-gray-200 rounded-md'></div>
         </div>
-
-        <div>
-          {Array(20)
-            .fill(0)
-            .map((_, index) => (
-              <div
-                key={index}
-                className='flex flex-row justify-between items-center py-2'
-              >
-                <div className='w-1/4 h-6 bg-gray-300 rounded'></div>
-                <div className='w-1/4 h-6 bg-gray-300 rounded'></div>
-                <div className='w-1/4 h-6 bg-gray-300 rounded'></div>
-                <div className='w-1/4 h-6 bg-gray-300 rounded'></div>
+        {/* Table Rows Skeleton */}
+        <div className='overflow-auto min-h-[70vh] max-h-[70vh] rounded'>
+          <div className='w-full'>
+            <div className='flex justify-between bg-darkGreen text-white'>
+              {Array(4).fill(0).map((_, index) => (
+                <div key={index} className='w-1/4 h-6 bg-gray-300 rounded mx-3.5 my-3'></div>
+              ))}
+            </div>
+            {Array(20).fill(0).map((_, rowIndex) => (
+              <div key={rowIndex} className={`flex justify-between ${rowIndex % 2 === 0 ? 'bg-borderGreen' : 'bg-darkGreen'} text-white`}>
+                {Array(4).fill(0).map((_, cellIndex) => (
+                  <div key={cellIndex} className='w-1/4 h-6 bg-gray-300 rounded mx-3.5 my-2.5'></div>
+                ))}
               </div>
             ))}
+          </div>
+        </div>
+        {/* Pagination Skeleton */}
+        <div className='flex items-center justify-between mt-2'>
+          <div className='flex gap-2'>
+            {Array(4).fill(0).map((_, index) => (
+              <div key={index} className='p-1 w-8 h-8 bg-gray-200 rounded'></div>
+            ))}
+          </div>
+          <div className='flex items-center gap-2'>
+            <div className='w-16 h-8 bg-gray-200 rounded'></div>
+            <div className='w-20 h-8 bg-gray-200 rounded'></div>
+          </div>
         </div>
       </div>
     </div>
@@ -159,3 +174,8 @@ export const ClientDetailedSkeleton = () => {
     </div>
   );
 };
+
+
+export const InvoiceDetailedSkeleton = () => {
+  <div>skeleton</div>
+}

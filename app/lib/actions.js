@@ -70,3 +70,29 @@ export async function createClient(clientData) {
 
   revalidatePath('/dashboard');
 }
+
+
+export async function deleteInvoice(invoiceId) {
+  await connectMongo();
+  try {
+    await Invoice.findByIdAndDelete(invoiceId);
+  } catch (error) {
+    console.error('Database Error:', error);
+    return {
+      message: 'Database Error: Failed to delete invoice and associated data',
+    };
+  }
+  revalidatePath('/database');
+  revalidatePath('/dashboard');
+}
+
+export async function updateInvoice(invoiceId, formData) {
+  await connectMongo();
+  try {
+    await Invoice.findByIdAndUpdate(invoiceId, formData);
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to update invoice with id');
+  }
+  revalidatePath(`/database/${invoiceId}`);
+}

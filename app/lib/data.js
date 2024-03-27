@@ -215,6 +215,7 @@ export const fetchYearlySalesData = async () => {
 export const fetchAllClients = async () => {
   await connectMongo();
   noStore();
+
   try {
     const clients = await Client.find();
     return clients.map((client) => ({
@@ -237,7 +238,7 @@ export const fetchClientById = async (clientId) => {
   try {
     const client = await Client.findOne({ _id: clientId }).lean();
     client._id = client._id.toString();
-    client.phoneNumber = formatPhoneNumber(client.phoneNumber)
+    client.phoneNumber = formatPhoneNumber(client.phoneNumber);
     return client;
   } catch (error) {
     console.error('Database Error:', Error);
@@ -259,5 +260,58 @@ export const fetchClientInvoices = async (clientId) => {
   } catch (error) {
     console.error('Database Error:', Error);
     Error('Client Invoices could not be found by Id');
+  }
+};
+
+export const fetchAllInvoices = async () => {
+  await connectMongo();
+  noStore();
+  try {
+    const invoices = await Invoice.find();
+
+    const formattedItems = (items) =>
+      items.map((item) => ({
+        description: item.description,
+        price: parseFloat(item.price) || 0,
+      }));
+
+    return invoices.map((invoice) => ({
+      _id: invoice._id.toString(),
+      invoiceId: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+      dateIssued: invoice.dateIssued.toISOString(),
+      dateDue: invoice.dateDue.toISOString(),
+      items: formattedItems(invoice.items),
+      frequency: invoice.frequency,
+      location: invoice.location,
+      notes: invoice.notes,
+      status: invoice.status,
+      clientId: invoice.clientId.toString(),
+    }));
+  } catch (error) {
+    console.error('Database Error:', Error);
+    Error('Failed to fetch all invoices');
+  }
+};
+
+export const fetchInvoiceById = async (invoiceId) => {
+  await connectMongo();
+  try {
+    const formattedItems = (items) =>
+      items.map((item) => ({
+        description: item.description,
+        price: parseFloat(item.price) || 0,
+      }));
+
+    const invoice = await Invoice.findOne({ _id: invoiceId }).lean();
+    invoice._id = invoice._id.toString();
+    invoice.dateDue = invoice.dateDue.toISOString().split('T')[0];
+    invoice.dateIssued = invoice.dateIssued.toISOString().split('T')[0];
+    invoice.clientId = invoice.clientId.toString();
+    invoice.items = formattedItems(invoice.items);
+    return invoice;
+  } catch (error) {
+    console.error('Database Error:', Error);
+    Error('Invoice could not be found by Id');
   }
 };

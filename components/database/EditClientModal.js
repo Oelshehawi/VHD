@@ -90,7 +90,7 @@ const InlineEditClient = ({ client, isEditing, toggleEdit }) => {
                 type='submit'
                 className='px-4 py-2 bg-darkGreen rounded text-white'
               >
-                Save
+                Save Changes
               </button>
             </div>
           )}

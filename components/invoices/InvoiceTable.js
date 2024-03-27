@@ -1,4 +1,3 @@
-'use client';
 import { useState, useEffect } from 'react';
 import {
   useReactTable,
@@ -9,29 +8,30 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
 } from '@tanstack/react-table';
+import { FaSearch, FaTrash, FaPenSquare } from 'react-icons/fa';
 import Link from 'next/link';
-import { FaSearch, FaPenSquare, FaTrash } from 'react-icons/fa';
-import { deleteClient } from '../../app/lib/actions';
+import { deleteInvoice } from '../../app/lib/actions';
 import DeleteModal from '../DeleteModal';
-import { toast } from 'react-hot-toast';
 
-const ClientTable = ({ clientData }) => {
+const InvoiceTable = ({ invoiceData }) => {
   const columnHelper = createColumnHelper();
   const [showModal, setShowModal] = useState(false);
-  const [selectedClientId, setSelectedClientId] = useState(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState(null);
   const [globalFilter, setGlobalFilter] = useState('');
   const [sorting, setSorting] = useState([]);
   const [columnVisibility, setColumnVisibility] = useState({});
 
   useEffect(() => {
     const updateVisibility = () => {
-      const isMobile = window.innerWidth < 768;
+      const isMobile = window.innerWidth < 768; 
       setColumnVisibility({
-        clientName: true,
-        email: !isMobile,
-        phoneNumber: !isMobile,
-        editClient: true,
-        deleteClient: !isMobile,
+        invoiceId: !isMobile, 
+        jobTitle: true,
+        issuedDate: !isMobile, 
+        status: !isMobile, 
+        items: !isMobile, 
+        InvoiceEdit: true, 
+        deleteInvoice: !isMobile, 
       });
     };
   
@@ -43,44 +43,80 @@ const ClientTable = ({ clientData }) => {
     };
   }, []);
 
-  const handleDelete = async (clientId) => {
+  const handleDelete = async (invoiceId) => {
     try {
-      const deleteClientWithId = deleteClient.bind(null, clientId);
-      await deleteClientWithId();
-      toast.success('Client and associated invoices deleted successfully');
+      const deleteInvoiceWithId = deleteInvoice.bind(null, invoiceId);
+      await deleteInvoiceWithId();
+      toast.success('Invoice deleted successfully');
     } catch (error) {
       console.error('Error updating invoice:', error);
-      toast.error(
-        'Database Error: Failed to delete client and associated invoices'
-      );
+      toast.error('Database Error: Failed to delete Invoice');
     }
     return;
   };
 
   const columns = [
-    columnHelper.accessor('clientName', {
-      header: 'Client Name',
-      id: 'clientName',
+    columnHelper.accessor('invoiceId', {
+      header: 'Invoice #',
+      id: 'invoiceId',
+      cell: (info) => <div className=''>{'#' + info.getValue()}</div>,
+    }),
+    columnHelper.accessor('jobTitle', {
+      header: 'Job Title',
+      id: 'jobTitle',
       cell: (info) => <div className=''>{info.getValue()}</div>,
     }),
-    columnHelper.accessor('email', {
-      header: 'Email',
-      id: 'email',
-      cell: (info) => <div className=''>{info.getValue()}</div>,
+    columnHelper.accessor('dateIssued', {
+      header: 'Issued Date',
+      id: 'issuedDate',
+      cell: (info) => {
+        const value = info.getValue();
+        if (value) {
+          return <div className=''>{value.split('T')[0]}</div>;
+        }
+      },
     }),
-    columnHelper.accessor('phoneNumber', {
-      header: 'Phone Number',
-      id: 'phoneNumber',
-      cell: (info) => <div className=''>{info.getValue()}</div>,
+    columnHelper.accessor('status', {
+      header: 'Status',
+      id: 'status',
+      cell: (info) => {
+        const status = info.getValue();
+        return (
+          <div
+            className={`rounded-lg flex justify-center items-center font-bold ${
+              status === 'paid'
+                ? 'bg-green-500 text-white'
+                : status === 'pending'
+                ? 'bg-yellow-500 text-white'
+                : 'bg-red-500 text-white'
+            }`}
+          >
+            {status.toUpperCase()}
+          </div>
+        );
+      },
+    }),
+    columnHelper.accessor('items', {
+      header: 'Amount',
+      id: 'items',
+      cell: (info) => {
+        const { original } = info.row;
+        let Total = 0;
+        for (let i = 0; i < original.items.length; i++) {
+          Total += original.items[i].price;
+        }
+
+        return <div className=''>${Total + Total * 0.05}</div>;
+      },
     }),
     columnHelper.accessor('_id', {
-      header: 'Edit Client',
-      id: 'editClient',
+      header: 'Edit Invoice',
+      id: 'editInvoice',
       cell: (info) => {
         return (
           <Link
-            href={`/database/${info.getValue()}`}
             className='flex justify-center'
+            href={`/invoices/${info.getValue()}`}
           >
             <FaPenSquare className='rounded bg-darkGreen size-8 text-white hover:bg-green-800' />
           </Link>
@@ -88,15 +124,15 @@ const ClientTable = ({ clientData }) => {
       },
     }),
     columnHelper.accessor('_id', {
-      header: 'Delete Client',
-      id: 'deleteClient',
+      header: 'Delete Invoice',
+      id: 'deleteInvoice',
       cell: (info) => {
         return (
           <div className='flex justify-center'>
             <FaTrash
               className='rounded bg-red-600 hover:bg-red-800 p-2 size-8 text-white hover:cursor-pointer'
               onClick={() => {
-                setSelectedClientId(info.getValue());
+                setSelectedInvoiceId(info.getValue());
                 setShowModal(true);
               }}
             />
@@ -107,7 +143,7 @@ const ClientTable = ({ clientData }) => {
   ];
 
   const table = useReactTable({
-    data: clientData,
+    data: invoiceData,
     columns,
     state: {
       globalFilter,
@@ -129,7 +165,7 @@ const ClientTable = ({ clientData }) => {
         <div className='flex'>
           <input
             type='text'
-            placeholder='Search For Client...'
+            placeholder='Search For Invoice...'
             onChange={(e) => setGlobalFilter(e.target.value)}
             className='w-full md:w-80 px-3 h-10 rounded-l-md border  border-darkGreen ring-2 ring-darkGreen focus:outline-none'
           />
@@ -141,24 +177,31 @@ const ClientTable = ({ clientData }) => {
           </button>
         </div>
         <select
-          id='clientSort'
-          name='clientSort'
+          id='invoiceSort'
+          name='invoiceSort'
           onChange={(e) => {
+            if (e.target.value === 'Pending') {
+              setGlobalFilter('Pending');
+              return;
+            }
             if (e.target.value === 'All') {
               table.resetSorting();
-            } else {
-              const sortOption = JSON.parse(e.target.value);
-              setSorting([sortOption]);
+              table.resetGlobalFilter();
+              return;
             }
+
+            const sortOption = JSON.parse(e.target.value);
+            setSorting([sortOption]);
           }}
           className='w-full h-10 border border-gray-300 hover:cursor-pointer focus:border-darkGreen focus:ring-2 focus:ring-darkGreen text-gray-700 rounded-md px-2 md:px-3 py-0 md:py-1 tracking-wider'
         >
           <option value='All'>All</option>
-          <option value={JSON.stringify({ id: 'clientName', desc: false })}>
-            Name A-Z
+          <option value='Pending'>Pending</option>
+          <option value={JSON.stringify({ id: 'issuedDate', desc: false })}>
+            Earliest Invoices
           </option>
-          <option value={JSON.stringify({ id: 'clientName', desc: true })}>
-            Name Z-A
+          <option value={JSON.stringify({ id: 'issuedDate', desc: true })}>
+            Latest Invoices
           </option>
         </select>
       </div>
@@ -277,17 +320,15 @@ const ClientTable = ({ clientData }) => {
       <DeleteModal
         showModal={showModal}
         onConfirm={() => {
-          handleDelete(selectedClientId);
+          handleDelete(selectedInvoiceId);
           setShowModal(false);
         }}
         onCancel={() => setShowModal(false)}
-        deleteText={'Are you sure you want to delete this client?'}
-        deleteDesc={
-          'All associated invoices with this client will also be deleted'
-        }
+        deleteText={'Are you sure you want to delete this invoice?'}
+        deleteDesc={'This action cannot be undone!'}
       />
     </div>
   );
 };
 
-export default ClientTable;
+export default InvoiceTable;

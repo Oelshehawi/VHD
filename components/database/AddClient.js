@@ -75,7 +75,7 @@ const AddClient = ({ show, onHide }) => {
 
       {/* Offcanvas Content */}
       <div
-        className={`fixed top-0 right-0 z-30 flex h-screen max-w-full transition-transform duration-300 w-1/3 ${
+        className={`fixed top-0 right-0 z-30 flex h-screen max-w-full transition-transform duration-300 w-3/4 lg:w-1/3 ${
           show ? 'translate-x-0' : 'translate-x-full'
         }`}
       >

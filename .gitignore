@@ -39,3 +39,5 @@ next-env.d.ts
 /migration.js
 
 /dump
+
+/next.config.js
