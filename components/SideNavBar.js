@@ -22,10 +22,9 @@ const SideNavBar = () => {
   };
 
   return (
-    <div className='flex flex-row md:h-screen items-center md:items-stretch md:!flex-col md:min-w-[5
-    %] bg-darkGreen md:border-r-4 border-borderGreen text-xl text-white justify-between'>
-      <div className='flex-1 flex justify-center md:!justify-start md:flex-col'>
-        <div className='flex flex-row md:!flex-col md:mt-3 text-center md:space-y-5 mx-3'>
+    <div className='flex flex-row lg:min-h-screen items-center lg:items-stretch lg:!flex-col lg:min-w-[5%] bg-darkGreen lg:border-r-4 border-borderGreen text-xl text-white justify-between'>
+      <div className='flex-1 flex justify-center lg:!justify-start lg:flex-col'>
+        <div className='flex flex-row lg:!flex-col lg:mt-3 text-center lg:space-y-5 mx-3'>
           {[
             { href: '/dashboard', icon: HomeIcon },
             { href: '/database', icon: CircleStackIcon },

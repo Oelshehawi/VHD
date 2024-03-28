@@ -12,6 +12,7 @@ import { FaSearch, FaTrash, FaPenSquare } from 'react-icons/fa';
 import Link from 'next/link';
 import { deleteInvoice } from '../../app/lib/actions';
 import DeleteModal from '../DeleteModal';
+import toast from 'react-hot-toast'
 
 const InvoiceTable = ({ invoiceData }) => {
   const columnHelper = createColumnHelper();

@@ -75,6 +75,10 @@ export async function createClient(clientData) {
 export async function deleteInvoice(invoiceId) {
   await connectMongo();
   try {
+    const job = await JobsDueSoon.findOne({invoiceId: invoiceId})
+    if (job) {
+      await JobsDueSoon.findByIdAndDelete(job._id);
+    }
     await Invoice.findByIdAndDelete(invoiceId);
   } catch (error) {
     console.error('Database Error:', error);
@@ -86,6 +90,28 @@ export async function deleteInvoice(invoiceId) {
   revalidatePath('/dashboard');
 }
 
+export async function createInvoice(invoiceData) {
+  await connectMongo();
+  try {
+    const clientInvoices = await Invoice.find({ clientId: invoiceData.clientId });
+
+    const invoiceNumber = clientInvoices.length;
+    const invoiceId = `#${invoiceData.prefix}-${invoiceNumber.toString().padStart(3, '0')}`;
+
+    const newInvoiceData = { ...invoiceData, invoiceId };
+
+    const newInvoice = new Invoice(newInvoiceData);
+    await newInvoice.save();
+
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to create invoice');
+  }
+
+  revalidatePath('/dashboard');
+  revalidatePath('/invoices')
+}
+
 export async function updateInvoice(invoiceId, formData) {
   await connectMongo();
   try {
@@ -94,5 +120,5 @@ export async function updateInvoice(invoiceId, formData) {
     console.error('Database Error:', error);
     throw new Error('Failed to update invoice with id');
   }
-  revalidatePath(`/database/${invoiceId}`);
+  revalidatePath(`/invoices/${invoiceId}`);
 }

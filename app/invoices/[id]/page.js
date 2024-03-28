@@ -1,5 +1,5 @@
 import { Suspense } from 'react';
-import InvoiceDetailedContainer from '../../../components/invoices/InvoiceDetailedContainer'
+import InvoiceDetailsContainer from '../../../components/invoices/InvoiceDetailsContainer';
 import { InvoiceDetailedSkeleton } from '../../../components/Skeletons';
 import { fetchClientById, fetchInvoiceById } from '../../lib/data';
 
@@ -10,9 +10,9 @@ const InvoiceDetailed = async ({ params }) => {
 
   return (
     <>
-      <div className='mt-4 px-2 lg:!px-5'>
+      <div className='mt-4 px-3 lg:!px-5'>
         <Suspense fallback={<InvoiceDetailedSkeleton />}>
-          <InvoiceDetailedContainer invoice={invoice} client={client}/>
+          <InvoiceDetailsContainer invoice={invoice} client={client} />
         </Suspense>
       </div>
     </>

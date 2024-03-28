@@ -1,13 +1,15 @@
 import InvoiceContainer from '../../components/invoices/invoiceContainer';
-import { fetchAllInvoices } from '../lib/data';
+import { fetchAllClients, fetchAllInvoices } from '../lib/data';
 
 const Invoice = async () => {
   const invoiceData = await fetchAllInvoices();
+  const clients = await fetchAllClients();
 
   return (
     <div className='flex items-center justify-center min-h-full'>
       <InvoiceContainer
         invoiceData={invoiceData}
+        clients={clients}
       />
     </div>
   );

@@ -1,12 +1,12 @@
-'use client'
+'use client';
 import { useState } from 'react';
 import { FaPenSquare, FaArrowLeft } from 'react-icons/fa';
 import InlineEditInvoice from './EditInvoiceModal';
 import ClientDetails from './ClientDetails';
 import { useRouter } from 'next/navigation';
+import PriceBreakdown from './PriceBreakdown';
 
-
-const InvoiceDetailedContainer = ({ client, invoice }) => {
+const InvoiceDetailsContainer = ({ invoice, client }) => {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const toggleEdit = () => {
@@ -31,7 +31,7 @@ const InvoiceDetailedContainer = ({ client, invoice }) => {
           <span>Edit</span>
         </button>
       </div>
-      <div className='flex flex-wrap lg:flex-nowrap -mx-2'>
+      <div className='flex flex-wrap lg:flex-nowrap text-sm lg:text-[1rem] -mx-2'>
         <InlineEditInvoice
           invoice={invoice}
           isEditing={isEditing}
@@ -39,8 +39,11 @@ const InvoiceDetailedContainer = ({ client, invoice }) => {
         />
         <ClientDetails client={client} />
       </div>
+      <PriceBreakdown
+        invoice={invoice}
+      />
     </>
   );
 };
 
-export default InvoiceDetailedContainer;
+export default InvoiceDetailsContainer;

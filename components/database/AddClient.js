@@ -152,7 +152,7 @@ const AddClient = ({ show, onHide }) => {
                 type='submit'
                 className={`btn ${
                   isLoading ? 'loading' : ''
-                } bg-darkGreen text-white hover:bg-darkBlue w-full`}
+                } bg-darkGreen text-white hover:bg-darkBlue w-full rounded p-2`}
               >
                 {isLoading ? 'Adding...' : 'Add Client'}
               </button>

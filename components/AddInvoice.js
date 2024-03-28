@@ -1,274 +1,280 @@
+'use client';
 import { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import Axios from 'axios';
+import { useForm } from 'react-hook-form';
+import toast from 'react-hot-toast';
+import { FaTrash, FaPlus } from 'react-icons/fa';
+import { calculateDueDate } from '../app/lib/utils';
+import { createInvoice } from '../app/lib/actions';
 
-
-const AddInvoice = ({ open, onClose, onUpdate }) => {
-  const [clients, setClients] = useState([]);
-  const [items, setItems] = useState([{ description: '', price: '' }]);
+const AddInvoice = ({ clients, show, onHide }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [frequency, setFrequency] = useState('');
-  const [dateIssued, setDateIssued] = useState('');
-  const [showToast, setShowToast] = useState(false);
+  const [items, setItems] = useState([{ description: '', price: '' }]);
 
   const {
     register,
     handleSubmit,
     reset,
-    control,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm();
 
+  const dateIssued = watch('dateIssued');
+  const frequency = watch('frequency');
+
   useEffect(() => {
-    const fetchClients = async () => {
-      try {
-        const response = await Axios.get(
-          `${process.env.NEXT_PUBLIC_API_URL}/clients`
-        );
-        setClients(response.data);
-      } catch (error) {
-        console.log('Error fetching clients:', error);
-      }
-    };
-    fetchClients();
-  }, []);
+    const updatedDateDue = calculateDueDate(dateIssued, frequency);
+    setValue('dateDue', updatedDateDue);
+  }, [dateIssued, frequency, setValue]);
 
   const addItem = () => {
-    setItems([...items, { description: '', price: '' }]);
+    setItems([...items, { description: '', price: 0 }]);
+  };
+
+  const handleItemChange = (index, field, value) => {
+    const updatedItems = [...items];
+    updatedItems[index][field] = value;
+    setItems(updatedItems);
   };
 
   const deleteItem = (index) => {
-    const newItems = items.filter((_, i) => i !== index);
-    setItems(newItems);
-    reset({ items: newItems });
+    if (items.length > 1) {
+      console.log(items);
+      const updatedItems = items.filter((_, i) => i !== index);
+      setItems(updatedItems);
+      setValue('items', updatedItems);
+    }
   };
 
-  const handleSave = async (values) => {
+  const handleSave = async (data) => {
     setIsLoading(true);
-
     try {
-      const selectedClient = clients.find(
-        (client) => client._id === values.clientId
-      );
-      const clientPrefix = selectedClient ? selectedClient.prefix : '';
-
-      const invoicesResponse = await Axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/invoices/clientInvoices?prefix=${clientPrefix}`
-      );
-
-      const maxInvoiceNumber = invoicesResponse.data.reduce((max, invoice) => {
-        const number = parseInt(invoice.invoiceId.split('-')[1]);
-        return number > max ? number : max;
-      }, -1);
-
-      const nextInvoiceNumber = maxInvoiceNumber + 1;
-
-      const invoiceId = `${clientPrefix}-${nextInvoiceNumber
-        .toString()
-        .padStart(4, '0')}`;
-
-      const invoiceData = {
-        invoiceId,
-        jobTitle: values.jobTitle,
-        dateIssued: values.dateIssued,
-        dateDue: calculateDueDate(values.dateIssued, values.frequency),
-        items: values.items.map((item) => ({
-          description: item.description,
-          price: parseFloat(item.price) || 0,
-        })),
-        frequency: values.frequency,
-        location: values.location,
-        notes: values.notes,
-        status: 'pending',
-      };
-
-      await Axios.post(`${process.env.NEXT_PUBLIC_API_URL}/invoices`, invoiceData);
-
-      setShowToast(true);
-      onUpdate();
-      onClose();
+      await createInvoice(data);
+      toast.success('Invoice has been successfully added.');
+      onHide();
       reset();
     } catch (error) {
       console.error('Error saving invoice:', error);
+      toast.error('Error saving invoice. Please check input fields');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const calculateDueDate = (issuedDate, freq) => {
-    if (issuedDate && freq) {
-      const dueDate = new Date(issuedDate);
-      const monthsToAdd = Math.floor(12 / parseInt(freq));
-      dueDate.setUTCMonth(dueDate.getUTCMonth() + monthsToAdd);
-  
+  const inputFields = [
+    {
+      name: 'clientId',
+      type: 'select',
+      placeholder: 'Select Client',
+      isRequired: true,
+    },
+    {
+      name: 'jobTitle',
+      type: 'text',
+      placeholder: 'Job Title',
+      isRequired: true,
+    },
+    {
+      name: 'frequency',
+      type: 'number',
+      placeholder: 'Frequency (per year)',
+      isRequired: true,
+      minLength: 1,
+      maxLength: 1,
+    },
+    {
+      name: 'location',
+      type: 'text',
+      placeholder: 'Location',
+      isRequired: true,
+    },
+    {
+      name: 'dateIssued',
+      type: 'date',
+      placeholder: 'Date Issued',
+      isRequired: true,
+    },
+    {
+      name: 'dateDue',
+      type: 'text',
+      placeholder: 'Date Due',
+      isRequired: true,
+      readOnly: true,
+    },
+    {
+      name: 'notes',
+      type: 'textarea',
+      placeholder: 'Additional Notes',
+      isRequired: false,
+    },
+  ];
 
-      return dueDate.toISOString().split('T')[0];
+  const handleClientChange = (e) => {
+    const selectedClientId = e.target.value;
+    const selectedClient = clients.find(
+      (client) => client._id === selectedClientId
+    );
+
+    setValue('clientId', selectedClientId);
+    if (selectedClient) {
+      setValue('prefix', selectedClient.prefix);
     }
-    return '';
   };
 
   return (
     <>
-      <Offcanvas
-        show={open}
-        onHide={onClose}
-        placement="end"
-        className={` ${addInvoice.offCanvas}`}
+      <div
+        className={`fixed inset-0 z-10 transition-opacity duration-300 bg-[#1f293799] ${
+          show ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onHide}
+      ></div>
+      <div
+        className={`fixed top-0 right-0 z-30 flex h-screen max-w-full transition-transform duration-300 w-3/4 lg:w-1/3 ${
+          show ? 'translate-x-0' : 'translate-x-full'
+        }`}
       >
-        <Offcanvas.Header closeButton>
-          <Offcanvas.Title>Add New Invoice</Offcanvas.Title>
-        </Offcanvas.Header>
-        <Offcanvas.Body>
-          <Form onSubmit={handleSubmit(handleSave)}>
-            <Form.Group className="mb-3">
-              <Form.Label>Recipient Client</Form.Label>
-              <Controller
-                name="clientId"
-                control={control}
-                rules={{ required: 'Client is required' }}
-                render={({ field }) => (
-                  <Form.Select {...field} aria-label="Recipient Client">
-                    <option value="">Recipient</option>
-                    {clients.map((client) => (
-                      <option key={client._id} value={client._id}>
-                        {`${client.clientName} - ${client.email}`}
-                      </option>
-                    ))}
-                  </Form.Select>
-                )}
-              />
-              {errors.clientId && (
-                <span className="text-danger">{errors.clientId.message}</span>
-              )}
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Job Title</Form.Label>
-              <Form.Control
-                {...register('jobTitle', { required: true })}
-                type="text"
-                placeholder="Job Title"
-              />
-              {errors.jobTitle && (
-                <span className="text-danger">{errors.jobTitle.message}</span>
-              )}
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Frequency</Form.Label>
-              <Form.Control
-                {...register('frequency', { required: true })}
-                type="number"
-                placeholder="Frequency"
-                onChange={(e) => setFrequency(e.target.value)}
-              />
-              {errors.frequency && (
-                <span className="text-danger">{errors.frequency.message}</span>
-              )}
-            </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Location</Form.Label>
-              <Form.Control
-                {...register('location', { required: true })}
-                type="text"
-                placeholder="Location"
-              />
-              {errors.location && (
-                <span className="text-danger">{errors.location.message}</span>
-              )}
-            </Form.Group>
-            <Row className="mb-3">
-              <Col>
-                <Form.Group>
-                  <Form.Label>Date Issued</Form.Label>
-                  <Form.Control
-                    type="date"
-                    {...register('dateIssued', { required: true })}
-                    onChange={(e) => setDateIssued(e.target.value)}
-                  />
-                  {errors.dateIssued && (
-                    <span className="text-danger">
-                      Date Issued is required.
-                    </span>
+        <div className='flex w-full flex-col bg-white shadow-lg'>
+          <div className='flex flex-row w-full items-center justify-between bg-darkGreen p-2'>
+            <h2 className='text-lg font-medium text-white'>Add New Invoice</h2>
+            <button
+              onClick={onHide}
+              className='rounded-md p-2 text-white hover:text-gray-500'
+            >
+              X
+            </button>
+          </div>
+          <form
+            onSubmit={handleSubmit(handleSave)}
+            className='mt-4 space-y-6 p-4 overflow-auto'
+          >
+            {inputFields.map(
+              ({
+                name,
+                type,
+                placeholder,
+                isRequired,
+                minLength,
+                maxLength,
+                readOnly
+              }) => (
+                <div key={name} className='field'>
+                  {type === 'textarea' ? (
+                    <textarea
+                      {...register(name, { required: isRequired })}
+                      placeholder={placeholder}
+                      className='w-full h-24 text-gray-700 outline-none focus:ring-2 focus:ring-darkGreen border-2 focus:border-darkGreen border-gray-400 rounded p-2'
+                    />
+                  ) : type === 'select' ? (
+                    <div className='field'>
+                      <select
+                        {...register('clientId', { required: true })}
+                        onChange={handleClientChange}
+                        className='w-full text-gray-700 outline-none focus:ring-2 focus:ring-darkGreen border-2 focus:border-darkGreen border-gray-400 rounded p-2'
+                      >
+                        <option value=''>Select Client</option>
+                        {clients.map((client) => (
+                          <option key={client._id} value={client._id}>
+                            {client.clientName} - {client.email}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : (
+                    <input
+                      {...register(name, {
+                        required: isRequired,
+                        minLength: minLength,
+                        maxLength: maxLength,
+                      })}
+                      type={type}
+                      placeholder={placeholder}
+                      readOnly={readOnly}
+                      className='w-full text-black outline-none focus:ring-2 focus:ring-darkGreen border-2 focus:border-darkGreen border-gray-400 rounded p-2'
+                    />
                   )}
-                </Form.Group>
-              </Col>
-              <Col>
-                <Form.Group>
-                  <Form.Label>Date Due</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={
-                      frequency && dateIssued
-                        ? calculateDueDate(dateIssued, frequency)
-                        : 'Enter Issue Date and Frequency'
-                    }
-                    disabled
-                  />
-                </Form.Group>
-              </Col>
-            </Row>
+                  {errors[name] && errors[name].type === 'required' && (
+                    <p className='text-red-500 text-xs mt-1'>
+                      {name} is required
+                    </p>
+                  )}
+                  {errors[name] && errors[name].type === 'minLength' && (
+                    <p className='text-red-500 text-xs mt-1'>
+                      {name} must be at least 1 characters
+                    </p>
+                  )}
+                  {errors[name] && errors[name].type === 'maxLength' && (
+                    <p className='text-red-500 text-xs mt-1'>
+                      {name} Cannot be more than 1 characters
+                    </p>
+                  )}
+                </div>
+              )
+            )}
+
+            {/* Dynamically add item fields here */}
+
             {items.map((item, index) => (
-              <Row key={index} className="align-items-center mb-3">
-                <Col>
-                  <Form.Control
-                    {...register(`items[${index}].description`, {
-                      required: true,
-                    })}
-                    placeholder="Item Description"
-                  />
-                </Col>
-                <Col>
-                  <Form.Control
-                    {...register(`items[${index}].price`, { required: true })}
-                    type="number"
-                    placeholder="Item Price"
-                  />
-                </Col>
-                <Col xs="auto">
-                  <Button
-                    variant="danger"
-                    onClick={() => deleteItem(index)}
-                    disabled={items.length === 1}
-                  >
-                    Delete
-                  </Button>
-                </Col>
-              </Row>
+              <div key={index} className='flex items-center justify-between w-full space-x-2'>
+                <input
+                  {...register(`items[${index}].description`, {
+                    required: 'Item description is required',
+                    onChange: (e) =>
+                      handleItemChange(index, 'description', e.target.value),
+                  })}
+                  defaultValue={item.description}
+                  placeholder='Item Description'
+                  className='text-black outline-none w-3/5 focus:ring-2 focus:ring-darkGreen border-2 focus:border-darkGreen border-gray-400 rounded p-2'
+                />
+                {errors.items?.[index]?.description && (
+                  <p className='text-red-500 text-xs'>
+                    {errors.items[index].description.message}
+                  </p>
+                )}
+                <input
+                  {...register(`items[${index}].price`, {
+                    required: 'Price is required',
+                    valueAsNumber: true,
+                    onChange: (e) =>
+                      handleItemChange(index, 'price', e.target.value),
+                  })}
+                  defaultValue={item.price}
+                  placeholder='Price'
+                  type='number'
+                  className='text-black w-1/5 outline-none focus:ring-2 focus:ring-darkGreen border-2 focus:border-darkGreen border-gray-400 rounded p-2'
+                />
+                {errors.items?.[index]?.price && (
+                  <p className='text-red-500 text-xs'>
+                    {errors.items[index].price.message}
+                  </p>
+                )}
+                <FaTrash
+                  className='cursor-pointer text-red-500 bg-darkGray rounded size-8 p-1'
+                  onClick={() => deleteItem(index)}
+                />
+              </div>
             ))}
-            <Button variant="secondary" onClick={addItem}>
-              + Add Item
-            </Button>
-            <Form.Group className="mb-3 mt-2">
-              <Form.Label>Additional Notes</Form.Label>
-              <Form.Control {...register('notes')} as="textarea" rows={3} />
-            </Form.Group>
-            <Row>
-              <Col className="d-flex justify-content-center">
-                <Button
-                  variant="primary"
-                  type="submit"
-                  disabled={isLoading}
-                  className={` ${addInvoice.submitButton}`}
-                >
-                  {isLoading ? 'Saving...' : 'Save Invoice'}
-                </Button>
-              </Col>
-            </Row>
-          </Form>
-        </Offcanvas.Body>
-      </Offcanvas>
-      <ToastContainer className="p-3" position="top-center">
-        <Toast
-          onClose={() => setShowToast(false)}
-          show={showToast}
-          delay={3000}
-          autohide
-        >
-          <Toast.Header>
-            <strong className="me-auto">Invoice Saved</strong>
-          </Toast.Header>
-          <Toast.Body>Invoice has been successfully saved!</Toast.Body>
-        </Toast>
-      </ToastContainer>
+            <button
+              type='button'
+              onClick={addItem}
+              className='hover:bg-darkGreen flex items-center justify-center flex-row bg-darkBlue text-white font-bold py-2 px-4 rounded shadow-sm'
+            >
+              <div>Add Item</div> <FaPlus />
+            </button>
+            <div className='flex justify-center'>
+              <button
+                type='submit'
+                className={`btn ${
+                  isLoading ? 'loading' : ''
+                } bg-darkGreen text-white hover:bg-darkBlue w-full rounded p-2`}
+              >
+                {isLoading ? 'Saving...' : 'Save Invoice'}
+              </button>
+            </div>
+          </form>
+          <div className='flex justify-between items-center p-4'></div>
+        </div>
+      </div>
     </>
   );
 };

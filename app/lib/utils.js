@@ -49,3 +49,14 @@ export const formatPhoneNumber = (phoneNumber) => {
   }
   return phoneNumber; 
 };
+
+export const calculateDueDate = (issuedDate, freq) => {
+  if (issuedDate && freq) {
+    const dueDate = new Date(issuedDate);
+    const monthsToAdd = Math.floor(12 / parseInt(freq));
+    dueDate.setUTCMonth(dueDate.getUTCMonth() + monthsToAdd);
+
+    return dueDate.toISOString().split('T')[0];
+  }
+  return;
+};

@@ -3,12 +3,12 @@ import { useState } from 'react';
 import InvoiceTable from '../../components/invoices/InvoiceTable';
 import AddInvoice from '../../components/AddInvoice';
 
-const InvoiceContainer = ({ invoiceData }) => {
+const InvoiceContainer = ({ invoiceData, clients }) => {
   const [openModal, setopenModal] = useState(false);
 
   return (
     <div className='bg-white rounded-lg shadow-lg w-[90%] lg:w-4/5 p-4 min-h-[90vh] my-5 lg:my-0'>
-      {/* <AddInvoice show={openModal} onHide={() => setopenModal(false)} /> */}
+      <AddInvoice clients={clients} show={openModal} onHide={() => setopenModal(false)} />
       <div className='flex flex-row items-center justify-between my-2'>
         <div className='text-xl fw-bold'>Invoices</div>
         <button

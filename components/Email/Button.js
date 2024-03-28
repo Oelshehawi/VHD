@@ -37,7 +37,7 @@ export function SendReminder({
       <>
         <FaCheckCircle className='h-10 w-10 block md:hidden text-green-600' />
         <div
-          className='alert alert-success p-0 m-0 fw-bolder hidden md:block'
+          className='bg-green-500 rounded p-0 m-0 font-bold hidden md:block'
           role='alert'
         >
           Sent!
@@ -51,7 +51,7 @@ export function SendReminder({
       <>
         <CgUnavailable className='h-10 w-10 block md:hidden text-red-700' />
         <div
-          className='alert alert-danger p-0 m-0 fw-bolder hidden md:block'
+          className='bg-red-500 rounded p-0 m-0 font-bold hidden md:block'
           role='alert'
         >
           No Email!

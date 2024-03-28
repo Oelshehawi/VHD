@@ -4,10 +4,10 @@ import { useForm } from 'react-hook-form';
 import { updateInvoice } from '../../app/lib/actions';
 import { formatDateToString } from '../../app/lib/utils';
 import { toast } from 'react-hot-toast';
+import { calculateDueDate } from '../../app/lib/utils';
 
 const InlineEditInvoice = ({ invoice, isEditing, toggleEdit }) => {
   const updateInvoiceWithId = updateInvoice.bind(null, invoice._id);
-  const [items, setItems] = useState([]);
 
   const {
     register,
@@ -25,47 +25,13 @@ const InlineEditInvoice = ({ invoice, isEditing, toggleEdit }) => {
     setValue('dateDue', updatedDateDue);
   }, [dateIssued, frequency, setValue]);
 
-  // useEffect(() => {
-  //   if (invoice && Object.keys(invoice).length !== 1) {
-  //     Object.entries(invoice).forEach(([key, value]) => {
-  //       if (key === 'dateIssued' || key === 'dateDue') {
-  //         setValue(key, new Date(value).toISOString().split('T')[0]);
-  //       } else {
-  //         setValue(key, value, { shouldValidate: true });
-  //       }
-  //     });
-  //     setItems(invoice.items || []);
-  //   }
-  // }, [invoice, setValue]);
-
-  const calculateDueDate = (issuedDate, freq) => {
-    if (issuedDate && freq) {
-      const dueDate = new Date(issuedDate);
-      const monthsToAdd = Math.floor(12 / parseInt(freq));
-      dueDate.setUTCMonth(dueDate.getUTCMonth() + monthsToAdd);
-
-      return dueDate.toISOString().split('T')[0];
-    }
-    return;
-  };
-
-  // const addItem = () => {
-  //   const newItems = [...items, { description: '', price: '' }];
-  //   setItems(newItems);
-  // };
-
-  // const deleteItem = (index) => {
-  //   if (items.length > 1) {
-  //     const updatedItems = items.filter((_, i) => i !== index);
-  //     setItems(updatedItems);
-  //   }
-  // };
-
   const onSubmit = async (formData) => {
     try {
       await updateInvoiceWithId(formData);
       toast.success('Invoice updated successfully');
-      toggleEdit();
+      if (!formData.status) {
+        toggleEdit();
+      }
     } catch (error) {
       console.error('Error updating Invoice', error);
       toast.error('Failed to update invoice');
@@ -122,15 +88,22 @@ const InlineEditInvoice = ({ invoice, isEditing, toggleEdit }) => {
   ];
 
   return (
-    <div className='w-full md:w-[65%] px-2 mb-4'>
+    <div className='w-full lg:w-[60%] pl-2 mb-4'>
       <div className='border rounded shadow'>
-        <div className='px-4 py-2 border-b text-xl'>Invoice Information</div>
+        <div className='flex flex-row items-center justify-between px-4 py-2 border-b text-xl'>
+          <div>Invoice Information</div>
+          <InvoiceStatusUpdate
+            onSubmit={onSubmit}
+            invoiceStatus={invoice.status}
+          />
+        </div>
+
         <form onSubmit={handleSubmit(onSubmit)} className='p-4'>
           <ul className='flex flex-col space-y-2 w-full'>
             {inputFields.map(
               ({ name, type, isRequired, readOnly, minLength, maxLength }) => (
-                <li key={name} className='flex flex-row w-full'>
-                  <strong className={isEditing ? 'w-[15%]' : 'w-[10%]'}>
+                <li key={name} className='flex flex-col lg:flex-row w-full'>
+                  <strong className={isEditing ? 'w-[15%]' : 'w-[11%]'}>
                     {name.charAt(0).toUpperCase() + name.slice(1)}:
                   </strong>
                   {isEditing ? (
@@ -175,7 +148,10 @@ const InlineEditInvoice = ({ invoice, isEditing, toggleEdit }) => {
                       )}
                     </>
                   ) : (
-                    <div className='ml-2'>
+                    <div
+                      className='w-full lg:w-auto overflow-auto'
+                      style={{ maxWidth: '500px', wordWrap: 'break-word' }}
+                    >
                       {name === 'dateDue' || name === 'dateIssued'
                         ? formatDateToString(invoice[name])
                         : invoice[name]}
@@ -205,6 +181,48 @@ const InlineEditInvoice = ({ invoice, isEditing, toggleEdit }) => {
         </form>
       </div>
     </div>
+  );
+};
+
+const InvoiceStatusUpdate = ({ onSubmit, invoiceStatus }) => {
+  const { register, handleSubmit, setValue } = useForm();
+  const [status, setStatus] = useState(invoiceStatus);
+
+  const handleChange = (e) => {
+    const selectedStatus = e.target.value;
+    setStatus(selectedStatus);
+    setValue('status', selectedStatus);
+    handleSubmit(onSubmit)({ status: selectedStatus });
+  };
+
+  return (
+    <form className='flex h-full items-center justify-end w-1/2'>
+      <div className=''>
+        <select
+          id='status'
+          {...register('status')}
+          onChange={handleChange}
+          className={`block appearance-none w-full border hover:cursor-pointer border-gray-400 hover:border-gray-500 px-4 py-2 rounded shadow leading-tight focus:outline-none focus:shadow-outline ${
+            status === 'paid'
+              ? 'bg-green-500'
+              : status === 'overdue'
+              ? 'bg-red-500'
+              : 'bg-yellow-500'
+          }`}
+          defaultValue={invoiceStatus}
+        >
+          <option className='bg-green-500' value='paid'>
+            Paid
+          </option>
+          <option className='bg-red-500' value='overdue'>
+            Overdue
+          </option>
+          <option className='bg-yellow-500' value='pending'>
+            Pending
+          </option>
+        </select>
+      </div>
+    </form>
   );
 };
 
