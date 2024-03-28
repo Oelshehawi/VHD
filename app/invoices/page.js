@@ -1,4 +1,4 @@
-import InvoiceContainer from '../../components/invoices/invoiceContainer';
+import InvoiceContainer from '../../components/invoices/InvoiceContainer';
 import { fetchAllClients, fetchAllInvoices } from '../lib/data';
 
 const Invoice = async () => {
