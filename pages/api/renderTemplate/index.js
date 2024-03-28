@@ -3,7 +3,7 @@ import axios from 'axios';
 export default async function handler(req, res) {
   if (req.method === 'POST') {
     try {
-      const templateId = 'c1377b234b5d6954'; 
+      const templateId = '63377b234bc75c82'; 
       const url = `https://rest-us.apitemplate.io/v2/create-pdf?template_id=${templateId}`;
 
       const headers = {

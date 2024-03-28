@@ -18,11 +18,11 @@ const InvoiceDetailsContainer = ({ invoice, client }) => {
   const calculateSubtotal = (items) =>
     items.reduce((acc, item) => acc + item.price, 0);
   const calculateGST = (subtotal) => subtotal * 0.05;
-
   const invoiceData = {
     invoiceId: invoice.invoiceId,
     dateIssued: formatDateToString(invoice.dateIssued),
     jobTitle: invoice.jobTitle,
+    location: invoice.location,
     clientName: client.clientName,
     email: client.email,
     phoneNumber: client.phoneNumber,
