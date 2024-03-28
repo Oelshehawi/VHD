@@ -15,7 +15,6 @@ export default async function handler(req, res) {
       const response = await axios.post(url, req.body, { headers, responseType: 'arraybuffer' });
 
       if (response.status === 200) {
-        // Set headers and send the PDF buffer as response
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', 'attachment; filename=invoice.pdf');
         res.send(Buffer.from(response.data, 'binary'));
