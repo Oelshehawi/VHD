@@ -22,6 +22,7 @@ const InvoiceDetailsContainer = ({ invoice, client }) => {
   const invoiceData = {
     invoiceId: invoice.invoiceId,
     dateIssued: formatDateToString(invoice.dateIssued),
+    jobTitle: invoice.jobTitle,
     clientName: client.clientName,
     email: client.email,
     phoneNumber: client.phoneNumber,
