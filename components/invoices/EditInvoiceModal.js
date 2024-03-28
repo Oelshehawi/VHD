@@ -202,7 +202,7 @@ const InvoiceStatusUpdate = ({ onSubmit, invoiceStatus }) => {
           id='status'
           {...register('status')}
           onChange={handleChange}
-          className={`block appearance-none w-full border hover:cursor-pointer border-gray-400 hover:border-gray-500 px-4 py-2 rounded shadow leading-tight focus:outline-none focus:shadow-outline ${
+          className={`text-center appearance-none w-full border hover:cursor-pointer border-gray-400 hover:border-gray-500 px-4 py-2 rounded shadow leading-tight focus:outline-none focus:shadow-outline ${
             status === 'paid'
               ? 'bg-green-500'
               : status === 'overdue'
@@ -211,7 +211,7 @@ const InvoiceStatusUpdate = ({ onSubmit, invoiceStatus }) => {
           }`}
           defaultValue={invoiceStatus}
         >
-          <option className='bg-green-500' value='paid'>
+          <option className='bg-green-500 text-center' value='paid'>
             Paid
           </option>
           <option className='bg-red-500' value='overdue'>

@@ -3,8 +3,8 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 import { FaTrash, FaPlus } from 'react-icons/fa';
-import { calculateDueDate } from '../app/lib/utils';
-import { createInvoice } from '../app/lib/actions';
+import { calculateDueDate } from '../../app/lib/utils';
+import { createInvoice } from '../../app/lib/actions';
 
 const AddInvoice = ({ clients, show, onHide }) => {
   const [isLoading, setIsLoading] = useState(false);

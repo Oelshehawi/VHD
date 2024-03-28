@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import InvoiceTable from '../../components/invoices/InvoiceTable';
-import AddInvoice from '../../components/AddInvoice';
+import AddInvoice from './AddInvoice';
 
 const InvoiceContainer = ({ invoiceData, clients }) => {
   const [openModal, setopenModal] = useState(false);
