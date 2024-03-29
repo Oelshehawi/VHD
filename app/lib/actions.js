@@ -96,7 +96,7 @@ export async function createInvoice(invoiceData) {
     const clientInvoices = await Invoice.find({ clientId: invoiceData.clientId });
 
     const invoiceNumber = clientInvoices.length;
-    const invoiceId = `#${invoiceData.prefix}-${invoiceNumber.toString().padStart(3, '0')}`;
+    const invoiceId = `${invoiceData.prefix}-${invoiceNumber.toString().padStart(3, '0')}`;
 
     const newInvoiceData = { ...invoiceData, invoiceId };
 
