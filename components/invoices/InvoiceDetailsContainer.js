@@ -38,7 +38,7 @@ const InvoiceDetailsContainer = ({ invoice, client }) => {
       calculateGST(calculateSubtotal(invoice.items)),
     cheque: '51-11020 Williams Rd',
     eTransfer: 'adam@vancouverventcleaning.ca',
-    terms: 'Please report any and all cleaning inquiries within 30 days.',
+    terms: 'Please report any and all cleaning inquiries within 5 business days.',
     thankYou: 'Thank you for choosing Vancouver Hood Doctors!',
   };
 
