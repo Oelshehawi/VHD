@@ -1,4 +1,4 @@
-const { Schema, model, models, mongoose } =require('mongoose');
+const { Schema, model, models, mongoose } = require('mongoose');
 
 const ClientSchema = new Schema({
   clientName: {
@@ -66,7 +66,7 @@ const invoiceSchema = new Schema({
   clientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
-    required: true
+    required: true,
   },
 });
 
@@ -122,14 +122,14 @@ const jobsDueSoonSchema = new Schema({
   clientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Client',
-    required: true
+    required: true,
   },
 });
 
 const Client = models.Client || model('Client', ClientSchema);
 const Invoice = models.Invoice || model('Invoice', invoiceSchema);
 const User = models.User || model('User', userSchema);
-const JobsDueSoon = models.JobsDueSoon || model('JobsDueSoon', jobsDueSoonSchema);
-
+const JobsDueSoon =
+  models.JobsDueSoon || model('JobsDueSoon', jobsDueSoonSchema);
 
 module.exports = { Client, User, Invoice, JobsDueSoon };
