@@ -12,16 +12,18 @@ export function SendReminder({
   emailExists,
 }) {
   const [emailAlreadySent, setEmailAlreadySent] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const sendEmail = async () => {
     try {
+      setIsLoading(true);
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/invoices/sendEmail`,
         { invoiceId }
       );
-
       toast.success(`Email has been sent successfully to ${emailRecipient}`);
       setEmailAlreadySent(true);
+      setIsLoading(false);
     } catch (error) {
       if (error.response && error.response.data && error.response.data.error) {
         toast.error(error.response.data.error);
@@ -62,10 +64,16 @@ export function SendReminder({
 
   return (
     <div className='flex justify-center'>
-      <FaPaperPlane
-        className={`p-1 h-10 w-10 rounded border-gray-500 border-2 hover:animate-pulse hover:cursor-pointer`}
-        onClick={sendEmail}
-      />
+      {!isLoading ? (
+        <FaPaperPlane
+          className={`p-1 h-10 w-10 rounded border-gray-500 border-2 hover:animate-pulse hover:cursor-pointer`}
+          onClick={sendEmail}
+        />
+      ) : (
+        <FaPaperPlane
+          className={`p-1 h-10 w-10 animate-spin rounded border-gray-500 border-2`}
+        />
+      )}
     </div>
   );
 }
