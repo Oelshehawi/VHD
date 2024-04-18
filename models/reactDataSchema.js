@@ -1,4 +1,5 @@
-const { Schema, model, models, mongoose } = require('mongoose');
+// @ts-ignore
+import { Schema, model, models, mongoose } from "mongoose";
 
 const ClientSchema = new Schema({
   clientName: {
@@ -60,12 +61,12 @@ const invoiceSchema = new Schema({
   notes: String,
   status: {
     type: String,
-    enum: ['pending', 'overdue', 'paid'],
-    default: 'pending',
+    enum: ["pending", "overdue", "paid"],
+    default: "pending",
   },
   clientId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Client',
+    ref: "Client",
     required: true,
   },
 });
@@ -82,18 +83,6 @@ const eventSchema = new Schema({
   },
   time: {
     type: Date,
-  },
-});
-
-const userSchema = new Schema({
-  username: {
-    type: String,
-  },
-  password: {
-    type: String,
-  },
-  isAdmin: {
-    type: Boolean,
   },
 });
 
@@ -121,15 +110,14 @@ const jobsDueSoonSchema = new Schema({
   },
   clientId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Client',
+    ref: "Client",
     required: true,
   },
 });
 
-const Client = models.Client || model('Client', ClientSchema);
-const Invoice = models.Invoice || model('Invoice', invoiceSchema);
-const User = models.User || model('User', userSchema);
+const Client = models.Client || model("Client", ClientSchema);
+const Invoice = models.Invoice || model("Invoice", invoiceSchema);
 const JobsDueSoon =
-  models.JobsDueSoon || model('JobsDueSoon', jobsDueSoonSchema);
+  models.JobsDueSoon || model("JobsDueSoon", jobsDueSoonSchema);
 
-module.exports = { Client, User, Invoice, JobsDueSoon };
+export { Client, Invoice, JobsDueSoon };

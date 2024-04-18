@@ -1,15 +1,13 @@
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   HomeIcon,
   CalendarIcon,
   CircleStackIcon,
   DocumentIcon,
-  PowerIcon,
-
-} from '@heroicons/react/24/solid';
-import { signOut } from 'next-auth/react';
-import { motion, AnimatePresence } from 'framer-motion';
+} from "@heroicons/react/24/solid";
+import { motion, AnimatePresence } from "framer-motion";
+import { SignOutButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 
 const SideNavBar = () => {
   const isActive = (href) => {
@@ -22,14 +20,22 @@ const SideNavBar = () => {
   };
 
   return (
-    <div className='flex flex-row lg:min-h-screen items-center lg:items-stretch lg:!flex-col lg:min-w-[5%] bg-darkGreen lg:border-r-4 border-borderGreen text-xl text-white justify-between'>
-      <div className='flex-1 flex justify-center lg:!justify-start lg:flex-col'>
-        <div className='flex flex-row lg:!flex-col lg:mt-3 text-center lg:space-y-5 mx-3'>
+    <div className="flex flex-row items-center justify-between border-borderGreen bg-darkGreen text-xl text-white lg:min-h-screen lg:flex-col lg:border-r-4">
+      <div className="flex items-center justify-center border-r-2 border-borderGreen p-2 lg:border-b-2 lg:border-r-0">
+        <SignedIn>
+          <UserButton afterSignOutUrl="/sign-in" />
+        </SignedIn>
+        <SignedOut>
+          <SignOutButton />
+        </SignedOut>
+      </div>
+      <div className="flex grow justify-center p-2 lg:flex-col lg:justify-start">
+        <div className="flex flex-row gap-4 text-center lg:mt-3 lg:flex-col lg:space-y-5">
           {[
-            { href: '/dashboard', icon: HomeIcon },
-            { href: '/database', icon: CircleStackIcon },
-            { href: '/invoices', icon: DocumentIcon },
-            { href: '/schedule', icon: CalendarIcon },
+            { href: "/dashboard", icon: HomeIcon },
+            { href: "/database", icon: CircleStackIcon },
+            { href: "/invoices", icon: DocumentIcon },
+            { href: "/schedule", icon: CalendarIcon },
           ].map(({ href, icon: Icon }) => (
             <AnimatePresence key={href}>
               <motion.div
@@ -38,26 +44,20 @@ const SideNavBar = () => {
               >
                 <Link
                   href={href}
-                  className={`flex items-center bg-gray-200 text-black justify-center p-2 mx-2 text-xl rounded-lg font-bold ${
+                  className={` flex items-center justify-center rounded-lg bg-gray-200 p-2 text-xl font-bold text-black ${
                     isActive(href)
-                      ? '!bg-darkBlue !text-white'
-                      : 'hover:bg-darkBlue hover:!text-white'
+                      ? "!bg-darkBlue !text-white"
+                      : "hover:bg-darkBlue hover:!text-white"
                   }`}
                 >
-                  <div className='flex items-center basis-full'>
-                    <Icon className='h-6 w-6' />
+                  <div className="flex items-center ">
+                    <Icon className="h-6 w-6" />
                   </div>
                 </Link>
               </motion.div>
             </AnimatePresence>
           ))}
         </div>
-      </div>
-      <div
-        className='flex justify-center p-3 bg-red-600 text-center font-bold hover:cursor-pointer hover:bg-red-700 hover:text-black'
-        onClick={signOut}
-      >
-        <PowerIcon className='h-6 w-6' />
       </div>
     </div>
   );

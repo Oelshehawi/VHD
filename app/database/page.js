@@ -12,4 +12,3 @@ const Database = async () => {
 };
 
 export default Database;
-export const Head = () => <title>Clients</title>;
