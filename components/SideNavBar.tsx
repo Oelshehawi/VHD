@@ -7,15 +7,21 @@ import {
   DocumentIcon,
 } from "@heroicons/react/24/solid";
 import { motion, AnimatePresence } from "framer-motion";
-import { SignOutButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import {
+  SignOutButton,
+  SignedIn,
+  SignedOut,
+  UserButton,
+  auth,
+} from "@clerk/nextjs";
 
 const SideNavBar = () => {
-  const isActive = (href) => {
+  const isActive = (href: string) => {
     const pathname = usePathname();
     return (
       pathname === href ||
-      pathname.startsWith(`${href}`) ||
-      pathname.startsWith(`${href}`)
+      pathname?.startsWith(`${href}`) ||
+      pathname?.startsWith(`${href}`)
     );
   };
 
