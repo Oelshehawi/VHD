@@ -17,4 +17,3 @@ const Invoice = async () => {
 
 export default Invoice;
 
-export const Head = () => <title>VHD</title>;
