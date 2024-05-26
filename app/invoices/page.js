@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs';
+import { auth } from '@clerk/nextjs/server';
 import InvoiceContainer from '../../components/invoices/InvoiceContainer';
 import { fetchAllClients, fetchAllInvoices } from '../lib/data';
 

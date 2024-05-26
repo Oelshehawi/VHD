@@ -12,11 +12,18 @@ export default function Page() {
             socialButtons: "bg-white rounded-lg",
             dividerLine: "bg-white",
             dividerText: "text-white",
+            identityPreviewText: "text-white",
+            identityPreviewEditButtonIcon: "text-white",
             formFieldLabel: "text-white",
+            formFieldAction: "text-white",
+            footerActionLink: "text-white hover:text-white",
             footer: "hidden",
+            backLink: "text-white",
+            alternativeMethodsBlockButton: "text-white",
+            formButtonPrimary: "bg-blue-500 hover:bg-blue-600",
+            internal: "text-white"
           },
         }}
-        afterSignInUrl={'/dashboard'}
       />
     </div>
   );

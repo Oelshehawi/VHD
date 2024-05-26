@@ -12,7 +12,6 @@ import {
   SignedIn,
   SignedOut,
   UserButton,
-  auth,
 } from "@clerk/nextjs";
 
 const SideNavBar = () => {

@@ -1,5 +1,5 @@
 import { TableContainerSkeleton } from "../../components/Skeletons";
-import { auth } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 
 export default function Loading() {
   const { has } = auth();

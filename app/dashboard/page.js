@@ -13,7 +13,7 @@ import {
 import { FaPeopleGroup, FaMoneyBill, FaFile } from "react-icons/fa6";
 import YearlySales from "../../components/dashboard/YearlySales";
 import { fetchYearlySalesData } from "../lib/data";
-import { auth } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 
 const DashboardPage = async () => {
   const salesData = await fetchYearlySalesData();

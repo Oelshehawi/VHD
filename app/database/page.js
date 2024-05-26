@@ -1,6 +1,6 @@
 import ClientContainer from "../../components/database/ClientContainer";
 import { fetchAllClients } from "../lib/data";
-import { auth } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 
 const Database = async () => {
   const clientData = await fetchAllClients();

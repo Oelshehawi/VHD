@@ -3,7 +3,8 @@ import { Inter } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "react-hot-toast";
-import { ClerkProvider, auth } from "@clerk/nextjs";
+import { ClerkProvider } from "@clerk/nextjs";
+import { auth } from "@clerk/nextjs/server";
 import { SyncActiveOrganization } from "../components/SyncActiveOrganization";
 
 const inter = Inter({ subsets: ["latin"] });
