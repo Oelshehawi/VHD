@@ -16,6 +16,7 @@ export default function Page() {
             footer: "hidden",
           },
         }}
+        afterSignInUrl={'/dashboard'}
       />
     </div>
   );
