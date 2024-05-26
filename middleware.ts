@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
-import { authMiddleware, redirectToSignIn } from "@clerk/nextjs/server";
+import { authMiddleware, redirect, redirectToSignIn } from "@clerk/nextjs/server";
 
 export default authMiddleware({
+  publicRoutes: ["/"],
   afterAuth(auth, req, evt) {
     // Handle users who aren't authenticated
+    if (auth.userId && auth.isPublicRoute) {
+      const mainPage = new URL("/dashboard", req.url);
+      return NextResponse.redirect(mainPage);
+    }
     if (!auth.userId && !auth.isPublicRoute) {
       return redirectToSignIn({ returnBackUrl: req.url });
     }
