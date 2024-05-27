@@ -1,4 +1,3 @@
-import { NextResponse } from "next/server";
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
 const ignoreRoute = createRouteMatcher(["/"]);
@@ -15,5 +14,5 @@ export default clerkMiddleware((auth, request) => {
 });
 
 export const config = {
-  matcher: ["/((?!.+\\.[\\w]+$|_next).*)", "/(api|trpc)(.*)"],
+  matcher: ['/((?!api|_next/static|_next/image|.*\\.png$).*)'],
 };
