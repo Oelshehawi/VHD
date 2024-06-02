@@ -7,13 +7,14 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
 import { SyncActiveOrganization } from "../components/SyncActiveOrganization";
 import type { Metadata, Viewport } from "next";
+import SideNavBar from "../components/SideNavBar";
 
 const inter = Inter({ subsets: ["latin"] });
 
-const APP_NAME = "VHD App";
-const APP_DEFAULT_TITLE = "VHD App";
+const APP_NAME = "VHD";
+const APP_DEFAULT_TITLE = "VHD";
 const APP_TITLE_TEMPLATE = "%s - PWA App";
-const APP_DESCRIPTION = "VHD CRM App";
+const APP_DESCRIPTION = "VHD CRM";
 
 export const metadata: Metadata = {
   applicationName: APP_NAME,
@@ -66,7 +67,10 @@ export default function RootLayout({
       <html lang="en">
         <body className={inter.className}>
           <Toaster position="top-center" />
-          {children}
+          <div className="flex max-h-[100vh] flex-col lg:!flex-row">
+            <SideNavBar />
+            <main>{children}</main>
+          </div>
           <SpeedInsights />
           <Analytics />
         </body>
