@@ -1,4 +1,4 @@
-import { TableContainerSkeleton } from "../../components/Skeletons";
+import { TableContainerSkeleton } from "../../../_components/Skeletons";
 import { auth } from "@clerk/nextjs/server";
 
 export default function Loading() {

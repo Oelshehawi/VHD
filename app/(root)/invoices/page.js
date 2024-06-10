@@ -1,9 +1,11 @@
-import ClientContainer from "../../components/database/ClientContainer";
-import { fetchAllClients } from "../lib/data";
 import { auth } from "@clerk/nextjs/server";
+import InvoiceContainer from "../../../_components/invoices/InvoiceContainer";
+import { fetchAllClients, fetchAllInvoices } from "../../lib/data";
 
-const Database = async () => {
-  const clientData = await fetchAllClients();
+const Invoice = async () => {
+  const invoiceData = await fetchAllInvoices();
+  const clients = await fetchAllClients();
+
   const { has } = auth();
   const canManage = has({ permission: "org:database:allow" });
 
@@ -16,9 +18,9 @@ const Database = async () => {
 
   return (
     <div className="flex min-h-full items-center justify-center">
-      <ClientContainer clientData={clientData} />
+      <InvoiceContainer invoiceData={invoiceData} clients={clients} />
     </div>
   );
 };
 
-export default Database;
+export default Invoice;

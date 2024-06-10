@@ -1,7 +1,7 @@
-import { fetchClientById, fetchClientInvoices } from '../../lib/data';
-import ClientDetailedContainer from '../../../components/database/ClientDetailedContainer';
-import { Suspense } from 'react';
-import {ClientDetailedSkeleton} from '../../../components/Skeletons';
+import { fetchClientById, fetchClientInvoices } from "../../../lib/data";
+import ClientDetailedContainer from "../../../../_components/database/ClientDetailedContainer";
+import { Suspense } from "react";
+import { ClientDetailedSkeleton } from "../../../../_components/Skeletons";
 
 const ClientDetailed = async ({ params }) => {
   const clientId = params.id;
@@ -12,7 +12,7 @@ const ClientDetailed = async ({ params }) => {
 
   return (
     <>
-      <div className='mt-4 px-2 lg:!px-5'>
+      <div className="mt-4 px-2 lg:!px-5">
         <Suspense fallback={<ClientDetailedSkeleton />}>
           <ClientDetailedContainer client={client} invoices={invoices} />
         </Suspense>

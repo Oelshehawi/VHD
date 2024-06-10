@@ -193,17 +193,17 @@ const AddInvoice = ({ clients, show, onHide }) => {
                       className='w-full text-black outline-none focus:ring-2 focus:ring-darkGreen border-2 focus:border-darkGreen border-gray-400 rounded p-2'
                     />
                   )}
-                  {errors[name] && errors[name].type === 'required' && (
+                  {errors[name] && errors[name]?.type === 'required' && (
                     <p className='text-red-500 text-xs mt-1'>
                       {name} is required
                     </p>
                   )}
-                  {errors[name] && errors[name].type === 'minLength' && (
+                  {errors[name] && errors[name]?.type === 'minLength' && (
                     <p className='text-red-500 text-xs mt-1'>
                       {name} must be at least 1 characters
                     </p>
                   )}
-                  {errors[name] && errors[name].type === 'maxLength' && (
+                  {errors[name] && errors[name]?.type === 'maxLength' && (
                     <p className='text-red-500 text-xs mt-1'>
                       {name} Cannot be more than 1 characters
                     </p>

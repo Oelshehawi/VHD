@@ -1,18 +1,18 @@
 import { Suspense } from "react";
-import JobsDueContainer from "../../components/dashboard/JobsDueContainer";
+import JobsDueContainer from "../../../_components/dashboard/JobsDueContainer";
 import {
   getClientCount,
   getOverDueInvoiceAmount,
   getPendingInvoiceAmount,
-} from "../lib/data";
+} from "../../lib/data";
 import {
   InfoBoxSkeleton,
   JobsDueContainerSkeleton,
   YearlySalesSkeleton,
-} from "../../components/Skeletons";
+} from "../../../_components/Skeletons";
 import { FaPeopleGroup, FaMoneyBill, FaFile } from "react-icons/fa6";
-import YearlySales from "../../components/dashboard/YearlySales";
-import { fetchYearlySalesData } from "../lib/data";
+import YearlySales from "../../../_components/dashboard/YearlySales";
+import { fetchYearlySalesData } from "../../lib/data";
 import { auth } from "@clerk/nextjs/server";
 
 const DashboardPage = async () => {

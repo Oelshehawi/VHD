@@ -37,7 +37,7 @@ const DeleteModal = ({ showModal, hideModal, confirmModal,setShowModal,deleteTex
               data-original='#000000'
             />
           </svg>
-          <h4 className='text-xl font-semibold mt-6'>
+          <h4 className='text-xl text-black font-semibold mt-6'>
             {deleteText}
           </h4>
           <p className='text-sm text-gray-500 mt-4'>

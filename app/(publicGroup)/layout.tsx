@@ -1,13 +1,10 @@
-import "./global.css";
+import "../global.css";
 import { Inter } from "next/font/google";
-import { SpeedInsights } from "@vercel/speed-insights/next";
-import { Analytics } from "@vercel/analytics/react";
-import { Toaster } from "react-hot-toast";
 import { ClerkProvider } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
-import { SyncActiveOrganization } from "../components/SyncActiveOrganization";
+import { SyncActiveOrganization } from "../../_components/SyncActiveOrganization";
 import type { Metadata, Viewport } from "next";
-import SideNavBar from "../components/SideNavBar";
+
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -55,7 +52,7 @@ export const viewport: Viewport = {
   themeColor: "#FFFFFF",
 };
 
-export default function RootLayout({
+export default function Layout({
   children,
 }: {
   children: React.ReactNode;
@@ -66,13 +63,7 @@ export default function RootLayout({
       <SyncActiveOrganization membership={sessionClaims?.membership} />
       <html lang="en">
         <body className={inter.className}>
-          <Toaster position="top-center" />
-          <div className="flex max-h-[100vh] flex-col lg:!flex-row">
-            <SideNavBar />
             <main>{children}</main>
-          </div>
-          <SpeedInsights />
-          <Analytics />
         </body>
       </html>
     </ClerkProvider>

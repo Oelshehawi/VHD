@@ -1,5 +1,6 @@
 // @ts-ignore
-import { Schema, model, models, mongoose } from "mongoose";
+import { Model, Schema, model, models, mongoose } from "mongoose";
+import { ScheduleType } from "../app/lib/typeDefinitions";
 
 const ClientSchema = new Schema({
   clientName: {
@@ -71,18 +72,23 @@ const invoiceSchema = new Schema({
   },
 });
 
-const eventSchema = new Schema({
+const scheduleSchema = new Schema<ScheduleType>({
+  invoiceRef: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Invoice",
+    required: true,
+  },
   jobTitle: {
     type: String,
+    required: true,
   },
   location: {
     type: String,
+    required: true,
   },
-  number: {
-    type: String,
-  },
-  time: {
+  startDateTime: {
     type: Date,
+    required: true,
   },
 });
 
@@ -119,5 +125,7 @@ const Client = models.Client || model("Client", ClientSchema);
 const Invoice = models.Invoice || model("Invoice", invoiceSchema);
 const JobsDueSoon =
   models.JobsDueSoon || model("JobsDueSoon", jobsDueSoonSchema);
+const Schedule =
+  (models.Schedule as Model<ScheduleType>) || model("Schedule", scheduleSchema);
 
-export { Client, Invoice, JobsDueSoon };
+export { Client, Invoice, JobsDueSoon, Schedule };

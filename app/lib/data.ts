@@ -1,10 +1,16 @@
-import connectMongo from '../lib/connect';
-import { unstable_noStore as noStore } from 'next/cache';
-import { Client, Invoice, JobsDueSoon } from '../../models/reactDataSchema';
-import { revalidatePath } from 'next/cache';
-import { formatPhoneNumber } from './utils';
+import connectMongo from "./connect";
+import { unstable_noStore as noStore } from "next/cache";
+import {
+  Client,
+  Invoice,
+  JobsDueSoon,
+  Schedule,
+} from "../../models/reactDataSchema";
+import { revalidatePath } from "next/cache";
+import { formatPhoneNumber } from "./utils";
+import { ScheduleType } from "./typeDefinitions";
+import { FindCursor } from "mongodb";
 export const fetchDueInvoices = async () => {
-  noStore();
   await connectMongo();
 
   try {
@@ -33,16 +39,15 @@ export const fetchDueInvoices = async () => {
         dateDue: job.dateDue.toISOString(),
         isScheduled: job.isScheduled,
         emailSent: job.emailSent,
-      }))
+      })),
     );
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch due invoices.');
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch due invoices.");
   }
 };
 
 export const createOrUpdateJobsDueSoon = async (dueInvoices) => {
-  noStore();
   await connectMongo();
 
   const jobsDueSoonPromises = dueInvoices.map(async (invoice) => {
@@ -66,60 +71,57 @@ export const createOrUpdateJobsDueSoon = async (dueInvoices) => {
 
   await Promise.all(jobsDueSoonPromises);
 
-  revalidatePath('/dashboard');
+  revalidatePath("/dashboard");
 };
 
 export const getClientCount = async () => {
-  noStore();
   await connectMongo();
 
   try {
     const count = await Client.countDocuments();
     return count;
   } catch (error) {
-    console.error('Database Error:', error);
-    Error('Failed to fetch client count');
+    console.error("Database Error:", error);
+    Error("Failed to fetch client count");
   }
 };
 
 export const getOverDueInvoiceAmount = async () => {
-  noStore();
   await connectMongo();
   try {
     const result = await Invoice.aggregate([
-      { $match: { status: 'overdue' } },
-      { $unwind: '$items' },
+      { $match: { status: "overdue" } },
+      { $unwind: "$items" },
       {
-        $group: { _id: null, totalAmount: { $sum: '$items.price' } },
+        $group: { _id: null, totalAmount: { $sum: "$items.price" } },
       },
     ]);
     let totalAmount = result.length > 0 ? result[0].totalAmount : 0;
     return (totalAmount += totalAmount * 0.05);
   } catch (error) {
-    console.error('Database Error:', error);
-    Error('Failed to fetch overdue invoice amount');
+    console.error("Database Error:", error);
+    Error("Failed to fetch overdue invoice amount");
   }
 };
 
 export const getPendingInvoiceAmount = async () => {
   await connectMongo();
-  noStore();
   try {
     const result = await Invoice.aggregate([
-      { $match: { status: 'pending' } },
-      { $unwind: '$items' },
+      { $match: { status: "pending" } },
+      { $unwind: "$items" },
       {
         $group: {
           _id: null,
-          totalAmount: { $sum: '$items.price' },
+          totalAmount: { $sum: "$items.price" },
         },
       },
     ]);
     let totalAmount = result.length > 0 ? result[0].totalAmount : 0;
     return (totalAmount += totalAmount * 0.05);
   } catch (error) {
-    console.error('Database Error:', error);
-    Error('Failed to fetch pending invoice amount');
+    console.error("Database Error:", error);
+    Error("Failed to fetch pending invoice amount");
   }
 };
 
@@ -142,8 +144,8 @@ export const checkEmailPresence = async (dueInvoices) => {
 
     return updatedDueInvoices;
   } catch (error) {
-    console.error('Error finding invoices and clients:', error);
-    throw new Error('Failed to check email presence for due invoices.');
+    console.error("Error finding invoices and clients:", error);
+    throw new Error("Failed to check email presence for due invoices.");
   }
 };
 
@@ -172,12 +174,12 @@ export const fetchYearlySalesData = async () => {
 
   const group = {
     $group: {
-      _id: { month: { $month: '$dateIssued' } },
-      totalSales: { $sum: { $sum: '$items.price' } },
+      _id: { month: { $month: "$dateIssued" } },
+      totalSales: { $sum: { $sum: "$items.price" } },
     },
   };
 
-  const sortByMonth = { $sort: { '_id.month': 1 } };
+  const sortByMonth = { $sort: { "_id.month": 1 } };
 
   const currentYearSales = await Invoice.aggregate([
     matchCurrentYear,
@@ -194,18 +196,18 @@ export const fetchYearlySalesData = async () => {
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
   const salesData = months.map((month) => {
     const currentYearSale = currentYearSales.find(
-      (sale) => sale._id.month === month
+      (sale) => sale._id.month === month,
     );
     const lastYearSale = lastYearSales.find((sale) => sale._id.month === month);
     return {
       date:
-        new Date(currentYear, month - 1, 1).toLocaleString('default', {
-          month: 'short',
+        new Date(currentYear, month - 1, 1).toLocaleString("default", {
+          month: "short",
         }) +
-        ' ' +
+        " " +
         currentYear.toString().slice(-2),
-      'This Year': currentYearSale ? currentYearSale.totalSales : 0,
-      'Last Year': lastYearSale ? lastYearSale.totalSales : 0,
+      "This Year": currentYearSale ? currentYearSale.totalSales : 0,
+      "Last Year": lastYearSale ? lastYearSale.totalSales : 0,
     };
   });
 
@@ -214,8 +216,6 @@ export const fetchYearlySalesData = async () => {
 
 export const fetchAllClients = async () => {
   await connectMongo();
-  noStore();
-
   try {
     const clients = await Client.find();
     return clients.map((client) => ({
@@ -227,28 +227,26 @@ export const fetchAllClients = async () => {
       notes: client.notes,
     }));
   } catch (error) {
-    console.error('Database Error:', Error);
-    Error('Failed to fetch all clients');
+    console.error("Database Error:", Error);
+    Error("Failed to fetch all clients");
   }
 };
 
 export const fetchClientById = async (clientId) => {
   await connectMongo();
-  noStore();
   try {
     const client = await Client.findOne({ _id: clientId }).lean();
     client._id = client._id.toString();
     client.phoneNumber = formatPhoneNumber(client.phoneNumber);
     return client;
   } catch (error) {
-    console.error('Database Error:', Error);
-    Error('Client could not be found by Id');
+    console.error("Database Error:", Error);
+    Error("Client could not be found by Id");
   }
 };
 
 export const fetchClientInvoices = async (clientId) => {
   await connectMongo();
-  noStore();
   try {
     const invoices = await Invoice.find({ clientId: clientId }).lean();
 
@@ -258,14 +256,13 @@ export const fetchClientInvoices = async (clientId) => {
       jobTitle: invoice.jobTitle,
     }));
   } catch (error) {
-    console.error('Database Error:', Error);
-    Error('Client Invoices could not be found by Id');
+    console.error("Database Error:", Error);
+    Error("Client Invoices could not be found by Id");
   }
 };
 
 export const fetchAllInvoices = async () => {
   await connectMongo();
-  noStore();
   try {
     const invoices = await Invoice.find();
 
@@ -289,8 +286,8 @@ export const fetchAllInvoices = async () => {
       clientId: invoice.clientId.toString(),
     }));
   } catch (error) {
-    console.error('Database Error:', Error);
-    Error('Failed to fetch all invoices');
+    console.error("Database Error:", Error);
+    Error("Failed to fetch all invoices");
   }
 };
 
@@ -305,13 +302,31 @@ export const fetchInvoiceById = async (invoiceId) => {
 
     const invoice = await Invoice.findOne({ _id: invoiceId }).lean();
     invoice._id = invoice._id.toString();
-    invoice.dateDue = invoice.dateDue.toISOString().split('T')[0];
-    invoice.dateIssued = invoice.dateIssued.toISOString().split('T')[0];
+    invoice.dateDue = invoice.dateDue.toISOString().split("T")[0];
+    invoice.dateIssued = invoice.dateIssued.toISOString().split("T")[0];
     invoice.clientId = invoice.clientId.toString();
     invoice.items = formattedItems(invoice.items);
     return invoice;
   } catch (error) {
-    console.error('Database Error:', Error);
-    Error('Invoice could not be found by Id');
+    console.error("Database Error:", Error);
+    Error("Invoice could not be found by Id");
+  }
+};
+
+export const fetchAllScheduledJobs = async () => {
+  await connectMongo();
+  try {
+    const scheduledJobs = await Schedule.find();
+    return scheduledJobs.map((job) => ({
+      _id: job._id.toString(),
+      invoiceRef: job.invoiceRef.toString(),
+      jobTitle: job.jobTitle,
+      location: job.location,
+      startDateTime: job.startDateTime,
+    }));
+  } catch (error) {
+    console.error("Database Error:", Error);
+    Error("Failed to fetch all scheduled jobs");
+    return [];
   }
 };
