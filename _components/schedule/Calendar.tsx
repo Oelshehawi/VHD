@@ -67,9 +67,9 @@ export default function Calendar({
     setCurrentMonth(format(firstDayNextMonth, "MMM-yyyy"));
   }
 
-  let selectedDayJobs = scheduledJobs.filter((job) =>
-    isSameDay(job.startDateTime.toString(), selectedDay),
-  );
+  let selectedDayJobs = scheduledJobs
+  .filter((job) => isSameDay(job.startDateTime.toString(), selectedDay))
+  .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
 
   return (
     <>
