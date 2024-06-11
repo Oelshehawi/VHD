@@ -1,5 +1,4 @@
 import { ObjectId } from "mongodb";
-import { Date } from "mongoose";
 
 export interface ScheduleType {
   _id: ObjectId | string;
@@ -22,7 +21,7 @@ export interface InvoiceType {
   _id: ObjectId | string;
   invoiceId: string;
   jobTitle: string;
-  dateIssued: Date;
+  dateIssued: Date | string | number;
   dateDue: Date;
   items: {
     description: string;

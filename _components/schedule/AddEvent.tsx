@@ -79,6 +79,7 @@ const AddEvent = ({
 
   if (!open) return null;
 
+
   return (
     <div
       onClick={setOpen}
@@ -117,7 +118,7 @@ const AddEvent = ({
                         key={invoice._id as string}
                         value={invoice._id as string}
                       >
-                        {invoice.jobTitle} - {invoice.location}
+                        {invoice.jobTitle} - {invoice.dateIssued.toString().split('T')[0]}
                       </option>
                     ))}
                   </select>
