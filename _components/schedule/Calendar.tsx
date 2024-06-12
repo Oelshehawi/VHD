@@ -211,10 +211,13 @@ export default function Calendar({
 function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
   let startDateTime = job.startDateTime.toString();
   let [deleteModal, setDeleteModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
   const toggleConfirmedStatus = async (job: ScheduleType) => {
+    setIsLoading(true);
     if (!canManage) {
       toast.error("You do not have permission to perform this action");
+      setIsLoading(false);
       return;
     }
     const newStatus = !job.confirmed;
@@ -228,9 +231,11 @@ function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
       toast.success(
         `Job ${newStatus ? "confirmed" : "unconfirmed"} successfully`,
       );
+      setIsLoading(false);
     } catch (error) {
       console.error("Failed to update the job:", error);
       toast.error("Failed to update the job status");
+      setIsLoading(false);
     }
   };
 
@@ -243,15 +248,38 @@ function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
           </p>
         </Link>
         <p className="mt-0.5">{format(startDateTime, "h:mm a")}</p>
-        <div className=" flex gap-2">
+        <div className="flex gap-2">
           <span
             className={classNames(
               job.confirmed ? "bg-green-500" : "bg-red-500",
-              " rounded p-1 hover:cursor-pointer",
+              " flex w-full items-center justify-center rounded p-1 hover:cursor-pointer",
             )}
             onClick={() => toggleConfirmedStatus(job)}
           >
-            {job.confirmed ? "Confirmed" : "Unconfirmed"}
+            {isLoading ? (
+              <svg
+                className=" h-5 w-5 animate-spin items-center justify-center text-white"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 2.42.878 4.628 2.322 6.291l1.678-1.659z"
+                ></path>
+              </svg>
+            ) : job.confirmed ? (
+              "Confirmed"
+            ) : (
+              "Unconfirmed"
+            )}
           </span>
           <span className=" rounded bg-blue-500 p-1 text-white">
             {job.assignedTechnician || "No Technician"}
