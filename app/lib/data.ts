@@ -322,7 +322,9 @@ export const fetchAllScheduledJobs = async () => {
       invoiceRef: job.invoiceRef.toString(),
       jobTitle: job.jobTitle,
       location: job.location,
+      assignedTechnician: job.assignedTechnician,
       startDateTime: job.startDateTime,
+      confirmed: job.confirmed,
     }));
   } catch (error) {
     console.error("Database Error:", Error);

@@ -31,6 +31,7 @@ const AddEvent = ({
 
     setValue("jobTitle", selectedInvoice?.jobTitle);
     setValue("location", selectedInvoice?.location ?? "");
+    setValue('assignedTechnician', 'Migo')
   };
 
   const handleSave: SubmitHandler<ScheduleType> = async (data) => {
@@ -70,11 +71,18 @@ const AddEvent = ({
       type: "text",
     },
     {
+      name: "assignedTechnician",
+      placeholder: "Technician Name",
+      isRequired: true,
+      type: "text",
+    },
+    {
       name: "startDateTime",
       placeholder: "Start Date",
       isRequired: true,
       type: "datetime-local",
     },
+    
   ];
 
   if (!open) return null;
@@ -83,14 +91,14 @@ const AddEvent = ({
   return (
     <div
       onClick={setOpen}
-      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40"
+      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40"
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.8 }}
         transition={{ duration: 0.3 }}
-        className="flex md:h-[50%] md:w-[50%] flex-col rounded-xl bg-darkGreen px-10 py-2"
+        className="flex md:h-[60%] md:w-[50%] w-[90%] flex-col rounded-xl bg-darkGreen px-10 py-2"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between py-4 text-white">

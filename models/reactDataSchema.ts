@@ -90,6 +90,14 @@ const scheduleSchema = new Schema<ScheduleType>({
     type: Date,
     required: true,
   },
+  assignedTechnician: {
+    type: String,
+    required: true,
+  },
+  confirmed: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const jobsDueSoonSchema = new Schema({

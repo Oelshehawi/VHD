@@ -30,7 +30,7 @@ import { Fragment, useState } from "react";
 import AddEvent from "./AddEvent";
 import { AnimatePresence } from "framer-motion";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
-import { deleteJob } from "../../app/lib/actions";
+import { deleteJob, updateSchedule } from "../../app/lib/actions";
 import DeleteModal from "../DeleteModal";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -42,9 +42,11 @@ function classNames(...classes: (string | boolean | undefined)[]) {
 export default function Calendar({
   invoices,
   scheduledJobs,
+  canManage,
 }: {
   invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
+  canManage: boolean;
 }) {
   let today = startOfToday();
   let [selectedDay, setSelectedDay] = useState(today);
@@ -68,8 +70,12 @@ export default function Calendar({
   }
 
   let selectedDayJobs = scheduledJobs
-  .filter((job) => isSameDay(job.startDateTime.toString(), selectedDay))
-  .sort((a, b) => new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime());
+    .filter((job) => isSameDay(job.startDateTime.toString(), selectedDay))
+    .sort(
+      (a, b) =>
+        new Date(a.startDateTime).getTime() -
+        new Date(b.startDateTime).getTime(),
+    );
 
   return (
     <>
@@ -86,7 +92,7 @@ export default function Calendar({
         <div className="flex w-full justify-center py-4 md:justify-end">
           <PlusIcon
             onClick={() => setOpen(true)}
-            className="hidden h-8 w-8 rounded-xl bg-darkGreen  text-white hover:cursor-pointer hover:bg-green-700 hover:transition-all md:block"
+            className={` h-8 w-8 rounded-xl bg-darkGreen text-white hover:cursor-pointer hover:bg-green-700 hover:transition-all ${canManage ? "block" : "hidden"}`}
           />
         </div>
         <div className="mx-auto max-w-md px-4 sm:px-7 md:max-w-4xl md:px-6">
@@ -184,7 +190,11 @@ export default function Calendar({
               <ol className="mt-4 flex flex-col gap-4 space-y-1 text-sm leading-6 text-gray-500">
                 {selectedDayJobs.length > 0 ? (
                   selectedDayJobs.map((job) => (
-                    <Job job={job} key={job._id as string} />
+                    <Job
+                      job={job}
+                      key={job._id as string}
+                      canManage={canManage}
+                    />
                   ))
                 ) : (
                   <p>No jobs for today.</p>
@@ -198,41 +208,80 @@ export default function Calendar({
   );
 }
 
-function Job({ job }: { job: ScheduleType }) {
+function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
   let startDateTime = job.startDateTime.toString();
   let [deleteModal, setDeleteModal] = useState(false);
 
-  return (
-    <li className="group flex items-center justify-between space-x-4 rounded-xl bg-darkGreen px-4  py-2 text-white hover:cursor-pointer hover:bg-green-700 hover:text-white ">
-      <Link href={`/invoices/${job.invoiceRef}`}>
-        <div className="flex-auto">
-          <p className="">{job.jobTitle}</p>
-          <p className="mt-0.5">{format(startDateTime, "h:mm a")}</p>
-        </div>
-      </Link>
-      <Menu
-        as="div"
-        className="relative opacity-0 focus-within:opacity-100 group-hover:opacity-100"
-      >
-        <div>
-          <MenuButton className="-m-2 flex items-center rounded-full p-1.5 text-white hover:text-white">
-            <span className="sr-only">Open options</span>
-            <EllipsisVerticalIcon className="h-6 w-6" aria-hidden="true" />
-          </MenuButton>
-        </div>
+  const toggleConfirmedStatus = async (job: ScheduleType) => {
+    if (!canManage) {
+      toast.error("You do not have permission to perform this action");
+      return;
+    }
+    const newStatus = !job.confirmed;
+    try {
+      const updateScheduleById = updateSchedule.bind(null, {
+        scheduleId: job._id.toString(),
+        confirmed: newStatus,
+      });
+      await updateScheduleById();
 
-        <Transition
-          as={Fragment}
-          enter="transition ease-out duration-100"
-          enterFrom="transform opacity-0 scale-95"
-          enterTo="transform opacity-100 scale-100"
-          leave="transition ease-in duration-75"
-          leaveFrom="transform opacity-100 scale-100"
-          leaveTo="transform opacity-0 scale-95"
+      toast.success(
+        `Job ${newStatus ? "confirmed" : "unconfirmed"} successfully`,
+      );
+    } catch (error) {
+      console.error("Failed to update the job:", error);
+      toast.error("Failed to update the job status");
+    }
+  };
+
+  return (
+    <li className="group flex items-center justify-between space-x-4 rounded-xl bg-darkGreen px-4  py-2 text-white ">
+      <div className="flex-auto gap-4">
+        <Link href={`/invoices/${job.invoiceRef}`}>
+          <p className="hover:cursor-pointer hover:rounded hover:bg-green-700">
+            {job.jobTitle}
+          </p>
+        </Link>
+        <p className="mt-0.5">{format(startDateTime, "h:mm a")}</p>
+        <div className=" flex gap-2">
+          <span
+            className={classNames(
+              job.confirmed ? "bg-green-500" : "bg-red-500",
+              " rounded p-1 hover:cursor-pointer",
+            )}
+            onClick={() => toggleConfirmedStatus(job)}
+          >
+            {job.confirmed ? "Confirmed" : "Unconfirmed"}
+          </span>
+          <span className=" rounded bg-blue-500 p-1 text-white">
+            {job.assignedTechnician || "No Technician"}
+          </span>
+        </div>
+      </div>
+      {canManage && (
+        <Menu
+          as="div"
+          className="relative opacity-0 focus-within:opacity-100 group-hover:opacity-100"
         >
-          <MenuItems className="absolute right-0 z-10 mt-2 w-36 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
-            <div className="py-1">
-              {/* <MenuItem>
+          <div>
+            <MenuButton className="-m-2 flex items-center rounded-full p-1.5 text-white hover:text-white">
+              <span className="sr-only">Open options</span>
+              <EllipsisVerticalIcon className="h-6 w-6" aria-hidden="true" />
+            </MenuButton>
+          </div>
+
+          <Transition
+            as={Fragment}
+            enter="transition ease-out duration-100"
+            enterFrom="transform opacity-0 scale-95"
+            enterTo="transform opacity-100 scale-100"
+            leave="transition ease-in duration-75"
+            leaveFrom="transform opacity-100 scale-100"
+            leaveTo="transform opacity-0 scale-95"
+          >
+            <MenuItems className="absolute right-0 z-10 mt-2 w-36 origin-top-right rounded-md bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none">
+              <div className="py-1">
+                {/* <MenuItem>
                 {({ focus }) => (
                   <a
                     href="#"
@@ -245,23 +294,24 @@ function Job({ job }: { job: ScheduleType }) {
                   </a>
                 )}
               </MenuItem> */}
-              <MenuItem>
-                {({ focus }) => (
-                  <div
-                    className={classNames(
-                      focus ? "bg-gray-100 text-gray-900" : "text-gray-700",
-                      "block px-4 py-2 text-sm",
-                    )}
-                    onClick={() => setDeleteModal(!deleteModal)}
-                  >
-                    Delete
-                  </div>
-                )}
-              </MenuItem>
-            </div>
-          </MenuItems>
-        </Transition>
-      </Menu>
+                <MenuItem>
+                  {({ focus }) => (
+                    <div
+                      className={classNames(
+                        focus ? "bg-gray-100 text-gray-900" : "text-gray-700",
+                        "block px-4 py-2 text-sm",
+                      )}
+                      onClick={() => setDeleteModal(!deleteModal)}
+                    >
+                      Delete
+                    </div>
+                  )}
+                </MenuItem>
+              </div>
+            </MenuItems>
+          </Transition>
+        </Menu>
+      )}
       <DeleteModal
         showModal={deleteModal}
         onConfirm={async () => {

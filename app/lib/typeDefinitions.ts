@@ -6,6 +6,8 @@ export interface ScheduleType {
   jobTitle: string | undefined;
   location: string;
   startDateTime: Date | string;
+  assignedTechnician: string;
+  confirmed: boolean;
 };
 
 export interface ClientType {

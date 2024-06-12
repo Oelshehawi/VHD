@@ -39,7 +39,6 @@ const AddInvoice = ({ clients, show, onHide }) => {
 
   const deleteItem = (index) => {
     if (items.length > 1) {
-      console.log(items);
       const updatedItems = items.filter((_, i) => i !== index);
       setItems(updatedItems);
       setValue('items', updatedItems);

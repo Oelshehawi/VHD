@@ -8,6 +8,7 @@ import {
   Schedule,
 } from "../../models/reactDataSchema";
 import { ClientType, ScheduleType } from "./typeDefinitions";
+import { ObjectId } from "mongoose";
 
 export async function updateInvoiceScheduleStatus(invoiceId) {
   await connectMongo();
@@ -130,14 +131,12 @@ export async function updateInvoice(invoiceId, formData) {
 }
 
 export async function createSchedule(scheduleData: ScheduleType) {
-  await connectMongo();
   try {
     if (typeof scheduleData.startDateTime === "string") {
       scheduleData.startDateTime = new Date(
         scheduleData.startDateTime,
       ) as Date & string;
     }
-    console.log(scheduleData);
     const newSchedule = new Schedule(scheduleData);
     await newSchedule.save();
   } catch (error) {
@@ -149,7 +148,6 @@ export async function createSchedule(scheduleData: ScheduleType) {
 }
 
 export const deleteJob = async (jobId: string) => {
-  await connectMongo;
   try {
     await Schedule.findByIdAndDelete(jobId);
   } catch (error) {
@@ -158,4 +156,20 @@ export const deleteJob = async (jobId: string) => {
   }
 
   revalidatePath("/schedule");
+};
+
+export const updateSchedule = async ({
+  scheduleId,
+  confirmed,
+}: {
+  scheduleId: string;
+  confirmed: boolean;
+}) => {
+  try {
+    await Schedule.findByIdAndUpdate(scheduleId, { confirmed }, { new: true });
+    revalidatePath("/schedule");
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to update the schedule");
+  }
 };
