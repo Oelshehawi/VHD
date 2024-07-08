@@ -10,6 +10,11 @@ export function SendReminder({
   emailSent,
   invoiceId,
   emailExists,
+}: {
+  emailRecipient: string;
+  emailSent: boolean;
+  invoiceId: string;
+  emailExists: boolean;
 }) {
   const [emailAlreadySent, setEmailAlreadySent] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -25,7 +30,9 @@ export function SendReminder({
       setEmailAlreadySent(true);
       setIsLoading(false);
     } catch (error) {
+      // @ts-ignore
       if (error.response && error.response.data && error.response.data.error) {
+        // @ts-ignore
         toast.error(error.response.data.error);
       } else {
         console.error('Error sending email:', error);

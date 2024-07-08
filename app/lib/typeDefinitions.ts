@@ -8,7 +8,7 @@ export interface ScheduleType {
   startDateTime: Date | string;
   assignedTechnician: string;
   confirmed: boolean;
-};
+}
 
 export interface ClientType {
   _id: ObjectId | string;
@@ -34,4 +34,16 @@ export interface InvoiceType {
   notes?: string;
   status: "pending" | "overdue" | "paid";
   clientId: ObjectId | string;
+}
+
+export interface DueInvoiceType {
+  emailExists: any;
+  _id: ObjectId | string;
+  invoiceId: string;
+  jobTitle: string;
+  dateDue: Date;
+  isScheduled: boolean;
+  emailSent: boolean;
+  clientId: ObjectId | string;
+  notesExists: any;
 }

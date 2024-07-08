@@ -67,7 +67,7 @@ const YearlySales = ({ salesData }) => {
 
   return (
     <div className='flex flex-col lg:w-3/4 w-full '>
-      <div className='w-full relative lg:h-[70vh] h-[50vh] p-4 border rounded-lg bg-white'>
+      <div className='w-full relative lg:min-h-[70vh] h-[50vh] p-4 border rounded-lg bg-white'>
         <Bar data={chartData} options={chartOptions} />
       </div>
       <div className='flex justify-center items-center py-4'>

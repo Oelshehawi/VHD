@@ -60,3 +60,13 @@ export const calculateDueDate = (issuedDate, freq) => {
   }
   return;
 };
+
+
+export const monthNameToNumber = (monthName) => {
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June", 
+    "July", "August", "September", "October", "November", "December"
+  ];
+  const monthNumber = monthNames.indexOf(monthName);
+  return monthNumber >= 0 ? monthNumber + 1 : null; // Adding 1 to make it 1-indexed
+};

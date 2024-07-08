@@ -8,20 +8,29 @@ import {
 } from "../../models/reactDataSchema";
 import { revalidatePath } from "next/cache";
 import { formatPhoneNumber } from "./utils";
-import { ScheduleType } from "./typeDefinitions";
-import { FindCursor } from "mongodb";
-export const fetchDueInvoices = async () => {
+import { DueInvoiceType, InvoiceType } from "./typeDefinitions";
+import { monthNameToNumber } from "./utils";
+
+export const fetchDueInvoices = async ({
+  month,
+  year,
+}: {
+  month: string | undefined;
+  year: string | number;
+}) => {
   await connectMongo();
 
-  try {
-    const today = new Date();
-    const sevenDaysLater = new Date(today);
-    sevenDaysLater.setDate(sevenDaysLater.getDate() + 7);
+  const monthNumber = month
+    ? monthNameToNumber(month)
+    : new Date().getMonth() + 1;
 
+  try {
     const dueInvoices = await Invoice.find({
-      dateDue: {
-        $gte: today,
-        $lte: sevenDaysLater,
+      $expr: {
+        $and: [
+          { $eq: [{ $year: "$dateDue" }, year] },
+          { $eq: [{ $month: "$dateDue" }, monthNumber] },
+        ],
       },
     });
 
@@ -29,9 +38,15 @@ export const fetchDueInvoices = async () => {
 
     const unscheduledJobs = await JobsDueSoon.find({
       isScheduled: false,
+      $expr: {
+        $and: [
+          { $eq: [{ $year: "$dateDue" }, year] },
+          { $eq: [{ $month: "$dateDue" }, monthNumber] },
+        ],
+      },
     }).sort({ dateDue: 1 });
 
-    return await checkEmailPresence(
+    return await checkEmailAndNotesPresence(
       unscheduledJobs.map((job) => ({
         clientId: job.clientId.toString(),
         invoiceId: job.invoiceId,
@@ -47,7 +62,7 @@ export const fetchDueInvoices = async () => {
   }
 };
 
-export const createOrUpdateJobsDueSoon = async (dueInvoices) => {
+export const createOrUpdateJobsDueSoon = async (dueInvoices: InvoiceType[]) => {
   await connectMongo();
 
   const jobsDueSoonPromises = dueInvoices.map(async (invoice) => {
@@ -125,21 +140,30 @@ export const getPendingInvoiceAmount = async () => {
   }
 };
 
-export const checkEmailPresence = async (dueInvoices) => {
+export const checkEmailAndNotesPresence = async (dueInvoices) => {
   await connectMongo();
 
   try {
     const clientIds = dueInvoices.map((invoice) => invoice.clientId);
+    const invoiceIds = dueInvoices.map((invoice) => invoice.invoiceId);
+
     const clients = await Client.find({ _id: { $in: clientIds } });
+    const invoices = await Invoice.find({ _id: { $in: invoiceIds } });
 
     const clientEmailMap = clients.reduce((map, client) => {
       map[client._id.toString()] = client.email ? true : false;
       return map;
     }, {});
 
+    const invoiceNotesMap = invoices.reduce((map, invoice) => {
+      map[invoice._id.toString()] = invoice.notes ? true : false;
+      return map;
+    }, {});
+
     const updatedDueInvoices = dueInvoices.map((invoice) => {
       const emailExists = clientEmailMap[invoice.clientId];
-      return { ...invoice, emailExists };
+      const notesExists = invoiceNotesMap[invoice.invoiceId];
+      return { ...invoice, emailExists, notesExists };
     });
 
     return updatedDueInvoices;

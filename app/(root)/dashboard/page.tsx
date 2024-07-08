@@ -15,7 +15,11 @@ import YearlySales from "../../../_components/dashboard/YearlySales";
 import { fetchYearlySalesData } from "../../lib/data";
 import { auth } from "@clerk/nextjs/server";
 
-const DashboardPage = async () => {
+const DashboardPage = async ({
+  searchParams,
+}: {
+  searchParams: { open: string; month: string; urlName: string; year: string };
+}) => {
   const salesData = await fetchYearlySalesData();
   const { has } = auth();
 
@@ -53,7 +57,7 @@ const DashboardPage = async () => {
           <YearlySales salesData={salesData} />
         </Suspense>
         <Suspense fallback={<JobsDueContainerSkeleton />}>
-          <JobsDueContainer />
+          <JobsDueContainer searchParams={searchParams} />
         </Suspense>
       </div>
     </>

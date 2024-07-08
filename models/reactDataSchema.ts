@@ -1,8 +1,13 @@
 // @ts-ignore
 import { Model, Schema, model, models, mongoose } from "mongoose";
-import { ScheduleType } from "../app/lib/typeDefinitions";
+import {
+  DueInvoiceType,
+  InvoiceType,
+  ScheduleType,
+  ClientType,
+} from "../app/lib/typeDefinitions";
 
-const ClientSchema = new Schema({
+const ClientSchema = new Schema<ClientType>({
   clientName: {
     type: String,
   },
@@ -21,7 +26,7 @@ const ClientSchema = new Schema({
   },
 });
 
-const invoiceSchema = new Schema({
+const invoiceSchema = new Schema<InvoiceType>({
   invoiceId: {
     type: String,
     required: true,
@@ -100,7 +105,7 @@ const scheduleSchema = new Schema<ScheduleType>({
   },
 });
 
-const jobsDueSoonSchema = new Schema({
+const jobsDueSoonSchema = new Schema<DueInvoiceType>({
   invoiceId: {
     type: String,
     required: true,
@@ -129,10 +134,13 @@ const jobsDueSoonSchema = new Schema({
   },
 });
 
-const Client = models.Client || model("Client", ClientSchema);
-const Invoice = models.Invoice || model("Invoice", invoiceSchema);
+const Client =
+  (models.Client as Model<ClientType>) || model("Client", ClientSchema);
+const Invoice =
+  (models.Invoice as Model<InvoiceType>) || model("Invoice", invoiceSchema);
 const JobsDueSoon =
-  models.JobsDueSoon || model("JobsDueSoon", jobsDueSoonSchema);
+  (models.JobsDueSoon as Model<DueInvoiceType>) ||
+  model("JobsDueSoon", jobsDueSoonSchema);
 const Schedule =
   (models.Schedule as Model<ScheduleType>) || model("Schedule", scheduleSchema);
 
