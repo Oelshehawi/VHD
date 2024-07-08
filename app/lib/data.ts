@@ -356,3 +356,128 @@ export const fetchAllScheduledJobs = async () => {
     return [];
   }
 };
+
+const ITEMS_PER_PAGE = 10;
+
+export async function fetchFilteredClients(
+  query: string,
+  currentPage: number,
+  sort: 1 | -1,
+) {
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  let matchQuery = {
+    $or: [
+      { clientName: { $regex: query, $options: "i" } },
+      { email: { $regex: query, $options: "i" } },
+      { phoneNumber: { $regex: query, $options: "i" } },
+      { notes: { $regex: query, $options: "i" } },
+    ],
+  };
+
+  try {
+    const clients = await Client.aggregate([
+      { $match: matchQuery },
+      { $sort: { clientName: Number(sort) } },
+      { $skip: offset },
+      { $limit: ITEMS_PER_PAGE },
+    ]);
+
+    return clients;
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch clients.");
+  }
+}
+
+export async function fetchClientsPages(query: string) {
+  await connectMongo();
+  try {
+    const matchQuery = {
+      $or: [
+        { clientName: { $regex: query, $options: "i" } },
+        { email: { $regex: query, $options: "i" } },
+        { phoneNumber: { $regex: query, $options: "i" } },
+        { notes: { $regex: query, $options: "i" } },
+      ],
+    };
+
+    const countResult = await Client.aggregate([
+      { $match: matchQuery },
+      { $count: "total" },
+    ]);
+
+    const totalClients = countResult.length > 0 ? countResult[0].total : 0;
+    const totalPages = Math.ceil(totalClients / ITEMS_PER_PAGE);
+
+    return totalPages;
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch total number of clients.");
+  }
+}
+
+export async function fetchFilteredInvoices(
+  query: string,
+  currentPage: number,
+  statusFilter: string,
+) {
+  await connectMongo();
+  const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+
+  const matchQuery = {
+    $or: [
+      { invoiceId: { $regex: query, $options: "i" } },
+      { jobTitle: { $regex: query, $options: "i" } },
+      { status: { $regex: query, $options: "i" } },
+    ],
+  };
+
+  if (statusFilter) {
+    matchQuery.$and = [{ status: statusFilter }];
+  }
+
+
+  try {
+    const invoices = await Invoice.aggregate([
+      { $match: matchQuery },
+      { $sort: { jobTitle: 1 } },
+      { $skip: offset },
+      { $limit: ITEMS_PER_PAGE },
+    ]);
+
+    return invoices;
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch invoices.");
+  }
+}
+
+export async function fetchInvoicesPages(query: string, statusFilter: string) {
+  await connectMongo();
+  try {
+    const matchQuery = {
+      $or: [
+        { invoiceId: { $regex: query, $options: 'i' } },
+        { jobTitle: { $regex: query, $options: 'i' } },
+        { status: { $regex: query, $options: 'i' } },
+      ],
+    };
+
+    if (statusFilter) {
+      matchQuery.$and = [{ status: statusFilter }];
+    }
+
+    const countResult = await Invoice.aggregate([
+      { $match: matchQuery },
+      { $count: 'total' },
+    ]);
+
+    const totalInvoices = countResult.length > 0 ? countResult[0].total : 0;
+    const totalPages = Math.ceil(totalInvoices / ITEMS_PER_PAGE);
+
+    return totalPages;
+  } catch (error) {
+    console.error('Database Error:', error);
+    throw new Error('Failed to fetch total number of invoices.');
+  }
+}

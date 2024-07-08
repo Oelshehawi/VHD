@@ -31,7 +31,7 @@ export async function updateInvoiceScheduleStatus(invoiceId) {
   revalidatePath("/dashboard");
 }
 
-export async function deleteClient(clientId) {
+export async function deleteClient(clientId: string) {
   await connectMongo();
   try {
     const clientExists = await Client.exists({ _id: clientId });
@@ -78,7 +78,7 @@ export async function createClient(clientData: ClientType) {
   revalidatePath("/dashboard");
 }
 
-export async function deleteInvoice(invoiceId) {
+export async function deleteInvoice(invoiceId: string) {
   await connectMongo();
   try {
     const job = await JobsDueSoon.findOne({ invoiceId: invoiceId });
