@@ -419,28 +419,36 @@ export async function fetchClientsPages(query: string) {
 export async function fetchFilteredInvoices(
   query: string,
   currentPage: number,
-  statusFilter: string,
+  filter: string,
+  sort: string,
 ) {
   await connectMongo();
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
 
-  const matchQuery = {
+  let matchQuery: any = {
     $or: [
       { invoiceId: { $regex: query, $options: "i" } },
       { jobTitle: { $regex: query, $options: "i" } },
-      { status: { $regex: query, $options: "i" } },
     ],
   };
 
-  if (statusFilter) {
-    matchQuery.$and = [{ status: statusFilter }];
+  let sortQuery: any = { invoiceId: 1, jobTitle: 1 };
+
+  if (filter === "pending") {
+    matchQuery.status = { $regex: filter, $options: "i" };
+  }
+  if (sort === "dateIssuedasc") {
+    sortQuery = { dateIssued: 1 };
   }
 
+  if (sort === "dateIssueddes") {
+    sortQuery = { dateIssued: -1 };
+  }
 
   try {
     const invoices = await Invoice.aggregate([
       { $match: matchQuery },
-      { $sort: { jobTitle: 1 } },
+      { $sort: sortQuery },
       { $skip: offset },
       { $limit: ITEMS_PER_PAGE },
     ]);
@@ -452,24 +460,36 @@ export async function fetchFilteredInvoices(
   }
 }
 
-export async function fetchInvoicesPages(query: string, statusFilter: string) {
+export async function fetchInvoicesPages(
+  query: string,
+  filter: string,
+  sort: string,
+) {
   await connectMongo();
   try {
-    const matchQuery = {
+    let matchQuery: any = {
       $or: [
-        { invoiceId: { $regex: query, $options: 'i' } },
-        { jobTitle: { $regex: query, $options: 'i' } },
-        { status: { $regex: query, $options: 'i' } },
+        { invoiceId: { $regex: query, $options: "i" } },
+        { jobTitle: { $regex: query, $options: "i" } },
       ],
     };
 
-    if (statusFilter) {
-      matchQuery.$and = [{ status: statusFilter }];
+    let sortQuery: any = { invoiceId: 1, jobTitle: 1 };
+
+    if (filter === "pending") {
+      matchQuery.status = { $regex: filter, $options: "i" };
+    }
+    if (sort === "dateIssuedasc") {
+      sortQuery = { dateIssued: 1 };
+    }
+
+    if (sort === "dateIssueddes") {
+      sortQuery = { dateIssued: -1 };
     }
 
     const countResult = await Invoice.aggregate([
       { $match: matchQuery },
-      { $count: 'total' },
+      { $count: "total" },
     ]);
 
     const totalInvoices = countResult.length > 0 ? countResult[0].total : 0;
@@ -477,7 +497,7 @@ export async function fetchInvoicesPages(query: string, statusFilter: string) {
 
     return totalPages;
   } catch (error) {
-    console.error('Database Error:', error);
-    throw new Error('Failed to fetch total number of invoices.');
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch total number of invoices.");
   }
 }

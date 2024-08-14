@@ -9,13 +9,23 @@ const InvoiceSorting = () => {
   const { replace } = useRouter();
 
   const handleSorting = useDebouncedCallback((term) => {
-    console.log(`Searching... ${term}`);
-
     const params = new URLSearchParams(searchParams);
-    if (term) {
-      params.set("statusFilter", term);
-    } else {
-      params.delete("statusFilter");
+
+    if (term === "dateIssued ascending") {
+      params.set("sort", "dateIssuedasc");
+    }
+
+    if (term === "dateIssued descending") {
+      params.set("sort", "dateIssueddes");
+    }
+
+    if (term === "pending") {
+      params.set("filter", term);
+    }
+
+    if (term === "") {
+      params.delete("sort");
+      params.delete("filter");
     }
     replace(`${pathname}?${params.toString()}`);
   }, 300);
@@ -28,8 +38,10 @@ const InvoiceSorting = () => {
         onChange={(e) => handleSorting(e.target.value)}
         className="h-10 w-full rounded-md border border-gray-300 px-2 py-0 tracking-wider text-gray-700 hover:cursor-pointer focus:border-darkGreen focus:ring-2 focus:ring-darkGreen md:px-3 md:py-1"
       >
-        <option value={''}>All</option>
+        <option value={""}>All</option>
         <option value={"pending"}>Pending</option>
+        <option value={"dateIssued descending"}>Latest Invoices</option>
+        <option value={"dateIssued ascending"}>Earliest Invoices</option>
       </select>
     </div>
   );

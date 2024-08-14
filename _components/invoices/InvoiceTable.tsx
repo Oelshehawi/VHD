@@ -7,13 +7,15 @@ import { InvoiceType } from "../../app/lib/typeDefinitions";
 const InvoiceTable = async ({
   query,
   currentPage,
-  statusFilter,
+  filter,
+  sort,
 }: {
   query: string;
   currentPage: number;
-  statusFilter: string;
+  filter: string;
+  sort: string;
 }) => {
-  const invoiceData = await fetchFilteredInvoices(query, currentPage,statusFilter);
+  const invoiceData = await fetchFilteredInvoices(query, currentPage, filter, sort);
 
   return (
     <div>
@@ -55,20 +57,21 @@ const InvoiceTable = async ({
                       invoice.status === "paid"
                         ? "bg-green-500 text-white"
                         : invoice.status === "pending"
-                        ? "bg-yellow-500 text-white"
-                        : "bg-red-500 text-white"
+                          ? "bg-yellow-500 text-white"
+                          : "bg-red-500 text-white"
                     }`}
                   >
                     {invoice.status.toUpperCase()}
                   </div>
                 </td>
                 <td className="hidden px-3.5 py-2.5 md:table-cell">
-                  ${invoice.items.reduce((total, item) => total + item.price, 0).toFixed(2)}
+                  $
+                  {invoice.items
+                    .reduce((total, item) => total + item.price, 0)
+                    .toFixed(2)}
                 </td>
                 <td className="flex justify-center px-3.5 py-2.5">
-                  <Link
-                    href={`/invoices/${invoice._id}`}
-                  >
+                  <Link href={`/invoices/${invoice._id}`}>
                     <FaPenSquare className="size-8 rounded bg-darkGreen text-white hover:bg-green-800" />
                   </Link>
                 </td>

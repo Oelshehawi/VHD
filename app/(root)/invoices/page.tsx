@@ -13,7 +13,8 @@ const Invoice = async ({
   searchParams?: {
     query?: string;
     page?: string;
-    statusFilter?: string;
+    filter?: string;
+    sort?: string;
   };
 }) => {
   const clients = (await fetchAllClients()) as ClientType[];
@@ -30,9 +31,10 @@ const Invoice = async ({
 
   const query = searchParams?.query || "";
   const currentPage = Number(searchParams?.page) || 1;
-  const statusFilter = searchParams?.statusFilter || "";
+  const filter = searchParams?.filter || "";
+  const sort = searchParams?.sort || "";
 
-  const totalPages = await fetchInvoicesPages(query, statusFilter);
+  const totalPages = await fetchInvoicesPages(query, filter, sort);
   return (
     <div className="flex min-h-full items-center justify-center">
       <div className="my-5 min-h-[90vh] w-[90%] rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-4/5">
@@ -45,7 +47,8 @@ const Invoice = async ({
           <InvoiceTable
             query={query}
             currentPage={currentPage}
-            statusFilter={statusFilter}
+            filter={filter}
+            sort={sort}
           />
         </div>
         <Pagination totalPages={totalPages} />
