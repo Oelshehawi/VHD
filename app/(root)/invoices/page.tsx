@@ -6,6 +6,8 @@ import Search from "../../../_components/database/Search";
 import Pagination from "../../../_components/database/Pagination";
 import InvoiceSorting from "../../../_components/invoices/InvoiceSorting";
 import { ClientType } from "../../lib/typeDefinitions";
+import { Suspense } from "react";
+import { TableContainerSkeleton } from "../../../_components/Skeletons";
 
 const Invoice = async ({
   searchParams,
@@ -36,24 +38,27 @@ const Invoice = async ({
 
   const totalPages = await fetchInvoicesPages(query, filter, sort);
   return (
-    <div className="flex min-h-full items-center justify-center">
-      <div className="my-5 min-h-[90vh] w-[90%] rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-4/5">
-        <AddInvoice clients={clients} />
-        <div className="">
-          <div className="flex flex-col justify-between md:flex-row lg:gap-4 ">
-            <Search placeholder="Search For Invoice..." />
-            <InvoiceSorting />
+    <Suspense fallback={<TableContainerSkeleton />}>
+      <div className="flex min-h-full items-center justify-center">
+        <div className="my-5 min-h-[90vh] w-[90%] rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-4/5">
+          <AddInvoice clients={clients} />
+          <div className="">
+            <div className="flex flex-col justify-between md:flex-row lg:gap-4 ">
+              <Search placeholder="Search For Invoice..." />
+              <InvoiceSorting />
+            </div>
+
+            <InvoiceTable
+              query={query}
+              currentPage={currentPage}
+              filter={filter}
+              sort={sort}
+            />
           </div>
-          <InvoiceTable
-            query={query}
-            currentPage={currentPage}
-            filter={filter}
-            sort={sort}
-          />
+          <Pagination totalPages={totalPages} />
         </div>
-        <Pagination totalPages={totalPages} />
       </div>
-    </div>
+    </Suspense>
   );
 };
 

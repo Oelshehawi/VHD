@@ -177,5 +177,80 @@ export const ClientDetailedSkeleton = () => {
 
 
 export const InvoiceDetailedSkeleton = () => {
-  <div>skeleton</div>
-}
+  return (
+    <div className='mt-4 px-5 animate-pulse'>
+      <div className='flex mb-4 justify-between'>
+        <div className='bg-gray-700 text-white py-2 px-4 rounded inline-flex items-center'>
+          <div className='h-4 w-4 bg-gray-300 rounded-full mr-2'></div>
+          <div className='h-4 w-24 bg-gray-300 rounded'></div>
+        </div>
+        <div className='flex space-x-2'>
+          <div className='bg-darkGreen text-white py-2 px-4 rounded inline-flex items-center'>
+            <div className='h-4 w-4 bg-gray-300 rounded-full mr-2'></div>
+            <div className='h-4 w-16 bg-gray-300 rounded'></div>
+          </div>
+          <div className='bg-blue-500 text-white py-2 px-4 rounded inline-flex items-center'>
+            <div className='h-4 w-4 bg-gray-300 rounded-full mr-2'></div>
+            <div className='h-4 w-16 bg-gray-300 rounded'></div>
+          </div>
+        </div>
+      </div>
+      <div className='flex flex-wrap lg:flex-nowrap text-sm lg:text-[1rem] -mx-2'>
+        {/* Invoice Details Skeleton */}
+        <div className='w-full lg:w-[60%] mb-4 px-2'>
+          <div className='border rounded shadow'>
+            <div className='px-4 py-2 border-b bg-gray-300'></div>
+            <div className='p-4 space-y-2'>
+              {Array(5)
+                .fill(0)
+                .map((_, idx) => (
+                  <div key={idx} className='flex justify-between items-center py-2'>
+                    <div className='w-1/2 h-4 bg-gray-300 rounded'></div>
+                    <div className='w-1/4 h-4 bg-gray-300 rounded'></div>
+                  </div>
+                ))}
+              <div className='flex justify-end mt-4'>
+                <div className='w-32 h-6 bg-gray-200 rounded'></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Client Details Skeleton */}
+        <div className='w-full lg:w-[40%] mb-4 px-2'>
+          <div className='border rounded shadow'>
+            <div className='px-4 py-2 border-b bg-gray-300'></div>
+            <div className='p-4 space-y-2'>
+              {Array(3)
+                .fill(0)
+                .map((_, idx) => (
+                  <div key={idx} className='flex items-center'>
+                    <div className='w-24 h-4 bg-gray-300 rounded mr-2'></div>
+                    <div className='flex-1 h-4 bg-gray-300 rounded'></div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      </div>
+      {/* Price Breakdown Skeleton */}
+      <div className='w-full lg:w-[60%] mb-4 px-2'>
+        <div className='border rounded shadow'>
+          <div className='px-4 py-2 border-b bg-gray-300'></div>
+          <div className='p-4 space-y-2'>
+            {Array(3)
+              .fill(0)
+              .map((_, idx) => (
+                <div key={idx} className='flex justify-between items-center py-2'>
+                  <div className='w-1/2 h-4 bg-gray-300 rounded'></div>
+                  <div className='w-1/4 h-4 bg-gray-300 rounded'></div>
+                </div>
+              ))}
+            <div className='flex justify-end mt-4'>
+              <div className='w-32 h-6 bg-gray-200 rounded'></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
