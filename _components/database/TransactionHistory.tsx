@@ -9,8 +9,11 @@ const TransactionHistory = ({ invoices }: { invoices: any }) => {
           {invoices.length !== 0 ? (
             <ul className="space-y-2">
               {invoices.map((invoice: any) => (
-                <li className="cursor-pointer rounded border p-2 hover:bg-gray-100">
-                  <Link key={invoice._id} href={`/invoices/${invoice._id}`}>
+                <li
+                  key={invoice._id}
+                  className="cursor-pointer rounded border p-2 hover:bg-gray-100"
+                >
+                  <Link href={`/invoices/${invoice._id}`}>
                     #{invoice.invoiceId} - {invoice.jobTitle}
                   </Link>
                 </li>
