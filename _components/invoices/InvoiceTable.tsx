@@ -49,7 +49,7 @@ const InvoiceTable = async ({
                 <td className="px-3.5 py-2.5 ">{invoice.invoiceId}</td>
                 <td className="px-3.5 py-2.5">{invoice.jobTitle}</td>
                 <td className="hidden px-3.5 py-2.5 md:table-cell">
-                  {new Date(invoice.dateIssued).toLocaleDateString()}
+                {new Date(invoice.dateIssued).toLocaleDateString('en-CA')}
                 </td>
                 <td className="hidden px-3.5 py-2.5 md:table-cell">
                   <div
