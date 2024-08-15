@@ -19,7 +19,6 @@ const ClientSchema = new Schema<ClientType>({
   },
   prefix: {
     type: String,
-    unique: true,
   },
   notes: {
     type: String,
@@ -30,7 +29,6 @@ const invoiceSchema = new Schema<InvoiceType>({
   invoiceId: {
     type: String,
     required: true,
-    unique: true,
   },
   jobTitle: {
     type: String,

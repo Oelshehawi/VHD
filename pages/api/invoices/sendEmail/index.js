@@ -8,7 +8,7 @@ export default async function handler(req, res) {
   await connectMongo();
 
   if (req.method === 'POST') {
-    const { invoiceId } = req.body;
+    const { clientId, invoiceId } = req.body;
 
     try {
       const invoice = await Invoice.findById(invoiceId);
@@ -16,7 +16,7 @@ export default async function handler(req, res) {
         return res.status(404).json({ error: 'Invoice not found' });
       }
       const clientDetails = await Client.findOne({
-        prefix: invoice.invoiceId.split('-')[0],
+        _id: clientId,
       });
 
       if (!clientDetails || !clientDetails.email) {
@@ -32,6 +32,7 @@ export default async function handler(req, res) {
         month: 'long',
         day: 'numeric',
       });
+
       const client = new postmark.ServerClient(process.env.POSTMARK_CLIENT);
 
       await client.sendEmailWithTemplate({

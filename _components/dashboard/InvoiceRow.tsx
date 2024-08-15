@@ -57,7 +57,7 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
           <SendReminder
             emailRecipient={invoiceData.jobTitle}
             emailSent={invoiceData.emailSent}
-            invoiceId={invoiceData.invoiceId}
+            dueInvoiceData={invoiceData}
             emailExists={invoiceData.emailExists}
           />
         </td>

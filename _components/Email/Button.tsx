@@ -4,16 +4,18 @@ import axios from 'axios';
 import { FaPaperPlane, FaCheckCircle } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
 import { CgUnavailable } from 'react-icons/cg';
+import { ObjectId } from 'mongodb';
+import { DueInvoiceType } from '../../app/lib/typeDefinitions';
 
 export function SendReminder({
   emailRecipient,
   emailSent,
-  invoiceId,
+  dueInvoiceData,
   emailExists,
 }: {
   emailRecipient: string;
   emailSent: boolean;
-  invoiceId: string;
+  dueInvoiceData: DueInvoiceType;
   emailExists: boolean;
 }) {
   const [emailAlreadySent, setEmailAlreadySent] = useState(false);
@@ -24,7 +26,7 @@ export function SendReminder({
       setIsLoading(true);
       await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/invoices/sendEmail`,
-        { invoiceId }
+        dueInvoiceData
       );
       toast.success(`Email has been sent successfully to ${emailRecipient}`);
       setEmailAlreadySent(true);
