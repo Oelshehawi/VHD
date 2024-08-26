@@ -15,7 +15,12 @@ const InvoiceTable = async ({
   filter: string;
   sort: string;
 }) => {
-  const invoiceData = await fetchFilteredInvoices(query, currentPage, filter, sort);
+  const invoiceData = await fetchFilteredInvoices(
+    query,
+    currentPage,
+    filter,
+    sort,
+  );
 
   return (
     <div>
@@ -49,7 +54,7 @@ const InvoiceTable = async ({
                 <td className="px-3.5 py-2.5 ">{invoice.invoiceId}</td>
                 <td className="px-3.5 py-2.5">{invoice.jobTitle}</td>
                 <td className="hidden px-3.5 py-2.5 md:table-cell">
-                {new Date(invoice.dateIssued).toLocaleDateString('en-CA')}
+                  {new Date(invoice.dateIssued).toLocaleDateString("en-CA")}
                 </td>
                 <td className="hidden px-3.5 py-2.5 md:table-cell">
                   <div

@@ -47,7 +47,6 @@ const Invoice = async ({
               <Search placeholder="Search For Invoice..." />
               <InvoiceSorting />
             </div>
-
             <InvoiceTable
               query={query}
               currentPage={currentPage}

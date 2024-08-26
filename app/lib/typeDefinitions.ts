@@ -24,7 +24,7 @@ export interface InvoiceType {
   invoiceId: string;
   jobTitle: string;
   dateIssued: Date | string | number;
-  dateDue: Date;
+  dateDue: Date| string;
   items: {
     description: string;
     price: number;

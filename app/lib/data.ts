@@ -357,6 +357,38 @@ export const fetchAllScheduledJobs = async () => {
   }
 };
 
+export const fetchFilteredScheduledJobs = async (query: string) => {
+  if (query === "") {
+    return [];
+  }
+  await connectMongo();
+
+  let matchQuery = {
+    $or: [
+      { jobTitle: { $regex: query, $options: "i" } },
+      { location: { $regex: query, $options: "i" } },
+      { assignedTechnician: { $regex: query, $options: "i" } },
+    ],
+  };
+  try {
+    const scheduledJobs = await Schedule.aggregate([
+      { $match: matchQuery },
+      { $sort: { jobTitle: 1 } },
+    ]);
+
+    const plainScheduledJobs = scheduledJobs.map((job: any) => ({
+      ...job,
+      _id: job._id.toString(),
+      invoiceRef: job.invoiceRef.toString(),
+    }));
+
+    return plainScheduledJobs;
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch scheduled jobs.");
+  }
+};
+
 const ITEMS_PER_PAGE = 10;
 
 export async function fetchFilteredClients(

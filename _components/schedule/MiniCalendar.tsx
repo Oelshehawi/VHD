@@ -39,7 +39,7 @@ function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-export default function Calendar({
+export default function MiniCalendar({
   invoices,
   scheduledJobs,
   canManage,

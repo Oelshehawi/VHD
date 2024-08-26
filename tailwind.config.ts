@@ -1,4 +1,5 @@
 import { type Config } from "tailwindcss";
+
 export default {
   content: [
     "./app/**/*.{js,ts,jsx,tsx,mdx}",
@@ -15,6 +16,9 @@ export default {
         darkGray: "#222a27",
         lightGray: "#dde2e0",
         darkBlue: "#0a003e",
+      },
+      boxShadow: {
+        custom: "0 1px 1px 0 rgba(65,69,73,.3), 0 1px 3px 1px rgba(65,69,73,.15)",
       },
       keyframes: {
         shimmer: {
