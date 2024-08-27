@@ -33,7 +33,7 @@ const Schedule = async ({
     return clientIdA.localeCompare(clientIdB);
   });
 
-  const calendarOption = searchParams?.calendarOption ?? "full";
+  const calendarOption = searchParams?.calendarOption ?? "mini";
 
   const query = searchParams?.query || "";
 
