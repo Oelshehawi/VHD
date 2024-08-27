@@ -9,7 +9,6 @@ const Sorting = () => {
   const { replace } = useRouter();
 
   const handleSorting = useDebouncedCallback((term) => {
-    console.log(`Searching... ${term}`);
 
     const params = new URLSearchParams(searchParams);
     if (term) {

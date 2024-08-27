@@ -1,15 +1,32 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, SubmitHandler } from "react-hook-form";
 import toast from "react-hot-toast";
 import { FaTrash, FaPlus } from "react-icons/fa";
 import { calculateDueDate } from "../../app/lib/utils";
 import { createInvoice } from "../../app/lib/actions";
 import { ClientType } from "../../app/lib/typeDefinitions";
+import ClientSearchSelect from "./ClientSearchSelect";
 
-const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
+
+interface AddInvoiceProps {
+  clients: ClientType[];
+}
+
+interface InvoiceFormValues {
+  clientId: string;
+  jobTitle: string;
+  frequency: number;
+  location: string;
+  dateIssued: string;
+  dateDue: string;
+  notes?: string;
+  items: { description: string; price: number }[];
+}
+
+const AddInvoice = ({ clients }: AddInvoiceProps) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [items, setItems] = useState([{ description: "", price: "" }]);
+  const [items, setItems] = useState([{ description: "", price: 0 }]);
   const [open, setOpen] = useState(false);
 
   const {
@@ -17,29 +34,35 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
     handleSubmit,
     reset,
     setValue,
+    clearErrors,
     watch,
     formState: { errors },
-  } = useForm();
+  } = useForm<InvoiceFormValues>();
 
   const dateIssued = watch("dateIssued");
   const frequency = watch("frequency");
 
   useEffect(() => {
     const updatedDateDue = calculateDueDate(dateIssued, frequency);
-    setValue("dateDue", updatedDateDue);
+    setValue("dateDue", updatedDateDue as string);
   }, [dateIssued, frequency, setValue]);
 
   const addItem = () => {
     setItems([...items, { description: "", price: 0 }]);
   };
 
-  const handleItemChange = (index, field, value) => {
-    const updatedItems = [...items];
+  const handleItemChange = (
+    index: number,
+    field: keyof InvoiceFormValues["items"][0],
+    value: string | number,
+  ) => {
+    const updatedItems: any = [...items];
     updatedItems[index][field] = value;
     setItems(updatedItems);
+    setValue("items", updatedItems);
   };
 
-  const deleteItem = (index) => {
+  const deleteItem = (index: number) => {
     if (items.length > 1) {
       const updatedItems = items.filter((_, i) => i !== index);
       setItems(updatedItems);
@@ -47,7 +70,13 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
     }
   };
 
-  const handleSave = async (data) => {
+  const handleClientSelect = (client: ClientType) => {
+    setValue("clientId", client._id as string);
+    setValue("prefix" as any, client.prefix);
+    clearErrors(["clientId", "prefix" as any]);
+  };
+
+  const handleSave: SubmitHandler<InvoiceFormValues> = async (data) => {
     setIsLoading(true);
     try {
       await createInvoice(data);
@@ -63,12 +92,6 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
   };
 
   const inputFields = [
-    {
-      name: "clientId",
-      type: "select",
-      placeholder: "Select Client",
-      isRequired: true,
-    },
     {
       name: "jobTitle",
       type: "text",
@@ -110,18 +133,6 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
     },
   ];
 
-  const handleClientChange = (e) => {
-    const selectedClientId = e.target.value;
-    const selectedClient = clients.find(
-      (client) => client._id === selectedClientId,
-    );
-
-    setValue("clientId", selectedClientId);
-    if (selectedClient) {
-      setValue("prefix", selectedClient.prefix);
-    }
-  };
-
   return (
     <>
       <div
@@ -149,6 +160,16 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
             onSubmit={handleSubmit(handleSave)}
             className="mt-4 space-y-6 overflow-auto p-4"
           >
+            {/* Client Dropdown */}
+            <ClientSearchSelect
+              placeholder="Search for a Client"
+              data={clients}
+              onSelect={handleClientSelect}
+              register={register}
+              error={errors.clientId}
+            />
+
+            {/* Input Fields */}
             {inputFields.map(
               ({
                 name,
@@ -162,28 +183,15 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
                 <div key={name} className="field">
                   {type === "textarea" ? (
                     <textarea
-                      {...register(name, { required: isRequired })}
+                      {...register(name as keyof InvoiceFormValues, {
+                        required: isRequired,
+                      })}
                       placeholder={placeholder}
                       className="h-24 w-full rounded border-2 border-gray-400 p-2 text-gray-700 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
                     />
-                  ) : type === "select" ? (
-                    <div className="field">
-                      <select
-                        {...register("clientId", { required: true })}
-                        onChange={handleClientChange}
-                        className="w-full rounded border-2 border-gray-400 p-2 text-gray-700 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
-                      >
-                        <option value="">Select Client</option>
-                        {clients.map((client) => (
-                          <option key={client._id} value={client._id}>
-                            {client.clientName} - {client.email}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
                   ) : (
                     <input
-                      {...register(name, {
+                      {...register(name as keyof InvoiceFormValues, {
                         required: isRequired,
                         minLength: minLength,
                         maxLength: maxLength,
@@ -194,19 +202,22 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
                       className="w-full rounded border-2 border-gray-400 p-2 text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
                     />
                   )}
-                  {errors[name] && errors[name]?.type === "required" && (
+                  {errors[name as keyof InvoiceFormValues]?.type ===
+                    "required" && (
                     <p className="mt-1 text-xs text-red-500">
                       {name} is required
                     </p>
                   )}
-                  {errors[name] && errors[name]?.type === "minLength" && (
+                  {errors[name as keyof InvoiceFormValues]?.type ===
+                    "minLength" && (
                     <p className="mt-1 text-xs text-red-500">
-                      {name} must be at least 1 characters
+                      {name} must be at least {minLength} character
                     </p>
                   )}
-                  {errors[name] && errors[name]?.type === "maxLength" && (
+                  {errors[name as keyof InvoiceFormValues]?.type ===
+                    "maxLength" && (
                     <p className="mt-1 text-xs text-red-500">
-                      {name} Cannot be more than 1 characters
+                      {name} cannot be more than {maxLength} characters
                     </p>
                   )}
                 </div>
@@ -214,14 +225,13 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
             )}
 
             {/* Dynamically add item fields here */}
-
             {items.map((item, index) => (
               <div
                 key={index}
                 className="flex w-full items-center justify-between space-x-2"
               >
                 <input
-                  {...register(`items[${index}].description`, {
+                  {...register(`items[${index}].description` as any, {
                     required: "Item description is required",
                     onChange: (e) =>
                       handleItemChange(index, "description", e.target.value),
@@ -232,11 +242,11 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
                 />
                 {errors.items?.[index]?.description && (
                   <p className="text-xs text-red-500">
-                    {errors.items[index].description.message}
+                    {errors.items[index]?.description?.message}
                   </p>
                 )}
                 <input
-                  {...register(`items[${index}].price`, {
+                  {...register(`items[${index}].price` as any, {
                     required: "Price is required",
                     valueAsNumber: true,
                     onChange: (e) =>
@@ -249,7 +259,7 @@ const AddInvoice = ({ clients }: { clients: ClientType[] }) => {
                 />
                 {errors.items?.[index]?.price && (
                   <p className="text-xs text-red-500">
-                    {errors.items[index].price.message}
+                    {errors.items[index]?.price?.message}
                   </p>
                 )}
                 <FaTrash

@@ -22,7 +22,6 @@ const DeleteModal = ({
   const handleDelete = async (deletionId: string) => {
     setIsLoading(true);
     try {
-      console.log(deletionId);
       if (deletingValue === "client") {
         const deleteClientWithId = deleteClient.bind(
           null,
