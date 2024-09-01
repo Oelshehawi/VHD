@@ -241,11 +241,15 @@ function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
   return (
     <li className="group flex items-center justify-between space-x-4 rounded-xl bg-darkGreen px-4  py-2 text-white ">
       <div className="flex-auto gap-4">
-        <Link href={`/invoices/${job.invoiceRef}`}>
-          <p className="hover:cursor-pointer hover:rounded hover:bg-green-700">
-            {job.jobTitle}
-          </p>
-        </Link>
+        {canManage ? (
+          <Link href={`/invoices/${job.invoiceRef}`}>
+            <p className="hover:cursor-pointer hover:rounded hover:bg-green-700">
+              {job.jobTitle}
+            </p>
+          </Link>
+        ) : (
+          <p>{job.jobTitle}</p>
+        )}
         <p className="mt-0.5">{format(startDateTime, "h:mm a")}</p>
         <div className="flex gap-2">
           <span
@@ -291,7 +295,6 @@ function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
           deleteDesc={""}
           deletionId={job._id as string}
           deletingValue="job"
-
         />
       )}
     </li>
