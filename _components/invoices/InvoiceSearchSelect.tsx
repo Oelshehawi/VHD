@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { clsx } from "clsx";
 import { InvoiceType } from "../../app/lib/typeDefinitions";
 import { FaSearch } from "react-icons/fa";
+import { formatDateToString } from "../../app/lib/utils";
 
 const InvoiceSearchSelect = ({
   placeholder,
@@ -58,8 +59,8 @@ const InvoiceSearchSelect = ({
           value={searchTerm}
           {...register("invoiceRef", { required: true })}
           onChange={(e) => {
-            register("invoiceRef").onChange(e); 
-            handleSearch(e.target.value); 
+            register("invoiceRef").onChange(e);
+            handleSearch(e.target.value);
           }}
           className="h-10 w-full flex-grow rounded-e-lg pl-5 focus:outline-none "
         />
@@ -71,10 +72,6 @@ const InvoiceSearchSelect = ({
         <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-md bg-white shadow-lg">
           <ul className="max-h-60 overflow-y-auto">
             {filteredData.map((invoice: any) => {
-              const formattedDate = new Date(
-                invoice.dateIssued,
-              ).toLocaleDateString("en-CA");
-
               return (
                 <li
                   key={invoice._id.toString()}
@@ -85,7 +82,7 @@ const InvoiceSearchSelect = ({
                     <span>{invoice.jobTitle}</span>
                   </div>
                   <div className="text-right">
-                    <span>{formattedDate}</span>
+                    <span>{formatDateToString(invoice.dateIssued)}</span>
                   </div>
                 </li>
               );
