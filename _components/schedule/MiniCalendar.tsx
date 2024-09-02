@@ -211,15 +211,16 @@ export default function MiniCalendar({
 function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
   let startDateTime = job.startDateTime.toString();
   const [isLoading, setIsLoading] = useState(false);
+  const [isConfirmed, setConfirmed] = useState(() => job.confirmed);
 
-  const toggleConfirmedStatus = async (job: ScheduleType) => {
+  const toggleConfirmedStatus = async () => {
     setIsLoading(true);
     if (!canManage) {
       toast.error("You do not have permission to perform this action");
       setIsLoading(false);
       return;
     }
-    const newStatus = !job.confirmed;
+    const newStatus = !isConfirmed;
     try {
       const updateScheduleById = updateSchedule.bind(null, {
         scheduleId: job._id.toString(),
@@ -230,6 +231,7 @@ function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
       toast.success(
         `Job ${newStatus ? "confirmed" : "unconfirmed"} successfully`,
       );
+      setConfirmed(newStatus);
       setIsLoading(false);
     } catch (error) {
       console.error("Failed to update the job:", error);
@@ -254,7 +256,7 @@ function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
         <div className="flex gap-2">
           <span
             className={classNames(
-              job.confirmed ? "bg-green-500" : "bg-red-500",
+              isConfirmed ? "bg-green-500" : "bg-red-500",
               " flex w-full items-center justify-center rounded p-1 hover:cursor-pointer",
             )}
             onClick={() => toggleConfirmedStatus(job)}
@@ -278,7 +280,7 @@ function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 2.42.878 4.628 2.322 6.291l1.678-1.659z"
                 ></path>
               </svg>
-            ) : job.confirmed ? (
+            ) : isConfirmed ? (
               "Confirmed"
             ) : (
               "Unconfirmed"

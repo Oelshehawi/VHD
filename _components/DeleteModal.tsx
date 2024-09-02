@@ -43,8 +43,8 @@ const DeleteModal = ({
       } else if (deletingValue === "job") {
         const deleteJobWithId = deleteJob.bind(null, deletionId.toString());
         await deleteJobWithId();
-        setOpen(false);
         setIsLoading(false);
+        setOpen(false);
         toast.success("Job deleted successfully");
       }
     } catch (error) {
