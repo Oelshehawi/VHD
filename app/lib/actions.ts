@@ -9,6 +9,7 @@ import {
 } from "../../models/reactDataSchema";
 import { ClientType, ScheduleType } from "./typeDefinitions";
 import { ObjectId } from "mongoose";
+import { calculateDueDate } from "./utils";
 
 export async function updateInvoiceScheduleStatus(invoiceId) {
   await connectMongo();
@@ -119,14 +120,41 @@ export async function createInvoice(invoiceData) {
   revalidatePath("/invoices");
 }
 
-export async function updateInvoice(invoiceId, formData) {
+export async function updateInvoice(invoiceId: any, formData: any) {
   await connectMongo();
   try {
+    const currentInvoice = await Invoice.findById(invoiceId);
+
     await Invoice.findByIdAndUpdate(invoiceId, formData);
+
+    let jobsDueSoonUpdate: any = {};
+
+    if (
+      formData.dateIssued &&
+      formData.dateIssued !== currentInvoice?.dateIssued
+    ) {
+      const newDateDue = calculateDueDate(
+        formData.dateIssued,
+        formData.frequency,
+      );
+      jobsDueSoonUpdate.dateDue = newDateDue;
+    }
+
+    if (formData.jobTitle && formData.jobTitle !== currentInvoice?.jobTitle) {
+      jobsDueSoonUpdate.jobTitle = formData.jobTitle;
+    }
+
+    if (Object.keys(jobsDueSoonUpdate).length > 0) {
+      await JobsDueSoon.findOneAndUpdate(
+        { invoiceId: invoiceId },
+        jobsDueSoonUpdate,
+      );
+    }
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to update invoice with id");
   }
+
   revalidatePath(`/invoices/${invoiceId}`);
 }
 
