@@ -1,13 +1,5 @@
 "use client";
 import {
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuItems,
-  Transition,
-} from "@headlessui/react";
-import { EllipsisVerticalIcon } from "@heroicons/react/16/solid";
-import {
   ChevronLeftIcon,
   ChevronRightIcon,
   PlusIcon,
@@ -23,14 +15,13 @@ import {
   isSameMonth,
   isToday,
   parse,
-  parseISO,
   startOfToday,
 } from "date-fns";
-import { Fragment, useState } from "react";
+import { useState } from "react";
 import AddEvent from "./AddEvent";
 import { AnimatePresence } from "framer-motion";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
-import { deleteJob, updateSchedule } from "../../app/lib/actions";
+import { updateSchedule } from "../../app/lib/actions";
 import DeleteModal from "../DeleteModal";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -208,7 +199,7 @@ export default function MiniCalendar({
   );
 }
 
-function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
+export function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
   let startDateTime = job.startDateTime.toString();
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmed, setConfirmed] = useState(() => job.confirmed);
@@ -259,7 +250,7 @@ function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
               isConfirmed ? "bg-green-500" : "bg-red-500",
               " flex w-full items-center justify-center rounded p-1 hover:cursor-pointer",
             )}
-            onClick={() => toggleConfirmedStatus(job)}
+            onClick={() => toggleConfirmedStatus()}
           >
             {isLoading ? (
               <svg

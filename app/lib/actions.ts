@@ -40,9 +40,15 @@ export async function deleteClient(clientId: string) {
       return { message: "Client not found" };
     }
 
+    const invoices = await Invoice.find({ clientId: clientId });
+
     await Invoice.deleteMany({ clientId: clientId });
 
     await JobsDueSoon.deleteMany({ clientId: clientId });
+
+    for (const invoice of invoices) {
+      await Schedule.deleteMany({ invoiceRef: invoice._id });
+    }
 
     await Client.findByIdAndDelete(clientId);
   } catch (error) {
@@ -85,6 +91,10 @@ export async function deleteInvoice(invoiceId: string) {
     const job = await JobsDueSoon.findOne({ invoiceId: invoiceId });
     if (job) {
       await JobsDueSoon.findByIdAndDelete(job._id);
+    }
+    const scheduledJob = await Schedule.findOne({ invoiceRef: invoiceId });
+    if (scheduledJob) {
+      await Schedule.findByIdAndDelete(scheduledJob._id);
     }
     await Invoice.findByIdAndDelete(invoiceId);
   } catch (error) {

@@ -1,9 +1,6 @@
 "use client";
 import { FaSearch } from "react-icons/fa";
-import { useDebouncedCallback } from "use-debounce";
 import clsx from "clsx";
-import { usePathname, useSearchParams } from "next/navigation";
-import { useRouter } from "next/navigation";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
 import { CalendarIcon } from "@heroicons/react/24/solid";
 import { useState } from "react";
@@ -18,22 +15,9 @@ const JobSearchSelect = ({
   data: any[];
   className?: string;
 }) => {
-  const searchParams = useSearchParams() ?? new URLSearchParams();
-  const pathname = usePathname();
-  const { replace } = useRouter();
   const [open, setOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
   const [openDropdown, setOpenDropdown] = useState(false);
-  const handleSearch = useDebouncedCallback((term) => {
-    setOpenDropdown(true);
-    const params = new URLSearchParams(searchParams);
-    if (term) {
-      params.set("query", term);
-    } else {
-      params.delete("query");
-    }
-    replace(`${pathname}?${params.toString()}`);
-  }, 300);
 
   const handleClick = (job: ScheduleType) => {
     setOpenDropdown(false);
@@ -53,7 +37,7 @@ const JobSearchSelect = ({
         <input
           type="text"
           placeholder={placeholder}
-          onChange={(e) => handleSearch(e.target.value)}
+
           className="h-10 w-full rounded-e-lg pl-5 focus:outline-none"
         />
       </div>
