@@ -8,22 +8,35 @@ import JobModal from "./JobModal";
 
 const JobSearchSelect = ({
   placeholder,
-  data,
   className,
+  scheduledJobs,
 }: {
   placeholder: string;
-  data: any[];
   className?: string;
+  scheduledJobs: ScheduleType[];
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
   const [openDropdown, setOpenDropdown] = useState(false);
+
+  const [query, setQuery] = useState("");
 
   const handleClick = (job: ScheduleType) => {
     setOpenDropdown(false);
     setSelectedJob(job);
     setOpen(true);
   };
+
+  const handleSearch = (e: any) => {
+    setOpenDropdown(true);
+    setQuery(e.target.value);
+    if (e.target.value === "") {
+      setOpenDropdown(false);
+    }
+  };
+  const filteredJobs = scheduledJobs.filter((job) => {
+    return job?.jobTitle?.toLowerCase().includes(query.toLowerCase());
+  });
 
   return (
     <div
@@ -37,14 +50,14 @@ const JobSearchSelect = ({
         <input
           type="text"
           placeholder={placeholder}
-
+          onChange={handleSearch}
           className="h-10 w-full rounded-e-lg pl-5 focus:outline-none"
         />
       </div>
-      {openDropdown && data?.length > 0 && (
+      {openDropdown && filteredJobs?.length > 0 && (
         <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-md bg-white shadow-lg">
           <ul className="max-h-60 overflow-y-auto">
-            {data.map((job: ScheduleType) => {
+            {filteredJobs.map((job: ScheduleType) => {
               const jobDate = new Date(job.startDateTime);
               const isCurrentYear =
                 jobDate.getFullYear() === new Date().getFullYear();

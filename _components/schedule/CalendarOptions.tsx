@@ -60,11 +60,10 @@ const Header = ({
     ? "Show Full Calendar"
     : "Show Mini Calendar";
 
-  const filteredJobs = scheduledJobs.filter((job) => {});
 
   return (
     <div className="flex flex-col gap-2 px-4 py-2 shadow-custom md:flex-row md:items-center md:justify-between md:gap-0 md:py-0">
-      <SearchSelect data={filteredJobs} placeholder="Search for a job" />
+      <SearchSelect scheduledJobs={scheduledJobs} placeholder="Search for a job"  />
       <button
         onClick={setCalendarOption}
         className={`flex h-10 items-center justify-center rounded-lg border  border-gray-300 px-4 transition-colors duration-300 ${
