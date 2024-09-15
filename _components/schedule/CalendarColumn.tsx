@@ -4,6 +4,7 @@ import { ScheduleType } from "../../app/lib/typeDefinitions";
 import DeleteModal from "../DeleteModal";
 import { useState } from "react";
 import toast from "react-hot-toast";
+import Link from "next/link";
 import { updateSchedule } from "../../app/lib/actions";
 
 const parseDate = (dateString: string): Date => {
@@ -97,12 +98,17 @@ const JobItem = ({
           isConfirmed ? "border-green-500" : "border-red-500"
         } cursor-pointer hover:bg-gray-100`}
       >
-        <div className="flex-auto">
-          <p className="font-semibold">{job.jobTitle}</p>
-          <p className="text-gray-500">{format(job.startDateTime, "h:mm a")}</p>
+        <div className="flex flex-col">
+          <span className="w-full rounded bg-blue-500 p-1 text-center text-white">
+            {job.assignedTechnician || "No Technician"}
+          </span>
+          <span className="font-semibold">{job.jobTitle}</span>
+
+          <span className="text-gray-500">
+            {format(job.startDateTime, "h:mm a")}
+          </span>
         </div>
       </li>
-
       {isModalOpen && (
         <div
           onClick={() => setModalOpen(false)}
@@ -112,7 +118,11 @@ const JobItem = ({
             onClick={(e) => e.stopPropagation()}
             className="min-w-[20%] max-w-[20%] rounded-lg bg-white p-6 shadow-lg"
           >
-            <h2 className="mb-4 text-xl font-semibold">{job.jobTitle}</h2>
+            <Link href={`/invoices/${job.invoiceRef}`}>
+              <h2 className="py-2 text-xl font-semibold hover:cursor-pointer hover:rounded hover:bg-green-700 hover:text-white">
+                {job.jobTitle}
+              </h2>
+            </Link>
             <p className="mb-4 text-gray-500">
               Scheduled at {format(job.startDateTime, "h:mm a")}
             </p>
