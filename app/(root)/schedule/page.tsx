@@ -1,15 +1,16 @@
-import { fetchAllInvoices, fetchAllScheduledJobs } from "../../lib/data";
+import {
+  fetchAllInvoices,
+  fetchAllScheduledJobs,
+  fetchHolidays,
+} from "../../lib/data";
 import { auth } from "@clerk/nextjs/server";
-import MiniCalendar from "../../../_components/schedule/MiniCalendar";
-import FullCalendar from "../../../_components/schedule/FullCalendar";
-import SearchSelect from "../../../_components/schedule/JobSearchSelect";
 import { InvoiceType, ScheduleType } from "../../../app/lib/typeDefinitions";
-import Link from "next/link";
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 
 const Schedule = async () => {
   const invoices: InvoiceType[] = (await fetchAllInvoices()) ?? [];
   const scheduledJobs: ScheduleType[] = await fetchAllScheduledJobs();
+  const holidays = await fetchHolidays();
   const { has } = auth();
   const canManage = has({ permission: "org:database:allow" });
 
@@ -28,9 +29,13 @@ const Schedule = async () => {
   });
 
   return (
-   <CalendarOptions invoices={groupedSortedInvoices} scheduledJobs={scheduledJobs} canManage={canManage} />
+    <CalendarOptions
+      invoices={groupedSortedInvoices}
+      scheduledJobs={scheduledJobs}
+      canManage={canManage}
+      holidays={holidays}
+    />
   );
 };
-
 
 export default Schedule;

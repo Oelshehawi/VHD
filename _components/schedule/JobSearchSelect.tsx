@@ -55,7 +55,7 @@ const JobSearchSelect = ({
         />
       </div>
       {openDropdown && filteredJobs?.length > 0 && (
-        <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-md bg-white shadow-lg">
+        <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-md bg-white shadow-custom">
           <ul className="max-h-60 overflow-y-auto">
             {filteredJobs.map((job: ScheduleType) => {
               const jobDate = new Date(job.startDateTime);

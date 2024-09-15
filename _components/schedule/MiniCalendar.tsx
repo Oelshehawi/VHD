@@ -70,22 +70,7 @@ export default function MiniCalendar({
 
   return (
     <>
-      <AnimatePresence>
-        {open && (
-          <AddEvent
-            invoices={invoices}
-            open={open}
-            setOpen={() => setOpen(!open)}
-          />
-        )}
-      </AnimatePresence>
-      <div className="">
-        <div className="flex w-full justify-center py-4 md:justify-end">
-          <PlusIcon
-            onClick={() => setOpen(true)}
-            className={` h-8 w-8 rounded-xl bg-darkGreen text-white hover:cursor-pointer hover:bg-green-700 hover:transition-all ${canManage ? "block" : "hidden"}`}
-          />
-        </div>
+      <div className="py-4">
         <div className="mx-auto max-w-md px-4 sm:px-7 md:max-w-4xl md:px-6">
           <div className="md:grid md:grid-cols-2 md:divide-x md:divide-gray-200">
             <div className="md:pr-14">

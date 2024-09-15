@@ -533,3 +533,58 @@ export async function fetchInvoicesPages(
     throw new Error("Failed to fetch total number of invoices.");
   }
 }
+
+export const fetchHolidays = async (): Promise<any[]> => {
+  try {
+    const queryParams = new URLSearchParams({
+      country:  "CA",
+      year: new Date().getFullYear().toString(),
+
+    });
+
+    const response = await fetch(
+      `https://api.api-ninjas.com/v1/holidays?${queryParams}`,
+      {
+        method: "GET",
+        headers: {
+          "X-Api-Key": process.env.HOLIDAYS_API_KEY!, 
+        },
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to fetch holidays");
+    }
+
+    const data: any[] = await response.json();
+
+    const allowedTypes: any[] = [
+      "observance",
+      "public_holiday",
+      "common_local_holiday",
+      "local_holiday",
+      "major_holiday",
+    ];
+
+    const filteredHolidays = data.filter((holiday: any) =>
+      allowedTypes.includes(holiday.type.toLowerCase() as any)
+    );
+
+    const manualHolidays: any[] = [
+      {
+        date: "2024-09-30",
+        name: "National Day for Truth and Reconciliation",
+        type: "public_holiday",
+        country: "Canada",
+        iso: "CA",
+        year: 2024,
+        day: "Monday",
+      },
+    ];
+
+    return [...filteredHolidays, ...manualHolidays];
+  } catch (error) {
+    console.error("Error fetching holidays:", error);
+    return [];
+  }
+};

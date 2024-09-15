@@ -1,71 +1,44 @@
 "use client";
-import { useState } from "react";
-import AddEvent from "./AddEvent";
-import { AnimatePresence } from "framer-motion";
-import {
-  add,
-  eachDayOfInterval,
-  endOfMonth,
-  format,
-  getDay,
-  isEqual,
-  isSameDay,
-  isSameMonth,
-  isToday,
-  parse,
-  startOfToday,
-} from "date-fns";
+import { useMemo } from "react";
+import { format } from "date-fns";
 import { InvoiceType, ScheduleType } from "../../app/lib/typeDefinitions";
+import CalendarGrid from "./CalendarGrid";
 
 const FullCalendar = ({
   invoices,
   scheduledJobs,
   canManage,
+  currentWeek,
+  holidays,
 }: {
   invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
   canManage: boolean;
+  currentWeek: Date[];
+  holidays: any;
 }) => {
-  let today = startOfToday();
-  let [selectedDay, setSelectedDay] = useState(today);
-  let [currentMonth, setCurrentMonth] = useState(format(today, "MMM-yyyy"));
-  let [open, setOpen] = useState(false);
-  let firstDayCurrentMonth = parse(currentMonth, "MMM-yyyy", new Date());
+  const selectedDayJobsMap = useMemo(() => {
+    const jobsMap: { [key: string]: ScheduleType[] } = {};
+    scheduledJobs.forEach((job) => {
+      const jobDateKey = format(job.startDateTime, "yyyy-MM-dd");
+      if (!jobsMap[jobDateKey]) {
+        jobsMap[jobDateKey] = [];
+      }
+      jobsMap[jobDateKey]?.push(job);
+    });
+    return jobsMap;
+  }, [scheduledJobs]);
 
-  let days = eachDayOfInterval({
-    start: firstDayCurrentMonth,
-    end: endOfMonth(firstDayCurrentMonth),
-  });
+  const selectedDayJobs = (day: Date) =>
+    selectedDayJobsMap[format(day, "yyyy-MM-dd")] || [];
 
-  function previousMonth() {
-    let firstDayNextMonth = add(firstDayCurrentMonth, { months: -1 });
-    setCurrentMonth(format(firstDayNextMonth, "MMM-yyyy"));
-  }
-
-  function nextMonth() {
-    let firstDayNextMonth = add(firstDayCurrentMonth, { months: 1 });
-    setCurrentMonth(format(firstDayNextMonth, "MMM-yyyy"));
-  }
-
-  let selectedDayJobs = scheduledJobs
-    .filter((job) => isSameDay(job.startDateTime.toString(), selectedDay))
-    .sort(
-      (a, b) =>
-        new Date(a.startDateTime).getTime() -
-        new Date(b.startDateTime).getTime(),
-    );
   return (
-    <>
-      <AnimatePresence>
-        {open && (
-          <AddEvent
-            invoices={invoices}
-            open={open}
-            setOpen={() => setOpen(!open)}
-          />
-        )}
-      </AnimatePresence>
-    </>
+    <CalendarGrid
+      week={currentWeek}
+      selectedDayJobs={selectedDayJobs}
+      canManage={canManage}
+      holidays={holidays}
+    />
   );
 };
 

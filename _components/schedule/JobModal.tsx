@@ -16,7 +16,7 @@ const JobModal = ({
   return (
     <div
       onClick={toggleModal}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 "
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-0 bg-black bg-opacity-50 "
     >
       <div
         onClick={(e) => e.stopPropagation()}
