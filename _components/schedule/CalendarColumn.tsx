@@ -2,10 +2,14 @@
 import { format, isSameDay } from "date-fns";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
 import DeleteModal from "../DeleteModal";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import toast from "react-hot-toast";
 import { updateSchedule } from "../../app/lib/actions";
-import axios from "axios";
+
+const parseDate = (dateString: string): Date => {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year as any, (month as any) - 1, day);
+};
 
 const CalendarColumn = ({
   day,
@@ -20,12 +24,10 @@ const CalendarColumn = ({
   canManage: boolean;
   holidays: any;
 }) => {
-
-  const holiday = holidays.find((holiday:any) =>
-    isSameDay(new Date(holiday.date), day),
+  const holiday = holidays.find((holiday: any) =>
+    isSameDay(parseDate(holiday.date), day),
   );
 
-  console.log(holidays);
   return (
     <div
       className={`flex flex-col gap-2 overflow-y-auto rounded border-2 p-2 ${
