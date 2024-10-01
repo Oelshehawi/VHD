@@ -3,17 +3,21 @@ import InvoiceDetailsContainer from "../../../../_components/invoices/InvoiceDet
 import { InvoiceDetailedSkeleton } from "../../../../_components/Skeletons";
 import { fetchClientById, fetchInvoiceById } from "../../../lib/data";
 import { ClientType, InvoiceType } from "../../../lib/typeDefinitions";
+import { auth } from "@clerk/nextjs/server";
 
 const InvoiceDetailed = async ({ params }: { params: { id: string } }) => {
   const invoiceId = params.id;
   const invoice = (await fetchInvoiceById(invoiceId)) as InvoiceType;
   const client = (await fetchClientById(invoice?.clientId)) as ClientType;
+  const { has } = auth();
+
+  const canManage = has({ permission: "org:database:allow" });
 
   return (
     <>
       <div className="mt-4 px-3 lg:!px-5">
         <Suspense fallback={<InvoiceDetailedSkeleton />}>
-          <InvoiceDetailsContainer invoice={invoice} client={client} />
+          <InvoiceDetailsContainer invoice={invoice} client={client} canManage={canManage} />
         </Suspense>
       </div>
     </>

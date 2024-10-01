@@ -9,10 +9,18 @@ import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 
 const Schedule = async () => {
   const invoices: InvoiceType[] = (await fetchAllInvoices()) ?? [];
-  const scheduledJobs: ScheduleType[] = await fetchAllScheduledJobs();
+  let scheduledJobs: ScheduleType[] = await fetchAllScheduledJobs();
   const holidays = await fetchHolidays();
-  const { has } = auth();
+  const { has, sessionClaims }: any = auth();
   const canManage = has({ permission: "org:database:allow" });
+
+  const technicianName = sessionClaims?.technicianName?.technicianName;
+
+  if (!canManage) {
+    scheduledJobs = scheduledJobs.filter(
+      (job) => job.assignedTechnician === technicianName,
+    );
+  }
 
   const sortedInvoices = invoices.sort(
     (a, b) =>

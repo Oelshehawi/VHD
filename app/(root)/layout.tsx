@@ -60,7 +60,9 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { sessionClaims } = auth();
+  const { sessionClaims, has } = auth();
+
+  const canManage = has({ permission: "org:database:allow" });
   return (
     <ClerkProvider>
       <SyncActiveOrganization membership={sessionClaims?.membership} />
@@ -68,7 +70,7 @@ export default function RootLayout({
         <body className={inter.className}>
           <Toaster position="top-center" />
           <div className="flex max-h-[100vh] flex-col lg:!flex-row">
-            <SideNavBar />
+            <SideNavBar canManage={canManage} />
             <main>{children}</main>
           </div>
           <SpeedInsights />

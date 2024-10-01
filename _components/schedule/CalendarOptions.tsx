@@ -34,7 +34,7 @@ const CalendarOptions = ({
       end: add(startOfWeek(new Date(), { weekStartsOn: 0 }), { days: 6 }),
     })
   );
-
+  
   useEffect(() => {
     if (isMobileDevice()) {
       setCalendarOption(true); 

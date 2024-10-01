@@ -12,9 +12,11 @@ import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
 const InvoiceDetailsContainer = ({
   invoice,
   client,
+  canManage
 }: {
   invoice: InvoiceType;
   client: ClientType;
+  canManage: boolean;
 }) => {
   const router = useRouter();
 
@@ -64,26 +66,29 @@ const InvoiceDetailsContainer = ({
           <FaArrowLeft className="lg:mr-2" />
           <span>Back</span>
         </button>
-        <div className="space-x-2">
-          <GeneratePDF invoiceData={invoiceData} />
-          <button
-            className="mr-2 inline-flex items-center rounded bg-darkGreen px-4 py-2 text-white hover:bg-green-700"
-            onClick={toggleEdit}
-          >
-            <FaPenSquare className="lg:mr-2" />
-            <span>Edit</span>
-          </button>
-        </div>
+        {canManage && (
+          <div className="space-x-2">
+            <GeneratePDF invoiceData={invoiceData} />
+            <button
+              className="mr-2 inline-flex items-center rounded bg-darkGreen px-4 py-2 text-white hover:bg-green-700"
+              onClick={toggleEdit}
+            >
+              <FaPenSquare className="lg:mr-2" />
+              <span>Edit</span>
+            </button>
+          </div>
+        )}
       </div>
       <div className="-mx-2 flex flex-wrap text-sm lg:flex-nowrap lg:text-[1rem]">
         <InlineEditInvoice
           invoice={invoice}
           isEditing={isEditing}
           toggleEdit={toggleEdit}
+          canManage={canManage}
         />
-        <ClientDetails client={client} />
+        <ClientDetails client={client} canManage={canManage} />
       </div>
-      <PriceBreakdown invoice={invoice} />
+      {canManage && <PriceBreakdown invoice={invoice} />}
     </>
   );
 };

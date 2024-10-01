@@ -29,6 +29,11 @@ const CalendarColumn = ({
     isSameDay(parseDate(holiday.date), day),
   );
 
+  const sortedJobs = jobs.sort(
+    (a, b) =>
+      new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime(),
+  );
+
   return (
     <div
       className={`flex flex-col gap-2 overflow-y-auto rounded border-2 p-2 ${
@@ -42,7 +47,7 @@ const CalendarColumn = ({
         </div>
       )}
       <ul className="flex flex-col gap-2">
-        {jobs.map((job) => (
+        {sortedJobs.map((job) => (
           <JobItem key={job._id as string} job={job} canManage={canManage} />
         ))}
       </ul>

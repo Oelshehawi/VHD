@@ -184,7 +184,13 @@ export default function MiniCalendar({
   );
 }
 
-export function Job({ job, canManage }: { job: ScheduleType; canManage: boolean }) {
+export function Job({
+  job,
+  canManage,
+}: {
+  job: ScheduleType;
+  canManage: boolean;
+}) {
   let startDateTime = job.startDateTime.toString();
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmed, setConfirmed] = useState(() => job.confirmed);
@@ -219,15 +225,11 @@ export function Job({ job, canManage }: { job: ScheduleType; canManage: boolean 
   return (
     <li className="group flex items-center justify-between space-x-4 rounded-xl bg-darkGreen px-4  py-2 text-white ">
       <div className="flex-auto gap-4">
-        {canManage ? (
-          <Link href={`/invoices/${job.invoiceRef}`}>
-            <p className="hover:cursor-pointer hover:rounded hover:bg-green-700">
-              {job.jobTitle}
-            </p>
-          </Link>
-        ) : (
-          <p>{job.jobTitle}</p>
-        )}
+        <Link href={`/invoices/${job.invoiceRef}`}>
+          <p className="hover:cursor-pointer hover:rounded hover:bg-green-700">
+            {job.jobTitle}
+          </p>
+        </Link>
         <p className="mt-0.5">{format(startDateTime, "h:mm a")}</p>
         <div className="flex gap-2">
           <span
