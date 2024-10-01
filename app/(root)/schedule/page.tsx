@@ -18,7 +18,7 @@ const Schedule = async () => {
 
   if (!canManage) {
     scheduledJobs = scheduledJobs.filter(
-      (job) => job.assignedTechnician === technicianName,
+      (job) => job.assignedTechnician.includes(technicianName) ,
     );
   }
 
