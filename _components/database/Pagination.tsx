@@ -19,14 +19,14 @@ export default function Pagination({ totalPages }: { totalPages: number }) {
     };
     return (
       <>
-        <div className="md:inline-flex hidden">
+        <div className="md:inline-flex md:flex-row gap-2 justify-center items-center flex flex-col ">
           <PaginationArrow
             direction="left"
             href={createPageURL(currentPage - 1)}
             isDisabled={currentPage <= 1}
           />
   
-          <div className="flex -space-x-px">
+          <div className="flex ">
             {allPages.map((page, index) => {
               let position: 'first' | 'last' | 'single' | 'middle' | undefined;
   
@@ -98,12 +98,12 @@ export default function Pagination({ totalPages }: { totalPages: number }) {
     isDisabled?: boolean;
   }) {
     const className = clsx(
-      'flex h-10 w-10 items-center justify-center rounded-md border',
+      'flex h-10 w-[100%] md:w-10 items-center justify-center rounded-md border',
       {
         'pointer-events-none text-gray-300': isDisabled,
         'hover:bg-gray-100': !isDisabled,
-        'mr-2 md:mr-4': direction === 'left',
-        'ml-2 md:ml-4': direction === 'right',
+        ' md:mr-4': direction === 'left',
+        ' md:ml-4': direction === 'right',
       },
     );
   

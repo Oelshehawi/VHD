@@ -5,13 +5,11 @@ import { InvoiceType, ScheduleType } from "../../app/lib/typeDefinitions";
 import CalendarGrid from "./CalendarGrid";
 
 const FullCalendar = ({
-  invoices,
   scheduledJobs,
   canManage,
   currentWeek,
   holidays,
 }: {
-  invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   currentWeek: Date[];

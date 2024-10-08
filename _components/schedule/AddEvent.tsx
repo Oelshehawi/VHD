@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
 import InvoiceSearchSelect from "../invoices/InvoiceSearchSelect";
-import { createSchedule } from "../../app/lib/actions";
+import { createSchedule } from "../../app/lib/actions/scheduleJobs.actions";
 
 const AddEvent = ({
   invoices,
@@ -26,11 +26,11 @@ const AddEvent = ({
     clearErrors,
   } = useForm<ScheduleType>();
 
-  const handleInvoiceSelect = (invoice: InvoiceType) => {
+  const handleInvoiceSelect = (invoice: ScheduleType) => {
     setValue("invoiceRef", invoice._id, { shouldValidate: true });
     setValue("jobTitle", invoice.jobTitle);
     setValue("location", invoice.location ?? "");
-    setValue("assignedTechnician", "Migo");
+    setValue("assignedTechnician", invoice.assignedTechnician);
     clearErrors(["invoiceRef", "jobTitle", "location", "assignedTechnician"]);
   };
 
@@ -56,7 +56,7 @@ const AddEvent = ({
   return (
     <div
       onClick={setOpen}
-      className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40"
+      className="bg-black-2 fixed inset-0 flex items-center justify-center bg-opacity-40"
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}

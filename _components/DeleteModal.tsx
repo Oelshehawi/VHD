@@ -1,9 +1,12 @@
 "use client";
 import { useState } from "react";
-import { deleteClient, deleteInvoice, deleteJob } from "../app/lib/actions";
+import {
+  deleteClient,
+  deleteInvoice,
+} from "../app/lib/actions/actions";
 import toast from "react-hot-toast";
 import { FaTrash } from "react-icons/fa";
-import { MenuItem } from "@headlessui/react";
+import { deleteJob } from "../app/lib/actions/scheduleJobs.actions";
 
 const DeleteModal = ({
   deleteText,
@@ -81,7 +84,7 @@ const DeleteModal = ({
           }}
         />
       </div>
-      <div className="fixed inset-0 z-[1000] flex h-full w-full flex-wrap items-center justify-center overflow-auto p-4 font-[sans-serif] before:fixed before:inset-0 before:h-full before:w-full before:bg-[rgba(0,0,0,0.5)]">
+      <div className="fixed inset-0 text-darkGray z-[1000] flex h-full w-full flex-wrap items-center justify-center overflow-auto p-4 font-[sans-serif] before:fixed before:inset-0 before:h-full before:w-full before:bg-[rgba(0,0,0,0.5)]">
         <div className="relative w-full max-w-md rounded-md bg-white p-6 shadow-lg">
           <svg
             xmlns="http://www.w3.org/2000/svg"

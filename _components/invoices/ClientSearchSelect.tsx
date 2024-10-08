@@ -48,7 +48,7 @@ const ClientSearchSelect = ({
       className={clsx("relative flex w-full flex-col gap-3 py-2", className)}
     >
       <div className="group flex w-full rounded-lg shadow-custom">
-        <FaSearch className="size-10 rounded-l-lg bg-black p-2 text-gray-400 group-focus-within:text-gray-600" />
+        <FaSearch className="size-10 rounded-l-lg bg-black-2 p-2 text-gray-400 group-focus-within:text-gray-600" />
         <input
           type="text"
           placeholder={placeholder}

@@ -91,7 +91,6 @@ const CalendarOptions = ({
         </div>
       ) : (
         <FullCalendar
-          invoices={invoices}
           scheduledJobs={scheduledJobs}
           canManage={canManage}
           currentWeek={currentWeek}

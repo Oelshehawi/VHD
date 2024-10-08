@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
-import { updateInvoice } from "../../app/lib/actions";
+import { updateInvoice } from "../../app/lib/actions/actions";
 import { formatDateToString } from "../../app/lib/utils";
 import { toast } from "react-hot-toast";
 import { calculateDueDate } from "../../app/lib/utils";

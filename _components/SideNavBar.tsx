@@ -1,27 +1,13 @@
 "use client";
-import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import {
-  HomeIcon,
-  CalendarIcon,
-  CircleStackIcon,
-  DocumentIcon,
-} from "@heroicons/react/24/solid";
-import { motion, AnimatePresence } from "framer-motion";
-import { SignOutButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import UserSection from "./UserSection";
+import NavLinks from "./NavLinks";
+import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 
-import { useEffect } from "react";
-
-const SideNavBar = ({ canManage }: { canManage: boolean }) => {
-  const isActive = (href: string) => {
-    const pathname = usePathname();
-    return (
-      pathname === href ||
-      pathname?.startsWith(`${href}`) ||
-      pathname?.startsWith(`${href}`)
-    );
-  };
-
+const SideNavBar = ({ canManage, user }: { canManage: boolean; user: any }) => {
+  const [isNavOpen, setIsNavOpen] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -29,69 +15,33 @@ const SideNavBar = ({ canManage }: { canManage: boolean }) => {
       router.replace("/schedule");
     }
   }, [canManage, router]);
-  
+
+  const toggleNav = () => {
+    setIsNavOpen((prev) => !prev);
+  };
+
   return (
-    <div className="flex flex-row items-center justify-between border-borderGreen bg-darkGreen text-xl text-white lg:min-h-screen lg:flex-col lg:border-r-4">
-      <div className="flex items-center justify-center border-r-2 border-borderGreen p-2 lg:border-b-2 lg:border-r-0">
-        <SignedIn>
-          <UserButton />
-        </SignedIn>
-        <SignedOut>
-          <SignOutButton />
-        </SignedOut>
-      </div>
-      <div className="flex grow justify-center p-2 lg:flex-col lg:justify-start">
-        <div className="flex flex-row gap-4 text-center lg:mt-3 lg:flex-col lg:space-y-5">
-          {canManage ? (
-            [
-              { href: "/dashboard", icon: HomeIcon },
-              { href: "/database", icon: CircleStackIcon },
-              { href: "/invoices", icon: DocumentIcon },
-              { href: "/schedule", icon: CalendarIcon },
-            ].map(({ href, icon: Icon }) => (
-              <AnimatePresence key={href}>
-                <motion.div
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <Link
-                    href={href}
-                    className={`flex items-center justify-center rounded-lg bg-gray-200 p-2 text-xl font-bold text-black ${
-                      isActive(href)
-                        ? "!bg-darkBlue !text-white"
-                        : "hover:bg-darkBlue hover:!text-white"
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      <Icon className="h-6 w-6" />
-                    </div>
-                  </Link>
-                </motion.div>
-              </AnimatePresence>
-            ))
+    <div className="border-borderGreen bg-darkGreen text-xl text-white lg:min-h-screen lg:border-r-4">
+      <div className="flex items-center justify-between p-4 lg:flex-col lg:border-b-2 lg:border-r-0">
+        <UserSection />
+        <button
+          className="block lg:hidden"
+          onClick={toggleNav}
+          aria-label="Toggle navigation"
+        >
+          {isNavOpen ? (
+            <XMarkIcon className="h-8 w-8 text-white" />
           ) : (
-            <AnimatePresence>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Link
-                  href="/schedule"
-                  className={`flex items-center justify-center rounded-lg bg-gray-200 p-2 text-xl font-bold text-black ${
-                    isActive("/schedule")
-                      ? "!bg-darkBlue !text-white"
-                      : "hover:bg-darkBlue hover:!text-white"
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <CalendarIcon className="h-6 w-6" />
-                  </div>
-                </Link>
-              </motion.div>
-            </AnimatePresence>
+            <Bars3Icon className="h-8 w-8 text-white" />
           )}
-        </div>
+        </button>
       </div>
+      <NavLinks
+        isNavOpen={isNavOpen}
+        canManage={canManage}
+        setIsNavOpen={setIsNavOpen}
+        user={user}
+      />
     </div>
   );
 };

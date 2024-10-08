@@ -2,7 +2,6 @@
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  PlusIcon,
 } from "@heroicons/react/16/solid";
 import {
   add,
@@ -18,10 +17,8 @@ import {
   startOfToday,
 } from "date-fns";
 import { useState } from "react";
-import AddEvent from "./AddEvent";
-import { AnimatePresence } from "framer-motion";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
-import { updateSchedule } from "../../app/lib/actions";
+import { updateSchedule } from "../../app/lib/actions/scheduleJobs.actions";
 import DeleteModal from "../DeleteModal";
 import toast from "react-hot-toast";
 import Link from "next/link";
@@ -31,7 +28,6 @@ function classNames(...classes: (string | boolean | undefined)[]) {
 }
 
 export default function MiniCalendar({
-  invoices,
   scheduledJobs,
   canManage,
 }: {
@@ -42,7 +38,6 @@ export default function MiniCalendar({
   let today = startOfToday();
   let [selectedDay, setSelectedDay] = useState(today);
   let [currentMonth, setCurrentMonth] = useState(format(today, "MMM-yyyy"));
-  let [open, setOpen] = useState(false);
   let firstDayCurrentMonth = parse(currentMonth, "MMM-yyyy", new Date());
 
   let days = eachDayOfInterval({

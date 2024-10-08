@@ -4,7 +4,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "react-hot-toast";
 import { ClerkProvider } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
+import { auth, currentUser } from "@clerk/nextjs/server";
 import { SyncActiveOrganization } from "../../_components/SyncActiveOrganization";
 import type { Metadata, Viewport } from "next";
 import SideNavBar from "../../_components/SideNavBar";
@@ -55,7 +55,7 @@ export const viewport: Viewport = {
   themeColor: "#FFFFFF",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -63,6 +63,16 @@ export default function RootLayout({
   const { sessionClaims, has } = auth();
 
   const canManage = has({ permission: "org:database:allow" });
+  
+  const user: any = await currentUser();
+
+  const serializedUser = {
+    id: user.id,
+    email: user.emailAddresses[0]?.emailAddress,
+    firstName: user.firstName,
+    lastName: user.lastName,
+  };
+  
   return (
     <ClerkProvider>
       <SyncActiveOrganization membership={sessionClaims?.membership} />
@@ -70,7 +80,7 @@ export default function RootLayout({
         <body className={inter.className}>
           <Toaster position="top-center" />
           <div className="flex max-h-[100vh] flex-col lg:!flex-row">
-            <SideNavBar canManage={canManage} />
+            <SideNavBar canManage={canManage} user={serializedUser} />
             <main>{children}</main>
           </div>
           <SpeedInsights />

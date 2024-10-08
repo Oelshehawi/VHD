@@ -5,6 +5,8 @@ import {
   InvoiceType,
   ScheduleType,
   ClientType,
+  BankAccountType,
+  TransactionType,
 } from "../app/lib/typeDefinitions";
 
 const ClientSchema = new Schema<ClientType>({
@@ -132,6 +134,63 @@ const jobsDueSoonSchema = new Schema<DueInvoiceType>({
   },
 });
 
+const bankAccountSchema = new Schema<BankAccountType>({
+  userId: {
+    type: String,
+    required: true,
+  },
+  bankId: {
+    type: String,
+    required: true,
+  },
+  accountId: {
+    type: String,
+    required: true,
+  },
+  accessToken: {
+    type: String,
+    required: true,
+  },
+  shareableId: {
+    type: String,
+    required: true,
+  },
+});
+
+const transactionSchema = new Schema<TransactionType>(
+  {
+    senderBankId: {
+      type: String,
+      required: true,
+    },
+    receiverBankId: {
+      type: String,
+      required: true,
+    },
+    amount: {
+      type: Number,
+      required: true,
+    },
+    name: String,
+    channel: {
+      type: String,
+      default: "online",
+    },
+    category: {
+      type: String,
+      default: "Transfer",
+    },
+  },
+  {
+    timestamps: true,
+  },
+);
+
+bankAccountSchema.index(
+  { userId: 1, bankId: 1, accountId: 1 },
+  { unique: true },
+);
+
 const Client =
   (models.Client as Model<ClientType>) || model("Client", ClientSchema);
 const Invoice =
@@ -142,4 +201,12 @@ const JobsDueSoon =
 const Schedule =
   (models.Schedule as Model<ScheduleType>) || model("Schedule", scheduleSchema);
 
-export { Client, Invoice, JobsDueSoon, Schedule };
+const BankAccount =
+  (models.BankAccount as Model<BankAccountType>) ||
+  model("BankAccount", bankAccountSchema);
+
+const Transaction =
+  (models.Transaction as Model<TransactionType>) ||
+  model("Transaction", transactionSchema);
+
+export { Client, Invoice, JobsDueSoon, Schedule, BankAccount, Transaction };

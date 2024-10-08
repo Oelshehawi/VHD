@@ -1,0 +1,112 @@
+"use client";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import {
+  HomeIcon,
+  CalendarIcon,
+  CircleStackIcon,
+  DocumentIcon,
+  CurrencyDollarIcon,
+} from "@heroicons/react/24/solid";
+import PlaidLink from "./transactions/PlaidLink";
+import { usePathname } from "next/navigation";
+
+const NavLinks = ({
+  isNavOpen,
+  canManage,
+  setIsNavOpen,
+  user,
+}: {
+  isNavOpen: boolean;
+  canManage: boolean;
+  setIsNavOpen: (isOpen: boolean) => void;
+  user: any;
+}) => {
+  const pathname = usePathname();
+
+  const isActive = (href: string) => {
+    return (
+      pathname === href ||
+      pathname?.startsWith(`${href}`) ||
+      pathname?.startsWith(`${href}`)
+    );
+  };
+
+  const links = canManage
+    ? [
+        { href: "/dashboard", icon: HomeIcon },
+        { href: "/database", icon: CircleStackIcon },
+        { href: "/invoices", icon: DocumentIcon },
+        { href: "/schedule", icon: CalendarIcon },
+        { href: "/transactions", icon: CurrencyDollarIcon },
+      ]
+    : [
+        { href: "/schedule", icon: CalendarIcon },
+        { href: "/transactions", icon: CurrencyDollarIcon },
+      ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: "-100%" }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: "-100%" }}
+      className={`lg:flex lg:flex-col lg:items-start ${
+        isNavOpen ? "block" : "hidden"
+      } lg:block`}
+    >
+      <div className="p-4 lg:mt-3 lg:flex lg:w-full lg:space-y-5">
+        <div className="grid grid-cols-3 gap-4 lg:hidden">
+          {links.map(({ href, icon: Icon }) => (
+            <motion.div
+              key={href}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Link
+                href={href}
+                className={`flex items-center justify-center rounded-lg bg-gray-600 p-4 text-xl font-bold text-black ${
+                  isActive(href)
+                    ? "!bg-darkBlue !text-white"
+                    : "hover:bg-darkBlue hover:!text-white"
+                }`}
+                onClick={() => setIsNavOpen(false)}
+              >
+                <div className="flex items-center">
+                  <Icon className="h-8 w-8" />
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+          <PlaidLink canManage={canManage} user={user} />
+        </div>
+
+        <div className="hidden flex-col items-center space-y-5 lg:flex">
+          {links.map(({ href, icon: Icon }) => (
+            <motion.div
+              key={href}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              <Link
+                href={href}
+                className={`flex items-center justify-center rounded-lg bg-gray-600 p-2 text-xl font-bold text-black ${
+                  isActive(href)
+                    ? "!bg-darkBlue !text-white"
+                    : "hover:bg-darkBlue hover:!text-white"
+                }`}
+                onClick={() => setIsNavOpen(false)}
+              >
+                <div className="flex items-center">
+                  <Icon className="h-6 w-6" />
+                </div>
+              </Link>
+            </motion.div>
+          ))}
+          <PlaidLink canManage={canManage} user={user} />
+        </div>
+      </div>
+    </motion.div>
+  );
+};
+
+export default NavLinks;

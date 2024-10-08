@@ -2,7 +2,7 @@
 import { useRouter } from "next/navigation";
 import { SendReminder } from "../Email/Button";
 import { toast } from "react-hot-toast";
-import { updateInvoiceScheduleStatus } from "../../app/lib/actions";
+import { updateInvoiceScheduleStatus } from "../../app/lib/actions/actions";
 import { formatDate } from "../../app/lib/utils";
 import { DueInvoiceType } from "../../app/lib/typeDefinitions";
 
@@ -29,7 +29,7 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
           onClick={() => router.push(`/invoices/${invoiceData.invoiceId}`)}
         >
           {invoiceData.notesExists ? (
-            <div className="relative top-0 left-0 size-3 animate-pulse rounded-full bg-blue-400 "></div>
+            <div className="relative left-0 top-0 size-3 animate-pulse rounded-full bg-blue-400 "></div>
           ) : (
             ""
           )}

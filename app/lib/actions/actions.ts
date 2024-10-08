@@ -1,15 +1,24 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import connectMongo from "./connect";
+import connectMongo from "../connect";
 import {
   JobsDueSoon,
   Client,
   Invoice,
   Schedule,
-} from "../../models/reactDataSchema";
-import { ClientType, ScheduleType } from "./typeDefinitions";
+  BankAccount,
+} from "../../../models/reactDataSchema";
+import { BankAccountType, ClientType, ScheduleType } from "../typeDefinitions";
 import { ObjectId } from "mongoose";
-import { calculateDueDate } from "./utils";
+import { calculateDueDate, encryptId, parseStringify } from "../utils";
+import { plaidClient } from "../plaid";
+import {
+  CountryCode,
+  ProcessorStripeBankAccountTokenCreateRequest,
+  ProcessorTokenCreateRequest,
+  ProcessorTokenCreateRequestProcessorEnum,
+  Products,
+} from "plaid";
 
 export async function updateInvoiceScheduleStatus(invoiceId) {
   await connectMongo();
@@ -168,46 +177,119 @@ export async function updateInvoice(invoiceId: any, formData: any) {
   revalidatePath(`/invoices/${invoiceId}`);
 }
 
-export async function createSchedule(scheduleData: ScheduleType) {
+export const createLinkToken = async (user: any) => {
   try {
-    if (typeof scheduleData.startDateTime === "string") {
-      scheduleData.startDateTime = new Date(
-        scheduleData.startDateTime,
-      ) as Date & string;
-    }
-    const newSchedule = new Schedule(scheduleData);
-    await newSchedule.save();
+    const tokenParams = {
+      user: {
+        client_user_id: user.id,
+      },
+      client_name: `${user.firstName} ${user.lastName}`,
+      products: ["auth", "transactions"] as Products[],
+      language: "en",
+      country_codes: ["CA"] as CountryCode[],
+    };
+
+    const response = await plaidClient.linkTokenCreate(tokenParams);
+
+    return parseStringify({ linkToken: response.data.link_token });
   } catch (error) {
     console.error("Database Error:", error);
-    throw new Error("Failed to create schedule");
+    throw new Error("Failed to create link token");
   }
-
-  revalidatePath("/schedule");
-}
-
-export const deleteJob = async (jobId: string) => {
-  try {
-    await Schedule.findByIdAndDelete(jobId);
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to delete job with id");
-  }
-
-  revalidatePath("/schedule");
 };
 
-export const updateSchedule = async ({
-  scheduleId,
-  confirmed,
+export const createBankAccount = async ({
+  userId,
+  bankId,
+  accountId,
+  accessToken,
+  shareableId,
+}: BankAccountType) => {
+  try {
+    await connectMongo();
+
+    const bankAccount = new BankAccount({
+      userId,
+      bankId,
+      accountId,
+      accessToken,
+      shareableId,
+    });
+
+    const savedBankAccount = await bankAccount.save();
+
+    return savedBankAccount.toObject();
+  } catch (error) {
+    console.error("Error creating bank account:", error);
+    return null;
+  }
+};
+
+export const exchangePublicToken = async ({
+  publicToken,
+  user,
 }: {
-  scheduleId: string;
-  confirmed: boolean;
+  publicToken: string;
+  user: any;
 }) => {
   try {
-    await Schedule.findByIdAndUpdate(scheduleId, { confirmed }, { new: true });
-    revalidatePath("/schedule");
+    const exchangeTokenResponse = await plaidClient.itemPublicTokenExchange({
+      public_token: publicToken,
+    });
+
+    const accessToken = exchangeTokenResponse.data.access_token;
+    const itemId = exchangeTokenResponse.data.item_id;
+
+    const accountsResponse = await plaidClient.accountsGet({
+      access_token: accessToken,
+    });
+
+    const accountData = accountsResponse.data.accounts[0];
+
+    // const request: ProcessorStripeBankAccountTokenCreateRequest = {
+    //   access_token: accessToken,
+    //   account_id: accountData?.account_id ?? "",
+    // };
+
+    // const stripeTokenResponse =
+    //   await plaidClient.processorStripeBankAccountTokenCreate(request);
+    // const bankAccount = stripeTokenResponse.data.stripe_bank_account_token;
+
+    await createBankAccount({
+      userId: user.id,
+      bankId: itemId,
+      accountId: accountData?.account_id ?? "",
+      accessToken,
+      shareableId: encryptId(accountData?.account_id as string),
+    });
+
+    revalidatePath("/transactions");
+
+    return parseStringify({ publicTokenExhange: "complete" });
   } catch (error) {
     console.error("Database Error:", error);
-    throw new Error("Failed to update the schedule");
+    throw new Error("Failed to exchange public token");
+  }
+};
+
+export const getBanks = async ({ userId }: { userId: string }) => {
+  await connectMongo();
+  try {
+    const banks = await BankAccount.find({ userId }).exec();
+    return banks.map((bank) => bank.toObject());
+  } catch (error) {
+    console.error("Error fetching banks:", error);
+    return null;
+  }
+};
+
+export const getBank = async ({ documentId }: { documentId: string }) => {
+  await connectMongo();
+  try {
+    const bank = await BankAccount.findById(documentId).exec();
+    return bank ? bank.toObject() : null;
+  } catch (error) {
+    console.error("Error fetching bank:", error);
+    return null;
   }
 };

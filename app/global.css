@@ -13,10 +13,14 @@ main {
   flex: 1;
 }
 
-::-webkit-scrollbar {
+/* ::-webkit-scrollbar {
   width: 5px;
   background-color: #003e29;
   color: #003e29;
+} */
+
+::-webkit-scrollbar {
+  display: none;
 }
 
 ::-webkit-scrollbar-track {
@@ -34,4 +38,128 @@ main {
 
 .cl-internal-b3fm6y {
   visibility: hidden;
+}
+
+@layer utilities {
+  .input-class {
+    @apply text-16 placeholder:text-16 rounded-lg border border-gray-300 text-gray-900 placeholder:text-gray-500;
+  }
+
+  .sheet-content button {
+    @apply focus:ring-0 focus:ring-offset-0 focus-visible:border-none focus-visible:outline-none focus-visible:ring-transparent focus-visible:ring-offset-0 !important;
+  }
+
+  .text14_padding10 {
+    @apply text-14 px-4 py-2.5 font-semibold;
+  }
+
+  .flex-center {
+    @apply flex items-center justify-center;
+  }
+
+  .header-2 {
+    @apply text-18 font-semibold text-gray-900;
+  }
+
+  .text-10 {
+    @apply text-[10px] leading-[14px];
+  }
+
+  .text-12 {
+    @apply text-[12px] leading-[16px];
+  }
+
+  .text-14 {
+    @apply text-[14px] leading-[20px];
+  }
+
+  .text-16 {
+    @apply text-[16px] leading-[24px];
+  }
+
+  .text-18 {
+    @apply text-[18px] leading-[22px];
+  }
+
+  .text-20 {
+    @apply text-[20px] leading-[24px];
+  }
+
+  .text-24 {
+    @apply text-[24px] leading-[30px];
+  }
+
+  .text-26 {
+    @apply text-[26px] leading-[32px];
+  }
+
+  .text-30 {
+    @apply text-[30px] leading-[38px];
+  }
+
+  .text-36 {
+    @apply text-[36px] leading-[44px];
+  }
+
+  .banks {
+    @apply flex flex-col justify-between gap-8 px-6 py-8;
+  }
+
+  /* My Banks */
+  .my-banks {
+    @apply bg-gray-25 flex h-screen max-h-screen w-full flex-col gap-8 p-8 xl:py-12;
+  }
+
+  /* My Banks */
+  .transactions {
+    @apply flex max-h-screen w-full flex-col gap-8 xl:py-2;
+  }
+
+  .transactions-account {
+    @apply flex flex-col justify-between gap-4 rounded-lg border-y bg-blue-800 px-4 py-5 md:flex-row;
+  }
+
+  .transactions-account-balance {
+    @apply flex-center bg-blue-25/20  flex-col gap-2 rounded-md px-4 py-2 text-white;
+  }
+
+  .header-box {
+    @apply flex flex-col gap-1;
+  }
+
+  .header-box-title {
+    @apply text-24 lg:text-30 font-semibold text-gray-900;
+  }
+
+  .header-box-subtext {
+    @apply text-14 lg:text-16 font-normal text-gray-600;
+  }
+
+  /* Category Badge */
+  .category-badge {
+    @apply flex-center w-fit gap-1 truncate rounded-2xl border-[1.5px] py-[2px] pl-1.5 pr-2;
+  }
+
+  .banktab-item {
+    @apply flex gap-[18px] border-b-2 px-2 py-2 transition-all sm:px-4;
+  }
+
+  /* Mobile nav */
+
+  /* PlaidLink */
+  .plaidlink-primary {
+    @apply text-16 border-bankGradient bg-bank-gradient shadow-form rounded-lg border font-semibold text-white;
+  }
+
+  .plaidlink-ghost {
+    @apply flex cursor-pointer items-center justify-center gap-3 rounded-lg px-3 py-7 hover:bg-white lg:justify-start;
+  }
+
+  .plaidlink-default {
+    @apply flex cursor-pointer flex-row !justify-start gap-3 rounded-lg !bg-transparent;
+  }
+
+  .bank-info_content {
+    @apply flex flex-1 items-center justify-between gap-2 overflow-hidden;
+  }
 }

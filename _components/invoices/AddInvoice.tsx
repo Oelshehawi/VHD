@@ -4,10 +4,9 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import toast from "react-hot-toast";
 import { FaTrash, FaPlus } from "react-icons/fa";
 import { calculateDueDate } from "../../app/lib/utils";
-import { createInvoice } from "../../app/lib/actions";
+import { createInvoice } from "../../app/lib/actions/actions";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import ClientSearchSelect from "./ClientSearchSelect";
-
 
 interface AddInvoiceProps {
   clients: ClientType[];

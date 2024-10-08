@@ -1,4 +1,41 @@
 import { ObjectId } from "mongodb";
+import { Types } from "mongoose";
+
+export type SearchParamProps = {
+  params: { [key: string]: string };
+  searchParams: { [key: string]: string | string[] | undefined };
+};
+
+export type Transaction = {
+  id: string;
+  $id: string;
+  name: string;
+  paymentChannel: string;
+  type: string;
+  accountId: string;
+  amount: number;
+  pending: boolean;
+  category: {
+    confidence_level: string;
+    detailed: string;
+    primary: string;
+  };
+  date: string;
+  image: string;
+  $createdAt: string;
+  channel: string;
+  senderBankId: string;
+  receiverBankId: string;
+};
+
+export interface TransactionTableProps {
+  transactions: Transaction[];
+}
+
+export interface TransactionHistoryTableProps {
+  transactions: Transaction[];
+  page: number;
+}
 
 export interface ScheduleType {
   _id: ObjectId | string;
@@ -8,6 +45,38 @@ export interface ScheduleType {
   startDateTime: Date | string;
   assignedTechnician: string;
   confirmed: boolean;
+}
+
+export interface BankAccountType {
+  userId: string;
+  bankId: string;
+  accountId: string;
+  accessToken: string;
+  shareableId: string;
+}
+
+export type NewDwollaCustomerParams = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  type: string;
+  address1: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  dateOfBirth: string;
+  ssn: string;
+};
+
+export interface TransactionType {
+  senderBankId: Types.ObjectId | string;
+  receiverBankId: Types.ObjectId | string;
+  amount: number;
+  name?: string;
+  channel: string;
+  category: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface ClientType {
@@ -24,7 +93,7 @@ export interface InvoiceType {
   invoiceId: string;
   jobTitle: string;
   dateIssued: Date | string | number;
-  dateDue: Date| string;
+  dateDue: Date | string;
   items: {
     description: string;
     price: number;

@@ -40,7 +40,7 @@ const Invoice = async ({
   return (
     <Suspense fallback={<TableContainerSkeleton />}>
       <div className="flex min-h-full items-center justify-center">
-        <div className="my-5 min-h-[90vh] w-[90%] rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-4/5">
+        <div className="my-5 min-h-[90vh] w-[90%] gap-4 flex flex-col rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-4/5">
           <AddInvoice clients={clients} />
           <div className="">
             <div className="flex flex-col justify-between md:flex-row lg:gap-4 ">
