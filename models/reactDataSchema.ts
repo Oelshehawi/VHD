@@ -155,31 +155,40 @@ const bankAccountSchema = new Schema<BankAccountType>({
     type: String,
     required: true,
   },
+  cursor: {
+    type: String,
+    default: null,
+  },
 });
 
 const transactionSchema = new Schema<TransactionType>(
   {
-    senderBankId: {
+    transactionId: {
+      type: String,
+      required: true,
+      unique: true,
+    },
+    bankAccountId: {
       type: String,
       required: true,
     },
-    receiverBankId: {
-      type: String,
-      required: true,
-    },
-    amount: {
-      type: Number,
-      required: true,
-    },
+    id: String,
+    $id: String,
     name: String,
-    channel: {
-      type: String,
-      default: "online",
-    },
+    paymentChannel: String,
+    type: String,
+    accountId: String,
+    amount: Number,
+    pending: Boolean,
     category: {
-      type: String,
-      default: "Transfer",
+      confidence_level: String,
+      detailed: String,
+      primary: String,
     },
+    date: String,
+    image: String,
+    $createdAt: String,
+    channel: String,
   },
   {
     timestamps: true,

@@ -14,30 +14,91 @@ import { motion } from "framer-motion";
 import { BanknotesIcon } from "@heroicons/react/24/solid";
 
 interface PlaidLinkProps {
-  canManage: boolean;
   user: any;
 }
 
-const PlaidLink = ({ canManage, user }: PlaidLinkProps) => {
-  const [token, setToken] = useState("");
-
-  const onSuccess = useCallback<PlaidLinkOnSuccess>(
-    async (public_token: string) => {
-      await exchangePublicToken({ publicToken: public_token, user });
-
-      toast.success("Bank account connected successfully");
-    },
-    [user],
-  );
+const PlaidLink = ({ user }: PlaidLinkProps) => {
+  const [token, setToken] = useState<string | null>(null);
+  const [tokenFetched, setTokenFetched] = useState(false);
 
   useEffect(() => {
     const getLinkToken = async () => {
-      const data = await createLinkToken(user);
-      setToken(data?.linkToken);
+      // Try to get the token from localStorage
+      const storedToken = localStorage.getItem("plaid_link_token");
+      const tokenExpiration = localStorage.getItem(
+        "plaid_link_token_expiration",
+      );
+
+      if (
+        storedToken &&
+        tokenExpiration &&
+        new Date() < new Date(tokenExpiration)
+      ) {
+        setToken(storedToken);
+        setTokenFetched(true);
+        return;
+      }
+
+      // If no valid token is in storage, fetch a new one
+      try {
+        const data = await createLinkToken(user);
+        const newToken = data?.linkToken;
+        setToken(newToken);
+
+        // Store the token and its expiration time
+        localStorage.setItem("plaid_link_token", newToken);
+        // Token is valid for 4 hours
+        const expirationTime = new Date(
+          Date.now() + 4 * 60 * 60 * 1000,
+        ).toISOString();
+        localStorage.setItem("plaid_link_token_expiration", expirationTime);
+      } catch (error) {
+        console.error("Error fetching link token:", error);
+      } finally {
+        setTokenFetched(true);
+      }
     };
 
     getLinkToken();
-  }, [user]);
+  }, [user.id]);
+
+  if (!tokenFetched) {
+    return (
+      <div className="flex items-center justify-center">
+        <span>Loading...</span>
+      </div>
+    );
+  }
+
+  if (!token) {
+    return (
+      <div className="flex items-center justify-center">
+        <span>Error fetching link token</span>
+      </div>
+    );
+  }
+
+  return <PlaidLinkButton token={token} user={user} />;
+};
+
+interface PlaidLinkButtonProps {
+  token: string;
+  user: any;
+}
+
+const PlaidLinkButton = ({ token, user }: PlaidLinkButtonProps) => {
+  const onSuccess = useCallback(
+    async (public_token: string) => {
+      try {
+        await exchangePublicToken({ publicToken: public_token, user });
+        toast.success("Bank account connected successfully");
+      } catch (error) {
+        console.error("Error exchanging public token:", error);
+        toast.error("Error connecting bank account");
+      }
+    },
+    [user.id],
+  );
 
   const config: PlaidLinkOptions = {
     token,
@@ -47,22 +108,20 @@ const PlaidLink = ({ canManage, user }: PlaidLinkProps) => {
   const { open, ready } = usePlaidLink(config);
 
   return (
-    <>
-      <motion.button
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={() => open()}
-        disabled={!ready}
+    <motion.button
+      whileHover={{ scale: 1.05 }}
+      whileTap={{ scale: 0.95 }}
+      onClick={() => open()}
+      disabled={!ready}
+    >
+      <span
+        className={`flex h-full items-center justify-center rounded-lg bg-gray-600 p-2 text-xl font-bold text-black hover:bg-darkBlue hover:!text-white`}
       >
-        <span
-          className={`flex items-center justify-center rounded-lg bg-gray-600 p-4 text-xl font-bold text-black hover:cursor-pointer hover:bg-darkBlue hover:!text-white md:p-2`}
-        >
-          <div className="flex items-center">
-            <BanknotesIcon className="size-8 md:size-6" />
-          </div>
-        </span>
-      </motion.button>
-    </>
+        <div className="flex items-center">
+          <BanknotesIcon className="size-6" />
+        </div>
+      </span>
+    </motion.button>
   );
 };
 

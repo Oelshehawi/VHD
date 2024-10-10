@@ -4,8 +4,8 @@ import { CountryCode } from "plaid";
 
 import { plaidClient } from "../plaid";
 
-import { getTransactionsByBankId } from "./transaction.actions";
 import { getBank, getBanks } from "./actions";
+import { BankAccount, Transaction } from "../../../models/reactDataSchema";
 
 // Get multiple bank accounts
 export const getAccounts = async ({ userId }: { userId: string }) => {
@@ -82,37 +82,50 @@ export const getAccount = async ({
     const accountsResponse = await plaidClient.accountsGet({
       access_token: bank.accessToken,
     });
+
     const accountData = accountsResponse.data.accounts[0];
-
-    // Get transfer transactions from MongoDB
-    const transferTransactionsData = await getTransactionsByBankId({
-      bankId: bank._id.toString(),
-    });
-
-    const transferTransactions = transferTransactionsData?.documents.map(
-      (transferData: any) => ({
-        id: transferData._id,
-        name: transferData.name || "",
-        amount: transferData.amount || 0,
-        date: transferData.createdAt,
-        paymentChannel: transferData.channel,
-        category: transferData.category,
-        type:
-          transferData.senderBankId === bank._id.toString()
-            ? "debit"
-            : "credit",
-      }),
-    );
 
     // Get institution info from Plaid
     const institution = await getInstitution({
       institutionId: accountsResponse.data.item.institution_id!,
     });
 
-    // Get transactions from Plaid
-    const transactions = await getTransactions({
+    // Retrieve the stored cursor from the database
+    const storedCursor = bank.cursor || null;
+
+    // Fetch new transactions using the stored cursor
+    const { added, modified, removed, cursor: newCursor } = await getTransactions({
       accessToken: bank.accessToken,
+      cursor: storedCursor,
     });
+
+    // Update the stored cursor in the database
+    await updateBankCursor(bank._id.toString(), newCursor);
+
+    // Save new transactions to the database
+    await saveTransactionsToDatabase(added, bank._id.toString());
+
+    // Update modified transactions in the database
+    await saveTransactionsToDatabase(modified, bank._id.toString());
+
+    // Remove deleted transactions from the database
+    await removeDeletedTransactionsFromDatabase(removed);
+
+    // Retrieve all transactions from the database
+    const allTransactions = await getAllTransactionsFromDatabase(bank._id.toString());
+
+    // Combine with transfer transactions if needed
+    // Assuming transferTransactions are stored separately
+    // const transferTransactions = await getTransferTransactions(bank._id.toString());
+
+    // const combinedTransactions = [
+    //   ...allTransactions,
+    //   ...(transferTransactions || []),
+    // ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+    const combinedTransactions = allTransactions.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
 
     const account = {
       id: accountData?.account_id,
@@ -127,21 +140,16 @@ export const getAccount = async ({
       bankAccountId: bank._id.toString(),
     };
 
-    // Combine and sort transactions
-    const allTransactions = [
-      ...transactions,
-      ...(transferTransactions || []),
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
     return {
       data: account,
-      transactions: allTransactions,
+      transactions: combinedTransactions,
     };
   } catch (error) {
     console.error("An error occurred while getting the account:", error);
     return null;
   }
 };
+
 
 // Get bank info
 export const getInstitution = async ({
@@ -164,47 +172,122 @@ export const getInstitution = async ({
   }
 };
 
-// Get transactions
+const mapPlaidTransaction = (transaction) => ({
+  transactionId: transaction.transaction_id,
+  id: transaction.transaction_id,
+  $id: transaction.transaction_id,
+  name: transaction.name,
+  paymentChannel: transaction.payment_channel,
+  type: transaction.transaction_type,
+  accountId: transaction.account_id,
+  amount: transaction.amount,
+  pending: transaction.pending,
+  category: {
+    confidence_level: transaction.personal_finance_category?.confidence_level || "",
+    detailed: transaction.personal_finance_category?.detailed || "",
+    primary: transaction.personal_finance_category?.primary || "",
+  },
+  date: transaction.date,
+  image: transaction.merchant_name || "", // Assuming merchant_name corresponds to image
+  channel: transaction.payment_channel,
+  $createdAt: new Date().toISOString(), // You can adjust this if needed
+});
+
 export const getTransactions = async ({
   accessToken,
+  cursor,
 }: {
   accessToken: string;
+  cursor: string | null;
 }) => {
   let hasMore = true;
-  let transactions: any[] = [];
-
+  let added: any[] = [];
+  let modified: any[] = [];
+  let removed: any[] = [];
+  let newCursor = cursor;
+  console.log("Calling transactionsSync API");
   try {
-    // Iterate through each page of new transaction updates for item
     while (hasMore) {
       const response = await plaidClient.transactionsSync({
         access_token: accessToken,
+        cursor: newCursor || undefined,
       });
 
       const data = response.data;
 
-      const newTransactions = data.added.map((transaction) => ({
-        id: transaction.transaction_id,
-        name: transaction.name,
-        paymentChannel: transaction.payment_channel,
-        type: transaction.payment_channel,
-        accountId: transaction.account_id,
-        amount: transaction.amount,
-        pending: transaction.pending,
-        category: transaction.personal_finance_category
-          ? transaction.personal_finance_category
-          : "",
-        date: transaction.date,
-        image: transaction.logo_url,
-      }));
+      // Map transactions to your Transaction type
+      const mappedAdded = data.added.map((transaction) => mapPlaidTransaction(transaction));
+      const mappedModified = data.modified.map((transaction) => mapPlaidTransaction(transaction));
 
-      transactions = transactions.concat(newTransactions);
+      added = added.concat(mappedAdded);
+      modified = modified.concat(mappedModified);
+      removed = removed.concat(data.removed);
 
+      newCursor = data.next_cursor;
       hasMore = data.has_more;
     }
 
-    return transactions;
+    return {
+      added,
+      modified,
+      removed,
+      cursor: newCursor,
+    };
   } catch (error) {
     console.error("An error occurred while getting the transactions:", error);
-    return [];
+    return {
+      added: [],
+      modified: [],
+      removed: [],
+      cursor: newCursor,
+    };
   }
+};
+
+
+export const updateBankCursor = async (bankId: string, newCursor: string) => {
+  await BankAccount.findByIdAndUpdate(bankId, { cursor: newCursor });
+};
+
+export const saveTransactionsToDatabase = async (
+  transactions: any[],
+  bankAccountId: string,
+) => {
+  for (const transaction of transactions) {
+    // Check if the transaction already exists
+    const existingTransaction = await Transaction.findOne({
+      transactionId: transaction.transactionId,
+    });
+
+    if (existingTransaction) {
+      // Update existing transaction
+      await Transaction.updateOne(
+        { transactionId: transaction.transactionId },
+        {
+          $set: transaction,
+        },
+      );
+    } else {
+      // Create new transaction
+      await Transaction.create({
+        ...transaction,
+        bankAccountId,
+      });
+    }
+  }
+};
+
+
+export const removeDeletedTransactionsFromDatabase = async (
+  removedTransactions: any[],
+) => {
+  const transactionIds = removedTransactions.map((t) => t.transaction_id);
+  await Transaction.deleteMany({ transactionId: { $in: transactionIds } });
+};
+
+export const getAllTransactionsFromDatabase = async (
+  bankAccountId: string,
+) => {
+  const transactions = await Transaction.find({ bankAccountId }).lean();
+  return transactions;
 };

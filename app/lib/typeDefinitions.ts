@@ -8,7 +8,6 @@ export type SearchParamProps = {
 
 export type Transaction = {
   id: string;
-  $id: string;
   name: string;
   paymentChannel: string;
   type: string;
@@ -53,6 +52,7 @@ export interface BankAccountType {
   accountId: string;
   accessToken: string;
   shareableId: string;
+  cursor: string | null;
 }
 
 export type NewDwollaCustomerParams = {
@@ -69,14 +69,45 @@ export type NewDwollaCustomerParams = {
 };
 
 export interface TransactionType {
-  senderBankId: Types.ObjectId | string;
-  receiverBankId: Types.ObjectId | string;
-  amount: number;
+
+  transactionId: string; // Added this line
+
+  bankAccountId: string;
+
+  id?: string;
+
+  $id?: string;
+
   name?: string;
-  channel: string;
-  category: string;
-  createdAt?: Date;
-  updatedAt?: Date;
+
+  paymentChannel?: string;
+
+  type?: string;
+
+  accountId?: string;
+
+  amount?: number;
+
+  pending?: boolean;
+
+  category?: {
+
+    confidence_level?: string;
+
+    detailed?: string;
+
+    primary?: string;
+
+  };
+
+  date?: string;
+
+  image?: string;
+
+  $createdAt?: string;
+
+  channel?: string;
+
 }
 
 export interface ClientType {

@@ -10,6 +10,7 @@ import {
 } from "@heroicons/react/24/solid";
 import PlaidLink from "./transactions/PlaidLink";
 import { usePathname } from "next/navigation";
+import { useMemo } from "react";
 
 const NavLinks = ({
   isNavOpen,
@@ -38,13 +39,14 @@ const NavLinks = ({
         { href: "/database", icon: CircleStackIcon },
         { href: "/invoices", icon: DocumentIcon },
         { href: "/schedule", icon: CalendarIcon },
-        { href: "/transactions", icon: CurrencyDollarIcon },
+        // { href: "/transactions", icon: CurrencyDollarIcon },
       ]
     : [
         { href: "/schedule", icon: CalendarIcon },
-        { href: "/transactions", icon: CurrencyDollarIcon },
+        // { href: "/transactions", icon: CurrencyDollarIcon },
       ];
 
+  const memoizedUser = useMemo(() => user, [user.id]);
   return (
     <motion.div
       initial={{ opacity: 0, x: "-100%" }}
@@ -77,7 +79,7 @@ const NavLinks = ({
               </Link>
             </motion.div>
           ))}
-          <PlaidLink canManage={canManage} user={user} />
+          {/* <PlaidLink user={memoizedUser} /> */}
         </div>
 
         <div className="hidden flex-col items-center space-y-5 lg:flex">
@@ -102,7 +104,7 @@ const NavLinks = ({
               </Link>
             </motion.div>
           ))}
-          <PlaidLink canManage={canManage} user={user} />
+          {/* <PlaidLink user={memoizedUser} /> */}
         </div>
       </div>
     </motion.div>

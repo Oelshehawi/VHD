@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { currentUser } from "@clerk/nextjs/server";
 import { getAccount, getAccounts } from "../../../../lib/actions/bank.actions";
-import { SearchParamProps, Transaction } from "../../../../lib/typeDefinitions";
+import { Transaction } from "../../../../lib/typeDefinitions";
 import TransactionsTable from "../../../../../_components/transactions/TransactionsTable";
 import TransactionsHeader from "../../../../../_components/transactions/TransactionsHeader";
 import AccountSelector from "../../../../../_components/transactions/AccountSelector";
@@ -33,7 +33,9 @@ const Transactions = async ({ params, searchParams }: TransactionsProps) => {
 
   const accountsData = accounts?.data || [];
 
+
   const bankAccount = await getAccount({ bankAccountId });
+
 
   if (!bankAccount) {
     return (
