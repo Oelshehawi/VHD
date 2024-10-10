@@ -26,7 +26,7 @@ const CustomSelect = ({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="relative w-1/4">
+    <div className="relative w-2/5 md:w-1/4">
       <div
         onClick={() => setOpen(!open)}
         className="w-full rounded border-2 border-gray-400 p-2 text-gray-700 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
