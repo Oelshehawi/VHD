@@ -55,7 +55,7 @@ const PlaidLink = ({ canManage, user }: PlaidLinkProps) => {
         disabled={!ready}
       >
         <span
-          className={`flex items-center justify-center rounded-lg bg-gray-600 p-4 text-xl font-bold text-black hover:bg-darkBlue hover:!text-white md:p-2`}
+          className={`flex items-center justify-center rounded-lg bg-gray-600 p-4 text-xl font-bold text-black hover:cursor-pointer hover:bg-darkBlue hover:!text-white md:p-2`}
         >
           <div className="flex items-center">
             <BanknotesIcon className="size-8 md:size-6" />
