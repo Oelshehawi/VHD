@@ -32,6 +32,10 @@ const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
     setIsLoading(true);
 
     try {
+      if (typeof data.startDateTime === "string") {
+        data.startDateTime = new Date(data.startDateTime).toISOString();
+      }
+
       await updateJob({
         scheduleId: job._id as string,
         jobTitle: data.jobTitle,
@@ -53,7 +57,7 @@ const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black-2 bg-opacity-50"
+      className="bg-black-2 fixed inset-0 z-50 flex items-center justify-center bg-opacity-50"
     >
       <div
         onClick={(e) => e.stopPropagation()}

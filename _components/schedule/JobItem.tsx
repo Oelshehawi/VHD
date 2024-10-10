@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import Link from "next/link";
 import DeleteModal from "../DeleteModal";
 import EditJobModal from "./EditJobModal";
@@ -79,7 +79,7 @@ const JobItem = ({
               </h2>
             </Link>
             <p className="mb-4 text-gray-500">
-              Scheduled at {format(parseISO(job.startDateTime as string), "h:mm a")}
+              Scheduled at {format(new Date(job.startDateTime), "h:mm a")}
             </p>
             {canManage && (
               <>
