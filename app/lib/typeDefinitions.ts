@@ -136,6 +136,30 @@ export interface InvoiceType {
   clientId: ObjectId | string;
 }
 
+export interface InvoiceItem {
+  description: string;
+  price: number;
+  total: number;
+}
+
+export interface InvoiceData {
+  invoiceId: string;
+  dateIssued: string;
+  jobTitle: string;
+  location: string;
+  clientName: string;
+  email: string;
+  phoneNumber: string;
+  items: InvoiceItem[];
+  subtotal: number;
+  gst: number;
+  totalAmount: number;
+  cheque: string;
+  eTransfer: string;
+  terms: string;
+  thankYou: string;
+}
+
 export interface DueInvoiceType {
   emailExists: any;
   _id: ObjectId | string;

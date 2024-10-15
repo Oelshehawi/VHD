@@ -225,3 +225,9 @@ export const formatLocalDateTime = (date: Date) => {
 
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
+
+
+export const calculateSubtotal = (items: any[]) =>
+  items.reduce((acc, item) => acc + item.price, 0);
+
+export const calculateGST = (subtotal: number) => subtotal * 0.05;

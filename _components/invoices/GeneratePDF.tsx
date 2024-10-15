@@ -4,21 +4,25 @@ import { useState } from 'react';
 import { FaPrint } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-const GeneratePDF = ({ invoiceData }) => {
+interface GeneratePDFProps {
+  invoiceId: string;
+}
+
+const GeneratePDF = ({ invoiceId }: GeneratePDFProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleGeneratePDF = async () => {
     setIsLoading(true);
     try {
-      const response = await axios.post(`/api/renderTemplate`, invoiceData);
+      const response = await axios.get(`/invoices/${invoiceId}/pdf`, {
+        responseType: 'blob',
+      });
 
-      if (response.data && response.data.download_url) {
-        window.open(response.data.download_url);
-        toast.success('PDF generated successfully!');
-      } else {
-        console.error('PDF URL not found in the response');
-        toast.error('Failed to generate PDF.');
-      }
+      const blob = new Blob([response.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      window.open(url);
+
+      toast.success('PDF generated successfully!');
     } catch (error) {
       console.error('Error generating PDF:', error);
       toast.error('Failed to generate PDF.');
@@ -47,5 +51,6 @@ const GeneratePDF = ({ invoiceData }) => {
     </button>
   );
 };
+
 
 export default GeneratePDF;
