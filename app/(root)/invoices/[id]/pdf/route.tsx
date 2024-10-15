@@ -53,13 +53,14 @@ const styles = StyleSheet.create({
   logoContainer: {
     position: "absolute",
     left: 540,
-    top: 0,
+    top: 10,
     bottom: 0,
     right: 0,
     width: "10%",
     padding: 0,
     height: 100,
     zIndex: 1,
+    opacity: 0.7,
   },
 
   // Header styles

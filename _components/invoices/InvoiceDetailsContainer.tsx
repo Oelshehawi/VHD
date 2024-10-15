@@ -38,7 +38,7 @@ const InvoiceDetailsContainer = ({
         </button>
         {canManage && (
           <div className="space-x-2">
-            <GeneratePDF invoiceId={invoice._id as string} />
+            <GeneratePDF invoiceId={invoice._id as string} jobTitle={invoice.jobTitle} />
             <button
               className="mr-2 inline-flex items-center rounded bg-darkGreen px-4 py-2 text-white hover:bg-green-700"
               onClick={toggleEdit}
