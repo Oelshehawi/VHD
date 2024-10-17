@@ -33,7 +33,6 @@ export const findOrCreatePayrollPeriod = async (
   // Normalize the date to the start of the day (midnight UTC)
   const normalizedDate = resetTimeToMidnight(date);
 
-  console.log('This is the normalized date:', normalizedDate);
 
   // Step 1: Try to find an existing payroll period that includes the given date
   let payrollPeriod = await PayrollPeriod.findOne({
@@ -82,10 +81,6 @@ export const findOrCreatePayrollPeriod = async (
 
     await newPayrollPeriod.save();
 
-    console.log(
-      `Created new Payroll Period: ${newStartDate.toISOString().split('T')[0]} - ${newEndDate.toISOString().split('T')[0]}`,
-    );
-
     latestPayrollPeriod = newPayrollPeriod;
 
     newStartDate = addDays(newEndDate, 1);
@@ -119,9 +114,6 @@ export async function createSchedule(scheduleData: ScheduleType) {
 
     const newSchedule = new Schedule(scheduleData);
     await newSchedule.save();
-    console.log(
-      `Created Schedule with ID: ${newSchedule._id} assigned to Payroll Period: ${payrollPeriod?._id}`,
-    );
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to create schedule");
@@ -190,9 +182,6 @@ export const updateJob = async ({
         payrollPeriod: payrollPeriod?._id ,
       },
       { new: true },
-    );
-    console.log(
-      `Updated Schedule ID: ${scheduleId} assigned to Payroll Period: ${payrollPeriod?._id }`,
     );
 
     revalidatePath("/schedule");
