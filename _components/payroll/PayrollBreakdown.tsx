@@ -3,7 +3,6 @@
 import React, { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
-  PayrollPeriodType,
   TechnicianType,
   ScheduleType,
 } from "../../app/lib/typeDefinitions";
@@ -18,14 +17,11 @@ const PayrollBreakdown = ({
   schedules,
 }: PayrollBreakdownProps) => {
   // Filter out Ziad and Omar
-  const validTechnicians = technicians.filter(
-    (tech) => tech.name !== "Ziad" && tech.name !== "Omar",
-  );
-
-  const hourlyRates: Record<string, number> = {
-    Migo: 17.40,
-    Mohnad: 18.00,
-  };
+  const validTechnicians = useMemo(() => {
+    return technicians.filter(
+      (tech) => tech.name !== "Ziad" && tech.name !== "Omar",
+    );
+  }, [technicians]);
 
   // Calculate total hours and gross pay per technician
   const technicianBreakdown = useMemo(() => {
@@ -46,7 +42,7 @@ const PayrollBreakdown = ({
         0
       );
 
-      const rate = hourlyRates[tech.name] || 0; 
+      const rate = tech.hourlyRate || 0;
       const grossPay = totalHours * rate;
 
       breakdown.push({
@@ -58,7 +54,7 @@ const PayrollBreakdown = ({
     });
 
     return breakdown;
-  }, [validTechnicians, schedules, hourlyRates]);
+  }, [validTechnicians, schedules]);
 
   const totalEmployees = validTechnicians.length;
   const totalHours = technicianBreakdown.reduce(
@@ -95,4 +91,5 @@ const PayrollBreakdown = ({
     </motion.div>
   );
 };
+
 export default PayrollBreakdown;

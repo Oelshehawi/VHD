@@ -79,7 +79,7 @@ export default async function RootLayout({
       <html lang="en">
         <body className={inter.className}>
           <Toaster position="top-center" />
-          <div className="flex max-h-[100vh] flex-col lg:!flex-row">
+          <div className="flex min-h-screen flex-col lg:flex-row">
             <SideNavBar canManage={canManage} user={serializedUser} />
             <main>{children}</main>
           </div>

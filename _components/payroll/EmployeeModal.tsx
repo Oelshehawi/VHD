@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   ScheduleType,
   TechnicianType,
@@ -39,6 +39,8 @@ const EmployeeModal = ({
     },
   });
 
+  const [isLoading, setIsLoading] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       const shiftData = schedules
@@ -55,6 +57,7 @@ const EmployeeModal = ({
   }, [isOpen, technician, schedules, reset]);
 
   const onSubmit = async (data: FormValues) => {
+    setIsLoading(true);
     try {
       const updatePromises = data.shifts.map((shift) =>
         updateShiftHours({
@@ -69,6 +72,8 @@ const EmployeeModal = ({
     } catch (error) {
       console.error("Failed to update shifts:", error);
       toast.error("Failed to update shifts");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -204,14 +209,44 @@ const EmployeeModal = ({
                   type="button"
                   className="rounded bg-darkGray px-4 py-2 text-white hover:bg-gray-700"
                   onClick={onClose}
+                  disabled={isLoading}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="rounded bg-darkGreen px-4 py-2 text-white hover:bg-green-700"
+                  className={`flex items-center justify-center rounded bg-darkGreen px-4 py-2 text-white hover:bg-green-700 ${
+                    isLoading ? "cursor-not-allowed opacity-50" : ""
+                  }`}
+                  disabled={isLoading}
                 >
-                  Save Changes
+                  {isLoading ? (
+                    <>
+                      <svg
+                        className="-ml-1 mr-3 h-5 w-5 animate-spin text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v8H4z"
+                        ></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
                 </button>
               </div>
             </form>

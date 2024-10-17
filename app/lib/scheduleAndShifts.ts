@@ -22,7 +22,9 @@ export const fetchAllScheduledJobsWithShifts = async (): Promise<
       jobTitle: job.jobTitle || "",
       location: job.location,
       assignedTechnicians: job.assignedTechnicians,
-      startDateTime: job.startDateTime.toLocaleString("en-US", { timeZone: "UTC" }),
+      startDateTime: job.startDateTime.toLocaleString("en-US", {
+        timeZone: "UTC",
+      }),
       confirmed: job.confirmed,
       hours: job.hours,
       shifts: job.shifts || [],
@@ -132,7 +134,9 @@ export const fetchShiftsForTechnician = async (
  * Fetch a technician by ID.
  * @param technicianId - The ID of the technician.
  */
-export const fetchTechnicianById = async (technicianId: string): Promise<Partial<any> | null> => {
+export const fetchTechnicianById = async (
+  technicianId: string,
+): Promise<Partial<any> | null> => {
   await connectMongo(); // If needed to connect MongoDB
   try {
     const technician = await clerkClient().users.getUser(technicianId); // Fetch from Clerk
@@ -140,9 +144,9 @@ export const fetchTechnicianById = async (technicianId: string): Promise<Partial
 
     // Map only the fields that might exist in Clerk
     return {
-      id: technician.id || '',
-      name: technician.fullName || 'Unknown', 
-      email: technician.emailAddresses[0]?.emailAddress || '',
+      id: technician.id || "",
+      name: technician.fullName || "Unknown",
+      email: technician.emailAddresses[0]?.emailAddress || "",
       hourlyRate: technician.publicMetadata?.hourlyRate || 0,
       // Add other relevant optional fields from Clerk as needed
     };
@@ -156,7 +160,9 @@ export const fetchTechnicianById = async (technicianId: string): Promise<Partial
  * Fetch a payroll period by ID.
  * @param payrollPeriodId - The ID of the payroll period.
  */
-export const fetchPayrollPeriodById = async (payrollPeriodId: string): Promise<PayrollPeriodType | null> => {
+export const fetchPayrollPeriodById = async (
+  payrollPeriodId: string,
+): Promise<PayrollPeriodType | null> => {
   await connectMongo();
   try {
     const payrollPeriod = await PayrollPeriod.findById(payrollPeriodId);
@@ -164,13 +170,71 @@ export const fetchPayrollPeriodById = async (payrollPeriodId: string): Promise<P
 
     return {
       _id: payrollPeriod._id.toString(),
-      startDate: payrollPeriod.startDate.toLocaleString("en-US", { timeZone: "UTC" }),
-      endDate: payrollPeriod.endDate.toLocaleString("en-US", { timeZone: "UTC" }),
-      cutoffDate: payrollPeriod.cutoffDate.toLocaleString("en-US", { timeZone: "UTC" }),
+      startDate: payrollPeriod.startDate.toLocaleString("en-US", {
+        timeZone: "UTC",
+      }),
+      endDate: payrollPeriod.endDate.toLocaleString("en-US", {
+        timeZone: "UTC",
+      }),
+      cutoffDate: payrollPeriod.cutoffDate.toLocaleString("en-US", {
+        timeZone: "UTC",
+      }),
       payDay: payrollPeriod.payDay.toLocaleString("en-US", { timeZone: "UTC" }),
     };
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch payroll period by ID");
   }
-}
+};
+
+export const fetchSchedulesForTechnician = async (
+  technicianId: string,
+): Promise<ScheduleType[]> => {
+  const schedules = await Schedule.find({
+    assignedTechnicians: technicianId,
+  }).lean();
+
+  return schedules.map((schedule) => ({
+    _id: schedule._id.toString(),
+    invoiceRef: schedule.invoiceRef.toString(),
+    jobTitle: schedule.jobTitle,
+    location: schedule.location,
+    startDateTime: schedule.startDateTime.toLocaleString("en-US", {
+      timeZone: "UTC",
+    }),
+    assignedTechnicians: schedule.assignedTechnicians,
+    confirmed: schedule.confirmed,
+    hours: schedule.hours,
+    shifts: schedule.shifts,
+    payrollPeriod: schedule.payrollPeriod
+      ? schedule.payrollPeriod.toString()
+      : "",
+    deadRun: schedule.deadRun,
+  }));
+};
+
+export const fetchPayrollPeriodsForTechnician = async (
+  technicianId: string,
+): Promise<PayrollPeriodType[]> => {
+  const schedules = await Schedule.find({
+    assignedTechnicians: technicianId,
+  }).lean();
+  const payrollPeriodIds = schedules
+    .map((schedule) => schedule.payrollPeriod)
+    .filter((pp) => pp != null)
+    .map((pp) => pp.toString());
+
+  const uniquePayrollPeriodIds = Array.from(new Set(payrollPeriodIds));
+
+  const payrollPeriods = await PayrollPeriod.find({
+    _id: { $in: uniquePayrollPeriodIds },
+  }).lean();
+
+  return payrollPeriods.map((pp) => ({
+    _id: pp._id.toString(),
+    startDate: pp.startDate.toLocaleString("en-US", { timeZone: "UTC" }),
+    endDate: pp.endDate.toLocaleString("en-US", { timeZone: "UTC" }),
+    cutoffDate: pp.cutoffDate.toLocaleString("en-US", { timeZone: "UTC" }),
+    payDay: pp.payDay.toLocaleString("en-US", { timeZone: "UTC" }),
+  }));
+};

@@ -61,6 +61,8 @@ export interface ScheduleType {
 export interface TechnicianType {
   id: string;
   name: string;
+  hourlyRate: number;
+  overtimeRate: number;
 }
 
 export interface PayrollPeriodType {

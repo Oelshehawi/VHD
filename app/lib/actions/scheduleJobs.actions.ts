@@ -207,6 +207,7 @@ export async function getTechnicians() {
   return users.data.map((user: any) => ({
     id: user.id,
     name: user.fullName,
+    hourlyRate: user.publicMetadata.hourlyRate,
   }));
 }
 
