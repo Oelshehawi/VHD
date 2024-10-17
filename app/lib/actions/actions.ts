@@ -119,14 +119,22 @@ export async function deleteInvoice(invoiceId: string) {
 export async function createInvoice(invoiceData) {
   await connectMongo();
   try {
-    const clientInvoices = await Invoice.find({
-      clientId: invoiceData.clientId,
-    });
+    // Find the invoice with the highest invoiceId for the client
+    const latestInvoice = await Invoice.findOne({ clientId: invoiceData.clientId })
+      .sort({ invoiceId: -1 })
+      .exec();
 
-    const invoiceNumber = clientInvoices.length;
-    const invoiceId = `${invoiceData.prefix}-${invoiceNumber.toString().padStart(3, "0")}`;
+    let newInvoiceNumber = 0; // Start at 0 for the first invoice (e.g., HUT-000)
 
-    const newInvoiceData = { ...invoiceData, invoiceId };
+    if (latestInvoice) {
+      // Extract the numeric part from the latest invoiceId
+      const latestNumber = parseInt(latestInvoice.invoiceId.split('-')[1], 10);
+      newInvoiceNumber = latestNumber + 1;
+    }
+
+    const newInvoiceId = `${invoiceData.prefix}-${newInvoiceNumber.toString().padStart(3, "0")}`;
+
+    const newInvoiceData = { ...invoiceData, invoiceId: newInvoiceId };
 
     const newInvoice = new Invoice(newInvoiceData);
     await newInvoice.save();
@@ -135,7 +143,6 @@ export async function createInvoice(invoiceData) {
     throw new Error("Failed to create invoice");
   }
 
-  revalidatePath("/dashboard");
   revalidatePath("/invoices");
 }
 

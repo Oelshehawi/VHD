@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { clsx } from "clsx";
 import { FaSearch } from "react-icons/fa";
 import { ClientType } from "../../app/lib/typeDefinitions";
@@ -10,6 +10,8 @@ const ClientSearchSelect = ({
   onSelect,
   register,
   error,
+  resetKey
+  
 }: {
   placeholder: string;
   data: ClientType[];
@@ -17,10 +19,18 @@ const ClientSearchSelect = ({
   onSelect: (client: ClientType) => void;
   register: any;
   error: any;
+  resetKey: number;
 }) => {
   const [filteredData, setFilteredData] = useState<ClientType[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [OpenDropdown, setOpenDropdown] = useState(false);
+
+  useEffect(() => {
+    setSearchTerm("");
+    setFilteredData([]);
+    setOpenDropdown(false);
+  }, [resetKey]);
+
 
   const handleSearch = (term: string) => {
     setSearchTerm(term);

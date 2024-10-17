@@ -27,6 +27,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [items, setItems] = useState([{ description: "", price: 0 }]);
   const [open, setOpen] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
 
   const {
     register,
@@ -81,6 +82,8 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
       await createInvoice(data);
       toast.success("Invoice has been successfully added.");
       setOpen(false);
+      setResetKey((prev) => prev + 1);
+      setItems([{ description: "", price: 0 }]);
       reset();
     } catch (error) {
       console.error("Error saving invoice:", error);
@@ -166,6 +169,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
               onSelect={handleClientSelect}
               register={register}
               error={errors.clientId}
+              resetKey={resetKey}
             />
 
             {/* Input Fields */}
@@ -198,7 +202,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                       type={type}
                       placeholder={placeholder}
                       readOnly={readOnly}
-                      className="w-full rounded border-2 border-gray-400 p-2 text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                      className="text-black w-full rounded border-2 border-gray-400 p-2 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
                     />
                   )}
                   {errors[name as keyof InvoiceFormValues]?.type ===
@@ -237,7 +241,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                   })}
                   defaultValue={item.description}
                   placeholder="Item Description"
-                  className="w-3/5 rounded border-2 border-gray-400 p-2 text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                  className="text-black w-3/5 rounded border-2 border-gray-400 p-2 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
                 />
                 {errors.items?.[index]?.description && (
                   <p className="text-xs text-red-500">
@@ -254,7 +258,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                   defaultValue={item.price}
                   placeholder="Price"
                   type="number"
-                  className="w-1/5 rounded border-2 border-gray-400 p-2 text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                  className="text-black w-1/5 rounded border-2 border-gray-400 p-2 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
                 />
                 {errors.items?.[index]?.price && (
                   <p className="text-xs text-red-500">
