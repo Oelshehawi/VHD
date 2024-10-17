@@ -23,6 +23,7 @@
     "chart.js": "^4.4.2",
     "clsx": "^2.1.1",
     "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
     "framer-motion": "^11.0.15",
     "mongodb": "^4.8.1",
     "mongoose": "^7.0.4",
@@ -36,6 +37,7 @@
     "react-hot-toast": "^2.4.1",
     "react-icons": "^4.7.1",
     "react-plaid-link": "^3.6.0",
+    "react-select": "^5.8.1",
     "tailwind-merge": "^2.5.3",
     "use-debounce": "^10.0.1"
   },

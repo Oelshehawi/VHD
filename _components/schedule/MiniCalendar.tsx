@@ -1,3 +1,4 @@
+// components/MiniCalendar.tsx
 "use client";
 import {
   ChevronLeftIcon,
@@ -22,6 +23,7 @@ import { updateSchedule } from "../../app/lib/actions/scheduleJobs.actions";
 import DeleteModal from "../DeleteModal";
 import toast from "react-hot-toast";
 import Link from "next/link";
+import TechnicianPill from "./TechnicianPill"; // Import the TechnicianPill component
 
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -30,10 +32,12 @@ function classNames(...classes: (string | boolean | undefined)[]) {
 export default function MiniCalendar({
   scheduledJobs,
   canManage,
+  technicians,
 }: {
   invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
   canManage: boolean;
+  technicians: { id: string; name: string }[];
 }) {
   let today = startOfToday();
   let [selectedDay, setSelectedDay] = useState(today);
@@ -56,7 +60,7 @@ export default function MiniCalendar({
   }
 
   let selectedDayJobs = scheduledJobs
-    .filter((job) => isSameDay(job.startDateTime.toString(), selectedDay))
+    .filter((job) => isSameDay(new Date(job.startDateTime), selectedDay))
     .sort(
       (a, b) =>
         new Date(a.startDateTime).getTime() -
@@ -142,7 +146,7 @@ export default function MiniCalendar({
                     </button>
                     <div className="mx-auto mt-1 h-1 w-1">
                       {scheduledJobs.some((job) =>
-                        isSameDay(job.startDateTime.toString(), day),
+                        isSameDay(new Date(job.startDateTime), day),
                       ) && (
                         <div className="h-1 w-1 rounded-full bg-sky-500"></div>
                       )}
@@ -165,6 +169,7 @@ export default function MiniCalendar({
                       job={job}
                       key={job._id as string}
                       canManage={canManage}
+                      technicians={technicians}
                     />
                   ))
                 ) : (
@@ -182,11 +187,13 @@ export default function MiniCalendar({
 export function Job({
   job,
   canManage,
+  technicians,
 }: {
   job: ScheduleType;
   canManage: boolean;
+  technicians: { id: string; name: string }[];
 }) {
-  let startDateTime = job.startDateTime.toString();
+  let startDateTime = new Date(job.startDateTime);
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmed, setConfirmed] = useState(() => job.confirmed);
 
@@ -199,11 +206,10 @@ export function Job({
     }
     const newStatus = !isConfirmed;
     try {
-      const updateScheduleById = updateSchedule.bind(null, {
+      await updateSchedule({
         scheduleId: job._id.toString(),
         confirmed: newStatus,
       });
-      await updateScheduleById();
 
       toast.success(
         `Job ${newStatus ? "confirmed" : "unconfirmed"} successfully`,
@@ -217,8 +223,13 @@ export function Job({
     }
   };
 
+  const techNames = job.assignedTechnicians.map(
+    (techId) =>
+      technicians.find((tech) => tech.id === techId)?.name || "Unknown",
+  );
+
   return (
-    <li className="group flex items-center justify-between space-x-4 rounded-xl bg-darkGreen px-4  py-2 text-white ">
+    <li className="group flex items-center justify-between space-x-4 rounded-xl bg-darkGreen px-4 py-2 text-white">
       <div className="flex-auto gap-4">
         <Link href={`/invoices/${job.invoiceRef}`}>
           <p className="hover:cursor-pointer hover:rounded hover:bg-green-700">
@@ -227,41 +238,9 @@ export function Job({
         </Link>
         <p className="mt-0.5">{format(startDateTime, "h:mm a")}</p>
         <div className="flex gap-2">
-          <span
-            className={classNames(
-              isConfirmed ? "bg-green-500" : "bg-red-500",
-              " flex w-full items-center justify-center rounded p-1 hover:cursor-pointer",
-            )}
-            onClick={() => toggleConfirmedStatus()}
-          >
-            {isLoading ? (
-              <svg
-                className=" h-5 w-5 animate-spin items-center justify-center text-white"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 2.42.878 4.628 2.322 6.291l1.678-1.659z"
-                ></path>
-              </svg>
-            ) : isConfirmed ? (
-              "Confirmed"
-            ) : (
-              "Unconfirmed"
-            )}
-          </span>
-          <span className=" rounded bg-blue-500 p-1 text-white">
-            {job.assignedTechnician || "No Technician"}
-          </span>
+          {techNames.map((tech, index) => (
+            <TechnicianPill key={index} name={tech} />
+          ))}
         </div>
       </div>
       {canManage && (
@@ -271,6 +250,21 @@ export function Job({
           deletionId={job._id as string}
           deletingValue="job"
         />
+      )}
+      {canManage && (
+        <button
+          className={`ml-2 rounded px-3 py-1 text-sm ${
+            isConfirmed ? "bg-red-500" : "bg-green-500"
+          } text-white hover:bg-opacity-80`}
+          onClick={toggleConfirmedStatus}
+          disabled={isLoading}
+        >
+          {isLoading
+            ? "Loading..."
+            : isConfirmed
+              ? "Unconfirm"
+              : "Confirm"}
+        </button>
       )}
     </li>
   );

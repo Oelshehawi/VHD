@@ -6,25 +6,28 @@ import { ScheduleType } from "../../app/lib/typeDefinitions";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { formatLocalDateTime } from "../../app/lib/utils";
+import TechnicianSelect from "./TechnicianSelect";
 
 interface EditJobModalProps {
   job: ScheduleType;
   onClose: () => void;
+  technicians: { id: string; name: string }[];
 }
 
-const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
+const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
   } = useForm({
     defaultValues: {
       jobTitle: job.jobTitle,
       location: job.location,
-      startDateTime: formatLocalDateTime(job.startDateTime as Date),
-      assignedTechnician: job.assignedTechnician,
+      startDateTime: formatLocalDateTime(job.startDateTime as string),
+      assignedTechnicians: job.assignedTechnicians,
     },
   });
 
@@ -33,7 +36,17 @@ const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
 
     try {
       if (typeof data.startDateTime === "string") {
-        data.startDateTime = new Date(data.startDateTime).toISOString();
+        const localDate = new Date(data.startDateTime);
+        data.startDateTime = new Date(
+          Date.UTC(
+            localDate.getFullYear(),
+            localDate.getMonth(),
+            localDate.getDate(),
+            localDate.getHours(),
+            localDate.getMinutes(),
+            localDate.getSeconds(),
+          ),
+        );
       }
 
       await updateJob({
@@ -41,7 +54,7 @@ const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
         jobTitle: data.jobTitle,
         location: data.location,
         startDateTime: data.startDateTime,
-        assignedTechnician: data.assignedTechnician,
+        assignedTechnicians: data.assignedTechnicians,
       });
 
       toast.success("Job updated successfully");
@@ -57,7 +70,7 @@ const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
   return (
     <div
       onClick={onClose}
-      className="bg-black-2 fixed inset-0 z-50 flex items-center justify-center bg-opacity-50"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black-2 bg-opacity-50"
     >
       <div
         onClick={(e) => e.stopPropagation()}
@@ -71,7 +84,9 @@ const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
             <input
               type="text"
               {...register("jobTitle", { required: "Job Title is required" })}
-              className="w-full rounded border px-3 py-2"
+              className={`w-full rounded border px-3 py-2 ${
+                errors.jobTitle ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.jobTitle && (
               <p className="mt-1 text-sm text-red-500">
@@ -85,7 +100,9 @@ const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
             <input
               type="text"
               {...register("location", { required: "Location is required" })}
-              className="w-full rounded border px-3 py-2"
+              className={`w-full rounded border px-3 py-2 ${
+                errors.location ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.location && (
               <p className="mt-1 text-sm text-red-500">
@@ -101,7 +118,9 @@ const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
               {...register("startDateTime", {
                 required: "Start Date & Time is required",
               })}
-              className="w-full rounded border px-3 py-2"
+              className={`w-full rounded border px-3 py-2 ${
+                errors.startDateTime ? "border-red-500" : "border-gray-300"
+              }`}
             />
             {errors.startDateTime && (
               <p className="mt-1 text-sm text-red-500">
@@ -109,21 +128,15 @@ const EditJobModal = ({ job, onClose }: EditJobModalProps) => {
               </p>
             )}
           </div>
-          {/* Assigned Technician */}
+          {/* Assigned Technicians */}
           <div className="mb-4">
-            <label className="block text-gray-700">Assigned Technician</label>
-            <input
-              type="text"
-              {...register("assignedTechnician", {
-                required: "Assigned Technician is required",
-              })}
-              className="w-full rounded border px-3 py-2"
+            <TechnicianSelect
+              control={control}
+              name="assignedTechnicians"
+              technicians={technicians}
+              placeholder="Select Technicians"
+              error={errors.assignedTechnicians}
             />
-            {errors.assignedTechnician && (
-              <p className="mt-1 text-sm text-red-500">
-                {errors.assignedTechnician.message}
-              </p>
-            )}
           </div>
           {/* Action Buttons */}
           <div className="flex justify-end space-x-4">

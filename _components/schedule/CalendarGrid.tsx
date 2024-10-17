@@ -7,11 +7,13 @@ const CalendarGrid = ({
   selectedDayJobs,
   canManage,
   holidays,
+  technicians,
 }: {
   week: Date[];
   selectedDayJobs: (day: Date) => ScheduleType[];
   canManage: boolean;
   holidays: any;
+  technicians: { id: string; name: string }[];
 }) => {
   const firstDay = week[0] as Date;
   const lastDay = week[week.length - 1] as Date;
@@ -34,6 +36,7 @@ const CalendarGrid = ({
             isToday={isToday(day)}
             canManage={canManage}
             holidays={holidays}
+            technicians={technicians}
           />
         ))}
       </div>

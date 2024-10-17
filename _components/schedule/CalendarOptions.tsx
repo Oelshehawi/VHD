@@ -21,23 +21,25 @@ const CalendarOptions = ({
   scheduledJobs,
   canManage,
   holidays,
+  technicians,
 }: {
   invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   holidays: any;
+  technicians: { id: string; name: string }[];
 }) => {
   const [calendarOption, setCalendarOption] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(
     eachDayOfInterval({
       start: startOfWeek(new Date(), { weekStartsOn: 0 }),
       end: add(startOfWeek(new Date(), { weekStartsOn: 0 }), { days: 6 }),
-    })
+    }),
   );
-  
+
   useEffect(() => {
     if (isMobileDevice()) {
-      setCalendarOption(true); 
+      setCalendarOption(true);
     } else {
       setCalendarOption(false);
     }
@@ -51,7 +53,7 @@ const CalendarOptions = ({
         end: add(startOfWeek(startOfPreviousWeek, { weekStartsOn: 0 }), {
           days: 6,
         }),
-      })
+      }),
     );
   };
 
@@ -63,12 +65,12 @@ const CalendarOptions = ({
         end: add(startOfWeek(startOfNextWeek, { weekStartsOn: 0 }), {
           days: 6,
         }),
-      })
+      }),
     );
   };
 
   return (
-    <div className="flex flex-col h-[100vh]">
+    <div className="flex h-[100vh] flex-col">
       <Header
         setCalendarOption={() => setCalendarOption(!calendarOption)}
         calendarOption={calendarOption}
@@ -78,14 +80,16 @@ const CalendarOptions = ({
         invoices={invoices}
         canManage={canManage}
         isMobile={isMobileDevice()}
+        technicians={technicians}
       />
       {calendarOption ? (
-        <div className="flex flex-grow md:items-center items-start justify-center p-4">
-          <div className="w-full rounded-xl border-2 border-black shadow-custom md:w-[50%]">
+        <div className="flex flex-grow items-start justify-center p-4 md:items-center">
+          <div className="border-black w-full rounded-xl border-2 shadow-custom md:w-[50%]">
             <MiniCalendar
               invoices={invoices}
               scheduledJobs={scheduledJobs}
               canManage={canManage}
+              technicians={technicians}
             />
           </div>
         </div>
@@ -95,6 +99,7 @@ const CalendarOptions = ({
           canManage={canManage}
           currentWeek={currentWeek}
           holidays={holidays}
+          technicians={technicians}
         />
       )}
     </div>
@@ -112,6 +117,7 @@ const Header = ({
   invoices,
   canManage,
   isMobile,
+  technicians,
 }: {
   setCalendarOption: () => void;
   calendarOption: boolean;
@@ -121,6 +127,7 @@ const Header = ({
   invoices: InvoiceType[];
   canManage: boolean;
   isMobile: boolean;
+  technicians: { id: string; name: string }[];
 }) => {
   const [open, setOpen] = useState(false);
   const buttonLabel = calendarOption
@@ -136,7 +143,7 @@ const Header = ({
         />
         <button
           onClick={() => setOpen(!open)}
-          className={`flex max-h-[50%] w-full md:w-[20%] text-nowrap justify-center items-center gap-2 rounded-lg bg-darkGreen p-2 text-white shadow-custom hover:bg-darkBlue ${
+          className={`flex max-h-[50%] w-full items-center justify-center gap-2 text-nowrap rounded-lg bg-darkGreen p-2 text-white shadow-custom hover:bg-darkBlue md:w-[20%] ${
             canManage ? "block" : "hidden"
           }`}
         >
@@ -145,7 +152,9 @@ const Header = ({
       </div>
 
       <div className="flex gap-4">
-        <div className={`${calendarOption ? "hidden" : "flex items-center gap-4"}`}>
+        <div
+          className={`${calendarOption ? "hidden" : "flex items-center gap-4"}`}
+        >
           <button onClick={previousWeek}>
             <ArrowLeftIcon className="size-10 rounded-full p-2 shadow-custom hover:bg-gray-300" />
           </button>
@@ -156,7 +165,7 @@ const Header = ({
         {!isMobile && (
           <button
             onClick={setCalendarOption}
-            className={`hidden md:flex h-10 text-nowrap items-center justify-center rounded-lg flex-grow border border-gray-300 px-4 transition-colors duration-300 ${
+            className={`hidden h-10 flex-grow items-center justify-center text-nowrap rounded-lg border border-gray-300 px-4 transition-colors duration-300 md:flex ${
               calendarOption
                 ? "bg-darkGreen text-white"
                 : "border-darkGreen bg-white text-darkGreen"
@@ -172,6 +181,7 @@ const Header = ({
             invoices={invoices}
             open={open}
             setOpen={() => setOpen(!open)}
+            technicians={technicians}
           />
         )}
       </AnimatePresence>

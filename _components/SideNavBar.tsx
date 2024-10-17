@@ -7,12 +7,11 @@ import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 
 const SideNavBar = ({ canManage, user }: { canManage: boolean; user: any }) => {
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const [isMounted, setIsMounted] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
     if (!canManage) {
-      router.replace("/schedule");
+      router.replace("/employee-dashboard");
     }
   }, [canManage, router]);
 

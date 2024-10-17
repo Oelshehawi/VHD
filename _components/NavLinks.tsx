@@ -39,14 +39,16 @@ const NavLinks = ({
         { href: "/database", icon: CircleStackIcon },
         { href: "/invoices", icon: DocumentIcon },
         { href: "/schedule", icon: CalendarIcon },
+        { href: "/payroll", icon: CurrencyDollarIcon },
         // { href: "/transactions", icon: CurrencyDollarIcon },
       ]
     : [
+        { href: "/employee-dashboard", icon: HomeIcon },
         { href: "/schedule", icon: CalendarIcon },
+
         // { href: "/transactions", icon: CurrencyDollarIcon },
       ];
 
-  const memoizedUser = useMemo(() => user, [user.id]);
   return (
     <motion.div
       initial={{ opacity: 0, x: "-100%" }}
@@ -66,7 +68,7 @@ const NavLinks = ({
             >
               <Link
                 href={href}
-                className={`flex items-center justify-center rounded-lg bg-gray-600 p-4 text-xl font-bold text-black ${
+                className={`text-black flex items-center justify-center rounded-lg bg-gray-600 p-4 text-xl font-bold ${
                   isActive(href)
                     ? "!bg-darkBlue !text-white"
                     : "hover:bg-darkBlue hover:!text-white"
@@ -91,7 +93,7 @@ const NavLinks = ({
             >
               <Link
                 href={href}
-                className={`flex items-center justify-center rounded-lg bg-gray-600 p-2 text-xl font-bold text-black ${
+                className={`text-black flex items-center justify-center rounded-lg bg-gray-600 p-2 text-xl font-bold ${
                   isActive(href)
                     ? "!bg-darkBlue !text-white"
                     : "hover:bg-darkBlue hover:!text-white"

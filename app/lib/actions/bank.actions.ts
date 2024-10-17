@@ -205,7 +205,6 @@ export const getTransactions = async ({
   let modified: any[] = [];
   let removed: any[] = [];
   let newCursor = cursor;
-  console.log("Calling transactionsSync API");
   try {
     while (hasMore) {
       const response = await plaidClient.transactionsSync({

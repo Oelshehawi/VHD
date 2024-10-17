@@ -24,7 +24,7 @@ const GeneratePDF = ({ invoiceId, jobTitle }: GeneratePDFProps) => {
   
       const link = document.createElement('a');
       link.href = url;
-      link.setAttribute('download', `${jobTitle} - Invoice.pdf`);
+      link.setAttribute('download', `${jobTitle.trim()} - Invoice.pdf`);
 
       document.body.appendChild(link);
   

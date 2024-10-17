@@ -14,12 +14,14 @@ const CalendarColumn = ({
   isToday,
   canManage,
   holidays,
+  technicians,
 }: {
   day: Date;
   jobs: ScheduleType[];
   isToday: boolean;
   canManage: boolean;
   holidays: any;
+  technicians: { id: string; name: string }[];
 }) => {
   const holiday = holidays.find((holiday: any) =>
     isSameDay(parseDate(holiday.date), day),
@@ -44,7 +46,7 @@ const CalendarColumn = ({
       )}
       <ul className="flex flex-col gap-2">
         {sortedJobs.map((job) => (
-          <JobItem key={job._id as string} job={job} canManage={canManage} />
+          <JobItem key={job._id as string} job={job} canManage={canManage} technicians={technicians} />
         ))}
       </ul>
     </div>

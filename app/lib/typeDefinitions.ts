@@ -1,5 +1,4 @@
 import { ObjectId } from "mongodb";
-import { Types } from "mongoose";
 
 export type SearchParamProps = {
   params: { [key: string]: string };
@@ -36,14 +35,40 @@ export interface TransactionHistoryTableProps {
   page: number;
 }
 
+export interface ShiftType {
+  _id: ObjectId | string;
+  technicianId: string;
+  clockIn: Date;
+  clockOut: Date;
+  jobDetails: string;
+  hoursWorked: number;
+}
+
 export interface ScheduleType {
   _id: ObjectId | string;
   invoiceRef: ObjectId | string;
   jobTitle: string | undefined;
   location: string;
   startDateTime: Date | string;
-  assignedTechnician: string;
+  assignedTechnicians: string[];
   confirmed: boolean;
+  hours: number;
+  shifts?: ShiftType[];
+  payrollPeriod: ObjectId | string;
+  deadRun: boolean;
+}
+
+export interface TechnicianType {
+  id: string;
+  name: string;
+}
+
+export interface PayrollPeriodType {
+  _id: ObjectId | string;
+  startDate: Date | string;
+  endDate: Date | string;
+  cutoffDate: Date | string;
+  payDay: Date | string;
 }
 
 export interface BankAccountType {
@@ -69,7 +94,6 @@ export type NewDwollaCustomerParams = {
 };
 
 export interface TransactionType {
-
   transactionId: string; // Added this line
 
   bankAccountId: string;
@@ -91,13 +115,11 @@ export interface TransactionType {
   pending?: boolean;
 
   category?: {
-
     confidence_level?: string;
 
     detailed?: string;
 
     primary?: string;
-
   };
 
   date?: string;
@@ -107,7 +129,6 @@ export interface TransactionType {
   $createdAt?: string;
 
   channel?: string;
-
 }
 
 export interface ClientType {

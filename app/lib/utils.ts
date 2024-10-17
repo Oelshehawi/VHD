@@ -1,4 +1,5 @@
 import clsx from "clsx";
+import { format } from "date-fns-tz";
 import { twMerge } from "tailwind-merge";
 
 export const formatDate = (dateString) => {
@@ -216,18 +217,20 @@ export const generatePagination = (currentPage, totalPages) => {
   ];
 };
 
-export const formatLocalDateTime = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-
-  return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
-
+export const formatLocalDateTime = (localeString: string) => {
+  const parsedDate = new Date(localeString);
+  if (isNaN(parsedDate.getTime())) {
+    return "";
+  }
+  return format(parsedDate, "yyyy-MM-dd'T'HH:mm");
+};
 
 export const calculateSubtotal = (items: any[]) =>
   items.reduce((acc, item) => acc + item.price, 0);
 
 export const calculateGST = (subtotal: number) => subtotal * 0.05;
+
+export const formatDateFns = (date: string | Date): string => {
+  const parsedDate = typeof date === "string" ? new Date(date) : date;
+  return format(parsedDate, "MMMM do, yyyy", { timeZone: "UTC" }); // e.g., "October 15th, 2024"
+};

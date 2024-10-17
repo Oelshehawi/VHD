@@ -1,24 +1,24 @@
 import {
   fetchAllInvoices,
-  fetchAllScheduledJobs,
   fetchHolidays,
 } from "../../lib/data";
+import { fetchAllScheduledJobsWithShifts } from "../../lib/scheduleAndShifts";
 import { auth } from "@clerk/nextjs/server";
 import { InvoiceType, ScheduleType } from "../../../app/lib/typeDefinitions";
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
+import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
 
 const Schedule = async () => {
   const invoices: InvoiceType[] = (await fetchAllInvoices()) ?? [];
-  let scheduledJobs: ScheduleType[] = await fetchAllScheduledJobs();
+  let scheduledJobs: ScheduleType[] = await fetchAllScheduledJobsWithShifts();
   const holidays = await fetchHolidays();
-  const { has, sessionClaims }: any = auth();
+  const { has, userId }: any = auth();
   const canManage = has({ permission: "org:database:allow" });
-
-  const technicianName = sessionClaims?.technicianName?.technicianName;
+  const technicians = await getTechnicians();
 
   if (!canManage) {
-    scheduledJobs = scheduledJobs.filter(
-      (job) => job.assignedTechnician.includes(technicianName) ,
+    scheduledJobs = scheduledJobs.filter((job) =>
+      job.assignedTechnicians.includes(userId),
     );
   }
 
@@ -42,6 +42,7 @@ const Schedule = async () => {
       scheduledJobs={scheduledJobs}
       canManage={canManage}
       holidays={holidays}
+      technicians={technicians}
     />
   );
 };

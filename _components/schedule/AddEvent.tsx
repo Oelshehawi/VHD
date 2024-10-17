@@ -6,39 +6,60 @@ import toast from "react-hot-toast";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
 import InvoiceSearchSelect from "../invoices/InvoiceSearchSelect";
 import { createSchedule } from "../../app/lib/actions/scheduleJobs.actions";
+import TechnicianSelect from "./TechnicianSelect";
 
 const AddEvent = ({
   invoices,
   open,
   setOpen,
+  technicians,
 }: {
   invoices: InvoiceType[];
   open: boolean;
   setOpen: () => void;
+  technicians: { id: string; name: string }[];
 }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const {
     register,
     handleSubmit,
+    control,
     formState: { errors },
     setValue,
     clearErrors,
-  } = useForm<ScheduleType>();
+  } = useForm<ScheduleType>({
+    defaultValues: {
+      jobTitle: "",
+      location: "",
+      startDateTime: "",
+      assignedTechnicians: [],
+      invoiceRef: "",
+      confirmed: false,
+    },
+  });
 
   const handleInvoiceSelect = (invoice: ScheduleType) => {
     setValue("invoiceRef", invoice._id, { shouldValidate: true });
     setValue("jobTitle", invoice.jobTitle);
     setValue("location", invoice.location ?? "");
-    setValue("assignedTechnician", invoice.assignedTechnician);
-    clearErrors(["invoiceRef", "jobTitle", "location", "assignedTechnician"]);
+    setValue("assignedTechnicians", invoice.assignedTechnicians);
+    clearErrors(["invoiceRef", "jobTitle", "location", "assignedTechnicians"]);
   };
 
   const handleSave: SubmitHandler<ScheduleType> = async (data) => {
     setIsLoading(true);
     try {
       if (typeof data.startDateTime === "string") {
-        data.startDateTime = new Date(data.startDateTime) as string & Date;
+        const localDate = new Date(data.startDateTime);
+        data.startDateTime = new Date(Date.UTC(
+          localDate.getFullYear(),
+          localDate.getMonth(),
+          localDate.getDate(),
+          localDate.getHours(),
+          localDate.getMinutes(),
+          localDate.getSeconds()
+        ));
       }
       await createSchedule(data);
       setOpen();
@@ -56,7 +77,7 @@ const AddEvent = ({
   return (
     <div
       onClick={setOpen}
-      className="bg-black-2 fixed inset-0 flex items-center justify-center bg-opacity-40"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black-2 bg-opacity-40"
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.8 }}
@@ -73,7 +94,7 @@ const AddEvent = ({
           </div>
         </div>
         <form
-          className="flex flex-col gap-4 overflow-hidden"
+          className="flex flex-col gap-4"
           onSubmit={handleSubmit(handleSave)}
         >
           {/* Invoice SearchSelect */}
@@ -87,8 +108,8 @@ const AddEvent = ({
             />
           </div>
 
-          {/* Other Input Fields */}
-          {[
+        {/* Other Input Fields */}
+        {[
             {
               name: "jobTitle",
               placeholder: "Job Title",
@@ -98,12 +119,6 @@ const AddEvent = ({
             {
               name: "location",
               placeholder: "Location",
-              type: "text",
-              isRequired: true,
-            },
-            {
-              name: "assignedTechnician",
-              placeholder: "Technician Name",
               type: "text",
               isRequired: true,
             },
@@ -121,7 +136,9 @@ const AddEvent = ({
                 })}
                 type={type}
                 placeholder={placeholder}
-                className="w-full rounded border-2 border-gray-400 p-2 text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                className={`w-full rounded border-2 border-gray-400 p-2 text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen ${
+                  errors[name as "jobTitle" | "startDateTime"] ? "border-red-500" : ""
+                }`}
               />
               {errors[name as "jobTitle" | "startDateTime"]?.type ===
                 "required" && (
@@ -131,6 +148,14 @@ const AddEvent = ({
               )}
             </div>
           ))}
+
+            <TechnicianSelect
+              control={control}
+              name="assignedTechnicians"
+              technicians={technicians}
+              placeholder="Select Technicians"
+              error={errors.assignedTechnicians}
+            />
           <button
             type="submit"
             className="mt-4 rounded-lg bg-green-700 p-2 text-white transition duration-200 ease-in-out hover:bg-green-800"
