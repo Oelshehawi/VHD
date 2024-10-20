@@ -31,17 +31,11 @@ const EmployeesTable = ({
   onViewShifts,
   payrollPeriod,
 }: EmployeesTableProps) => {
-  // Define hourly rates based on technician names
-  const hourlyRates: Record<string, number> = {
-    Migo: 17.4,
-    Mohnad: 18.0,
-    // Add more technicians and their rates as needed
-  };
 
   // Calculate payroll data for each technician
   const employeeData: EmployeePayrollData[] = useMemo(() => {
     return technicians
-      .filter((tech) => tech.name !== "Ziad" && tech.name !== "Omar")
+      .filter((tech) => tech.name !== "Ziad" && tech.name !== "Omar" && tech.name !== "Migo")
       .map((tech) => {
         const techSchedules = schedules.filter((schedule) =>
           schedule.assignedTechnicians.includes(tech.id),

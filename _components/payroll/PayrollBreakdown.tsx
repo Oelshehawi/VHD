@@ -19,7 +19,7 @@ const PayrollBreakdown = ({
   // Filter out Ziad and Omar
   const validTechnicians = useMemo(() => {
     return technicians.filter(
-      (tech) => tech.name !== "Ziad" && tech.name !== "Omar",
+      (tech) => tech.name !== "Ziad" && tech.name !== "Omar" && tech.name !== "Migo",
     );
   }, [technicians]);
 
