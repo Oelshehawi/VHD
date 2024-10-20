@@ -1,5 +1,5 @@
 "use client";
-import {  useState } from "react";
+import { useState } from "react";
 import {
   PayrollPeriodType,
   ScheduleType,
@@ -26,12 +26,14 @@ const PayrollPeriodSelector = ({
   selectedPayrollPeriod,
 }: PayrollPeriodSelectorProps) => {
   const filteredTechnicians = technicians.filter(
-    (tech) => !tech.name.includes("Ziad") && !tech.name.includes("Omar") && !tech.name.includes("Migo"),
+    (tech) =>
+      !tech.name.includes("Ziad") &&
+      !tech.name.includes("Omar") &&
+      !tech.name.includes("Migo"),
   );
   // State for managing selected payroll period
   const [selectedTechnician, setSelectedTechnician] =
     useState<TechnicianType | null>(null);
-
 
   const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -40,7 +42,6 @@ const PayrollPeriodSelector = ({
     setIsModalOpen(true);
   };
 
-  
   const MAX_LINKS_DISPLAY = 5;
 
   const router = useRouter();
@@ -54,14 +55,17 @@ const PayrollPeriodSelector = ({
       {/* Payroll Period Selection */}
       {payrollPeriods.length > MAX_LINKS_DISPLAY ? (
         <div className="mb-6">
-          <label htmlFor="payrollPeriodSelect" className="block text-gray-700 mb-2">
+          <label
+            htmlFor="payrollPeriodSelect"
+            className="mb-2 block text-gray-700"
+          >
             Select Payroll Period:
           </label>
           <select
             id="payrollPeriodSelect"
             onChange={handleSelectChange}
-            className="block w-full p-2 border border-gray-300 rounded"
-            defaultValue=""
+            className="block w-full rounded border border-gray-300 p-2"
+            defaultValue={selectedPayrollPeriod?._id as string || ""}
           >
             <option value="" disabled>
               -- Select a Payroll Period --
@@ -79,7 +83,7 @@ const PayrollPeriodSelector = ({
             <Link
               key={pp._id as string}
               href={`/payroll?payrollPeriodId=${pp._id}`}
-              className={`px-4 py-2 rounded ${
+              className={`rounded px-4 py-2 ${
                 selectedPayrollPeriod?._id === pp._id
                   ? "bg-blue-500 text-white"
                   : "bg-gray-200 text-gray-700 hover:bg-gray-300"

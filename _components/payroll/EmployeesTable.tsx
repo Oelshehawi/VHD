@@ -31,6 +31,7 @@ const EmployeesTable = ({
   onViewShifts,
   payrollPeriod,
 }: EmployeesTableProps) => {
+  // Define hourly rates based on technician names
 
   // Calculate payroll data for each technician
   const employeeData: EmployeePayrollData[] = useMemo(() => {
@@ -44,17 +45,16 @@ const EmployeesTable = ({
           (acc, schedule) => acc + (schedule.hours || 0),
           0,
         );
-        const hourlyRate = hourlyRates[tech.name] || 18.0; // Default rate if not specified
-        const grossPay = totalHours * hourlyRate;
+        const grossPay = totalHours * tech.hourlyRate;
 
         return {
           technician: tech,
           totalHours,
-          hourlyRate,
+          hourlyRate: tech.hourlyRate || 0,
           grossPay,
         };
       });
-  }, [technicians, schedules, hourlyRates]);
+  }, [technicians, schedules]);
 
   return (
     <motion.div
