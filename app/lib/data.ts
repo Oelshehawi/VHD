@@ -8,7 +8,7 @@ import {
 } from "../../models/reactDataSchema";
 import { revalidatePath } from "next/cache";
 import { formatPhoneNumber } from "./utils";
-import { DueInvoiceType, InvoiceType } from "./typeDefinitions";
+import { InvoiceType } from "./typeDefinitions";
 import { monthNameToNumber } from "./utils";
 
 export const fetchDueInvoices = async ({
@@ -122,8 +122,10 @@ export const getOverDueInvoiceAmount = async () => {
 export const getPendingInvoiceAmount = async () => {
   await connectMongo();
   try {
+    const today = new Date();
+
     const result = await Invoice.aggregate([
-      { $match: { status: "pending" } },
+      { $match: { status: "pending", dateIssued: { $lt: today } } },
       { $unwind: "$items" },
       {
         $group: {
@@ -137,6 +139,34 @@ export const getPendingInvoiceAmount = async () => {
   } catch (error) {
     console.error("Database Error:", error);
     Error("Failed to fetch pending invoice amount");
+  }
+};
+
+export const getPendingInvoices = async () => {
+  await connectMongo();
+  try {
+    const today = new Date();
+
+    const pendingInvoices = await Invoice.aggregate([
+      { $match: { status: "pending", dateIssued: { $lt: today } } },
+      { $sort: { dateIssued: 1 } },
+    ]);
+
+    return pendingInvoices.map((invoice) => ({
+      _id: invoice._id.toString(),
+      invoiceId: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+      status: invoice.status,
+      dateIssued: invoice.dateIssued.toLocaleString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      }),
+      amount: invoice.items.reduce((acc: any, item: { price: any; }) => acc + item.price, 0),
+    }));
+  } catch (error) {
+    console.error("Database Error:", error);
+    Error("Failed to fetch pending invoices");
   }
 };
 
@@ -485,9 +515,8 @@ export async function fetchInvoicesPages(
 export const fetchHolidays = async (): Promise<any[]> => {
   try {
     const queryParams = new URLSearchParams({
-      country:  "CA",
+      country: "CA",
       year: new Date().getFullYear().toString(),
-
     });
 
     const response = await fetch(
@@ -495,9 +524,9 @@ export const fetchHolidays = async (): Promise<any[]> => {
       {
         method: "GET",
         headers: {
-          "X-Api-Key": process.env.HOLIDAYS_API_KEY!, 
+          "X-Api-Key": process.env.HOLIDAYS_API_KEY!,
         },
-      }
+      },
     );
 
     if (!response.ok) {
@@ -515,7 +544,7 @@ export const fetchHolidays = async (): Promise<any[]> => {
     ];
 
     const filteredHolidays = data.filter((holiday: any) =>
-      allowedTypes.includes(holiday.type.toLowerCase() as any)
+      allowedTypes.includes(holiday.type.toLowerCase() as any),
     );
 
     const manualHolidays: any[] = [

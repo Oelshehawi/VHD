@@ -6,7 +6,6 @@ import ClientDetails from "./ClientDetails";
 import { useRouter } from "next/navigation";
 import PriceBreakdown from "./PriceBreakdown";
 import GeneratePDF from "./GeneratePDF";
-import { formatDateToString } from "../../app/lib/utils";
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
 
 const InvoiceDetailsContainer = ({

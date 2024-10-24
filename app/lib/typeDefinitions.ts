@@ -44,6 +44,15 @@ export interface ShiftType {
   hoursWorked: number;
 }
 
+export interface PendingInvoiceType {
+  _id: ObjectId | string;
+  invoiceId: string;
+  jobTitle: string;
+  dateIssued: Date | string;
+  status: string;
+  amount: number;
+}
+
 export interface ScheduleType {
   _id: ObjectId | string;
   invoiceRef: ObjectId | string;

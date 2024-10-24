@@ -1,4 +1,3 @@
-import { set } from "mongoose";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 
@@ -35,7 +34,7 @@ const JobModal = ({
           <strong>Location:</strong> {jobInfo.location}
         </p>
         <p className="mb-2 text-gray-800">
-          <strong>Assigned Technician:</strong> {jobInfo.assignedTechnician}
+          <strong>Assigned Technician:</strong> {jobInfo.assignedTechnicians}
         </p>
         <p className="mb-2 text-gray-800">
           <strong>Start Date:</strong>{" "}

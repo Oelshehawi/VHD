@@ -4,16 +4,18 @@ import {
   getClientCount,
   getOverDueInvoiceAmount,
   getPendingInvoiceAmount,
+  getPendingInvoices,
 } from "../../lib/data";
 import {
   InfoBoxSkeleton,
   JobsDueContainerSkeleton,
   YearlySalesSkeleton,
 } from "../../../_components/Skeletons";
-import { FaPeopleGroup, FaMoneyBill, FaFile } from "react-icons/fa6";
+import { FaPeopleGroup, FaFile } from "react-icons/fa6";
 import YearlySales from "../../../_components/dashboard/YearlySales";
 import { fetchYearlySalesData } from "../../lib/data";
 import { auth } from "@clerk/nextjs/server";
+import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
 
 const DashboardPage = async ({
   searchParams,
@@ -21,7 +23,10 @@ const DashboardPage = async ({
   searchParams: { open: string; month: string; urlName: string; year: string };
 }) => {
   const salesData = await fetchYearlySalesData();
+  const amount = await getPendingInvoiceAmount();
+  const pendingInvoices = (await getPendingInvoices()) || [];
   const { has } = auth();
+
 
   const canManage = has({ permission: "org:database:allow" });
 
@@ -47,7 +52,10 @@ const DashboardPage = async ({
         </div>
         <div className="w-1/3 px-2 md:w-1/6 md:!px-0">
           <Suspense fallback={<InfoBoxSkeleton />}>
-            <PendingAmount />
+            <PendingAmountContainer
+              amount={amount}
+              pendingInvoices={pendingInvoices}
+            />
           </Suspense>
         </div>
       </div>
@@ -92,23 +100,6 @@ const OverdueAmount = async () => {
         </div>
       </div>
 
-      <div className="text-md rounded bg-darkGray p-2 text-center md:text-3xl">
-        ${amount}
-      </div>
-    </div>
-  );
-};
-
-const PendingAmount = async () => {
-  const amount = await getPendingInvoiceAmount();
-  return (
-    <div className="h-full space-y-2 rounded bg-darkGreen p-2 text-white shadow">
-      <div className="flex flex-row items-center justify-center md:justify-start">
-        <FaMoneyBill className="h-6 w-6" />
-        <div className="hidden p-2 text-center text-xl md:block">
-          Pending Amount
-        </div>
-      </div>
       <div className="text-md rounded bg-darkGray p-2 text-center md:text-3xl">
         ${amount}
       </div>

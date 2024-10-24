@@ -8,15 +8,11 @@ import {
   Schedule,
   BankAccount,
 } from "../../../models/reactDataSchema";
-import { BankAccountType, ClientType, ScheduleType } from "../typeDefinitions";
-import { ObjectId } from "mongoose";
+import { BankAccountType, ClientType } from "../typeDefinitions";
 import { calculateDueDate, encryptId, parseStringify } from "../utils";
 import { plaidClient } from "../plaid";
 import {
   CountryCode,
-  ProcessorStripeBankAccountTokenCreateRequest,
-  ProcessorTokenCreateRequest,
-  ProcessorTokenCreateRequestProcessorEnum,
   Products,
 } from "plaid";
 
