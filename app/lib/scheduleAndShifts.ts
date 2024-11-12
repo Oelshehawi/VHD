@@ -56,7 +56,9 @@ export const fetchScheduledJobsByPayrollPeriod = async (
       jobTitle: job.jobTitle || "",
       location: job.location,
       assignedTechnicians: job.assignedTechnicians,
-      startDateTime: job.startDateTime,
+      startDateTime: job.startDateTime.toLocaleString("en-US", {
+        timeZone: "UTC",
+      }),
       confirmed: job.confirmed,
       hours: job.hours,
       shifts: job.shifts || [],
