@@ -22,76 +22,121 @@ const InvoiceTable = async ({
     sort,
   );
 
+  if (!invoiceData.length) {
+    return (
+      <div className="flex min-h-[70vh] items-center justify-center rounded bg-darkGreen/90">
+        <p className="text-xl font-semibold text-white">No invoices found</p>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <div className="max-h-[70vh] min-h-[70vh] overflow-auto rounded">
-        <table className="w-full text-left ">
-          <thead className="bg-darkGreen text-white">
-            <tr className="">
-              <th className="px-3.5 py-3 capitalize">Invoice #</th>
-              <th className="px-3.5 py-3 capitalize">Job Title</th>
-              <th className="hidden px-3.5 py-3 capitalize md:table-cell">
-                Issued Date
-              </th>
-              <th className="hidden px-3.5 py-3 capitalize md:table-cell">
-                Status
-              </th>
-              <th className="hidden px-3.5 py-3 capitalize md:table-cell">
-                Amount
-              </th>
-              <th className="px-3.5 py-3 capitalize">Edit Invoice</th>
-              <th className="hidden px-3.5 py-3 capitalize md:table-cell">
-                Delete Invoice
-              </th>
-            </tr>
-          </thead>
-          <tbody className="rounded font-bold">
-            {invoiceData.map((invoice: InvoiceType) => (
-              <tr
-                key={invoice._id as string}
-                className="bg-borderGreen text-white"
-              >
-                <td className="px-3.5 py-2.5 ">{invoice.invoiceId}</td>
-                <td className="px-3.5 py-2.5">{invoice.jobTitle}</td>
-                <td className="hidden px-3.5 py-2.5 md:table-cell">
-                  {new Date(invoice.dateIssued).toLocaleDateString("en-CA")}
-                </td>
-                <td className="hidden px-3.5 py-2.5 md:table-cell">
-                  <div
-                    className={`flex items-center justify-center rounded-lg font-bold ${
-                      invoice.status === "paid"
-                        ? "bg-green-500 text-white"
-                        : invoice.status === "pending"
-                          ? "bg-yellow-500 text-white"
-                          : "bg-red-500 text-white"
+    <div className="rounded-lg border border-borderGreen bg-darkGreen/10 shadow-lg">
+      <div className="flex flex-col overflow-hidden rounded-lg">
+        <div className="flex-grow overflow-auto">
+          <table className="relative w-full border-collapse">
+            <thead className="sticky top-0 z-10">
+              <tr className="bg-darkGreen text-white">
+                <th className="whitespace-nowrap px-4 py-3.5 text-left font-semibold">Invoice #</th>
+                <th className="whitespace-nowrap px-4 py-3.5 text-left font-semibold">Job Title</th>
+                <th className="hidden whitespace-nowrap px-4 py-3.5 text-left font-semibold md:table-cell">
+                  Issued Date
+                </th>
+                <th className="hidden whitespace-nowrap px-4 py-3.5 text-left font-semibold md:table-cell">
+                  Status
+                </th>
+                <th className="hidden whitespace-nowrap px-4 py-3.5 text-left font-semibold md:table-cell">
+                  Amount
+                </th>
+                <th className="whitespace-nowrap px-4 py-3.5 text-center font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-darkGreen/20">
+              {invoiceData.map((invoice: InvoiceType, index: number) => {
+                const totalAmount = invoice.items
+                  .reduce((total, item) => total + item.price, 0)
+                  .toFixed(2);
+
+                return (
+                  <tr
+                    key={invoice._id as string}
+                    className={`bg-darkGreen/70 transition-colors hover:bg-darkGreen/90 ${
+                      index === invoiceData.length - 1 ? "h-full" : ""
                     }`}
                   >
-                    {invoice.status.toUpperCase()}
-                  </div>
-                </td>
-                <td className="hidden px-3.5 py-2.5 md:table-cell">
-                  $
-                  {invoice.items
-                    .reduce((total, item) => total + item.price, 0)
-                    .toFixed(2)}
-                </td>
-                <td className="flex justify-center px-3.5 py-2.5">
-                  <Link href={`/invoices/${invoice._id}`}>
-                    <FaPenSquare className="size-8 rounded bg-darkGreen text-white hover:bg-green-800" />
-                  </Link>
-                </td>
-                <td className="hidden px-3.5 py-2.5 md:table-cell">
-                  <DeleteModal
-                    deleteText={"Are you sure you want to delete this invoice?"}
-                    deleteDesc={"This action cannot be undone!"}
-                    deletionId={invoice._id.toString()}
-                    deletingValue="invoice"
-                  />
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                    <td className="px-4 py-3 text-white">
+                      <div className="font-medium">{invoice.invoiceId}</div>
+                    </td>
+                    <td className="px-4 py-3 text-white">
+                      <div className="font-medium">{invoice.jobTitle}</div>
+                      <div className="md:hidden space-y-1">
+                        <div className="text-gray-200">
+                          {new Date(invoice.dateIssued).toLocaleDateString("en-CA")}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <div
+                            className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                              invoice.status === "paid"
+                                ? "bg-green-600/20 text-green-300"
+                                : invoice.status === "pending"
+                                  ? "bg-yellow-600/20 text-yellow-300"
+                                  : "bg-red-600/20 text-red-300"
+                            }`}
+                          >
+                            {invoice.status.toUpperCase()}
+                          </div>
+                          <span className="text-gray-200">${totalAmount}</span>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="hidden px-4 py-3 text-white md:table-cell">
+                      {new Date(invoice.dateIssued).toLocaleDateString("en-CA")}
+                    </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      <div
+                        className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
+                          invoice.status === "paid"
+                            ? "bg-green-600/20 text-green-300"
+                            : invoice.status === "pending"
+                              ? "bg-yellow-600/20 text-yellow-300"
+                              : "bg-red-600/20 text-red-300"
+                        }`}
+                      >
+                        {invoice.status.toUpperCase()}
+                      </div>
+                    </td>
+                    <td className="hidden px-4 py-3 text-white md:table-cell">
+                      ${totalAmount}
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center gap-3">
+                        <Link 
+                          href={`/invoices/${invoice._id}`}
+                          className="transition-transform hover:scale-105"
+                        >
+                          <FaPenSquare className="size-8 rounded bg-green-600 p-1.5 text-white hover:bg-green-700" />
+                        </Link>
+                        <div className="hidden md:block">
+                          <DeleteModal
+                            deleteText="Are you sure you want to delete this invoice?"
+                            deleteDesc="This action cannot be undone!"
+                            deletionId={invoice._id.toString()}
+                            deletingValue="invoice"
+                          />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {invoiceData.length < 10 && (
+                <tr className="h-full bg-darkGreen/70">
+                  <td className="px-4 py-3" colSpan={6}></td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );

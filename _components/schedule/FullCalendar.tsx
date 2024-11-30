@@ -17,33 +17,46 @@ const FullCalendar = ({
   holidays: any;
   technicians: { id: string; name: string }[];
 }) => {
+  // Group jobs by date
   const selectedDayJobsMap = useMemo(() => {
     const jobsMap: { [key: string]: ScheduleType[] } = {};
+    
     scheduledJobs.forEach((job) => {
-      const jobDateKey = format(new Date(job.startDateTime), "yyyy-MM-dd", {
-        timeZone: "UTC",
-      });
+      const jobDate = new Date(job.startDateTime);
+      const jobDateKey = format(jobDate, "yyyy-MM-dd");
+      
       if (!jobsMap[jobDateKey]) {
         jobsMap[jobDateKey] = [];
       }
-      jobsMap[jobDateKey]?.push(job);
+      
+      (jobsMap[jobDateKey] as ScheduleType[]).push(job);
+      
+      // Sort jobs by time within each day
+      (jobsMap[jobDateKey] as ScheduleType[]).sort((a, b) => {
+        const timeA = new Date(a.startDateTime).getTime();
+        const timeB = new Date(b.startDateTime).getTime();
+        return timeA - timeB;
+      });
     });
+    
     return jobsMap;
   }, [scheduledJobs]);
 
-  
-
-  const selectedDayJobs = (day: Date) =>
-    selectedDayJobsMap[format(day, "yyyy-MM-dd", { timeZone: "UTC" })] || [];
+  const selectedDayJobs = (day: Date) => {
+    const dayKey = format(day, "yyyy-MM-dd");
+    return selectedDayJobsMap[dayKey] || [];
+  };
 
   return (
-    <CalendarGrid
-      week={currentWeek}
-      selectedDayJobs={selectedDayJobs}
-      canManage={canManage}
-      holidays={holidays}
-      technicians={technicians}
-    />
+    <div className="h-full overflow-hidden bg-white">
+      <CalendarGrid
+        week={currentWeek}
+        selectedDayJobs={selectedDayJobs}
+        canManage={canManage}
+        holidays={holidays}
+        technicians={technicians}
+      />
+    </div>
   );
 };
 

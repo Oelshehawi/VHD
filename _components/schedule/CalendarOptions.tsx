@@ -29,79 +29,70 @@ const CalendarOptions = ({
   holidays: any;
   technicians: { id: string; name: string }[];
 }) => {
-  const [calendarOption, setCalendarOption] = useState(false);
-  const [currentWeek, setCurrentWeek] = useState(
-    eachDayOfInterval({
-      start: startOfWeek(new Date(), { weekStartsOn: 0 }),
-      end: add(startOfWeek(new Date(), { weekStartsOn: 0 }), { days: 6 }),
-    }),
-  );
+  const [calendarOption, setCalendarOption] = useState<boolean>(false);
+  const [currentWeek, setCurrentWeek] = useState<Date[]>(() => {
+    const today = new Date();
+    const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+    return eachDayOfInterval({
+      start: weekStart,
+      end: add(weekStart, { days: 6 }),
+    });
+  });
 
   useEffect(() => {
-    if (isMobileDevice()) {
-      setCalendarOption(true);
-    } else {
-      setCalendarOption(false);
-    }
+    setCalendarOption(isMobileDevice());
   }, []);
 
-  const previousWeek = () => {
-    const startOfPreviousWeek = add(currentWeek[0] as Date, { days: -7 });
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const days = direction === 'prev' ? -7 : 7;
+    const newWeekStart = add(currentWeek[0] as Date, { days });
     setCurrentWeek(
       eachDayOfInterval({
-        start: startOfWeek(startOfPreviousWeek, { weekStartsOn: 0 }),
-        end: add(startOfWeek(startOfPreviousWeek, { weekStartsOn: 0 }), {
-          days: 6,
-        }),
-      }),
-    );
-  };
-
-  const nextWeek = () => {
-    const startOfNextWeek = add(currentWeek[0] as Date, { days: 7 });
-    setCurrentWeek(
-      eachDayOfInterval({
-        start: startOfWeek(startOfNextWeek, { weekStartsOn: 0 }),
-        end: add(startOfWeek(startOfNextWeek, { weekStartsOn: 0 }), {
-          days: 6,
-        }),
-      }),
+        start: startOfWeek(newWeekStart, { weekStartsOn: 0 }),
+        end: add(startOfWeek(newWeekStart, { weekStartsOn: 0 }), { days: 6 }),
+      })
     );
   };
 
   return (
-    <div className="flex h-[100vh] flex-col">
+    <div className="flex h-screen flex-col overflow-hidden bg-white">
       <Header
-        setCalendarOption={() => setCalendarOption(!calendarOption)}
         calendarOption={calendarOption}
+        setCalendarOption={() => setCalendarOption(!calendarOption)}
         scheduledJobs={scheduledJobs}
-        previousWeek={previousWeek}
-        nextWeek={nextWeek}
+        previousWeek={() => navigateWeek('prev')}
+        nextWeek={() => navigateWeek('next')}
+        currentWeek={currentWeek}
         invoices={invoices}
         canManage={canManage}
         isMobile={isMobileDevice()}
         technicians={technicians}
       />
-      {calendarOption ? (
-        <div className="flex flex-grow items-start justify-center p-4 md:items-center">
-          <div className="border-black w-full rounded-xl border-2 shadow-custom md:w-[50%]">
-            <MiniCalendar
-              invoices={invoices}
+
+      <main className="flex-1 overflow-hidden">
+        {calendarOption ? (
+          <div className="flex h-full items-start justify-center p-4 md:items-center">
+            <div className="w-full max-w-4xl rounded-xl border border-gray-200 bg-white shadow-lg">
+              <MiniCalendar
+                invoices={invoices}
+                scheduledJobs={scheduledJobs}
+                canManage={canManage}
+                technicians={technicians}
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="h-full">
+            <FullCalendar
               scheduledJobs={scheduledJobs}
               canManage={canManage}
+              currentWeek={currentWeek}
+              holidays={holidays}
               technicians={technicians}
             />
           </div>
-        </div>
-      ) : (
-        <FullCalendar
-          scheduledJobs={scheduledJobs}
-          canManage={canManage}
-          currentWeek={currentWeek}
-          holidays={holidays}
-          technicians={technicians}
-        />
-      )}
+        )}
+      </main>
     </div>
   );
 };

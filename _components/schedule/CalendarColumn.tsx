@@ -5,8 +5,10 @@ import JobItem from "./JobItem";
 
 const parseDate = (dateString: string): Date => {
   const [year, month, day] = dateString.split("-").map(Number);
-  return new Date(year as any, (month as any) - 1, day);
+  return new Date(year, month - 1, day);
 };
+
+const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 const CalendarColumn = ({
   day,
@@ -24,31 +26,64 @@ const CalendarColumn = ({
   technicians: { id: string; name: string }[];
 }) => {
   const holiday = holidays.find((holiday: any) =>
-    isSameDay(parseDate(holiday.date), day),
+    isSameDay(parseDate(holiday.date), day)
   );
 
+  // Sort jobs by start time
   const sortedJobs = jobs.sort(
     (a, b) =>
-      new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime(),
+      new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
   );
 
+  // Get hour and minutes from job's start time
+  const getJobTime = (job: ScheduleType) => {
+    const date = new Date(job.startDateTime);
+    return {
+      hour: date.getHours(),
+      minutes: date.getMinutes(),
+    };
+  };
+
   return (
-    <div
-      className={`flex flex-col gap-2 overflow-y-auto rounded border-2 p-2 ${
-        isToday ? "bg-blue-100" : ""
-      }`}
-    >
-      <button className="font-bold">{format(day, "E d")}</button>
+    <div className={`h-full ${isToday ? "bg-blue-50" : "bg-white"}`}>
+      {/* Holiday banner */}
       {holiday && (
-        <div className="mt-2 border-b-2 border-gray-300 bg-yellow-200 p-2">
-          <p className="font-semibold text-red-600">{holiday.name}</p>
+        <div className="sticky top-0 z-20 bg-yellow-50 px-2 py-1">
+          <p className="text-xs font-medium text-yellow-800">{holiday.name}</p>
         </div>
       )}
-      <ul className="flex flex-col gap-2">
-        {sortedJobs.map((job) => (
-          <JobItem key={job._id as string} job={job} canManage={canManage} technicians={technicians} />
+
+      {/* Time slots */}
+      <div className="relative">
+        {HOURS.map((hour) => (
+          <div
+            key={hour}
+            className="relative h-[60px] border-b border-gray-100 last:border-b-0"
+          >
+            {/* Jobs that start at this hour */}
+            {sortedJobs
+              .filter((job) => getJobTime(job).hour === hour)
+              .map((job) => {
+                const { minutes } = getJobTime(job);
+                const topOffset = (minutes / 60) * 100;
+
+                return (
+                  <div
+                    key={job._id as string}
+                    className="absolute inset-x-1 z-10"
+                    style={{ top: `${topOffset}%` }}
+                  >
+                    <JobItem
+                      job={job}
+                      canManage={canManage}
+                      technicians={technicians}
+                    />
+                  </div>
+                );
+              })}
+          </div>
         ))}
-      </ul>
+      </div>
     </div>
   );
 };

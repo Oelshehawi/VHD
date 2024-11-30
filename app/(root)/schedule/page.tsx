@@ -22,28 +22,26 @@ const Schedule = async () => {
     );
   }
 
-  const sortedInvoices = invoices.sort(
-    (a, b) =>
-      new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime(),
-  );
+  const sortedInvoices = invoices
+    .sort((a, b) => {
+      const dateComparison = new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime();
+      if (dateComparison !== 0) return dateComparison;
 
-  const groupedSortedInvoices = sortedInvoices.sort((a, b) => {
-    const clientIdA = a.clientId.toString();
-    const clientIdB = b.clientId.toString();
-    if (clientIdA === clientIdB) {
-      return 0;
-    }
-    return clientIdA.localeCompare(clientIdB);
-  });
+      return a.clientId.toString().localeCompare(b.clientId.toString());
+    });
 
   return (
-    <CalendarOptions
-      invoices={groupedSortedInvoices}
-      scheduledJobs={scheduledJobs}
-      canManage={canManage}
-      holidays={holidays}
-      technicians={technicians}
-    />
+    <div className="flex min-h-screen w-full flex-col bg-gray-50">
+      <div className="flex-1">
+        <CalendarOptions
+          invoices={sortedInvoices}
+          scheduledJobs={scheduledJobs}
+          canManage={canManage}
+          holidays={holidays}
+          technicians={technicians}
+        />
+      </div>
+    </div>
   );
 };
 
