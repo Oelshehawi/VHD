@@ -1,7 +1,7 @@
 "use client";
 import { FaSearch } from "react-icons/fa";
 import clsx from "clsx";
-import { ScheduleType } from "../../app/lib/typeDefinitions";
+import { ScheduleType, TechnicianType } from "../../app/lib/typeDefinitions";
 import { CalendarIcon } from "@heroicons/react/24/solid";
 import { useState } from "react";
 import JobModal from "./JobModal";
@@ -10,10 +10,12 @@ const JobSearchSelect = ({
   placeholder,
   className,
   scheduledJobs,
+  technicians,
 }: {
   placeholder: string;
   className?: string;
   scheduledJobs: ScheduleType[];
+  technicians: TechnicianType[];
 }) => {
   const [open, setOpen] = useState(false);
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
@@ -100,6 +102,7 @@ const JobSearchSelect = ({
           open={open}
           toggleModal={() => setOpen(!open)}
           jobInfo={selectedJob}
+          technicians={technicians}
         />
       )}
     </div>

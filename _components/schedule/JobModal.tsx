@@ -1,16 +1,23 @@
-import { ScheduleType } from "../../app/lib/typeDefinitions";
+import { ScheduleType, TechnicianType } from "../../app/lib/typeDefinitions";
 import { XMarkIcon } from "@heroicons/react/24/solid";
 
 const JobModal = ({
   open,
   toggleModal,
   jobInfo,
+  technicians,
 }: {
   open: boolean;
   toggleModal: () => void;
   jobInfo: ScheduleType;
+  technicians: TechnicianType[];
 }) => {
   if (!open) return null;
+
+  const getTechnicianName = (techId: string) => {
+    const tech = technicians.find(t => t.id === techId);
+    return tech?.name || techId;
+  };
 
   return (
     <div
@@ -34,7 +41,8 @@ const JobModal = ({
           <strong>Location:</strong> {jobInfo.location}
         </p>
         <p className="mb-2 text-gray-800">
-          <strong>Assigned Technician:</strong> {jobInfo.assignedTechnicians}
+          <strong>Assigned Technicians:</strong>{" "}
+          {jobInfo.assignedTechnicians.map(getTechnicianName).join(", ")}
         </p>
         <p className="mb-2 text-gray-800">
           <strong>Start Date:</strong>{" "}

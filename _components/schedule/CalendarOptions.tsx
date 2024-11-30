@@ -140,6 +140,7 @@ const Header = ({
         <SearchSelect
           scheduledJobs={scheduledJobs}
           placeholder="Search for a job"
+          technicians={technicians}
         />
         <button
           onClick={() => setOpen(!open)}

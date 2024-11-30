@@ -4,7 +4,7 @@ import {
 } from "../../lib/data";
 import { fetchAllScheduledJobsWithShifts } from "../../lib/scheduleAndShifts";
 import { auth } from "@clerk/nextjs/server";
-import { InvoiceType, ScheduleType } from "../../../app/lib/typeDefinitions";
+import { InvoiceType, ScheduleType, TechnicianType } from "../../../app/lib/typeDefinitions";
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
 
@@ -14,7 +14,7 @@ const Schedule = async () => {
   const holidays = await fetchHolidays();
   const { has, userId }: any = auth();
   const canManage = has({ permission: "org:database:allow" });
-  const technicians = await getTechnicians();
+  const technicians: TechnicianType[] = await getTechnicians();
 
   if (!canManage) {
     scheduledJobs = scheduledJobs.filter((job) =>
