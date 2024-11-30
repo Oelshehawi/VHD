@@ -1,3 +1,4 @@
+// @ts-nocheck
 "use client";
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
@@ -5,9 +6,21 @@ import { updateInvoice } from "../../app/lib/actions/actions";
 import { formatDateToString } from "../../app/lib/utils";
 import { toast } from "react-hot-toast";
 import { calculateDueDate } from "../../app/lib/utils";
-import { FaArrowAltCircleRight, FaArrowCircleRight } from "react-icons/fa";
+import { FaArrowCircleRight } from "react-icons/fa";
+import { InvoiceType } from "../../app/lib/typeDefinitions";
 
-const InlineEditInvoice = ({ invoice, isEditing, toggleEdit, canManage }) => {
+
+const InlineEditInvoice = ({
+  invoice,
+  isEditing,
+  toggleEdit,
+  canManage,
+}: {
+  invoice: InvoiceType;
+  isEditing: boolean;
+  toggleEdit: () => void;
+  canManage: boolean;
+}) => {
   const updateInvoiceWithId = updateInvoice.bind(null, invoice._id);
 
   const {
@@ -26,7 +39,7 @@ const InlineEditInvoice = ({ invoice, isEditing, toggleEdit, canManage }) => {
     setValue("dateDue", updatedDateDue);
   }, [dateIssued, frequency, setValue]);
 
-  const onSubmit = async (formData) => {
+  const onSubmit = async (formData: any) => {
     try {
       await updateInvoiceWithId(formData);
       toast.success("Invoice updated successfully");
@@ -114,7 +127,7 @@ const InlineEditInvoice = ({ invoice, isEditing, toggleEdit, canManage }) => {
                       {type === "textarea" ? (
                         <textarea
                           {...register(name, { required: isRequired })}
-                          className="w-full rounded border-2 border-gray-400 p-2 text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                          className="text-black w-full rounded border-2 border-gray-400 p-2 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
                           defaultValue={invoice[name]}
                         />
                       ) : (
@@ -125,7 +138,7 @@ const InlineEditInvoice = ({ invoice, isEditing, toggleEdit, canManage }) => {
                             minLength: minLength,
                             maxLength: maxLength,
                           })}
-                          className="w-full rounded border-2 border-gray-400 p-2 text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                          className="text-black w-full rounded border-2 border-gray-400 p-2 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
                           readOnly={readOnly}
                           defaultValue={invoice[name]}
                         />

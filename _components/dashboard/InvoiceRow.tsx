@@ -58,7 +58,7 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
             emailRecipient={invoiceData.jobTitle}
             emailSent={invoiceData.emailSent}
             dueInvoiceData={invoiceData}
-            emailExists={invoiceData.emailExists}
+            emailExists={invoiceData.emailExists || false}
           />
         </td>
       </tr>

@@ -8,7 +8,7 @@ import { auth } from "@clerk/nextjs/server";
 const InvoiceDetailed = async ({ params }: { params: { id: string } }) => {
   const invoiceId = params.id;
   const invoice = (await fetchInvoiceById(invoiceId)) as InvoiceType;
-  const client = (await fetchClientById(invoice?.clientId)) as ClientType;
+  const client = (await fetchClientById(invoice?.clientId as string)) as ClientType;
   const { has } = auth();
 
   const canManage = has({ permission: "org:database:allow" });

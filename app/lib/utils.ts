@@ -2,7 +2,7 @@ import clsx from "clsx";
 import { format } from "date-fns-tz";
 import { twMerge } from "tailwind-merge";
 
-export const formatDate = (dateString) => {
+export const formatDate = (dateString: any) => {
   const parts = dateString.split("-");
   const year = parts[0];
   const month = parts[1];
@@ -87,7 +87,7 @@ export const removeSpecialCharacters = (value: string) => {
   return value.replace(/[^\w\s]/gi, "");
 };
 
-export const isNumberKey = (evt) => {
+export const isNumberKey = (evt: any) => {
   var charCode = evt.which ? evt.which : evt.keyCode;
   if (charCode > 31 && (charCode < 48 || charCode > 57)) {
     evt.preventDefault();
@@ -110,7 +110,7 @@ export const getTransactionStatus = (date: Date) => {
   return date > twoDaysAgo ? "Processing" : "Success";
 };
 
-export const formatDateToString = (dateString) => {
+export const formatDateToString = (dateString: string) => {
   const [year, month, day] = dateString.split("-");
 
   const monthNames = [
@@ -128,12 +128,12 @@ export const formatDateToString = (dateString) => {
     "December",
   ];
 
-  const monthName = monthNames[parseInt(month, 10) - 1]; // subtract 1 because array is zero-indexed
+  const monthName = monthNames[parseInt(month as string, 10) - 1]; // subtract 1 because array is zero-indexed
 
-  return `${monthName} ${parseInt(day, 10)}, ${year}`; // parseInt removes leading zeros from the day
+  return `${monthName} ${parseInt(day as string, 10)}, ${year}`; // parseInt removes leading zeros from the day
 };
 
-export const isTextKey = (evt) => {
+export const isTextKey = (evt: any) => {
   var charCode = evt.which ? evt.which : evt.keyCode;
   if (
     (charCode > 64 && charCode < 91) ||
@@ -147,14 +147,14 @@ export const isTextKey = (evt) => {
   }
 };
 
-export const formatPhoneNumber = (phoneNumber) => {
+export const formatPhoneNumber = (phoneNumber: any) => {
   if (phoneNumber.length === 10) {
     return `(${phoneNumber.substring(0, 3)})-${phoneNumber.substring(3, 6)}-${phoneNumber.substring(6)}`;
   }
   return phoneNumber;
 };
 
-export const calculateDueDate = (issuedDate, freq) => {
+export const calculateDueDate = (issuedDate: any, freq: any) => {
   if (issuedDate && freq) {
     const dueDate = new Date(issuedDate);
     const monthsToAdd = Math.floor(12 / parseInt(freq));
@@ -165,7 +165,7 @@ export const calculateDueDate = (issuedDate, freq) => {
   return;
 };
 
-export const monthNameToNumber = (monthName) => {
+export const monthNameToNumber = (monthName: string) => {
   const monthNames = [
     "January",
     "February",
@@ -184,7 +184,7 @@ export const monthNameToNumber = (monthName) => {
   return monthNumber >= 0 ? monthNumber + 1 : null; // Adding 1 to make it 1-indexed
 };
 
-export const generatePagination = (currentPage, totalPages) => {
+export const generatePagination = (currentPage: number, totalPages: number) => {
   // If the total number of pages is 7 or less,
   // display all pages without any ellipsis.
   if (totalPages <= 7) {

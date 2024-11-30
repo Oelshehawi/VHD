@@ -118,8 +118,8 @@ const YearlySales = ({ salesData, currentYear }: YearlySalesProps) => {
   };
 
   return (
-    <div className='flex flex-col lg:w-3/4 w-full'>
-      <div className='w-full relative lg:min-h-[70vh] h-[50vh] p-4 border rounded-lg bg-white'>
+    <div className='flex flex-col w-full lg:w-[50%]'>
+      <div className='w-full relative lg:min-h-[70vh] h-[50vh] p-4 border rounded-lg bg-white shadow-lg transition-all hover:shadow-xl'>
         <Bar data={chartData} options={chartOptions} />
       </div>
       <div className='flex justify-center items-center gap-2 md:gap-4 py-4'>

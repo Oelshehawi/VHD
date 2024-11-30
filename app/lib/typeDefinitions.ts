@@ -193,15 +193,15 @@ export interface InvoiceData {
 }
 
 export interface DueInvoiceType {
-  emailExists: any;
-  _id: ObjectId | string;
+  _id?: string;
+  clientId: string;
   invoiceId: string;
   jobTitle: string;
-  dateDue: Date;
+  dateDue: string;
   isScheduled: boolean;
   emailSent: boolean;
-  clientId: ObjectId | string;
-  notesExists: any;
+  emailExists?: boolean;
+  notesExists?: boolean;
 }
 
 export interface YearlySalesData {
@@ -245,4 +245,13 @@ export interface DashboardSearchParams {
   year?: string;
   salesYear?: string;
   [key: string]: string | undefined;
+}
+
+export interface JobsDueType {
+  clientId: string;
+  invoiceId: string;
+  jobTitle: string;
+  dateDue: Date;
+  isScheduled: boolean;
+  emailSent: boolean;
 }

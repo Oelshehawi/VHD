@@ -1,18 +1,18 @@
 import { Suspense } from "react";
 import JobsDueContainer from "../../../_components/dashboard/JobsDueContainer";
 import {
-  getClientCount,
-  getPendingInvoiceAmount,
-  getPendingInvoices,
-} from "../../lib/data";
-import {
   InfoBoxSkeleton,
   JobsDueContainerSkeleton,
   YearlySalesSkeleton,
 } from "../../../_components/Skeletons";
+import {
+  getClientCount,
+  getPendingInvoiceAmount,
+  getPendingInvoices,
+  fetchYearlySalesData,
+} from "../../lib/dashboard.data";
 import { FaPeopleGroup } from "react-icons/fa6";
 import YearlySales from "../../../_components/dashboard/YearlySales";
-import { fetchYearlySalesData } from "../../lib/data";
 import { auth } from "@clerk/nextjs/server";
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
 import { DashboardSearchParams } from "../../lib/typeDefinitions";
@@ -58,7 +58,7 @@ const DashboardPage = async ({
         </div>
       </div>
 
-      <div className="flex h-4/5 flex-col justify-between px-4 lg:flex-row">
+      <div className="flex flex-col justify-between gap-2 px-4 lg:flex-row">
         <Suspense fallback={<YearlySalesSkeleton />}>
           <YearlySales salesData={salesData} currentYear={currentYear} />
         </Suspense>
@@ -77,7 +77,9 @@ const ClientCount = async () => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <FaPeopleGroup className="h-8 w-8 lg:h-10 lg:w-10" />
-          <h2 className="text-lg font-bold sm:text-xl lg:text-2xl">Total Clients</h2>
+          <h2 className="text-lg font-bold sm:text-xl lg:text-2xl">
+            Total Clients
+          </h2>
         </div>
       </div>
       <div className="rounded-lg bg-darkGray p-3 text-center text-2xl font-bold sm:text-3xl lg:text-4xl">

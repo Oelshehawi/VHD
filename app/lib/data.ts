@@ -1,287 +1,11 @@
 import connectMongo from "./connect";
-import { unstable_noStore as noStore } from "next/cache";
 import {
   Client,
   Invoice,
-  JobsDueSoon,
-  Schedule,
 } from "../../models/reactDataSchema";
-import { revalidatePath } from "next/cache";
 import { formatPhoneNumber } from "./utils";
-import { 
-  InvoiceType, 
-  YearlySalesData, 
-  SalesAggregation,
-  MongoMatchStage,
-  MongoGroupStage,
-  MongoSortStage
-} from "./typeDefinitions";
-import { monthNameToNumber } from "./utils";
 
-export const fetchDueInvoices = async ({
-  month,
-  year,
-}: {
-  month: string | undefined;
-  year: string | number;
-}) => {
-  await connectMongo();
 
-  const monthNumber = month
-    ? monthNameToNumber(month)
-    : new Date().getMonth() + 1;
-
-  try {
-    const dueInvoices = await Invoice.find({
-      $expr: {
-        $and: [
-          { $eq: [{ $year: "$dateDue" }, year] },
-          { $eq: [{ $month: "$dateDue" }, monthNumber] },
-        ],
-      },
-    });
-
-    await createOrUpdateJobsDueSoon(dueInvoices);
-
-    const unscheduledJobs = await JobsDueSoon.find({
-      isScheduled: false,
-      $expr: {
-        $and: [
-          { $eq: [{ $year: "$dateDue" }, year] },
-          { $eq: [{ $month: "$dateDue" }, monthNumber] },
-        ],
-      },
-    }).sort({ dateDue: 1 });
-
-    return await checkEmailAndNotesPresence(
-      unscheduledJobs.map((job) => ({
-        clientId: job.clientId.toString(),
-        invoiceId: job.invoiceId,
-        jobTitle: job.jobTitle,
-        dateDue: job.dateDue.toISOString(),
-        isScheduled: job.isScheduled,
-        emailSent: job.emailSent,
-      })),
-    );
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch due invoices.");
-  }
-};
-
-export const createOrUpdateJobsDueSoon = async (dueInvoices: InvoiceType[]) => {
-  await connectMongo();
-
-  const jobsDueSoonPromises = dueInvoices.map(async (invoice) => {
-    const { _id, jobTitle, dateDue } = invoice;
-
-    let jobExists = await JobsDueSoon.findOne({
-      invoiceId: _id.toString(),
-    });
-
-    if (!jobExists) {
-      jobExists = await JobsDueSoon.create({
-        clientId: invoice.clientId,
-        invoiceId: _id.toString(),
-        jobTitle,
-        dateDue,
-        isScheduled: false,
-        emailSent: false,
-      });
-    }
-  });
-
-  await Promise.all(jobsDueSoonPromises);
-
-  revalidatePath("/dashboard");
-};
-
-export const getClientCount = async () => {
-  await connectMongo();
-
-  try {
-    const count = await Client.countDocuments();
-    return count;
-  } catch (error) {
-    console.error("Database Error:", error);
-    Error("Failed to fetch client count");
-  }
-};
-
-export const getOverDueInvoiceAmount = async () => {
-  await connectMongo();
-  try {
-    const result = await Invoice.aggregate([
-      { $match: { status: "overdue" } },
-      { $unwind: "$items" },
-      {
-        $group: { _id: null, totalAmount: { $sum: "$items.price" } },
-      },
-    ]);
-    let totalAmount = result.length > 0 ? result[0].totalAmount : 0;
-    return (totalAmount += totalAmount * 0.05);
-  } catch (error) {
-    console.error("Database Error:", error);
-    Error("Failed to fetch overdue invoice amount");
-  }
-};
-
-export const getPendingInvoiceAmount = async () => {
-  await connectMongo();
-  try {
-    const today = new Date();
-
-    const result = await Invoice.aggregate([
-      { $match: { status: "pending", dateIssued: { $lt: today } } },
-      { $unwind: "$items" },
-      {
-        $group: {
-          _id: null,
-          totalAmount: { $sum: "$items.price" },
-        },
-      },
-    ]);
-    let totalAmount = result.length > 0 ? result[0].totalAmount : 0;
-    return (totalAmount += totalAmount * 0.05);
-  } catch (error) {
-    console.error("Database Error:", error);
-    Error("Failed to fetch pending invoice amount");
-  }
-};
-
-export const getPendingInvoices = async () => {
-  await connectMongo();
-  try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const pendingInvoices = await Invoice.aggregate([
-      { $match: { status: "pending", dateIssued: { $lt: today } } },
-      { $sort: { dateIssued: 1 } },
-    ]);
-
-    return pendingInvoices.map((invoice) => ({
-      _id: invoice._id.toString(),
-      invoiceId: invoice.invoiceId,
-      jobTitle: invoice.jobTitle,
-      status: invoice.status,
-      dateIssued: invoice.dateIssued.toLocaleString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      }),
-      amount: invoice.items.reduce(
-        (acc: any, item: { price: any }) => acc + item.price,
-        0,
-      ),
-    }));
-  } catch (error) {
-    console.error("Database Error:", error);
-    Error("Failed to fetch pending invoices");
-  }
-};
-
-export const checkEmailAndNotesPresence = async (dueInvoices) => {
-  await connectMongo();
-
-  try {
-    const clientIds = dueInvoices.map((invoice) => invoice.clientId);
-    const invoiceIds = dueInvoices.map((invoice) => invoice.invoiceId);
-
-    const clients = await Client.find({ _id: { $in: clientIds } });
-    const invoices = await Invoice.find({ _id: { $in: invoiceIds } });
-
-    const clientEmailMap = clients.reduce((map, client) => {
-      map[client._id.toString()] = client.email ? true : false;
-      return map;
-    }, {});
-
-    const invoiceNotesMap = invoices.reduce((map, invoice) => {
-      map[invoice._id.toString()] = invoice.notes ? true : false;
-      return map;
-    }, {});
-
-    const updatedDueInvoices = dueInvoices.map((invoice) => {
-      const emailExists = clientEmailMap[invoice.clientId];
-      const notesExists = invoiceNotesMap[invoice.invoiceId];
-      return { ...invoice, emailExists, notesExists };
-    });
-
-    return updatedDueInvoices;
-  } catch (error) {
-    console.error("Error finding invoices and clients:", error);
-    throw new Error("Failed to check email presence for due invoices.");
-  }
-};
-
-export const fetchYearlySalesData = async (targetYear?: number): Promise<YearlySalesData[]> => {
-  await connectMongo();
-  const year = targetYear || new Date().getFullYear();
-  const previousYear = year - 1;
-
-  const matchCurrentYear: MongoMatchStage = {
-    $match: {
-      dateIssued: {
-        $gte: new Date(`${year}-01-01`),
-        $lte: new Date(`${year}-12-31`),
-      },
-    },
-  };
-
-  const matchPreviousYear: MongoMatchStage = {
-    $match: {
-      dateIssued: {
-        $gte: new Date(`${previousYear}-01-01`),
-        $lte: new Date(`${previousYear}-12-31`),
-      },
-    },
-  };
-
-  const group: MongoGroupStage = {
-    $group: {
-      _id: { month: { $month: "$dateIssued" } },
-      totalSales: { $sum: { $sum: "$items.price" } },
-    },
-  };
-
-  const sortByMonth: MongoSortStage = {
-    $sort: { "_id.month": 1 }
-  };
-
-  const currentYearSales = await Invoice.aggregate<SalesAggregation>([
-    matchCurrentYear as any,
-    group as any,
-    sortByMonth,
-  ]);
-
-  const previousYearSales = await Invoice.aggregate<SalesAggregation>([
-    matchPreviousYear as any,
-    group as any,
-    sortByMonth,
-  ]);
-
-  const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const salesData: YearlySalesData[] = months.map((month) => {
-    const currentYearSale = currentYearSales.find(
-      (sale) => sale._id.month === month,
-    );
-    const previousYearSale = previousYearSales.find(
-      (sale) => sale._id.month === month,
-    );
-    return {
-      date:
-        new Date(year, month - 1, 1).toLocaleString("default", {
-          month: "short",
-        }) +
-        " " +
-        year.toString().slice(-2),
-      'Current Year': currentYearSale ? currentYearSale.totalSales : 0,
-      'Previous Year': previousYearSale ? previousYearSale.totalSales : 0,
-    };
-  });
-
-  return salesData;
-};
 
 export const fetchAllClients = async () => {
   await connectMongo();
@@ -305,16 +29,19 @@ export const fetchClientById = async (clientId: string) => {
   await connectMongo();
   try {
     const client = await Client.findOne({ _id: clientId }).lean();
+    if (!client) {
+      throw new Error("Client not found");
+    }
     client._id = client._id.toString();
     client.phoneNumber = formatPhoneNumber(client.phoneNumber);
     return client;
   } catch (error) {
-    console.error("Database Error:", Error);
-    Error("Client could not be found by Id");
+    console.error("Database Error:", error);
+    throw new Error("Client could not be found by Id");
   }
 };
 
-export const fetchClientInvoices = async (clientId) => {
+export const fetchClientInvoices = async (clientId: string) => {
   await connectMongo();
   try {
     const invoices = await Invoice.find({ clientId: clientId }).lean();
@@ -335,7 +62,7 @@ export const fetchAllInvoices = async () => {
   try {
     const invoices = await Invoice.find();
 
-    const formattedItems = (items) =>
+    const formattedItems = (items: any[]) =>
       items.map((item) => ({
         description: item.description,
         price: parseFloat(item.price) || 0,
@@ -345,7 +72,9 @@ export const fetchAllInvoices = async () => {
       _id: invoice._id.toString(),
       invoiceId: invoice.invoiceId,
       jobTitle: invoice.jobTitle,
+      // @ts-ignore
       dateIssued: invoice.dateIssued.toISOString(),
+      // @ts-ignore
       dateDue: invoice.dateDue.toISOString(),
       items: formattedItems(invoice.items),
       frequency: invoice.frequency,
@@ -360,19 +89,24 @@ export const fetchAllInvoices = async () => {
   }
 };
 
-export const fetchInvoiceById = async (invoiceId) => {
+export const fetchInvoiceById = async (invoiceId: string) => {
   await connectMongo();
   try {
-    const formattedItems = (items) =>
+    const formattedItems = (items: any[]) =>
       items.map((item) => ({
         description: item.description,
         price: parseFloat(item.price) || 0,
       }));
 
     const invoice = await Invoice.findOne({ _id: invoiceId }).lean();
+    if (!invoice) {
+      throw new Error("Invoice not found");
+    }
     invoice._id = invoice._id.toString();
+    // @ts-ignore
     invoice.dateDue = invoice.dateDue.toISOString().split("T")[0];
-    invoice.dateIssued = invoice.dateIssued.toISOString().split("T")[0];
+    // @ts-ignore
+    invoice.dateIssued = invoice.dateIssued.toISOString().split("T")[0];  
     invoice.clientId = invoice.clientId.toString();
     invoice.items = formattedItems(invoice.items);
     return invoice;
@@ -399,10 +133,13 @@ export async function fetchFilteredClients(
     ],
   };
 
+  const sortQuery = { clientName: Number(sort) };
+
   try {
     const clients = await Client.aggregate([
       { $match: matchQuery },
-      { $sort: { clientName: Number(sort) } },
+      // @ts-ignore
+      { $sort: sortQuery },
       { $skip: offset },
       { $limit: ITEMS_PER_PAGE },
     ]);
