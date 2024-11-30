@@ -16,16 +16,16 @@ const PendingAmountContainer = ({
   return (
     <>
       <div
-        className="h-full cursor-pointer space-y-2 rounded bg-darkGreen p-2 text-white shadow"
+        className="h-full space-y-2 rounded-lg bg-darkGreen p-4 text-white shadow-lg transition-all hover:scale-[1.02]"
         onClick={() => setOpen(true)}
       >
-        <div className="flex flex-row items-center justify-center md:justify-start">
-          <FaMoneyBill className="h-6 w-6" />
-          <div className="hidden p-2 text-center text-xl md:block">
+        <div className="flex items-center gap-3">
+          <FaMoneyBill className="h-8 w-8 lg:h-10 lg:w-10" />
+          <div className="text-lg font-bold sm:text-xl lg:text-2xl">
             Pending Amount
           </div>
         </div>
-        <div className="text-md rounded bg-darkGray p-2 text-center md:text-3xl">
+        <div className="rounded-lg bg-darkGray p-3 text-center text-2xl font-bold sm:text-3xl lg:text-4xl">
           ${amount}
         </div>
       </div>

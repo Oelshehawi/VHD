@@ -1,14 +1,7 @@
 'use client'
 import Link from "next/link";
 import { Key, useState } from "react";
-
-interface SearchParams {
-  open: string;
-  month: string;
-  urlName: string;
-  year: string;
-  [key: string]: string;
-}
+import { DashboardSearchParams } from "../../app/lib/typeDefinitions";
 
 const CustomSelect = ({
   values,
@@ -19,7 +12,7 @@ const CustomSelect = ({
   values: String[] | number[];
   currentValue: string | number | undefined;
   urlName: string;
-  searchParams: SearchParams;
+  searchParams: DashboardSearchParams;
 }) => {
   const displayValue = searchParams[urlName] || currentValue;
 
@@ -36,7 +29,10 @@ const CustomSelect = ({
       {open && (
         <ul className="absolute left-0 z-10 mt-2 w-full rounded bg-white shadow-md">
           {values.map((value: any, index: Key | null | undefined) => {
-            const currentParams = new URLSearchParams(searchParams);
+            const currentParams = new URLSearchParams();
+            Object.entries(searchParams).forEach(([key, value]) => {
+              if (value) currentParams.set(key, value);
+            });
             currentParams.set(urlName, value);
             const newUrl = `?${currentParams.toString()}`;
             return (

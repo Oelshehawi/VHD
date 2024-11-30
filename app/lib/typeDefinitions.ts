@@ -203,3 +203,46 @@ export interface DueInvoiceType {
   clientId: ObjectId | string;
   notesExists: any;
 }
+
+export interface YearlySalesData {
+  date: string;
+  'Current Year': number;
+  'Previous Year': number;
+}
+
+export interface SalesAggregation {
+  _id: {
+    month: number;
+  };
+  totalSales: number;
+}
+
+export interface MongoMatchStage {
+  $match: {
+    dateIssued: {
+      $gte: Date;
+      $lte: Date;
+    };
+  };
+}
+
+export interface MongoGroupStage {
+  $group: {
+    _id: { month: { $month: string } };
+    totalSales: { $sum: { $sum: string } };
+  };
+}
+
+export interface MongoSortStage {
+  $sort: { [key: string]: 1 | -1 };
+}
+
+
+export interface DashboardSearchParams {
+  open?: string;
+  month?: string;
+  urlName?: string;
+  year?: string;
+  salesYear?: string;
+  [key: string]: string | undefined;
+}

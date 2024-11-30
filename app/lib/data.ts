@@ -8,7 +8,14 @@ import {
 } from "../../models/reactDataSchema";
 import { revalidatePath } from "next/cache";
 import { formatPhoneNumber } from "./utils";
-import { InvoiceType } from "./typeDefinitions";
+import { 
+  InvoiceType, 
+  YearlySalesData, 
+  SalesAggregation,
+  MongoMatchStage,
+  MongoGroupStage,
+  MongoSortStage
+} from "./typeDefinitions";
 import { monthNameToNumber } from "./utils";
 
 export const fetchDueInvoices = async ({
@@ -207,65 +214,69 @@ export const checkEmailAndNotesPresence = async (dueInvoices) => {
   }
 };
 
-export const fetchYearlySalesData = async () => {
+export const fetchYearlySalesData = async (targetYear?: number): Promise<YearlySalesData[]> => {
   await connectMongo();
-  const currentYear = new Date().getFullYear();
-  const lastYear = currentYear - 1;
+  const year = targetYear || new Date().getFullYear();
+  const previousYear = year - 1;
 
-  const matchCurrentYear = {
+  const matchCurrentYear: MongoMatchStage = {
     $match: {
       dateIssued: {
-        $gte: new Date(`${currentYear}-01-01`),
-        $lte: new Date(`${currentYear}-12-31`),
+        $gte: new Date(`${year}-01-01`),
+        $lte: new Date(`${year}-12-31`),
       },
     },
   };
 
-  const matchLastYear = {
+  const matchPreviousYear: MongoMatchStage = {
     $match: {
       dateIssued: {
-        $gte: new Date(`${lastYear}-01-01`),
-        $lte: new Date(`${lastYear}-12-31`),
+        $gte: new Date(`${previousYear}-01-01`),
+        $lte: new Date(`${previousYear}-12-31`),
       },
     },
   };
 
-  const group = {
+  const group: MongoGroupStage = {
     $group: {
       _id: { month: { $month: "$dateIssued" } },
       totalSales: { $sum: { $sum: "$items.price" } },
     },
   };
 
-  const sortByMonth = { $sort: { "_id.month": 1 } };
+  const sortByMonth: MongoSortStage = {
+    $sort: { "_id.month": 1 }
+  };
 
-  const currentYearSales = await Invoice.aggregate([
-    matchCurrentYear,
-    group,
+  const currentYearSales = await Invoice.aggregate<SalesAggregation>([
+    matchCurrentYear as any,
+    group as any,
     sortByMonth,
   ]);
 
-  const lastYearSales = await Invoice.aggregate([
-    matchLastYear,
-    group,
+  const previousYearSales = await Invoice.aggregate<SalesAggregation>([
+    matchPreviousYear as any,
+    group as any,
     sortByMonth,
   ]);
 
   const months = Array.from({ length: 12 }, (_, i) => i + 1);
-  const salesData = months.map((month) => {
+  const salesData: YearlySalesData[] = months.map((month) => {
     const currentYearSale = currentYearSales.find(
       (sale) => sale._id.month === month,
     );
-    const lastYearSale = lastYearSales.find((sale) => sale._id.month === month);
+    const previousYearSale = previousYearSales.find(
+      (sale) => sale._id.month === month,
+    );
     return {
       date:
-        new Date(currentYear, month - 1, 1).toLocaleString("default", {
+        new Date(year, month - 1, 1).toLocaleString("default", {
           month: "short",
         }) +
         " " +
-        currentYear.toString().slice(-2),
-      "This Year": currentYearSale ? currentYearSale.totalSales : 0,
-      "Last Year": lastYearSale ? lastYearSale.totalSales : 0,
+        year.toString().slice(-2),
+      'Current Year': currentYearSale ? currentYearSale.totalSales : 0,
+      'Previous Year': previousYearSale ? previousYearSale.totalSales : 0,
     };
   });
 
@@ -290,7 +301,7 @@ export const fetchAllClients = async () => {
   }
 };
 
-export const fetchClientById = async (clientId) => {
+export const fetchClientById = async (clientId: string) => {
   await connectMongo();
   try {
     const client = await Client.findOne({ _id: clientId }).lean();

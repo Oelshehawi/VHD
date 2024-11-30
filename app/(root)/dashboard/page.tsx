@@ -2,7 +2,6 @@ import { Suspense } from "react";
 import JobsDueContainer from "../../../_components/dashboard/JobsDueContainer";
 import {
   getClientCount,
-  getOverDueInvoiceAmount,
   getPendingInvoiceAmount,
   getPendingInvoices,
 } from "../../lib/data";
@@ -11,22 +10,26 @@ import {
   JobsDueContainerSkeleton,
   YearlySalesSkeleton,
 } from "../../../_components/Skeletons";
-import { FaPeopleGroup, FaFile } from "react-icons/fa6";
+import { FaPeopleGroup } from "react-icons/fa6";
 import YearlySales from "../../../_components/dashboard/YearlySales";
 import { fetchYearlySalesData } from "../../lib/data";
 import { auth } from "@clerk/nextjs/server";
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
+import { DashboardSearchParams } from "../../lib/typeDefinitions";
 
 const DashboardPage = async ({
   searchParams,
 }: {
-  searchParams: { open: string; month: string; urlName: string; year: string };
+  searchParams: DashboardSearchParams;
 }) => {
-  const salesData = await fetchYearlySalesData();
+  const currentYear = searchParams.salesYear
+    ? parseInt(searchParams.salesYear)
+    : new Date().getFullYear();
+
+  const salesData = await fetchYearlySalesData(currentYear);
   const amount = await getPendingInvoiceAmount();
   const pendingInvoices = (await getPendingInvoices()) || [];
   const { has } = auth();
-
 
   const canManage = has({ permission: "org:database:allow" });
 
@@ -39,18 +42,13 @@ const DashboardPage = async ({
 
   return (
     <>
-      <div className="flex h-[20vh] flex-row items-center justify-between md:h-1/5 md:px-6">
-        <div className="w-1/3 px-2 md:w-1/6 md:!px-0">
+      <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
+        <div className="w-full">
           <Suspense fallback={<InfoBoxSkeleton />}>
             <ClientCount />
           </Suspense>
         </div>
-        <div className="w-1/3 px-2 md:w-1/6 md:!px-0">
-          <Suspense fallback={<InfoBoxSkeleton />}>
-            <OverdueAmount />
-          </Suspense>
-        </div>
-        <div className="w-1/3 px-2 md:w-1/6 md:!px-0">
+        <div className="w-full">
           <Suspense fallback={<InfoBoxSkeleton />}>
             <PendingAmountContainer
               amount={amount}
@@ -62,7 +60,7 @@ const DashboardPage = async ({
 
       <div className="flex h-4/5 flex-col justify-between px-4 lg:flex-row">
         <Suspense fallback={<YearlySalesSkeleton />}>
-          <YearlySales salesData={salesData} />
+          <YearlySales salesData={salesData} currentYear={currentYear} />
         </Suspense>
         <Suspense fallback={<JobsDueContainerSkeleton />}>
           <JobsDueContainer searchParams={searchParams} />
@@ -75,33 +73,15 @@ const DashboardPage = async ({
 const ClientCount = async () => {
   const count = await getClientCount();
   return (
-    <div className="h-full space-y-2 rounded bg-darkGreen p-2 text-white shadow">
-      <div className="flex flex-row items-center justify-center md:justify-start">
-        <FaPeopleGroup className="h-6 w-6 " />
-        <div className="hidden p-2 text-center text-xl md:block">
-          Total Clients
+    <div className="h-full space-y-2 rounded-lg bg-darkGreen p-4 text-white shadow-lg transition-all hover:scale-[1.02]">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <FaPeopleGroup className="h-8 w-8 lg:h-10 lg:w-10" />
+          <h2 className="text-lg font-bold sm:text-xl lg:text-2xl">Total Clients</h2>
         </div>
       </div>
-      <div className="text-md rounded bg-darkGray p-2 text-center md:text-3xl">
+      <div className="rounded-lg bg-darkGray p-3 text-center text-2xl font-bold sm:text-3xl lg:text-4xl">
         {count}
-      </div>
-    </div>
-  );
-};
-
-const OverdueAmount = async () => {
-  const amount = await getOverDueInvoiceAmount();
-  return (
-    <div className="h-full space-y-2 rounded bg-darkGreen p-2 text-white shadow">
-      <div className="flex flex-row items-center justify-center md:justify-start">
-        <FaFile className="h-6 w-6" />
-        <div className="hidden p-2 text-center text-xl md:block ">
-          Overdue Amount
-        </div>
-      </div>
-
-      <div className="text-md rounded bg-darkGray p-2 text-center md:text-3xl">
-        ${amount}
       </div>
     </div>
   );

@@ -1,12 +1,14 @@
-import { DueInvoiceType } from "../../app/lib/typeDefinitions";
+import { DashboardSearchParams, DueInvoiceType } from "../../app/lib/typeDefinitions";
 import InvoiceRow from "./InvoiceRow";
 import CustomSelect from "./CustomSelect";
 import { fetchDueInvoices } from "../../app/lib/data";
 
+
+
 const JobsDueContainer = async ({
   searchParams,
 }: {
-  searchParams: { open: string; month: string; urlName: string; year: string };
+  searchParams: DashboardSearchParams;
 }) => {
   const months = [
     "January",
@@ -95,7 +97,7 @@ const SelectBoxes = ({
   year,
   count,
 }: {
-  searchParams: { open: string; month: string; urlName: string; year: string };
+  searchParams: DashboardSearchParams;
   months: string[];
   years: number[];
   month: string | undefined;
