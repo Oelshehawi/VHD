@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
 import Link from "next/link";
 import DeleteModal from "../DeleteModal";
@@ -13,6 +13,8 @@ import TechnicianPill from "./TechnicianPill";
 import { motion, AnimatePresence } from "framer-motion";
 import { FaBan } from "react-icons/fa";
 import { format } from "date-fns-tz";
+import { XMarkIcon } from "@heroicons/react/24/outline";
+import { createPortal } from 'react-dom';
 
 const JobItem = ({
   job,
@@ -29,7 +31,8 @@ const JobItem = ({
   const [isModalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
 
-  const toggleConfirmedStatus = async () => {
+  const toggleConfirmedStatus = useCallback(async () => {
+    if (isLoading) return;
     setIsLoading(true);
     if (!canManage) {
       toast.error("You do not have permission to perform this action");
@@ -47,16 +50,17 @@ const JobItem = ({
         `Job ${newStatus ? "confirmed" : "unconfirmed"} successfully`,
       );
       setConfirmed(newStatus);
-      setIsLoading(false);
-      setModalOpen(false);
     } catch (error) {
       console.error("Failed to update the job:", error);
       toast.error("Failed to update the job status");
+    } finally {
       setIsLoading(false);
+      setModalOpen(false);
     }
-  };
+  }, [canManage, isConfirmed, isLoading, job._id]);
 
-  const toggleDeadRun = async () => {
+  const toggleDeadRun = useCallback(async () => {
+    if (isLoading) return;
     setIsLoading(true);
     if (!canManage) {
       toast.error("You do not have permission to perform this action");
@@ -71,16 +75,16 @@ const JobItem = ({
       });
 
       toast.success(
-        `deadRun ${newDeadRun ? "enabled" : "disabled"} successfully`,
+        `Dead run ${newDeadRun ? "enabled" : "disabled"} successfully`,
       );
       setIsDeadRun(newDeadRun);
-      setIsLoading(false);
     } catch (error) {
       console.error("Failed to update deadRun:", error);
-      toast.error("Failed to update deadRun status");
+      toast.error("Failed to update dead run status");
+    } finally {
       setIsLoading(false);
     }
-  };
+  }, [canManage, isDeadRun, isLoading, job._id]);
 
   const techNames = job.assignedTechnicians.map(
     (techId) =>
@@ -88,38 +92,47 @@ const JobItem = ({
       "Unknown",
   );
 
+  const closeModal = () => {
+    setModalOpen(false);
+    setIsEditMode(false);
+  };
+
   return (
     <>
       <li
-        className={`group relative flex items-center justify-between rounded-xl border-l-4 bg-white px-4 py-2 shadow-custom ${
+        className={`group relative z-0 flex items-center justify-between rounded-xl border-l-4 bg-white/90 px-4 py-2 shadow-custom backdrop-blur-sm ${
           isConfirmed ? "border-green-500" : "border-red-500"
-        } cursor-pointer hover:bg-gray-100`}
+        } cursor-pointer transition-all hover:bg-gray-100 hover:shadow-lg`}
       >
         {/* DeadRun Toggle Button */}
-        {isDeadRun && (
-          <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 3 }}
-            exit={{ scale: 0 }}
-            transition={{ duration: 0.3 }}
-            className="pointer-events-none absolute inset-0 flex items-center justify-center"
-          >
-            <FaBan className="text-2xl text-red-600" />
-          </motion.div>
-        )}
+        <AnimatePresence>
+          {isDeadRun && (
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 3 }}
+              exit={{ scale: 0 }}
+              transition={{ duration: 0.3 }}
+              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+            >
+              <FaBan className="text-2xl text-red-600/80" />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* List Item Content */}
         <div
-          className="flex flex-col overflow-hidden"
-          onClick={() => setModalOpen(true)}
+          className="z-0 flex w-full flex-col overflow-hidden"
+          onClick={() => !isModalOpen && setModalOpen(true)}
         >
-          <span className="flex w-full justify-center gap-1 rounded bg-blue-500 p-1 text-center text-white">
+          <span className="flex w-full justify-center gap-1 rounded bg-blue-600 p-1 text-center text-white shadow-sm">
             {techNames.map((tech, index) => (
               <TechnicianPill key={index} name={tech} />
             ))}
           </span>
-          <span className="font-semibold">{job.jobTitle}</span>
-          <span className="text-gray-500">
+          <span className="mt-1 font-semibold text-gray-800">
+            {job.jobTitle}
+          </span>
+          <span className="text-sm text-gray-500">
             {format(job.startDateTime, "h:mm a", { timeZone: "PST" })}
           </span>
         </div>
@@ -128,120 +141,126 @@ const JobItem = ({
         {canManage && (
           <button
             onClick={(e) => {
-              e.stopPropagation(); // Prevent opening the modal
+              e.stopPropagation();
               toggleDeadRun();
             }}
-            className={`absolute bottom-1 right-2  rounded-full p-2 ${
+            className={`absolute bottom-1 right-2 rounded-full p-2 shadow-sm ${
               isDeadRun ? "bg-red-600" : "bg-gray-300"
-            } transition-colors duration-200 hover:bg-red-700`}
+            } transition-all duration-200 hover:bg-red-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50`}
             disabled={isLoading}
             aria-label="Toggle Dead Run"
           >
             <FaBan
-              className={`text-white ${
+              className={`text-white transition-all duration-200 ${
                 isDeadRun ? "text-xl" : "text-lg"
-              } transition-transform duration-200 ${
-                isDeadRun ? "rotate-0" : "rotate-45"
-              }`}
+              } ${isDeadRun ? "rotate-0" : "rotate-45"}`}
             />
           </button>
         )}
       </li>
 
-      <AnimatePresence>
-        {isModalOpen && !isEditMode && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setModalOpen(false)}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black-2 bg-opacity-50"
-          >
+      {/* Portal the modal to document.body */}
+      {isModalOpen && 
+        createPortal(
+          <AnimatePresence>
             <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative z-50 w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={closeModal}
+              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 bg-black/60 backdrop-blur-sm"
             >
-              <Link href={`/invoices/${job.invoiceRef}`}>
-                <h2 className="py-2 text-xl font-semibold hover:cursor-pointer hover:rounded hover:bg-green-700 hover:text-white">
-                  {job.jobTitle}
-                </h2>
-              </Link>
-              <p className="mb-4 text-gray-500">
-                Scheduled at  {format(job.startDateTime, "h:mm a", { timeZone: "UTC" })}
-              </p>
-              {canManage && (
-                <>
-                  <div className="flex items-center space-x-4">
-                    <button
-                      className={`w-full rounded px-4 py-2 ${
-                        isConfirmed ? "bg-green-500" : "bg-red-500"
-                      } text-white transition-colors duration-200 hover:opacity-90`}
-                      onClick={toggleConfirmedStatus}
-                      disabled={isLoading}
-                    >
-                      {isLoading
-                        ? "Loading..."
-                        : isConfirmed
-                          ? "Unconfirm Job"
-                          : "Confirm Job"}
-                    </button>
-                    <DeleteModal
-                      deleteText={"Are you sure you want to delete this Job?"}
-                      deleteDesc={""}
-                      deletionId={job._id as string}
-                      deletingValue="job"
-                    />
-                  </div>
-                  <button
-                    className="mt-4 w-full rounded bg-darkGreen px-4 py-2 text-white transition-colors duration-200 hover:bg-darkBlue"
-                    onClick={() => setIsEditMode(true)}
-                  >
-                    Edit
-                  </button>
-                </>
-              )}
-              <button
-                className="mt-4 w-full rounded bg-gray-200 px-4 py-2 transition-colors duration-200 hover:bg-gray-300"
-                onClick={() => setModalOpen(false)}
+              <motion.div
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.95, opacity: 0 }}
+                transition={{ duration: 0.2 }}
+                onClick={(e) => e.stopPropagation()}
+                className={`relative w-full max-w-md overflow-hidden rounded-xl bg-gradient-to-br from-darkGreen to-darkBlue p-6 shadow-xl`}
               >
-                Close
-              </button>
+                {!isEditMode ? (
+                  <>
+                    {/* View Mode */}
+                    <div className="mb-6 flex items-start justify-between">
+                      <Link
+                        href={`/invoices/${job.invoiceRef}`}
+                        className="group"
+                      >
+                        <h2 className="text-xl font-semibold text-white transition-colors group-hover:text-green-400">
+                          {job.jobTitle}
+                        </h2>
+                      </Link>
+                      <button
+                        onClick={closeModal}
+                        className="rounded-full p-1 text-white/80 hover:bg-white/10 hover:text-white"
+                      >
+                        <XMarkIcon className="h-6 w-6" />
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      <p className="text-white/80">
+                        Scheduled at{" "}
+                        {format(job.startDateTime, "h:mm a", { timeZone: "UTC" })}
+                      </p>
+
+                      {canManage && (
+                        <div className="flex flex-col gap-3">
+                          <div className="flex items-center gap-3">
+                            <button
+                              className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium ${
+                                isConfirmed
+                                  ? "bg-red-500 hover:bg-red-600"
+                                  : "bg-green-500 hover:bg-green-600"
+                              } text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50`}
+                              onClick={toggleConfirmedStatus}
+                              disabled={isLoading}
+                            >
+                              {isLoading
+                                ? "Loading..."
+                                : isConfirmed
+                                  ? "Unconfirm Job"
+                                  : "Confirm Job"}
+                            </button>
+                            <DeleteModal
+                              deleteText={
+                                "Are you sure you want to delete this Job?"
+                              }
+                              deleteDesc={""}
+                              deletionId={job._id as string}
+                              deletingValue="job"
+                            />
+                          </div>
+                          <button
+                            className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+                            onClick={() => setIsEditMode(true)}
+                          >
+                            Edit Job
+                          </button>
+                        </div>
+                      )}
+
+                      <button
+                        className="mt-2 w-full rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                        onClick={closeModal}
+                      >
+                        Close
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <EditJobModal
+                    job={job}
+                    onClose={closeModal}
+                    technicians={technicians}
+                  />
+                )}
+              </motion.div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {isModalOpen && isEditMode && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black-2 bg-opacity-50"
-          >
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              transition={{ duration: 0.3 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative w-full max-w-md rounded-lg bg-white p-6 shadow-lg"
-            >
-              <EditJobModal
-                job={job}
-                onClose={() => {
-                  setIsEditMode(false);
-                  setModalOpen(false);
-                }}
-                technicians={technicians}
-              />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          </AnimatePresence>,
+          document.body
+        )
+      }
     </>
   );
 };

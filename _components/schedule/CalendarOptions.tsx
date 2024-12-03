@@ -43,25 +43,25 @@ const CalendarOptions = ({
     setCalendarOption(isMobileDevice());
   }, []);
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    const days = direction === 'prev' ? -7 : 7;
+  const navigateWeek = (direction: "prev" | "next") => {
+    const days = direction === "prev" ? -7 : 7;
     const newWeekStart = add(currentWeek[0] as Date, { days });
     setCurrentWeek(
       eachDayOfInterval({
         start: startOfWeek(newWeekStart, { weekStartsOn: 0 }),
         end: add(startOfWeek(newWeekStart, { weekStartsOn: 0 }), { days: 6 }),
-      })
+      }),
     );
   };
 
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-white">
+    <div className="flex h-[100dvh] flex-col overflow-hidden bg-white">
       <Header
         calendarOption={calendarOption}
         setCalendarOption={() => setCalendarOption(!calendarOption)}
         scheduledJobs={scheduledJobs}
-        previousWeek={() => navigateWeek('prev')}
-        nextWeek={() => navigateWeek('next')}
+        previousWeek={() => navigateWeek("prev")}
+        nextWeek={() => navigateWeek("next")}
         currentWeek={currentWeek}
         invoices={invoices}
         canManage={canManage}
@@ -69,9 +69,9 @@ const CalendarOptions = ({
         technicians={technicians}
       />
 
-      <main className="flex-1 overflow-hidden">
+      <main className="flex-1 overflow-y-auto">
         {calendarOption ? (
-          <div className="flex h-full items-start justify-center p-4 md:items-center">
+          <div className="flex h-full items-start justify-center p-2 md:items-center md:p-4">
             <div className="w-full max-w-4xl rounded-xl border border-gray-200 bg-white shadow-lg">
               <MiniCalendar
                 invoices={invoices}
@@ -103,6 +103,7 @@ const Header = ({
   calendarOption,
   setCalendarOption,
   scheduledJobs,
+  currentWeek,
   previousWeek,
   nextWeek,
   invoices,
@@ -113,6 +114,7 @@ const Header = ({
   setCalendarOption: () => void;
   calendarOption: boolean;
   scheduledJobs: ScheduleType[];
+  currentWeek: Date[];
   previousWeek: () => void;
   nextWeek: () => void;
   invoices: InvoiceType[];
@@ -143,21 +145,21 @@ const Header = ({
         </button>
       </div>
 
-      <div className="flex gap-4">
+      <div className="flex items-center justify-between gap-2 md:gap-4">
         <div
-          className={`${calendarOption ? "hidden" : "flex items-center gap-4"}`}
+          className={`${calendarOption ? "hidden" : "flex items-center gap-2"}`}
         >
           <button onClick={previousWeek}>
-            <ArrowLeftIcon className="size-10 rounded-full p-2 shadow-custom hover:bg-gray-300" />
+            <ArrowLeftIcon className="size-8 rounded-full p-1.5 shadow-custom hover:bg-gray-300 md:size-10 md:p-2" />
           </button>
           <button onClick={nextWeek}>
-            <ArrowRightIcon className="size-10 rounded-full p-2 shadow-custom hover:bg-gray-300" />
+            <ArrowRightIcon className="size-8 rounded-full p-1.5 shadow-custom hover:bg-gray-300 md:size-10 md:p-2" />
           </button>
         </div>
         {!isMobile && (
           <button
             onClick={setCalendarOption}
-            className={`hidden h-10 flex-grow items-center justify-center text-nowrap rounded-lg border border-gray-300 px-4 transition-colors duration-300 md:flex ${
+            className={`hidden h-10 items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 px-4 transition-colors duration-300 md:flex ${
               calendarOption
                 ? "bg-darkGreen text-white"
                 : "border-darkGreen bg-white text-darkGreen"

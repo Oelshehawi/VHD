@@ -23,7 +23,7 @@ import { updateSchedule } from "../../app/lib/actions/scheduleJobs.actions";
 import DeleteModal from "../DeleteModal";
 import toast from "react-hot-toast";
 import Link from "next/link";
-import TechnicianPill from "./TechnicianPill"; // Import the TechnicianPill component
+import TechnicianPill from "./TechnicianPill"; 
 
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -69,12 +69,12 @@ export default function MiniCalendar({
 
   return (
     <>
-      <div className="py-4">
-        <div className="mx-auto max-w-md px-4 sm:px-7 md:max-w-4xl md:px-6">
-          <div className="md:grid md:grid-cols-2 md:divide-x md:divide-gray-200">
+      <div className="py-2 md:py-4">
+        <div className="mx-auto max-w-md px-2 sm:px-4 md:max-w-4xl md:px-6">
+          <div className="flex flex-col md:grid md:grid-cols-2 md:divide-x md:divide-gray-200">
             <div className="md:pr-14">
               <div className="flex items-center">
-                <h2 className="flex-auto font-semibold text-gray-900">
+                <h2 className="flex-auto text-sm font-semibold text-gray-900 md:text-base">
                   {format(firstDayCurrentMonth, "MMMM yyyy")}
                 </h2>
                 <button
@@ -83,7 +83,7 @@ export default function MiniCalendar({
                   className="-my-1.5 flex flex-none items-center justify-center p-1.5 text-gray-400 hover:text-gray-500"
                 >
                   <span className="sr-only">Previous month</span>
-                  <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
+                  <ChevronLeftIcon className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
                 </button>
                 <button
                   onClick={nextMonth}
@@ -91,10 +91,10 @@ export default function MiniCalendar({
                   className="-my-1.5 -mr-1.5 ml-2 flex flex-none items-center justify-center p-1.5 text-gray-400 hover:text-gray-500"
                 >
                   <span className="sr-only">Next month</span>
-                  <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
+                  <ChevronRightIcon className="h-4 w-4 md:h-5 md:w-5" aria-hidden="true" />
                 </button>
               </div>
-              <div className="mt-10 grid grid-cols-7 text-center text-xs leading-6 text-gray-500">
+              <div className="mt-6 md:mt-10 grid grid-cols-7 text-center text-xs leading-6 text-gray-500">
                 <div>S</div>
                 <div>M</div>
                 <div>T</div>
@@ -109,7 +109,7 @@ export default function MiniCalendar({
                     key={day.toString()}
                     className={classNames(
                       dayIdx === 0 && colStartClasses[getDay(day)],
-                      "py-1.5",
+                      "py-1",
                     )}
                   >
                     <button
@@ -137,7 +137,7 @@ export default function MiniCalendar({
                         !isEqual(day, selectedDay) && "hover:bg-gray-200",
                         (isEqual(day, selectedDay) || isToday(day)) &&
                           "font-semibold",
-                        "mx-auto flex h-8 w-8 items-center justify-center rounded-full",
+                        "mx-auto flex h-6 w-6 md:h-8 md:w-8 items-center justify-center rounded-full text-xs md:text-sm",
                       )}
                     >
                       <time dateTime={format(day, "yyyy-MM-dd")}>
@@ -155,14 +155,14 @@ export default function MiniCalendar({
                 ))}
               </div>
             </div>
-            <section className="mt-12 md:mt-0 md:pl-14">
-              <h2 className="font-semibold text-gray-900">
+            <section className="mt-6 max-h-[50vh] overflow-y-auto md:mt-0 md:max-h-none md:pl-14">
+              <h2 className="text-sm font-semibold text-gray-900 md:text-base">
                 Schedule for{" "}
                 <time dateTime={format(selectedDay, "yyyy-MM-dd")}>
                   {format(selectedDay, "MMM dd, yyy")}
                 </time>
               </h2>
-              <ol className="mt-4 flex flex-col gap-4 space-y-1 text-sm leading-6 text-gray-500">
+              <ol className="mt-4 flex flex-col gap-2 space-y-1 text-xs leading-6 text-gray-500 md:gap-4 md:text-sm">
                 {selectedDayJobs.length > 0 ? (
                   selectedDayJobs.map((job) => (
                     <Job
@@ -229,42 +229,42 @@ export function Job({
   );
 
   return (
-    <li className="group flex items-center justify-between space-x-4 rounded-xl bg-darkGreen px-4 py-2 text-white">
-      <div className="flex-auto gap-4">
+    <li className="group flex items-center justify-between gap-2 rounded-xl bg-darkGreen p-2 text-white md:gap-4 md:px-4 md:py-2">
+      <div className="flex-auto">
         <Link href={`/invoices/${job.invoiceRef}`}>
-          <p className="hover:cursor-pointer hover:rounded hover:bg-green-700">
+          <p className="text-xs font-medium hover:cursor-pointer hover:rounded hover:bg-green-700 md:text-sm">
             {job.jobTitle}
           </p>
         </Link>
-        <p className="mt-0.5">{format(startDateTime, "h:mm a")}</p>
-        <div className="flex gap-2">
+        <p className="mt-0.5 text-xs md:text-sm">{format(startDateTime, "h:mm a")}</p>
+        <div className="flex flex-wrap gap-1 md:gap-2">
           {techNames.map((tech, index) => (
             <TechnicianPill key={index} name={tech} />
           ))}
         </div>
       </div>
       {canManage && (
-        <DeleteModal
-          deleteText={"Are you sure you want to delete this Job?"}
-          deleteDesc={""}
-          deletionId={job._id as string}
-          deletingValue="job"
-        />
-      )}
-      {canManage && (
-        <button
-          className={`ml-2 rounded px-3 py-1 text-sm ${
-            isConfirmed ? "bg-red-500" : "bg-green-500"
-          } text-white hover:bg-opacity-80`}
-          onClick={toggleConfirmedStatus}
-          disabled={isLoading}
-        >
-          {isLoading
-            ? "Loading..."
-            : isConfirmed
-              ? "Unconfirm"
-              : "Confirm"}
-        </button>
+        <div className="flex items-center gap-2">
+          <DeleteModal
+            deleteText={"Are you sure you want to delete this Job?"}
+            deleteDesc={""}
+            deletionId={job._id as string}
+            deletingValue="job"
+          />
+          <button
+            className={`rounded px-2 py-1 text-xs md:px-3 md:text-sm ${
+              isConfirmed ? "bg-red-500" : "bg-green-500"
+            } text-white hover:bg-opacity-80`}
+            onClick={toggleConfirmedStatus}
+            disabled={isLoading}
+          >
+            {isLoading
+              ? "..."
+              : isConfirmed
+                ? "Unconfirm"
+                : "Confirm"}
+          </button>
+        </div>
       )}
     </li>
   );

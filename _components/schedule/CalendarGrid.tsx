@@ -42,7 +42,7 @@ const CalendarGrid = ({
           {week.map((day, idx) => (
             <div
               key={idx}
-              className={`flex flex-1 flex-col items-center py-2 ${
+              className={`relative flex flex-1 flex-col items-center py-2 ${
                 isToday(day) ? "bg-blue-50" : "bg-white"
               }`}
             >
@@ -62,9 +62,9 @@ const CalendarGrid = ({
       </div>
 
       {/* Scrollable content */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="relative flex-1 overflow-y-auto">
         <div className="flex h-full">
-          {/* Time axis - Sticky */}
+          {/* Time axis - Update z-index */}
           <div className="sticky left-0 w-16 flex-none bg-white">
             <div className="grid auto-rows-[60px]">
               {HOURS.map((hour) => (
@@ -80,10 +80,10 @@ const CalendarGrid = ({
             </div>
           </div>
 
-          {/* Calendar columns */}
-          <div className="flex flex-1 divide-x divide-gray-200">
+          {/* Calendar columns - Add stacking context */}
+          <div className="relative z-0 flex flex-1 divide-x divide-gray-200">
             {week.map((day, idx) => (
-              <div key={idx} className="flex-1">
+              <div key={idx} className="relative flex-1">
                 <CalendarColumn
                   day={day}
                   jobs={selectedDayJobs(day)}
