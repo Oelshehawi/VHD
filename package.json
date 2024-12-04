@@ -26,7 +26,7 @@
     "date-fns-tz": "^3.2.0",
     "framer-motion": "^11.0.15",
     "mongodb": "^4.8.1",
-    "mongoose": "^7.0.4",
+    "mongoose": "^8.8.3",
     "next": "^14.2.3",
     "plaid": "^28.0.0",
     "postmark": "^4.0.2",
