@@ -1,8 +1,6 @@
 import "../global.css";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { auth } from "@clerk/nextjs/server";
-import { SyncActiveOrganization } from "../../_components/SyncActiveOrganization";
 import type { Metadata, Viewport } from "next";
 
 
@@ -57,10 +55,8 @@ export default function Layout({
 }: {
   children: React.ReactNode;
 }) {
-  const { sessionClaims } = auth();
   return (
     <ClerkProvider>
-      <SyncActiveOrganization membership={sessionClaims?.membership} />
       <html lang="en">
         <body className={inter.className}>
             <main>{children}</main>

@@ -10,7 +10,7 @@ import PayrollOverview from "../../../_components/employeeDashboard/PayrollOverv
 import RecentJobs from "../../../_components/employeeDashboard/RecentJobs";
 
 const EmployeeDashboard = async () => {
-  const { userId }: any = auth();
+  const { userId }: any = await auth();
 
   const technician = await fetchTechnicianById(userId);
   const schedules = await fetchSchedulesForTechnician(technician?.id);

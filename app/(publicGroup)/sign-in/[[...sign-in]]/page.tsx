@@ -1,9 +1,11 @@
+"use client";
 import { SignIn } from "@clerk/nextjs";
 
 export default function Page() {
   return (
-    <div className="flex min-h-[100vh] items-center justify-center bg-darkGreen">
-      <SignIn
+    <div className="flex min-h-screen items-center justify-center bg-darkGreen">
+      <SignIn 
+        forceRedirectUrl="/dashboard"
         appearance={{
           elements: {
             card: "bg-green-900 text-white",

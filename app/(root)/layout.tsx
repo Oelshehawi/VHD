@@ -5,7 +5,6 @@ import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "react-hot-toast";
 import { ClerkProvider } from "@clerk/nextjs";
 import { auth, currentUser } from "@clerk/nextjs/server";
-import { SyncActiveOrganization } from "../../_components/SyncActiveOrganization";
 import type { Metadata, Viewport } from "next";
 import SideNavBar from "../../_components/SideNavBar";
 
@@ -60,10 +59,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { sessionClaims, has } = auth();
+  const { orgPermissions } = await auth();
 
-  const canManage = has({ permission: "org:database:allow" });
-  
+  const canManage = orgPermissions?.includes("org:database:allow");
+
   const user: any = await currentUser();
 
   const serializedUser = {
@@ -75,12 +74,11 @@ export default async function RootLayout({
   
   return (
     <ClerkProvider>
-      <SyncActiveOrganization membership={sessionClaims?.membership} />
       <html lang="en">
         <body className={inter.className}>
           <Toaster position="top-center" />
           <div className="flex min-h-screen flex-col lg:flex-row">
-            <SideNavBar canManage={canManage} user={serializedUser} />
+            <SideNavBar canManage={canManage as boolean} user={serializedUser} />
             <main>{children}</main>
           </div>
           <SpeedInsights />

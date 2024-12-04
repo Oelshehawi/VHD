@@ -139,9 +139,11 @@ export const fetchShiftsForTechnician = async (
 export const fetchTechnicianById = async (
   technicianId: string,
 ): Promise<Partial<any> | null> => {
-  await connectMongo(); // If needed to connect MongoDB
+  await connectMongo();
   try {
-    const technician = await clerkClient().users.getUser(technicianId); // Fetch from Clerk
+    const technicianget = await clerkClient();
+
+    const technician = await technicianget.users.getUser(technicianId);
     if (!technician) return null;
 
     // Map only the fields that might exist in Clerk

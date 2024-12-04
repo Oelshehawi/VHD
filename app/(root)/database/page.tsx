@@ -18,8 +18,8 @@ const Database = async ({
   };
 }) => {
   // AUTH STUFF
-  const { has } = auth();
-  const canManage = has({ permission: "org:database:allow" });
+  const { orgPermissions } = await auth();
+  const canManage = orgPermissions?.includes("org:database:allow");
 
   if (!canManage)
     return (

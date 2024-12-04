@@ -192,8 +192,9 @@ export const updateJob = async ({
 };
 
 export async function getTechnicians() {
-  const users: any = await clerkClient().users.getUserList();
-  return users.data.map((user: any) => ({
+  const users: any = await clerkClient();
+  const userList = await users.users.getUserList();
+  return userList.data.map((user: any) => ({
     id: user.id,
     name: user.fullName,
     hourlyRate: user.publicMetadata.hourlyRate,

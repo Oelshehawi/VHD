@@ -1,15 +1,21 @@
 "use client";
-import { SignOutButton, SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { useUser } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
 
 const UserSection = () => {
+  const { isLoaded } = useUser();
+
+  if (!isLoaded) {
+    return (
+      <div className="flex items-center gap-3">
+        <div className="h-10 w-10 animate-pulse rounded-full bg-white/20" />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex items-center justify-center border-r-2 border-borderGreen p-2 lg:border-b-2 lg:border-r-0">
-      <SignedIn>
-        <UserButton />
-      </SignedIn>
-      <SignedOut>
-        <SignOutButton />
-      </SignedOut>
+    <div className="flex items-center gap-3">
+      <UserButton />
     </div>
   );
 };

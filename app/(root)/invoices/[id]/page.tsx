@@ -9,15 +9,15 @@ const InvoiceDetailed = async ({ params }: { params: { id: string } }) => {
   const invoiceId = params.id;
   const invoice = (await fetchInvoiceById(invoiceId)) as InvoiceType;
   const client = (await fetchClientById(invoice?.clientId as string)) as ClientType;
-  const { has } = auth();
+  const { orgPermissions } = await auth();
 
-  const canManage = has({ permission: "org:database:allow" });
+  const canManage = orgPermissions?.includes("org:database:allow");
 
   return (
     <>
       <div className="mt-4 px-3 lg:!px-5">
         <Suspense fallback={<InvoiceDetailedSkeleton />}>
-          <InvoiceDetailsContainer invoice={invoice} client={client} canManage={canManage} />
+          <InvoiceDetailsContainer invoice={invoice} client={client} canManage={canManage as boolean} />
         </Suspense>
       </div>
     </>

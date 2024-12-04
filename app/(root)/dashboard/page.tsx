@@ -29,9 +29,9 @@ const DashboardPage = async ({
   const salesData = await fetchYearlySalesData(currentYear);
   const amount = await getPendingInvoiceAmount();
   const pendingInvoices = (await getPendingInvoices()) || [];
-  const { has } = auth();
+  const { orgPermissions } = await auth();
 
-  const canManage = has({ permission: "org:database:allow" });
+  const canManage = orgPermissions?.includes("org:database:allow");
 
   if (!canManage)
     return (

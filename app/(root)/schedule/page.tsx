@@ -1,10 +1,11 @@
-import {
-  fetchAllInvoices,
-  fetchHolidays,
-} from "../../lib/data";
+import { fetchAllInvoices, fetchHolidays } from "../../lib/data";
 import { fetchAllScheduledJobsWithShifts } from "../../lib/scheduleAndShifts";
 import { auth } from "@clerk/nextjs/server";
-import { InvoiceType, ScheduleType, TechnicianType } from "../../../app/lib/typeDefinitions";
+import {
+  InvoiceType,
+  ScheduleType,
+  TechnicianType,
+} from "../../../app/lib/typeDefinitions";
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
 
@@ -12,9 +13,16 @@ const Schedule = async () => {
   const invoices: InvoiceType[] = (await fetchAllInvoices()) ?? [];
   let scheduledJobs: ScheduleType[] = await fetchAllScheduledJobsWithShifts();
   const holidays = await fetchHolidays();
-  const { has, userId }: any = auth();
-  const canManage = has({ permission: "org:database:allow" });
+  const { orgPermissions, userId }: any = await auth();
+  const canManage = orgPermissions?.includes("org:database:allow");
   const technicians: TechnicianType[] = await getTechnicians();
+
+  if (!canManage)
+    return (
+      <div className="flex min-h-[100vh] items-center justify-center text-3xl font-bold">
+        You don't have correct permissions to access this page!
+      </div>
+    );
 
   if (!canManage) {
     scheduledJobs = scheduledJobs.filter((job) =>
@@ -22,13 +30,13 @@ const Schedule = async () => {
     );
   }
 
-  const sortedInvoices = invoices
-    .sort((a, b) => {
-      const dateComparison = new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime();
-      if (dateComparison !== 0) return dateComparison;
+  const sortedInvoices = invoices.sort((a, b) => {
+    const dateComparison =
+      new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime();
+    if (dateComparison !== 0) return dateComparison;
 
-      return a.clientId.toString().localeCompare(b.clientId.toString());
-    });
+    return a.clientId.toString().localeCompare(b.clientId.toString());
+  });
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-gray-50">
