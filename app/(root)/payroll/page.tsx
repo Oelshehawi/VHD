@@ -9,6 +9,7 @@ import {
 } from "../../lib/scheduleAndShifts";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
 import PayrollPeriodSelector from "../../../_components/payroll/PayrollPeriodSelector";
+import { auth } from "@clerk/nextjs/server";
 
 interface PayrollPageProps {
   searchParams: { payrollPeriodId?: string };
@@ -19,6 +20,8 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
   const technicians: TechnicianType[] = await getTechnicians();
   let schedules: ScheduleType[] = [];
   let selectedPayrollPeriod: PayrollPeriodType | null = null;  
+  const { orgPermissions }: any = await auth();
+  const canManage = orgPermissions?.includes("org:database:allow");
 
   if (searchParams.payrollPeriodId) {
     selectedPayrollPeriod =
@@ -61,6 +64,13 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
       }
     }
   }
+
+  if (!canManage)
+    return (
+      <div className="flex min-h-[100vh] items-center justify-center text-3xl font-bold">
+        You don't have correct permissions to access this page!
+      </div>
+    );
 
   return (
     <div className="min-h-screen bg-gray-100 p-6">
