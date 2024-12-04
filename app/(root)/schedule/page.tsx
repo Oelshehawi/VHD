@@ -14,15 +14,8 @@ const Schedule = async () => {
   let scheduledJobs: ScheduleType[] = await fetchAllScheduledJobsWithShifts();
   const holidays = await fetchHolidays();
   const { orgPermissions, userId }: any = await auth();
-  const canManage = orgPermissions?.includes("org:database:allow");
+  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
   const technicians: TechnicianType[] = await getTechnicians();
-
-  if (!canManage)
-    return (
-      <div className="flex min-h-[100vh] items-center justify-center text-3xl font-bold">
-        You don't have correct permissions to access this page!
-      </div>
-    );
 
   if (!canManage) {
     scheduledJobs = scheduledJobs.filter((job) =>

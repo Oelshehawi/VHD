@@ -64,7 +64,7 @@ export default async function RootLayout({
 }) {
   const { orgPermissions } = await auth();
 
-  const canManage = orgPermissions?.includes("org:database:allow");
+  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
 
   const user: any = await currentUser();
 

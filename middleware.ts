@@ -1,25 +1,51 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { clerkMiddleware, createRouteMatcher, auth } from '@clerk/nextjs/server'
 import { NextResponse } from 'next/server'
 
-// Include root path in public routes
+// Define protected routes that require manage permissions
+const manageRoutes = [
+  '/database',
+  '/payroll',
+  '/dashboard',
+  '/invoices$', // Only block the main invoices list with $ (exact match)
+]
+
+// Define routes that allow both managers and employees
+const sharedRoutes = [
+  '/invoices/', // Allow access to individual invoices
+]
+
 const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/'])
 
 export default clerkMiddleware(async (auth, request) => {
-  // Redirect root path to sign-in
   if (request.nextUrl.pathname === '/') {
     return NextResponse.redirect(new URL('/sign-in', request.url))
+  }
+
+  const path = request.nextUrl.pathname
+  const { orgPermissions } = await auth()
+  const hasManagePermission = orgPermissions?.includes("org:database:allow") ?? false
+
+  // Allow access to shared routes regardless of permissions
+  if (sharedRoutes.some(route => path.includes(route))) {
+    // Continue to auth.protect() below
+  }
+  // Block non-managers from accessing manage routes
+  else if (manageRoutes.some(route => path.match(new RegExp(`^${route}`)))) {
+    if (!hasManagePermission) {
+      return NextResponse.redirect(new URL('/employee-dashboard', request.url))
+    }
   }
 
   if (!isPublicRoute(request)) {
     await auth.protect()
   }
+
+  return NextResponse.next()
 })
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
     '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
     '/(api|trpc)(.*)',
   ],
 }

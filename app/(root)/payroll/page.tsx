@@ -21,7 +21,7 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
   let schedules: ScheduleType[] = [];
   let selectedPayrollPeriod: PayrollPeriodType | null = null;  
   const { orgPermissions }: any = await auth();
-  const canManage = orgPermissions?.includes("org:database:allow");
+  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
 
   if (searchParams.payrollPeriodId) {
     selectedPayrollPeriod =

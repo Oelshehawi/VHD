@@ -22,8 +22,7 @@ const Invoice = async ({
   const clients = (await fetchAllClients()) as ClientType[];
 
   const { orgPermissions } = await auth();
-  const canManage = orgPermissions?.includes("org:database:allow");
-
+  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
   if (!canManage)
     return (
       <div className="flex min-h-[100vh] items-center justify-center text-3xl font-bold">

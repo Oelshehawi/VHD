@@ -11,7 +11,7 @@ const InvoiceDetailed = async ({ params }: { params: { id: string } }) => {
   const client = (await fetchClientById(invoice?.clientId as string)) as ClientType;
   const { orgPermissions } = await auth();
 
-  const canManage = orgPermissions?.includes("org:database:allow");
+  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
 
   return (
     <>
