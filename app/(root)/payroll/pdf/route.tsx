@@ -5,7 +5,6 @@ import {
   Text,
   View,
   StyleSheet,
-  PDFDownloadLink,
   renderToBuffer,
 } from "@react-pdf/renderer";
 import {
@@ -13,8 +12,10 @@ import {
   fetchPayrollPeriodById,
   fetchScheduledJobsByPayrollPeriod,
 } from "../../../lib//scheduleAndShifts";
-import React from "react";
 
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 interface PaystubProps {
   employer: {
     name: string;
