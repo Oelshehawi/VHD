@@ -1,8 +1,15 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from 'next/server'
 
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)'])
+// Include root path in public routes
+const isPublicRoute = createRouteMatcher(['/sign-in(.*)', '/'])
 
 export default clerkMiddleware(async (auth, request) => {
+  // Redirect root path to sign-in
+  if (request.nextUrl.pathname === '/') {
+    return NextResponse.redirect(new URL('/sign-in', request.url))
+  }
+
   if (!isPublicRoute(request)) {
     await auth.protect()
   }
