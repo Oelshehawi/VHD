@@ -162,4 +162,33 @@ main {
   .bank-info_content {
     @apply flex flex-1 items-center justify-between gap-2 overflow-hidden;
   }
+
+  /* Custom scrollbar styles */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: #666;
+  }
+
+  /* Style select options */
+  select option {
+    padding: 1rem !important;
+    margin: 0.5rem;
+  }
 }

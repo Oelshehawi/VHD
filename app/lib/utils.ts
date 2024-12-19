@@ -83,6 +83,7 @@ export function formatAmount(amount: number): string {
 
   return formatter.format(amount);
 }
+
 export const removeSpecialCharacters = (value: string) => {
   return value.replace(/[^\w\s]/gi, "");
 };
