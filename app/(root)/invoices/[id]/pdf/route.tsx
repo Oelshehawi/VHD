@@ -404,11 +404,11 @@ export async function GET(
   try {
     // Fetch data and prepare invoiceData
     const invoice = (await fetchInvoiceById(params.id)) as InvoiceType;
-    const client = (await fetchClientById(invoice.clientId)) as ClientType;
+    const client = (await fetchClientById(invoice.clientId as string)) as ClientType;
 
     const invoiceData = {
       invoiceId: invoice.invoiceId,
-      dateIssued: formatDateToString(invoice.dateIssued),
+      dateIssued: formatDateToString(invoice.dateIssued as string),
       jobTitle: invoice.jobTitle,
       location: invoice.location,
       clientName: client.clientName,
@@ -424,7 +424,7 @@ export async function GET(
       totalAmount:
         calculateSubtotal(invoice.items) +
         calculateGST(calculateSubtotal(invoice.items)),
-      cheque: "51-11020 Williams Rd",
+      cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
       eTransfer: "adam@vancouverventcleaning.ca",
       terms:
         "Please report any and all cleaning inquiries within 5 business days.",
