@@ -197,7 +197,7 @@ export interface DueInvoiceType {
   clientId: string;
   invoiceId: string;
   jobTitle: string;
-  dateDue: string;
+  dateDue: Date | string;
   isScheduled: boolean;
   emailSent: boolean;
   emailExists?: boolean;
