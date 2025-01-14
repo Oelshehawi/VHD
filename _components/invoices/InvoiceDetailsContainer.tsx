@@ -54,9 +54,9 @@ const InvoiceDetailsContainer = ({
       </div>
 
       {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 gap-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-5">
         {/* Left side - Invoice Info & Price Breakdown */}
-        <div className="space-y-4 lg:col-span-2">
+        <div className="space-y-4 lg:col-span-3">
           <InlineEditInvoice
             invoice={invoice}
             isEditing={isEditing}
