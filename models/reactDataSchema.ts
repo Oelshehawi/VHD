@@ -9,6 +9,8 @@ import {
   TransactionType,
   PayrollPeriodType,
   ShiftType,
+  SignatureType,
+  PhotoType,
 } from "../app/lib/typeDefinitions";
 
 const ClientSchema = new Schema<ClientType>({
@@ -26,6 +28,40 @@ const ClientSchema = new Schema<ClientType>({
   },
   notes: {
     type: String,
+  },
+});
+
+const PhotoSchema = new Schema<PhotoType>({
+  url: {
+    type: String,
+    required: true,
+  },
+  timestamp: {
+    type: Date,
+    required: true,
+  },
+  technicianId: {
+    type: String,
+    required: true,
+  },
+});
+
+const SignatureSchema = new Schema<SignatureType>({
+  url: {
+    type: String,
+    required: true,
+  },
+  timestamp: {
+    type: Date,
+    required: true,
+  },
+  signerName: {
+    type: String,
+    required: true,
+  },
+  technicianId: {
+    type: String,
+    required: true,
   },
 });
 
@@ -76,6 +112,20 @@ const invoiceSchema = new Schema<InvoiceType>({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Client",
     required: true,
+  },
+  signature: {
+    type: SignatureSchema,
+    required: false,
+  },
+  photos: {
+    before: {
+      type: [PhotoSchema],
+      default: undefined,
+    },
+    after: {
+      type: [PhotoSchema],
+      default: undefined,
+    },
   },
 });
 

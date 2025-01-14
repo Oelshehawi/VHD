@@ -45,7 +45,7 @@ const PriceBreakdown = ({ invoice }) => {
   };
 
   return (
-    <div className="mb-4 w-full lg:w-[60%]">
+    <div className="mb-4 w-full">
       <div className="overflow-auto rounded border shadow">
         <div className="flex flex-row items-center justify-between border-b px-4 py-2 text-xl">
           <div>Price Breakdown</div>

@@ -166,12 +166,32 @@ export interface InvoiceType {
   notes?: string;
   status: "pending" | "overdue" | "paid";
   clientId: ObjectId | string;
+  signature?: SignatureType;
+  photos?: {
+    before?: PhotoType[];
+    after?: PhotoType[];
+  };
 }
 
 export interface InvoiceItem {
   description: string;
   price: number;
   total: number;
+}
+
+export interface PhotoType {
+  url: string;
+  timestamp: Date;
+  technicianId: string;
+  _id: ObjectId | string;
+}
+
+export interface SignatureType {
+  _id: string;
+  url: string;
+  timestamp: Date | string;
+  signerName: string;
+  technicianId: string;
 }
 
 export interface InvoiceData {
@@ -206,8 +226,8 @@ export interface DueInvoiceType {
 
 export interface YearlySalesData {
   date: string;
-  'Current Year': number;
-  'Previous Year': number;
+  "Current Year": number;
+  "Previous Year": number;
 }
 
 export interface SalesAggregation {
@@ -236,7 +256,6 @@ export interface MongoGroupStage {
 export interface MongoSortStage {
   $sort: { [key: string]: 1 | -1 };
 }
-
 
 export interface DashboardSearchParams {
   open?: string;

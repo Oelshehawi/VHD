@@ -37,30 +37,24 @@ export default async function handler(
       ).lean());
       console.log('📊 Found raw schedules:', scheduledJobs.length);
   
-      const transformedSchedules = scheduledJobs.map((job) => ({
-        _id: job._id.toString(),
-        invoiceRef: job.invoiceRef.toString(),
-        jobTitle: job.jobTitle || '',
-        location: job.location,
-        assignedTechnicians: job.assignedTechnicians,
-        startDateTime: job.startDateTime, // Send raw UTC date
-        confirmed: job.confirmed,
-        hours: job.hours,
-        shifts: job.shifts || [],
-        payrollPeriod: job.payrollPeriod ? job.payrollPeriod.toString() : '',
-        deadRun: job.deadRun,
-      }));
+      const transformedSchedules = {
+        schedules: scheduledJobs.map((job) => ({
+          _id: job._id.toString(),
+          invoiceRef: job.invoiceRef.toString(),
+          jobTitle: job.jobTitle || '',
+          location: job.location,
+          assignedTechnicians: job.assignedTechnicians,
+          startDateTime: job.startDateTime,
+          confirmed: job.confirmed,
+          hours: job.hours,
+          shifts: job.shifts || [],
+          payrollPeriod: job.payrollPeriod ? job.payrollPeriod.toString() : '',
+          deadRun: job.deadRun,
+        })),
+        canManage, 
+      };
   
-  
-      console.log('✨ Transformed schedules:', transformedSchedules.length);
-  
-      const sortedSchedules = transformedSchedules.sort(
-        (a, b) =>
-          new Date(a.startDateTime).getTime() -
-          new Date(b.startDateTime).getTime()
-      );
-  
-      res.status(200).json(sortedSchedules);
+      res.status(200).json(transformedSchedules);
     } catch (error) {
       console.error('💥 Error in schedules API:', error);
       res.status(500).json({ error: 'Error fetching schedules' });

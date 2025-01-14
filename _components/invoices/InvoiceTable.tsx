@@ -37,8 +37,12 @@ const InvoiceTable = async ({
           <table className="relative w-full border-collapse">
             <thead className="sticky top-0 z-10">
               <tr className="bg-darkGreen text-white">
-                <th className="whitespace-nowrap px-4 py-3.5 text-left font-semibold">Invoice #</th>
-                <th className="whitespace-nowrap px-4 py-3.5 text-left font-semibold">Job Title</th>
+                <th className="whitespace-nowrap px-4 py-3.5 text-left font-semibold">
+                  Invoice #
+                </th>
+                <th className="whitespace-nowrap px-4 py-3.5 text-left font-semibold">
+                  Job Title
+                </th>
                 <th className="hidden whitespace-nowrap px-4 py-3.5 text-left font-semibold md:table-cell">
                   Issued Date
                 </th>
@@ -48,14 +52,19 @@ const InvoiceTable = async ({
                 <th className="hidden whitespace-nowrap px-4 py-3.5 text-left font-semibold md:table-cell">
                   Amount
                 </th>
-                <th className="whitespace-nowrap px-4 py-3.5 text-center font-semibold">Actions</th>
+                <th className="whitespace-nowrap px-4 py-3.5 text-center font-semibold">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-darkGreen/20">
               {invoiceData.map((invoice: InvoiceType, index: number) => {
-                const totalAmount = invoice.items
-                  .reduce((total, item) => total + item.price, 0)
-                  .toFixed(2);
+                const subtotal = invoice.items.reduce(
+                  (total, item) => total + item.price,
+                  0,
+                );
+                const tax = subtotal * 0.05;
+                const totalAmount = (subtotal + tax).toFixed(2);
 
                 return (
                   <tr
@@ -69,9 +78,11 @@ const InvoiceTable = async ({
                     </td>
                     <td className="px-4 py-3 text-white">
                       <div className="font-medium">{invoice.jobTitle}</div>
-                      <div className="md:hidden space-y-1">
+                      <div className="space-y-1 md:hidden">
                         <div className="text-gray-200">
-                          {new Date(invoice.dateIssued).toLocaleDateString("en-CA")}
+                          {new Date(invoice.dateIssued).toLocaleDateString(
+                            "en-CA",
+                          )}
                         </div>
                         <div className="flex items-center gap-2">
                           <div
@@ -110,7 +121,7 @@ const InvoiceTable = async ({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-center gap-3">
-                        <Link 
+                        <Link
                           href={`/invoices/${invoice._id}`}
                           className="transition-transform hover:scale-105"
                         >

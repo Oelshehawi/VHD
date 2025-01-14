@@ -10,7 +10,7 @@ const ClientDetails = ({
   canManage: boolean;
 }) => {
   return (
-    <div className="mb-4 w-full px-2 lg:w-[40%]">
+    <div className="mb-4 w-full px-2">
       <div className="rounded border shadow">
         <div className="border-b px-4 py-2 text-xl">Client Information</div>
         <div className="p-4">

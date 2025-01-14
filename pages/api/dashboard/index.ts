@@ -6,11 +6,14 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { clerkClient } from "@clerk/nextjs/server";
 
 // Dashboard API endpoint
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
+export default async function handler(
+  req: NextApiRequest,
+  res: NextApiResponse,
+) {
   if (req.method !== "GET") {
     return res.status(405).json({ message: "Method not allowed" });
   }
-  
+
   try {
     const { userId, orgPermissions } = getAuth(req);
     const canManage = orgPermissions?.includes("org:database:allow") ?? false;
@@ -22,37 +25,55 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     await connectMongo();
 
     const today = new Date();
-    const startOfToday = startOfDay(today);
-    const endOfToday = endOfDay(today);
+    const now = new Date();
+    const startOfTodayUTC = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        0,
+        0,
+        0,
+        0,
+      ),
+    );
+    const endOfTodayUTC = new Date(
+      Date.UTC(
+        now.getUTCFullYear(),
+        now.getUTCMonth(),
+        now.getUTCDate(),
+        23,
+        59,
+        59,
+        999,
+      ),
+    );
 
-    // Get today's schedules based on user role
     const query = canManage ? {} : { assignedTechnicians: userId };
     const todaySchedules = await Schedule.find({
       ...query,
       startDateTime: {
-        $gte: startOfToday,
-        $lt: endOfToday,
+        $gte: startOfTodayUTC,
+        $lt: endOfTodayUTC,
       },
-    })
-      .sort({ startDateTime: 1 })
-      .lean();
+    }).lean();
 
     // Get all unique technician IDs from schedules
     const technicianIds = Array.from(
-      new Set(todaySchedules.flatMap((s) => s.assignedTechnicians))
+      new Set(todaySchedules.flatMap((s) => s.assignedTechnicians)),
     );
 
     // Fetch technician names from Clerk
-     const users: any = await clerkClient();
-     const userList = await users.users.getUserList();
-     const technicians = userList.data.map((user: any) => ({
-       id: user.id,
-       name: user.fullName,
-       hourlyRate: user.publicMetadata.hourlyRate,
-     }));
+    const users: any = await clerkClient();
+    const userList = await users.users.getUserList();
+    const technicians = userList.data.map((user: any) => ({
+      id: user.id,
+      name: user.fullName,
+      hourlyRate: user.publicMetadata.hourlyRate,
+    }));
     // Create a map of technician IDs to names
     const technicianNames = new Map(
-      technicians.map((tech: any) => [tech.id, tech.name || "Unknown"])
+      technicians.map((tech: any) => [tech.id, tech.name || "Unknown"]),
     );
 
     // Calculate hours per technician
@@ -67,7 +88,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     // Calculate total hours
     const totalHours = todaySchedules.reduce(
       (sum, schedule) => sum + (schedule.hours || 0),
-      0
+      0,
     );
 
     // Get current user's name from technicians list
@@ -97,7 +118,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         // Calculate total hours for payroll period
         const payrollHours = payrollSchedules.reduce(
           (sum, schedule) => sum + (schedule.hours || 0),
-          0
+          0,
         );
 
         currentPayroll = {

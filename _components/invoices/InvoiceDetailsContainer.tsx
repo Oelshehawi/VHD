@@ -7,6 +7,7 @@ import { useRouter } from "next/navigation";
 import PriceBreakdown from "./PriceBreakdown";
 import GeneratePDF from "./GeneratePDF";
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
+import MediaDisplay from "./MediaDisplay";
 
 const InvoiceDetailsContainer = ({
   invoice,
@@ -37,7 +38,10 @@ const InvoiceDetailsContainer = ({
         </button>
         {canManage && (
           <div className="space-x-2">
-            <GeneratePDF invoiceId={invoice._id as string} jobTitle={invoice.jobTitle} />
+            <GeneratePDF
+              invoiceId={invoice._id as string}
+              jobTitle={invoice.jobTitle}
+            />
             <button
               className="mr-2 inline-flex items-center rounded bg-darkGreen px-4 py-2 text-white hover:bg-green-700"
               onClick={toggleEdit}
@@ -48,16 +52,41 @@ const InvoiceDetailsContainer = ({
           </div>
         )}
       </div>
-      <div className="-mx-2 flex flex-wrap text-sm lg:flex-nowrap lg:text-[1rem]">
-        <InlineEditInvoice
-          invoice={invoice}
-          isEditing={isEditing}
-          toggleEdit={toggleEdit}
-          canManage={canManage}
-        />
-        <ClientDetails client={client} canManage={canManage} />
+
+      {/* Main Grid Layout */}
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-4">
+        {/* Left side - Invoice Info & Price Breakdown */}
+        <div className="space-y-4 lg:col-span-2">
+          <InlineEditInvoice
+            invoice={invoice}
+            isEditing={isEditing}
+            toggleEdit={toggleEdit}
+            canManage={canManage}
+          />
+          {canManage && <PriceBreakdown invoice={invoice} />}
+        </div>
+
+        {/* Right side - Client Info & Signature */}
+        <div className="space-y-4 lg:col-span-2">
+          <ClientDetails client={client} canManage={canManage} />
+          {invoice.signature && (
+            <MediaDisplay
+              photos={{ before: [], after: [] }}
+              signature={invoice.signature}
+            />
+          )}
+        </div>
       </div>
-      {canManage && <PriceBreakdown invoice={invoice} />}
+
+      {/* Photos Section - Full Width */}
+      {invoice?.photos?.before &&
+        invoice?.photos?.after &&
+        (invoice.photos.before.length > 0 ||
+          invoice.photos.after.length > 0) && (
+          <div className="mt-4">
+            <MediaDisplay photos={invoice.photos} signature={null} />
+          </div>
+        )}
     </>
   );
 };

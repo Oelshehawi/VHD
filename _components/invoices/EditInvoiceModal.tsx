@@ -102,7 +102,7 @@ const InlineEditInvoice = ({
   ];
 
   return (
-    <div className="mb-4 w-full pl-2 lg:w-[60%]">
+    <div className="mb-4 w-full">
       <div className="rounded border shadow">
         <div className="flex flex-row items-center justify-between border-b px-4 py-2 text-xl">
           <div>Invoice Information</div>

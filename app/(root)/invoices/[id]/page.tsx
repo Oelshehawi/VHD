@@ -7,20 +7,22 @@ import { auth } from "@clerk/nextjs/server";
 
 const InvoiceDetailed = async ({ params }: { params: { id: string } }) => {
   const invoiceId = params.id;
-  const invoice = (await fetchInvoiceById(invoiceId)) as InvoiceType;
-  const client = (await fetchClientById(invoice?.clientId as string)) as ClientType;
+  const invoice = await fetchInvoiceById(invoiceId);
+  const client = await fetchClientById(invoice?.clientId);
   const { orgPermissions } = await auth();
 
-  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
+  const canManage = orgPermissions?.includes("org:database:allow") ?? false;
 
   return (
-    <>
-      <div className="mt-4 px-3 lg:!px-5">
-        <Suspense fallback={<InvoiceDetailedSkeleton />}>
-          <InvoiceDetailsContainer invoice={invoice} client={client} canManage={canManage as boolean} />
-        </Suspense>
-      </div>
-    </>
+    <div className="mt-4 px-3 lg:!px-5">
+      <Suspense fallback={<InvoiceDetailedSkeleton />}>
+        <InvoiceDetailsContainer
+          invoice={invoice as InvoiceType}
+          client={client as ClientType}
+          canManage={canManage}
+        />
+      </Suspense>
+    </div>
   );
 };
 
