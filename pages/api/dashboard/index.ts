@@ -26,27 +26,34 @@ export default async function handler(
 
     const today = new Date();
     const now = new Date();
+    const ptOffset = -8; // Pacific Time UTC offset
+    
+    // Adjust for PT
+    const ptDate = new Date(now.getTime() + (ptOffset * 60 * 60 * 1000));
+    
+    // Create UTC midnight bounds for PT date
     const startOfTodayUTC = new Date(
       Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
+        ptDate.getUTCFullYear(),
+        ptDate.getUTCMonth(),
+        ptDate.getUTCDate(),
         0,
         0,
         0,
-        0,
-      ),
+        0
+      )
     );
+    
     const endOfTodayUTC = new Date(
       Date.UTC(
-        now.getUTCFullYear(),
-        now.getUTCMonth(),
-        now.getUTCDate(),
+        ptDate.getUTCFullYear(),
+        ptDate.getUTCMonth(),
+        ptDate.getUTCDate(),
         23,
         59,
         59,
-        999,
-      ),
+        999
+      )
     );
 
     const query = canManage ? {} : { assignedTechnicians: userId };
@@ -57,6 +64,8 @@ export default async function handler(
         $lt: endOfTodayUTC,
       },
     }).lean();
+
+
 
     // Get all unique technician IDs from schedules
     const technicianIds = Array.from(
