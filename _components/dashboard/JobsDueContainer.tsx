@@ -1,7 +1,12 @@
-import { DashboardSearchParams, DueInvoiceType } from "../../app/lib/typeDefinitions";
+import { DashboardSearchParams } from "../../app/lib/typeDefinitions";
 import InvoiceRow from "./InvoiceRow";
 import CustomSelect from "./CustomSelect";
-import { checkScheduleStatus, getScheduledCount, getUnscheduledCount, fetchDueInvoices } from "../../app/lib/dashboard.data";
+import {
+  checkScheduleStatus,
+  getScheduledCount,
+  getUnscheduledCount,
+  fetchDueInvoices,
+} from "../../app/lib/dashboard.data";
 import { FaCalendarAlt } from "react-icons/fa";
 
 const JobsDueContainer = async ({
@@ -10,32 +15,58 @@ const JobsDueContainer = async ({
   searchParams: DashboardSearchParams;
 }) => {
   const months = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 8 }, (_, i) => currentYear + i);
+  const years = Array.from({ length: 8 }, (_, i) => 2024 + i);
 
   const month = searchParams.month || months[new Date().getMonth()];
   const year = searchParams.year || currentYear;
 
-  const result = { month, year };
+  // Add type safety for result
+  const result: { month: string; year: number } = {
+    month: month || "",
+    year: typeof year === "string" ? parseInt(year) : year,
+  };
 
   // Fetch all due invoices and check their schedule status
   const dueInvoices = await fetchDueInvoices(result);
   const invoicesWithSchedule = await checkScheduleStatus(dueInvoices);
-  
-  // Get total counts
-  const totalDue = invoicesWithSchedule.length;
-  const invoiceIds = invoicesWithSchedule.map((invoice) => invoice.invoiceId);
-  const scheduledCount = await getScheduledCount(invoiceIds);
-  const unscheduledCount = await getUnscheduledCount(invoiceIds);
+
+  // Add type safety
+  if (!Array.isArray(invoicesWithSchedule)) {
+    return (
+      <div className="flex h-[50vh] w-full flex-col rounded-lg border bg-white p-4 shadow-lg">
+        <p className="text-center text-gray-500">Error loading jobs</p>
+      </div>
+    );
+  }
+
+  // Get total counts with safety checks
+  const totalDue = invoicesWithSchedule?.length || 0;
+  const invoiceIds =
+    invoicesWithSchedule?.map((invoice) => invoice.invoiceId) || [];
+  const scheduledCount = (await getScheduledCount(invoiceIds)) || 0;
+  const unscheduledCount = (await getUnscheduledCount(invoiceIds)) || 0;
 
   // Filter for display based on isScheduled - default to showing unscheduled
-  const displayInvoices = searchParams.scheduled === "true" 
-    ? invoicesWithSchedule.filter((invoice) => invoice.isScheduled)
-    : invoicesWithSchedule.filter((invoice) => !invoice.isScheduled);
+  const displayInvoices = invoicesWithSchedule.filter((invoice) =>
+    searchParams.scheduled === "true"
+      ? invoice?.isScheduled
+      : !invoice?.isScheduled,
+  );
 
   return (
     <div className="flex h-[50vh] w-full flex-col rounded-lg border bg-white p-4 shadow-lg transition-all hover:shadow-xl lg:h-[70vh] lg:w-[50%]">
@@ -80,16 +111,27 @@ const JobsDueContainer = async ({
           <table className="w-full">
             <thead className="sticky top-0 bg-gray-50">
               <tr>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-600">Job</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-600">Due</th>
-                <th className="hidden whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-600 md:table-cell">Status</th>
-                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-600">Email</th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-600">
+                  Job
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-600">
+                  Due
+                </th>
+                <th className="hidden whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-600 md:table-cell">
+                  Status
+                </th>
+                <th className="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-600">
+                  Email
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {displayInvoices.length === 0 ? (
                 <tr>
-                  <td className="px-4 py-8 text-center text-gray-500" colSpan={4}>
+                  <td
+                    className="px-4 py-8 text-center text-gray-500"
+                    colSpan={4}
+                  >
                     No jobs due this month
                   </td>
                 </tr>
