@@ -1,9 +1,9 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { v2 as cloudinary } from "cloudinary";
 import { getAuth } from "@clerk/nextjs/server";
-import { PhotoType, SignatureType } from "../../../app/lib/typeDefinitions";
 import { Invoice } from "../../../models/reactDataSchema";
 import connectMongo from "../../../app/lib/connect";
+import mongoose from "mongoose";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -33,65 +33,55 @@ export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  console.log("🔥 Upload API called");
+  if (req.method !== "POST")
+    return res.status(405).json({ error: "Method not allowed" });
 
   const { userId } = getAuth(req);
-
-  if (!userId) {
-    console.log("❌ Unauthorized - No user ID");
-    return res.status(401).json({ error: "Unauthorized" });
-  }
-
-  if (req.method !== "POST") {
-    console.log("❌ Method not allowed:", req.method);
-    return res.status(405).json({ error: "Method not allowed" });
-  }
+  if (!userId) return res.status(401).json({ error: "Unauthorized" });
 
   try {
-    await connectMongo();
     const { images, type, technicianId, signerName, jobTitle, invoiceId } =
       req.body as UploadRequest;
 
-    console.log("📦 Request body:", {
-      type,
-      technicianId,
-      jobTitle,
-      invoiceId,
-      imagesCount: images?.length,
-    });
-
-    if (!images || !Array.isArray(images) || !invoiceId) {
-      throw new Error("Missing required fields");
-    }
-
-    if (!technicianId || !jobTitle) {
-      throw new Error("Technician ID and job title are required");
+    // Quick validation
+    if (!images?.length || !technicianId || !jobTitle || !invoiceId) {
+      return res.status(400).json({ error: "Missing required fields" });
     }
 
     const sanitizedJobTitle = jobTitle
       .replace(/[^a-zA-Z0-9-_]/g, "-")
       .toLowerCase();
 
-    const uploadPromises = images.map((image: string) =>
+    // Connect to DB and start uploads in parallel
+    const [, invoice] = await Promise.all([
+      connectMongo(),
+      Invoice.findById(invoiceId),
+    ]);
+
+    if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+
+    // Start uploads with optimized settings
+    const uploadPromises = images.map((image) =>
       cloudinary.uploader.upload(image, {
         folder: `vhd-app/${sanitizedJobTitle}/${type}`,
         resource_type: "auto",
+        quality: "auto",
+        fetch_format: "auto",
+        eager_async: true,
+        transformation: [{ width: 800, height: 600, crop: "limit" }],
       }),
     );
 
+    // Process uploads
     const results = await Promise.all(uploadPromises);
 
-    console.log(
-      "☁️ Cloudinary upload results:",
-      results.map((r) => r.secure_url),
-    );
-
-    // Find the invoice - use findOneAndUpdate instead of findById
+    // Find and update invoice in one operation
     const updateQuery =
       type === "signature"
         ? {
             $set: {
               signature: {
+                _id: new mongoose.Types.ObjectId().toString(),
                 url: results[0]?.secure_url || "",
                 timestamp: new Date(),
                 signerName: signerName || "",
@@ -103,6 +93,7 @@ export default async function handler(
             $addToSet: {
               [`photos.${type}`]: {
                 $each: results.map((result) => ({
+                  _id: new mongoose.Types.ObjectId().toString(),
                   url: result.secure_url,
                   timestamp: new Date(),
                   technicianId,
@@ -111,47 +102,25 @@ export default async function handler(
             },
           };
 
-    // First ensure the photos structure exists
-    await Invoice.updateOne(
-      {
-        _id: invoiceId,
-        photos: { $exists: false },
-      },
-      {
-        $set: {
-          photos: { before: [], after: [] },
-        },
-      },
-    );
-
-    // Then update with the new photos/signature
-    const invoice = await Invoice.findOneAndUpdate(
+    const updatedInvoice = await Invoice.findOneAndUpdate(
       { _id: invoiceId },
       updateQuery,
-      {
-        new: true,
-        runValidators: true,
-      },
+      { new: true, runValidators: true, upsert: true },
     );
-
-    console.log("🔍 Updated invoice:", {
-      id: invoice?._id,
-      photos: invoice?.photos,
-      signature: invoice?.signature,
-    });
-
-    if (!invoice) {
-      throw new Error("Invoice not found or update failed");
-    }
 
     return res.status(200).json({
       message: "Upload successful",
       type,
       data:
-        type === "signature" ? invoice.signature : invoice.photos?.[type] || [],
+        type === "signature"
+          ? updatedInvoice.signature
+          : updatedInvoice.photos?.[type] || [],
     });
   } catch (error) {
-    console.error("💥 Error in upload API:", error);
-    res.status(500).json({ error: "Upload failed" });
+    console.error("Upload error:", error);
+    return res.status(500).json({
+      error: "Upload failed",
+      message: error instanceof Error ? error.message : "Unknown error",
+    });
   }
 }
