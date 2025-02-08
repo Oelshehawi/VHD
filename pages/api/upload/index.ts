@@ -48,10 +48,6 @@ export default async function handler(
       return res.status(400).json({ error: "Missing required fields" });
     }
 
-    const sanitizedJobTitle = jobTitle
-      .replace(/[^a-zA-Z0-9-_]/g, "-")
-      .toLowerCase();
-
     // Connect to DB and start uploads in parallel
     const [, invoice] = await Promise.all([
       connectMongo(),
@@ -59,6 +55,15 @@ export default async function handler(
     ]);
 
     if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+
+    // Format date and create folder name
+    const dateStr = invoice.dateIssued 
+      ? new Date(invoice.dateIssued).toISOString().split('T')[0]
+      : 'no-date';
+      
+    const sanitizedJobTitle = `${jobTitle} - ${dateStr}`
+      .replace(/[^a-zA-Z0-9-_]/g, "-")
+      .toLowerCase();
 
     // Start uploads with optimized settings
     const uploadPromises = images.map((image) =>
