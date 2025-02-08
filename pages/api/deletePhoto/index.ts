@@ -1,4 +1,3 @@
-// pages/api/deletePhoto.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import { v2 as cloudinary } from "cloudinary";
 import { getAuth } from "@clerk/nextjs/server";
@@ -11,6 +10,13 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+// Add delay helper
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Track last deletion time
+let lastDeletionTime = 0;
+const MIN_DELETE_INTERVAL = 1000; // 1 second minimum between deletions
 
 interface DeleteRequest {
   photoUrl: string;
@@ -41,12 +47,20 @@ export default async function handler(
     }
 
     // Extract public_id from Cloudinary URL
-    // Example URL: https://res.cloudinary.com/your-cloud/image/upload/v1234567/vhd-app/job-title/before/image.jpg
     const matches = photoUrl.match(/\/upload\/(?:v\d+\/)?(.+?)\./);
     if (!matches || !matches[1]) {
       throw new Error("Invalid Cloudinary URL format");
     }
     const publicId = matches[1];
+
+    // Check if we need to wait before making another deletion
+    const now = Date.now();
+    const timeSinceLastDeletion = now - lastDeletionTime;
+    if (timeSinceLastDeletion < MIN_DELETE_INTERVAL) {
+      const waitTime = MIN_DELETE_INTERVAL - timeSinceLastDeletion;
+      console.log(`⏳ Waiting ${waitTime}ms before next deletion`);
+      await delay(waitTime);
+    }
 
     console.log("🗑️ Attempting to delete from Cloudinary:", {
       url: photoUrl,
@@ -55,6 +69,7 @@ export default async function handler(
 
     // Delete from Cloudinary
     const cloudinaryResult = await cloudinary.uploader.destroy(publicId);
+    lastDeletionTime = Date.now();
     
     console.log("☁️ Cloudinary delete result:", cloudinaryResult);
 
