@@ -7,6 +7,7 @@ import { calculateDueDate } from "../../app/lib/utils";
 import { createInvoice } from "../../app/lib/actions/actions";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import ClientSearchSelect from "./ClientSearchSelect";
+import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
 
 interface AddInvoiceProps {
   clients: ClientType[];
@@ -76,22 +77,16 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
     clearErrors(["clientId", "prefix" as any]);
   };
 
-  const handleSave: SubmitHandler<InvoiceFormValues> = async (data) => {
-    setIsLoading(true);
-    try {
+  const { isProcessing, debouncedSubmit } = useDebounceSubmit({
+    onSubmit: async (data: InvoiceFormValues) => {
       await createInvoice(data);
-      toast.success("Invoice has been successfully added.");
       setOpen(false);
       setResetKey((prev) => prev + 1);
       setItems([{ description: "", price: 0 }]);
       reset();
-    } catch (error) {
-      console.error("Error saving invoice:", error);
-      toast.error("Error saving invoice. Please check input fields");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+    successMessage: "Invoice has been successfully added",
+  });
 
   const inputFields = [
     {
@@ -134,6 +129,10 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
       isRequired: false,
     },
   ];
+
+  const handleSave: SubmitHandler<InvoiceFormValues> = (data) => {
+    debouncedSubmit(data);
+  };
 
   return (
     <>
@@ -281,11 +280,11 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
             <div className="flex justify-center">
               <button
                 type="submit"
-                className={`btn ${
-                  isLoading ? "loading" : ""
-                } w-full rounded bg-darkGreen p-2 text-white hover:bg-darkBlue`}
+                disabled={isProcessing}
+                className={`w-full rounded bg-darkGreen p-2 text-white hover:bg-darkBlue disabled:cursor-not-allowed disabled:opacity-50
+                  ${isProcessing ? "animate-pulse" : ""}`}
               >
-                {isLoading ? "Saving..." : "Save Invoice"}
+                {isProcessing ? "Saving..." : "Save Invoice"}
               </button>
             </div>
           </form>

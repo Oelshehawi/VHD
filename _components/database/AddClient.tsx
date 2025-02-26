@@ -4,9 +4,9 @@ import { useForm } from "react-hook-form";
 import { createClient } from "../../app/lib/actions/actions";
 import toast from "react-hot-toast";
 import { isTextKey, isNumberKey } from "../../app/lib/utils";
+import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
 
 const AddClient = () => {
-  const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
 
   const {
@@ -15,6 +15,15 @@ const AddClient = () => {
     reset,
     formState: { errors },
   } = useForm();
+
+  const { isProcessing, debouncedSubmit } = useDebounceSubmit({
+    onSubmit: async (values: any) => {
+      await createClient(values);
+      setOpen(false);
+      reset();
+    },
+    successMessage: "New client has been successfully added",
+  });
 
   const inputFields = [
     {
@@ -49,19 +58,8 @@ const AddClient = () => {
     },
   ];
 
-  const handleSave = async (values) => {
-    setIsLoading(true);
-    try {
-      await createClient(values);
-      setOpen(false);
-      reset();
-      toast.success("New client has been successfully added.");
-    } catch (error) {
-      console.error("Error saving client:", error);
-      toast.error("Error saving client. Please Check Input Fields");
-    } finally {
-      setIsLoading(false);
-    }
+  const handleSave = (values: any) => {
+    debouncedSubmit(values);
   };
 
   return (
@@ -126,30 +124,30 @@ const AddClient = () => {
                     <input
                       {...register(name, {
                         required: isRequired,
-                        minLength: minLength,
-                        maxLength: maxLength,
+                        minLength: minLength as number,
+                        maxLength: maxLength as number,
                       })}
                       type={type}
                       placeholder={placeholder}
                       onKeyDown={onKeyDown}
                       className={
                         name === "prefix"
-                          ? "w-full rounded border-2 border-gray-400 p-2 uppercase text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
-                          : "w-full rounded border-2 border-gray-400 p-2 text-black outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                          ? "text-black w-full rounded border-2 border-gray-400 p-2 uppercase outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                          : "text-black w-full rounded border-2 border-gray-400 p-2 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
                       }
                     />
                   )}
-                  {errors[name] && errors[name].type === "required" && (
+                  {errors[name] && errors[name]?.type === "required" && (
                     <p className="mt-1 text-xs text-red-500">
                       {name} is required
                     </p>
                   )}
-                  {errors[name] && errors[name].type === "minLength" && (
+                  {errors[name] && errors[name]?.type === "minLength" && (
                     <p className="mt-1 text-xs text-red-500">
                       {name} must be at least 3 characters
                     </p>
                   )}
-                  {errors[name] && errors[name].type === "maxLength" && (
+                  {errors[name] && errors[name]?.type === "maxLength" && (
                     <p className="mt-1 text-xs text-red-500">
                       {name} Cannot be more than 3 characters
                     </p>
@@ -160,11 +158,11 @@ const AddClient = () => {
             <div className="flex justify-center">
               <button
                 type="submit"
-                className={`btn ${
-                  isLoading ? "loading" : ""
-                } w-full rounded bg-darkGreen p-2 text-white hover:bg-darkBlue`}
+                disabled={isProcessing}
+                className={`w-full rounded bg-darkGreen p-2 text-white hover:bg-darkBlue disabled:cursor-not-allowed disabled:opacity-50
+                  ${isProcessing ? "animate-pulse" : ""}`}
               >
-                {isLoading ? "Adding..." : "Add Client"}
+                {isProcessing ? "Adding..." : "Add Client"}
               </button>
             </div>
           </form>
