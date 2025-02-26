@@ -1,6 +1,6 @@
 "use client";
 import { format, isSameDay } from "date-fns";
-import { ScheduleType } from "../../app/lib/typeDefinitions";
+import { Holiday, ScheduleType } from "../../app/lib/typeDefinitions";
 import JobItem from "./JobItem";
 
 const parseDate = (dateString: string): Date => {
@@ -9,6 +9,26 @@ const parseDate = (dateString: string): Date => {
 };
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+const getHolidayStyles = (type?: "statutory" | "observance") => {
+  switch (type) {
+    case "statutory":
+      return {
+        container: "border-red-200/50 bg-red-50/90",
+        text: "text-red-800 font-semibold",
+      };
+    case "observance":
+      return {
+        container: "border-purple-200/50 bg-purple-50/90",
+        text: "text-purple-800",
+      };
+    default:
+      return {
+        container: "border-yellow-200/50 bg-yellow-50/90",
+        text: "text-yellow-800",
+      };
+  }
+};
 
 const CalendarColumn = ({
   day,
@@ -22,12 +42,14 @@ const CalendarColumn = ({
   jobs: ScheduleType[];
   isToday: boolean;
   canManage: boolean;
-  holidays: any;
+  holidays: Holiday[];
   technicians: { id: string; name: string }[];
 }) => {
-  const holiday = holidays.find((holiday: any) =>
+  const holiday = holidays.find((holiday) =>
     isSameDay(parseDate(holiday.date), day),
   );
+
+  const holidayStyles = getHolidayStyles(holiday?.type);
 
   // Sort jobs by start time
   const sortedJobs = jobs.sort(
@@ -70,9 +92,14 @@ const CalendarColumn = ({
 
       {/* Holiday banner */}
       {holiday && (
-        <div className="absolute inset-x-0 top-0 z-30 border-y border-yellow-200/50 bg-yellow-50/90 px-2 py-1.5 shadow-sm backdrop-blur-[2px]">
-          <p className="text-center text-xs font-medium text-yellow-800">
-            {holiday.name}
+        <div
+          className={`absolute inset-x-0 top-0 z-30 border-y ${holidayStyles.container} px-2 py-1.5 shadow-sm backdrop-blur-[2px]`}
+        >
+          <p className={`text-center text-xs ${holidayStyles.text}`}>
+            {holiday.nameEn}
+            {holiday.type === "observance" && (
+              <span className="ml-1 text-[10px] opacity-75">(Observance)</span>
+            )}
           </p>
         </div>
       )}

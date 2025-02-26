@@ -14,7 +14,9 @@ const Schedule = async () => {
   let scheduledJobs: ScheduleType[] = await fetchAllScheduledJobsWithShifts();
   const holidays = await fetchHolidays();
   const { orgPermissions, userId }: any = await auth();
-  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
+  const canManage = orgPermissions?.includes("org:database:allow")
+    ? true
+    : false;
   const technicians: TechnicianType[] = await getTechnicians();
 
   if (!canManage) {

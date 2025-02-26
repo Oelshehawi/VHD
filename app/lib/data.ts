@@ -1,6 +1,7 @@
 import connectMongo from "./connect";
 import { Client, Invoice } from "../../models/reactDataSchema";
 import { formatPhoneNumber } from "./utils";
+import { Holiday, HolidayResponse, OBSERVANCES } from "./typeDefinitions";
 
 export const fetchAllClients = async () => {
   await connectMongo();
@@ -287,54 +288,31 @@ export async function fetchInvoicesPages(
   }
 }
 
-export const fetchHolidays = async (): Promise<any[]> => {
+export const fetchHolidays = async (): Promise<Holiday[]> => {
   try {
-    const queryParams = new URLSearchParams({
-      country: "CA",
-      year: new Date().getFullYear().toString(),
-    });
-
     const response = await fetch(
-      `https://api.api-ninjas.com/v1/holidays?${queryParams}`,
-      {
-        method: "GET",
-        headers: {
-          "X-Api-Key": process.env.HOLIDAYS_API_KEY!,
-        },
-      },
+      `https://canada-holidays.ca/api/v1/provinces/BC`,
     );
 
     if (!response.ok) {
       throw new Error("Failed to fetch holidays");
     }
 
-    const data: any[] = await response.json();
+    const data: HolidayResponse = await response.json();
 
-    const allowedTypes: any[] = [
-      "observance",
-      "public_holiday",
-      "common_local_holiday",
-      "local_holiday",
-      "major_holiday",
-    ];
+    // Mark statutory holidays
+    const statutoryHolidays = data.province.holidays.map((holiday) => ({
+      ...holiday,
+      type: "statutory" as const,
+    }));
 
-    const filteredHolidays = data.filter((holiday: any) =>
-      allowedTypes.includes(holiday.type.toLowerCase() as any),
+    // Combine statutory holidays with observances
+    const allHolidays = [...statutoryHolidays, ...OBSERVANCES];
+
+    // Sort by date
+    return allHolidays.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
     );
-
-    const manualHolidays: any[] = [
-      {
-        date: "2024-09-30",
-        name: "National Day for Truth and Reconciliation",
-        type: "public_holiday",
-        country: "Canada",
-        iso: "CA",
-        year: 2024,
-        day: "Monday",
-      },
-    ];
-
-    return [...filteredHolidays, ...manualHolidays];
   } catch (error) {
     console.error("Error fetching holidays:", error);
     return [];
