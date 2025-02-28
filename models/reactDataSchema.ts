@@ -127,6 +127,10 @@ const invoiceSchema = new Schema<InvoiceType>({
       default: undefined,
     },
   },
+  paymentEmailSent: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const ShiftSchema = new Schema<ShiftType>({

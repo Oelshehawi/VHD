@@ -306,6 +306,38 @@ export const getPendingInvoices = async () => {
 
     const pendingInvoices = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lt: today } } },
+      {
+        $lookup: {
+          from: "clients",
+          let: { clientId: "$clientId" },
+          pipeline: [
+            { $match: { $expr: { $eq: ["$_id", "$$clientId"] } } },
+            {
+              $project: {
+                hasValidEmail: {
+                  $and: [
+                    { $ne: ["$email", null] },
+                    { $ne: ["$email", ""] },
+                    { $ne: [{ $type: "$email" }, "missing"] },
+                  ],
+                },
+              },
+            },
+          ],
+          as: "client",
+        },
+      },
+      {
+        $addFields: {
+          emailExists: {
+            $cond: {
+              if: { $gt: [{ $size: "$client" }, 0] },
+              then: { $arrayElemAt: ["$client.hasValidEmail", 0] },
+              else: false,
+            },
+          },
+        },
+      },
       { $sort: { dateIssued: 1 } },
     ]);
 
@@ -322,6 +354,8 @@ const formatPendingInvoices = (invoices: any[]) => {
     invoiceId: invoice.invoiceId,
     jobTitle: invoice.jobTitle,
     status: invoice.status,
+    paymentEmailSent: invoice.paymentEmailSent,
+    emailExists: invoice.emailExists,
     dateIssued: invoice.dateIssued.toLocaleString("en-US", {
       month: "short",
       day: "numeric",

@@ -51,6 +51,7 @@ export interface PendingInvoiceType {
   dateIssued: Date | string;
   status: string;
   amount: number;
+  paymentEmailSent?: boolean;
 }
 
 export interface ScheduleType {
@@ -171,6 +172,7 @@ export interface InvoiceType {
     before?: PhotoType[];
     after?: PhotoType[];
   };
+  paymentEmailSent?: boolean;
 }
 
 export interface InvoiceItem {

@@ -386,10 +386,10 @@ const InvoicePdf: React.FC<InvoicePdfProps> = ({ invoiceData }) => (
         </Text>
         <Text style={[styles.footerText, { marginRight: 25 }]}>
           <Link
-            src="http://vancouverhooddoctors.ca"
+            src="http://vancouverventcleaning.ca"
             style={{ color: "#FFFFFF", textDecoration: "none" }}
           >
-            vancouverhooddoctors.ca
+            vancouverventcleaning.ca
           </Link>
         </Text>
       </View>
@@ -402,9 +402,28 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
+    // Add rate limiting header
+    const response = new Response();
+    response.headers.set("X-RateLimit-Limit", "100");
+
     // Fetch data and prepare invoiceData
     const invoice = (await fetchInvoiceById(params.id)) as InvoiceType;
-    const client = (await fetchClientById(invoice.clientId as string)) as ClientType;
+    if (!invoice) {
+      return new Response(JSON.stringify({ error: "Invoice not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    const client = (await fetchClientById(
+      invoice.clientId as string,
+    )) as ClientType;
+    if (!client) {
+      return new Response(JSON.stringify({ error: "Client not found" }), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
 
     const invoiceData = {
       invoiceId: invoice.invoiceId,
@@ -436,11 +455,15 @@ export async function GET(
       <InvoicePdf invoiceData={invoiceData} />,
     );
 
-    // Return response with correct headers
+    // Return response with enhanced security headers
     return new Response(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename=invoice-${invoiceData.invoiceId}.pdf`,
+        "Content-Disposition": `attachment; filename=invoice-${invoiceData.invoiceId}.pdf`,
+        "Cache-Control": "no-store, max-age=0",
+        "Content-Security-Policy": "default-src 'self'",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
       },
     });
   } catch (error: any) {
@@ -452,7 +475,10 @@ export async function GET(
       }),
       {
         status: 500,
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Cache-Control": "no-store",
+        },
       },
     );
   }

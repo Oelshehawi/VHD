@@ -1,6 +1,6 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { SendReminder } from "../Email/Button";
+import { SendReminder } from "../Email/SendEmail";
 import { toast } from "react-hot-toast";
 import { updateInvoiceScheduleStatus } from "../../app/lib/actions/actions";
 import { formatDate } from "../../app/lib/utils";
