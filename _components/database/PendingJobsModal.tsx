@@ -218,7 +218,7 @@ const PendingJobsModal = ({
                                 )}
                                 <span className="whitespace-nowrap text-sm font-medium">
                                   Send Payment Reminder
-                              </span>
+                                </span>
                               </button>
                             )}
                           </div>

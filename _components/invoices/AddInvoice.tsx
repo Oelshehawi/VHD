@@ -1,13 +1,16 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import toast from "react-hot-toast";
 import { FaTrash, FaPlus } from "react-icons/fa";
 import { calculateDueDate } from "../../app/lib/utils";
-import { createInvoice } from "../../app/lib/actions/actions";
+import {
+  createInvoice,
+  getMostRecentInvoice,
+} from "../../app/lib/actions/actions";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import ClientSearchSelect from "./ClientSearchSelect";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
+import { toast } from "react-hot-toast";
 
 interface AddInvoiceProps {
   clients: ClientType[];
@@ -25,10 +28,11 @@ interface InvoiceFormValues {
 }
 
 const AddInvoice = ({ clients }: AddInvoiceProps) => {
-  const [isLoading, setIsLoading] = useState(false);
   const [items, setItems] = useState([{ description: "", price: 0 }]);
   const [open, setOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<string[]>([]);
 
   const {
     register,
@@ -71,10 +75,52 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
     }
   };
 
-  const handleClientSelect = (client: ClientType) => {
+  const handleClientSelect = async (client: ClientType) => {
     setValue("clientId", client._id as string);
     setValue("prefix" as any, client.prefix);
     clearErrors(["clientId", "prefix" as any]);
+
+    setIsAutoFilling(true);
+    setAutoFilledFields([]);
+
+    try {
+      // Fetch most recent invoice data for the client
+      const recentInvoice = await getMostRecentInvoice(client._id as string);
+
+      if (recentInvoice) {
+        const fieldsToUpdate = [];
+
+        if (recentInvoice.jobTitle) {
+          setValue("jobTitle", recentInvoice.jobTitle);
+          fieldsToUpdate.push("jobTitle");
+        }
+        if (recentInvoice.frequency) {
+          setValue("frequency", recentInvoice.frequency);
+          fieldsToUpdate.push("frequency");
+        }
+        if (recentInvoice.location) {
+          setValue("location", recentInvoice.location);
+          fieldsToUpdate.push("location");
+        }
+        if (recentInvoice.notes) {
+          setValue("notes", recentInvoice.notes);
+          fieldsToUpdate.push("notes");
+        }
+        if (recentInvoice.items && recentInvoice.items.length > 0) {
+          setItems(recentInvoice.items);
+          setValue("items", recentInvoice.items);
+          fieldsToUpdate.push("items");
+        }
+
+        setAutoFilledFields(fieldsToUpdate);
+        toast.success("Form auto-filled from most recent invoice");
+      }
+    } catch (error) {
+      console.error("Error auto-filling form:", error);
+      toast.error("Failed to auto-fill form");
+    } finally {
+      setIsAutoFilling(false);
+    }
   };
 
   const { isProcessing, debouncedSubmit } = useDebounceSubmit({
@@ -161,6 +207,15 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
             onSubmit={handleSubmit(handleSave)}
             className="mt-4 space-y-6 overflow-auto p-4"
           >
+            {isAutoFilling && (
+              <div className="mb-4 flex items-center justify-center">
+                <div className="h-5 w-5 animate-spin rounded-full border-b-2 border-darkGreen"></div>
+                <span className="ml-2 text-sm text-gray-600">
+                  Auto-filling form...
+                </span>
+              </div>
+            )}
+
             {/* Client Dropdown */}
             <ClientSearchSelect
               placeholder="Search for a Client"
@@ -189,7 +244,11 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                         required: isRequired,
                       })}
                       placeholder={placeholder}
-                      className="h-24 w-full rounded border-2 border-gray-400 p-2 text-gray-700 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                      className={`h-24 w-full rounded border-2 p-2 text-gray-700 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen ${
+                        autoFilledFields.includes(name)
+                          ? "border-green-400 bg-green-50"
+                          : "border-gray-400"
+                      } transition-colors duration-300`}
                     />
                   ) : (
                     <input
@@ -201,7 +260,11 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                       type={type}
                       placeholder={placeholder}
                       readOnly={readOnly}
-                      className="text-black w-full rounded border-2 border-gray-400 p-2 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen"
+                      className={`text-black w-full rounded border-2 p-2 outline-none focus:border-darkGreen focus:ring-2 focus:ring-darkGreen ${
+                        autoFilledFields.includes(name)
+                          ? "border-green-400 bg-green-50"
+                          : "border-gray-400"
+                      } transition-colors duration-300`}
                     />
                   )}
                   {errors[name as keyof InvoiceFormValues]?.type ===
@@ -230,7 +293,11 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
             {items.map((item, index) => (
               <div
                 key={index}
-                className="flex w-full items-center justify-between space-x-2"
+                className={`flex w-full items-center justify-between space-x-2 ${
+                  autoFilledFields.includes("items")
+                    ? "rounded border-2 border-green-400 bg-green-50 p-2"
+                    : ""
+                }`}
               >
                 <input
                   {...register(`items[${index}].description` as any, {

@@ -11,10 +11,7 @@ import {
 import { BankAccountType, ClientType } from "../typeDefinitions";
 import { calculateDueDate, encryptId, parseStringify } from "../utils";
 import { plaidClient } from "../plaid";
-import {
-  CountryCode,
-  Products,
-} from "plaid";
+import { CountryCode, Products } from "plaid";
 
 export async function updateInvoiceScheduleStatus(invoiceId) {
   await connectMongo();
@@ -116,7 +113,9 @@ export async function createInvoice(invoiceData) {
   await connectMongo();
   try {
     // Find the invoice with the highest invoiceId for the client
-    const latestInvoice = await Invoice.findOne({ clientId: invoiceData.clientId })
+    const latestInvoice = await Invoice.findOne({
+      clientId: invoiceData.clientId,
+    })
       .sort({ invoiceId: -1 })
       .exec();
 
@@ -124,7 +123,7 @@ export async function createInvoice(invoiceData) {
 
     if (latestInvoice) {
       // Extract the numeric part from the latest invoiceId
-      const latestNumber = parseInt(latestInvoice.invoiceId.split('-')[1], 10);
+      const latestNumber = parseInt(latestInvoice.invoiceId.split("-")[1], 10);
       newInvoiceNumber = latestNumber + 1;
     }
 
@@ -296,3 +295,30 @@ export const getBank = async ({ documentId }: { documentId: string }) => {
     return null;
   }
 };
+
+export async function getMostRecentInvoice(clientId: string) {
+  await connectMongo();
+  try {
+    const mostRecentInvoice = await Invoice.findOne({ clientId })
+      .sort({ dateIssued: -1 })
+      .lean();
+
+    if (!mostRecentInvoice) {
+      return null;
+    }
+
+    return {
+      jobTitle: mostRecentInvoice.jobTitle,
+      frequency: mostRecentInvoice.frequency,
+      location: mostRecentInvoice.location,
+      notes: mostRecentInvoice.notes,
+      items: mostRecentInvoice.items.map((item: any) => ({
+        description: item.description,
+        price: parseFloat(item.price) || 0,
+      })),
+    };
+  } catch (error) {
+    console.error("Database Error:", error);
+    return null;
+  }
+}
