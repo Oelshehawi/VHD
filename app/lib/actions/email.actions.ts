@@ -76,6 +76,7 @@ export async function sendCleaningReminderEmail(
         email_title: "Hood & Vent Cleaning Reminder",
       },
       TrackOpens: true,
+      MessageStream: "outbound",
     });
 
     // Update emailSent field in JobsDueSoon
@@ -156,6 +157,7 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
         email_title: "Payment for Vent Cleaning & Certification",
       },
       TrackOpens: true,
+      MessageStream: "payment-reminder"
     });
 
     // Update emailSent field in Invoice
