@@ -22,7 +22,6 @@ const sharedRoutes = [
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
   "/",
-  "/invoices/[id]/pdf$", // Allow PDF access
 ]);
 
 export default clerkMiddleware(async (auth, request) => {

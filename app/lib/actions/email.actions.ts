@@ -137,6 +137,22 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
     // Generate PDF invoice URL using the helper
     const pdfUrl = getAbsoluteUrl(`/invoices/${invoice._id}/pdf`);
 
+    // Fetch the PDF directly from the server
+    const pdfResponse = await fetch(pdfUrl, {
+      method: "GET",
+      headers: {
+        Accept: "application/pdf",
+      },
+    });
+
+    if (!pdfResponse.ok) {
+      throw new Error(`Failed to fetch PDF: ${pdfResponse.statusText}`);
+    }
+
+    // Convert the PDF to a buffer and then to base64
+    const pdfBuffer = await pdfResponse.arrayBuffer();
+    const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+
     // Send email using Postmark
     const client = new postmark.ServerClient(process.env.POSTMARK_CLIENT);
 
@@ -150,14 +166,20 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
         jobTitle: invoice.jobTitle,
         issue_date: issueDateFormatted,
         amount_due: formattedAmount,
-        invoice_pdf_url: pdfUrl,
         phone_number: "604-273-8717",
         contact_email: "adam@vancouverventcleaning.ca",
         header_title: "Payment for Vent Cleaning & Certification",
         email_title: "Payment for Vent Cleaning & Certification",
       },
+      Attachments: [
+        {
+          Name: `${invoice.jobTitle.trim()} - Invoice.pdf`,
+          Content: pdfBase64,
+          ContentType: "application/pdf",
+        },
+      ],
       TrackOpens: true,
-      MessageStream: "payment-reminder"
+      MessageStream: "payment-reminder",
     });
 
     // Update emailSent field in Invoice
