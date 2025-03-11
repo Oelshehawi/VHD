@@ -9,9 +9,9 @@ const InvoiceDetailed = async ({ params }: { params: { id: string } }) => {
   const invoiceId = params.id;
   const invoice = await fetchInvoiceById(invoiceId);
   const client = await fetchClientById(invoice?.clientId);
-  const { orgPermissions } = await auth();
+  const {  sessionClaims } = await auth();
 
-  const canManage = orgPermissions?.includes("org:database:allow") ?? false;
+  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
   return (
     <div className="mt-4 px-3 lg:!px-5">

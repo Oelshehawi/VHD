@@ -62,10 +62,14 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { orgPermissions } = await auth();
+  const { sessionClaims } = await auth();
 
-  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
+  console.log((sessionClaims as any)?.isManager?.isManager);
 
+  const canManage =
+    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+
+  console.log(canManage);
   const user: any = await currentUser();
 
   const serializedUser = {
@@ -74,7 +78,7 @@ export default async function RootLayout({
     firstName: user.firstName,
     lastName: user.lastName,
   };
-  
+
   return (
     <ClerkProvider>
       <html lang="en">
@@ -84,7 +88,10 @@ export default async function RootLayout({
         <body className={inter.className}>
           <Toaster position="top-center" />
           <div className="flex min-h-screen flex-col lg:flex-row">
-            <SideNavBar canManage={canManage as boolean} user={serializedUser} />
+            <SideNavBar
+              canManage={canManage as boolean}
+              user={serializedUser}
+            />
             <main>{children}</main>
           </div>
           <SpeedInsights />

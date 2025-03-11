@@ -19,9 +19,9 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
   const payrollPeriods: PayrollPeriodType[] = await fetchAllPayrollPeriods();
   const technicians: TechnicianType[] = await getTechnicians();
   let schedules: ScheduleType[] = [];
-  let selectedPayrollPeriod: PayrollPeriodType | null = null;  
-  const { orgPermissions }: any = await auth();
-  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
+  let selectedPayrollPeriod: PayrollPeriodType | null = null;
+  const { sessionClaims }: any = await auth();
+  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
   if (searchParams.payrollPeriodId) {
     selectedPayrollPeriod =
@@ -50,7 +50,8 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
       // If no payroll period includes today's date, default to the most recent one
       if (!selectedPayrollPeriod) {
         const sortedPayrollPeriods = [...payrollPeriods].sort(
-          (a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime(),
+          (a, b) =>
+            new Date(b.endDate).getTime() - new Date(a.endDate).getTime(),
         );
         selectedPayrollPeriod = sortedPayrollPeriods[0] ?? null;
       }

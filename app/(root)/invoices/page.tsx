@@ -21,8 +21,8 @@ const Invoice = async ({
 }) => {
   const clients = (await fetchAllClients()) as ClientType[];
 
-  const { orgPermissions } = await auth();
-  const canManage = orgPermissions?.includes("org:database:allow") ? true : false;
+  const { sessionClaims } = await auth();
+  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
   if (!canManage)
     return (
       <div className="flex min-h-[100vh] items-center justify-center text-3xl font-bold">
@@ -39,7 +39,7 @@ const Invoice = async ({
   return (
     <Suspense fallback={<TableContainerSkeleton />}>
       <div className="flex min-h-full items-center justify-center">
-        <div className="my-5 min-h-[90vh] w-[90%] gap-4 flex flex-col rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-4/5">
+        <div className="my-5 flex min-h-[90vh] w-[90%] flex-col gap-4 rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-4/5">
           <AddInvoice clients={clients} />
           <div className="">
             <div className="flex flex-col justify-between md:flex-row lg:gap-4 ">

@@ -13,10 +13,8 @@ const Schedule = async () => {
   const invoices: InvoiceType[] = (await fetchAllInvoices()) ?? [];
   let scheduledJobs: ScheduleType[] = await fetchAllScheduledJobsWithShifts();
   const holidays = await fetchHolidays();
-  const { orgPermissions, userId }: any = await auth();
-  const canManage = orgPermissions?.includes("org:database:allow")
-    ? true
-    : false;
+  const { sessionClaims, userId }: any = await auth();
+  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
   const technicians: TechnicianType[] = await getTechnicians();
 
   if (!canManage) {
