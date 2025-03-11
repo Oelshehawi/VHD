@@ -7,7 +7,6 @@ import { useRouter } from "next/navigation";
 import PriceBreakdown from "./PriceBreakdown";
 import GeneratePDF from "./GeneratePDF";
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
-import MediaDisplay from "./MediaDisplay";
 
 const InvoiceDetailsContainer = ({
   invoice,
@@ -69,24 +68,8 @@ const InvoiceDetailsContainer = ({
         {/* Right side - Client Info & Signature */}
         <div className="space-y-4 lg:col-span-2">
           <ClientDetails client={client} canManage={canManage} />
-          {invoice.signature && (
-            <MediaDisplay
-              photos={{ before: [], after: [] }}
-              signature={invoice.signature}
-            />
-          )}
         </div>
       </div>
-
-      {/* Photos Section - Full Width */}
-      {invoice?.photos?.before &&
-        invoice?.photos?.after &&
-        (invoice.photos.before.length > 0 ||
-          invoice.photos.after.length > 0) && (
-          <div className="mt-4">
-            <MediaDisplay photos={invoice.photos} signature={null} />
-          </div>
-        )}
     </>
   );
 };

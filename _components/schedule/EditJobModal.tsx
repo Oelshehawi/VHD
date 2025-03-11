@@ -29,6 +29,7 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
       location: job.location,
       startDateTime: formatLocalDateTime(job.startDateTime as string),
       assignedTechnicians: job.assignedTechnicians,
+      technicianNotes: job.technicianNotes || "",
     },
   });
 
@@ -56,6 +57,7 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
         location: data.location,
         startDateTime: data.startDateTime,
         assignedTechnicians: data.assignedTechnicians,
+        technicianNotes: data.technicianNotes,
       });
 
       toast.success("Job updated successfully");
@@ -114,7 +116,9 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
 
         {/* Start Date & Time */}
         <div className="space-y-1">
-          <label className="text-sm font-medium text-white/90">Start Date & Time</label>
+          <label className="text-sm font-medium text-white/90">
+            Start Date & Time
+          </label>
           <input
             type="datetime-local"
             {...register("startDateTime", {
@@ -125,13 +129,17 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
             }`}
           />
           {errors.startDateTime && (
-            <p className="text-sm text-red-400">{errors.startDateTime.message}</p>
+            <p className="text-sm text-red-400">
+              {errors.startDateTime.message}
+            </p>
           )}
         </div>
 
         {/* Assigned Technicians */}
         <div className="space-y-1">
-          <label className="text-sm font-medium text-white/90">Assign Technicians</label>
+          <label className="text-sm font-medium text-white/90">
+            Assign Technicians
+          </label>
           <TechnicianSelect
             control={control}
             name="assignedTechnicians"
@@ -139,6 +147,19 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
             placeholder="Select technicians..."
             error={errors.assignedTechnicians}
           />
+        </div>
+
+        {/* Technician Notes */}
+        <div className="space-y-1">
+          <label className="text-sm font-medium text-white/90">
+            Technician Notes
+          </label>
+          <textarea
+            {...register("technicianNotes")}
+            rows={4}
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-white placeholder-white/50 shadow-sm transition-colors focus:border-white/20 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-white/20"
+            placeholder="Enter any notes about this job (equipment, access instructions, etc.)"
+          ></textarea>
         </div>
 
         {/* Action Buttons */}
@@ -154,17 +175,14 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
             type="submit"
             className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${
               isLoading
-                ? "bg-white/20 cursor-not-allowed"
+                ? "cursor-not-allowed bg-white/20"
                 : "bg-white/10 hover:bg-white/20 active:bg-white/30"
             }`}
             disabled={isLoading}
           >
             {isLoading ? (
               <>
-                <svg
-                  className="mr-2 h-4 w-4 animate-spin"
-                  viewBox="0 0 24 24"
-                >
+                <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
                   <circle
                     className="opacity-25"
                     cx="12"

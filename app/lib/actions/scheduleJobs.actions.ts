@@ -5,8 +5,6 @@ import { Schedule, PayrollPeriod } from "../../../models/reactDataSchema";
 import { PayrollPeriodType, ScheduleType } from "../typeDefinitions";
 import { clerkClient } from "@clerk/nextjs/server";
 
-
-
 /**
  * Adds a specified number of days to a date.
  * @param {Date} date - The original date.
@@ -33,7 +31,6 @@ export const findOrCreatePayrollPeriod = async (
   // Normalize the date to the start of the day (midnight UTC)
   const normalizedDate = resetTimeToMidnight(date);
 
-
   // Step 1: Try to find an existing payroll period that includes the given date
   let payrollPeriod = await PayrollPeriod.findOne({
     startDate: { $lte: normalizedDate },
@@ -45,7 +42,9 @@ export const findOrCreatePayrollPeriod = async (
   }
 
   // Step 2: Define the base start date for payroll periods (October 3, 2024)
-  const baseStartDate = resetTimeToMidnight(new Date(Date.UTC(2024, 9, 3, 0, 0, 0))); // Months are 0-indexed (9 = October)
+  const baseStartDate = resetTimeToMidnight(
+    new Date(Date.UTC(2024, 9, 3, 0, 0, 0)),
+  ); // Months are 0-indexed (9 = October)
 
   const periodLength = 14; // Payroll period length is 14 days
 
@@ -157,12 +156,14 @@ export const updateJob = async ({
   location,
   startDateTime,
   assignedTechnicians,
+  technicianNotes,
 }: {
   scheduleId: string;
   jobTitle: string;
   location: string;
   startDateTime: string;
   assignedTechnicians: string[];
+  technicianNotes?: string;
 }) => {
   await connectMongo();
   try {
@@ -179,7 +180,8 @@ export const updateJob = async ({
         location,
         startDateTime: updatedStartDate,
         assignedTechnicians,
-        payrollPeriod: payrollPeriod?._id ,
+        payrollPeriod: payrollPeriod?._id,
+        technicianNotes,
       },
       { new: true },
     );

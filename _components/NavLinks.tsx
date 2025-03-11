@@ -8,15 +8,12 @@ import {
   DocumentIcon,
   CurrencyDollarIcon,
 } from "@heroicons/react/24/solid";
-import PlaidLink from "./transactions/PlaidLink";
 import { usePathname } from "next/navigation";
-import { useMemo } from "react";
 
 const NavLinks = ({
   isNavOpen,
   canManage,
   setIsNavOpen,
-  user,
 }: {
   isNavOpen: boolean;
   canManage: boolean;
@@ -40,13 +37,10 @@ const NavLinks = ({
         { href: "/invoices", icon: DocumentIcon },
         { href: "/schedule", icon: CalendarIcon },
         { href: "/payroll", icon: CurrencyDollarIcon },
-        // { href: "/transactions", icon: CurrencyDollarIcon },
       ]
     : [
         { href: "/employee-dashboard", icon: HomeIcon },
         { href: "/schedule", icon: CalendarIcon },
-
-        // { href: "/transactions", icon: CurrencyDollarIcon },
       ];
 
   return (
@@ -81,7 +75,6 @@ const NavLinks = ({
               </Link>
             </motion.div>
           ))}
-          {/* <PlaidLink user={memoizedUser} /> */}
         </div>
 
         <div className="hidden flex-col items-center space-y-5 lg:flex">
@@ -106,7 +99,6 @@ const NavLinks = ({
               </Link>
             </motion.div>
           ))}
-          {/* <PlaidLink user={memoizedUser} /> */}
         </div>
       </div>
     </motion.div>

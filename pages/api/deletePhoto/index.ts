@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { v2 as cloudinary } from "cloudinary";
 import { getAuth } from "@clerk/nextjs/server";
-import { Invoice } from "../../../models/reactDataSchema";
+import { Schedule } from "../../../models/reactDataSchema";
 import connectMongo from "../../../app/lib/connect";
 
 // Configure Cloudinary
@@ -12,7 +12,7 @@ cloudinary.config({
 });
 
 // Add delay helper
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // Track last deletion time
 let lastDeletionTime = 0;
@@ -21,12 +21,12 @@ const MIN_DELETE_INTERVAL = 1000; // 1 second minimum between deletions
 interface DeleteRequest {
   photoUrl: string;
   type: "before" | "after";
-  invoiceId: string;
+  scheduleId: string;
 }
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse
+  res: NextApiResponse,
 ) {
   const { userId } = getAuth(req);
 
@@ -40,9 +40,9 @@ export default async function handler(
 
   try {
     await connectMongo();
-    const { photoUrl, type, invoiceId } = req.body as DeleteRequest;
+    const { photoUrl, type, scheduleId } = req.body as DeleteRequest;
 
-    if (!photoUrl || !type || !invoiceId) {
+    if (!photoUrl || !type || !scheduleId) {
       throw new Error("Missing required fields");
     }
 
@@ -70,42 +70,42 @@ export default async function handler(
     // Delete from Cloudinary
     const cloudinaryResult = await cloudinary.uploader.destroy(publicId);
     lastDeletionTime = Date.now();
-    
+
     console.log("☁️ Cloudinary delete result:", cloudinaryResult);
 
-    if (cloudinaryResult.result !== 'ok') {
+    if (cloudinaryResult.result !== "ok") {
       throw new Error("Failed to delete from Cloudinary");
     }
 
     // Remove photo from MongoDB
-    const invoice = await Invoice.findOneAndUpdate(
-      { _id: invoiceId },
+    const schedule = await Schedule.findOneAndUpdate(
+      { _id: scheduleId },
       {
         $pull: {
           [`photos.${type}`]: { url: photoUrl },
         },
       },
-      { new: true }
+      { new: true },
     );
 
-    if (!invoice) {
-      throw new Error("Invoice not found or update failed");
+    if (!schedule) {
+      throw new Error("Schedule not found or update failed");
     }
 
-    console.log("📝 Updated invoice:", {
-      id: invoice._id,
-      remainingPhotos: invoice.photos?.[type]?.length || 0,
+    console.log("📝 Updated schedule:", {
+      id: schedule._id,
+      remainingPhotos: schedule.photos?.[type]?.length || 0,
     });
 
     return res.status(200).json({
       message: "Photo deleted successfully",
-      photos: invoice.photos?.[type] || [],
+      photos: schedule.photos?.[type] || [],
     });
   } catch (error) {
     console.error("💥 Error in delete API:", error);
-    res.status(500).json({ 
-      error: "Delete failed", 
-      details: error instanceof Error ? error.message : "Unknown error" 
+    res.status(500).json({
+      error: "Delete failed",
+      details: error instanceof Error ? error.message : "Unknown error",
     });
   }
 }

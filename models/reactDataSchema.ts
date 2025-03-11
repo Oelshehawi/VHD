@@ -5,8 +5,6 @@ import {
   InvoiceType,
   ScheduleType,
   ClientType,
-  BankAccountType,
-  TransactionType,
   PayrollPeriodType,
   ShiftType,
   SignatureType,
@@ -113,20 +111,6 @@ const invoiceSchema = new Schema<InvoiceType>({
     ref: "Client",
     required: true,
   },
-  signature: {
-    type: SignatureSchema,
-    required: false,
-  },
-  photos: {
-    before: {
-      type: [PhotoSchema],
-      default: undefined,
-    },
-    after: {
-      type: [PhotoSchema],
-      default: undefined,
-    },
-  },
   paymentEmailSent: {
     type: Boolean,
     default: false,
@@ -173,6 +157,24 @@ const scheduleSchema = new Schema<ScheduleType>({
   shifts: { type: [ShiftSchema], default: [] },
   payrollPeriod: { type: mongoose.Schema.Types.ObjectId, ref: "PayrollPeriod" },
   deadRun: { type: Boolean, default: false },
+  signature: {
+    type: SignatureSchema,
+    required: false,
+  },
+  photos: {
+    before: {
+      type: [PhotoSchema],
+      default: undefined,
+    },
+    after: {
+      type: [PhotoSchema],
+      default: undefined,
+    },
+  },
+  technicianNotes: {
+    type: String,
+    default: "",
+  },
 });
 
 const PayrollPeriodSchema = new Schema<PayrollPeriodType>(
@@ -214,72 +216,6 @@ const jobsDueSoonSchema = new Schema<DueInvoiceType>({
   },
 });
 
-const bankAccountSchema = new Schema<BankAccountType>({
-  userId: {
-    type: String,
-    required: true,
-  },
-  bankId: {
-    type: String,
-    required: true,
-  },
-  accountId: {
-    type: String,
-    required: true,
-  },
-  accessToken: {
-    type: String,
-    required: true,
-  },
-  shareableId: {
-    type: String,
-    required: true,
-  },
-  cursor: {
-    type: String,
-    default: null,
-  },
-});
-
-const transactionSchema = new Schema<TransactionType>(
-  {
-    transactionId: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    bankAccountId: {
-      type: String,
-      required: true,
-    },
-    id: String,
-    $id: String,
-    name: String,
-    paymentChannel: String,
-    type: String,
-    accountId: String,
-    amount: Number,
-    pending: Boolean,
-    category: {
-      confidence_level: String,
-      detailed: String,
-      primary: String,
-    },
-    date: String,
-    image: String,
-    $createdAt: String,
-    channel: String,
-  },
-  {
-    timestamps: true,
-  },
-);
-
-bankAccountSchema.index(
-  { userId: 1, bankId: 1, accountId: 1 },
-  { unique: true },
-);
-
 PayrollPeriodSchema.index({ startDate: 1, endDate: 1 }, { unique: true });
 
 const Client =
@@ -292,24 +228,8 @@ const JobsDueSoon =
 const Schedule =
   (models.Schedule as Model<ScheduleType>) || model("Schedule", scheduleSchema);
 
-const BankAccount =
-  (models.BankAccount as Model<BankAccountType>) ||
-  model("BankAccount", bankAccountSchema);
-
-const Transaction =
-  (models.Transaction as Model<TransactionType>) ||
-  model("Transaction", transactionSchema);
-
 const PayrollPeriod =
   (models.PayrollPeriod as Model<PayrollPeriodType>) ||
   model("PayrollPeriod", PayrollPeriodSchema);
 
-export {
-  Client,
-  Invoice,
-  JobsDueSoon,
-  Schedule,
-  BankAccount,
-  Transaction,
-  PayrollPeriod,
-};
+export { Client, Invoice, JobsDueSoon, Schedule, PayrollPeriod };

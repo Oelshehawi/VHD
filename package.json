@@ -8,7 +8,7 @@
     "start": "next start"
   },
   "dependencies": {
-    "@clerk/nextjs": "^6.6.0",
+    "@clerk/nextjs": "^6.12.4",
     "@clerk/themes": "^1.7.12",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@headlessui/react": "^2.0.4",
@@ -42,7 +42,8 @@
     "react-plaid-link": "^3.6.0",
     "react-select": "^5.8.1",
     "tailwind-merge": "^2.5.3",
-    "use-debounce": "^10.0.1"
+    "use-debounce": "^10.0.1",
+    "yet-another-react-lightbox": "^3.21.7"
   },
   "devDependencies": {
     "@types/chart.js": "^2.9.41",

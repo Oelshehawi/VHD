@@ -11,10 +11,11 @@ import {
 } from "../../app/lib/actions/scheduleJobs.actions";
 import TechnicianPill from "./TechnicianPill";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaBan } from "react-icons/fa";
+import { FaBan, FaCamera, FaSignature } from "react-icons/fa";
 import { format } from "date-fns-tz";
 import { XMarkIcon } from "@heroicons/react/24/outline";
-import { createPortal } from 'react-dom';
+import { createPortal } from "react-dom";
+import MediaDisplay from "../invoices/MediaDisplay";
 
 const JobItem = ({
   job,
@@ -30,6 +31,7 @@ const JobItem = ({
   const [isDeadRun, setIsDeadRun] = useState(() => job.deadRun || false);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
+  const [activeView, setActiveView] = useState<"details" | "media">("details");
 
   const toggleConfirmedStatus = useCallback(async () => {
     if (isLoading) return;
@@ -95,7 +97,14 @@ const JobItem = ({
   const closeModal = () => {
     setModalOpen(false);
     setIsEditMode(false);
+    setActiveView("details");
   };
+
+  // Check if job has photos or signatures
+  const hasBeforePhotos = job.photos?.before && job.photos.before.length > 0;
+  const hasAfterPhotos = job.photos?.after && job.photos.after.length > 0;
+  const hasSignature = !!job.signature;
+  const hasMedia = hasBeforePhotos || hasAfterPhotos || hasSignature;
 
   return (
     <>
@@ -118,6 +127,16 @@ const JobItem = ({
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Photos/Signatures Indicator */}
+        {hasMedia && (
+          <div className="absolute right-9 top-1 flex space-x-1">
+            {(hasBeforePhotos || hasAfterPhotos) && (
+              <FaCamera className="text-xs text-blue-500" />
+            )}
+            {hasSignature && <FaSignature className="text-xs text-blue-500" />}
+          </div>
+        )}
 
         {/* List Item Content */}
         <div
@@ -160,7 +179,7 @@ const JobItem = ({
       </li>
 
       {/* Portal the modal to document.body */}
-      {isModalOpen && 
+      {isModalOpen &&
         createPortal(
           <AnimatePresence>
             <motion.div
@@ -168,7 +187,7 @@ const JobItem = ({
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeModal}
-              className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 bg-black/60 backdrop-blur-sm"
+              className="bg-black/60 fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 backdrop-blur-sm"
             >
               <motion.div
                 initial={{ scale: 0.95, opacity: 0 }}
@@ -198,55 +217,104 @@ const JobItem = ({
                       </button>
                     </div>
 
-                    <div className="space-y-4">
-                      <p className="text-white/80">
-                        Scheduled at{" "}
-                        {format(job.startDateTime, "h:mm a", { timeZone: "UTC" })}
-                      </p>
+                    {/* Tab navigation */}
+                    {hasMedia && (
+                      <div className="mb-4 flex border-b border-white/20">
+                        <button
+                          onClick={() => setActiveView("details")}
+                          className={`px-4 py-2 ${activeView === "details" ? "border-b-2 border-white text-white font-semibold" : "text-white/70"}`}
+                        >
+                          Details
+                        </button>
+                        <button
+                          onClick={() => setActiveView("media")}
+                          className={`flex items-center px-4 py-2 ${activeView === "media" ? "border-b-2 border-white text-white font-semibold" : "text-white/70"}`}
+                        >
+                          Media
+                        </button>
+                      </div>
+                    )}
 
-                      {canManage && (
-                        <div className="flex flex-col gap-3">
-                          <div className="flex items-center gap-3">
-                            <button
-                              className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium ${
-                                isConfirmed
-                                  ? "bg-red-500 hover:bg-red-600"
-                                  : "bg-green-500 hover:bg-green-600"
-                              } text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50`}
-                              onClick={toggleConfirmedStatus}
-                              disabled={isLoading}
-                            >
-                              {isLoading
-                                ? "Loading..."
-                                : isConfirmed
-                                  ? "Unconfirm Job"
-                                  : "Confirm Job"}
-                            </button>
-                            <DeleteModal
-                              deleteText={
-                                "Are you sure you want to delete this Job?"
-                              }
-                              deleteDesc={""}
-                              deletionId={job._id as string}
-                              deletingValue="job"
-                            />
+                    {activeView === "details" ? (
+                      <div className="space-y-4">
+                        <p className="text-white/80">
+                          Scheduled at{" "}
+                          {format(job.startDateTime, "h:mm a", {
+                            timeZone: "UTC",
+                          })}
+                        </p>
+
+                        {job.technicianNotes && (
+                          <div className="rounded bg-white/10 p-3">
+                            <h4 className="mb-1 font-medium text-white">
+                              Technician Notes:
+                            </h4>
+                            <p className="text-sm text-white/90">
+                              {job.technicianNotes}
+                            </p>
                           </div>
-                          <button
-                            className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
-                            onClick={() => setIsEditMode(true)}
-                          >
-                            Edit Job
-                          </button>
-                        </div>
-                      )}
+                        )}
 
-                      <button
-                        className="mt-2 w-full rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-                        onClick={closeModal}
-                      >
-                        Close
-                      </button>
-                    </div>
+                        {canManage && (
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center gap-3">
+                              <button
+                                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium ${
+                                  isConfirmed
+                                    ? "bg-red-500 hover:bg-red-600"
+                                    : "bg-green-500 hover:bg-green-600"
+                                } text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50`}
+                                onClick={toggleConfirmedStatus}
+                                disabled={isLoading}
+                              >
+                                {isLoading
+                                  ? "Loading..."
+                                  : isConfirmed
+                                    ? "Unconfirm Job"
+                                    : "Confirm Job"}
+                              </button>
+                              <DeleteModal
+                                deleteText={
+                                  "Are you sure you want to delete this Job?"
+                                }
+                                deleteDesc={""}
+                                deletionId={job._id as string}
+                                deletingValue="job"
+                              />
+                            </div>
+                            <button
+                              className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+                              onClick={() => setIsEditMode(true)}
+                            >
+                              Edit Job
+                            </button>
+                          </div>
+                        )}
+
+                        <button
+                          className="mt-2 w-full rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                          onClick={closeModal}
+                        >
+                          Close
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="max-h-[60vh] overflow-y-auto rounded bg-white p-4">
+                        <MediaDisplay
+                          photos={{
+                            before: job.photos?.before || [],
+                            after: job.photos?.after || [],
+                          }}
+                          signature={job.signature || null}
+                        />
+                        <button
+                          className="mt-4 w-full rounded-lg bg-darkGreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-opacity-90"
+                          onClick={() => setActiveView("details")}
+                        >
+                          Back to Details
+                        </button>
+                      </div>
+                    )}
                   </>
                 ) : (
                   <EditJobModal
@@ -258,9 +326,8 @@ const JobItem = ({
               </motion.div>
             </motion.div>
           </AnimatePresence>,
-          document.body
-        )
-      }
+          document.body,
+        )}
     </>
   );
 };

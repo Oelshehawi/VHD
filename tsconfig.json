@@ -37,7 +37,7 @@
     // "**/*.cjs",
     "**/*.js",
     ".next/types/**/*.ts"
-  ],
+, "scripts/cleanup-invoice-photos.cjs", "scripts/migrate-photos-signatures.cjs"  ],
   "exclude": [
     "node_modules"
   ]

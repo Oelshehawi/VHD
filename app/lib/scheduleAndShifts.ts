@@ -15,7 +15,7 @@ export const fetchAllScheduledJobsWithShifts = async (): Promise<
 > => {
   await connectMongo();
   try {
-    const scheduledJobs = await Schedule.find();
+    const scheduledJobs = await Schedule.find().lean();
     return scheduledJobs.map((job) => ({
       _id: job._id.toString(),
       invoiceRef: job.invoiceRef.toString(),
@@ -27,15 +27,50 @@ export const fetchAllScheduledJobsWithShifts = async (): Promise<
       }),
       confirmed: job.confirmed,
       hours: job.hours,
-      shifts: job.shifts || [],
+      shifts:
+        job.shifts?.map((shift) => ({
+          _id: shift._id.toString(),
+          technicianId: shift.technicianId,
+          clockIn: shift.clockIn,
+          clockOut: shift.clockOut,
+          jobDetails: shift.jobDetails,
+          hoursWorked: shift.hoursWorked,
+        })) || [],
       payrollPeriod: job.payrollPeriod ? job.payrollPeriod.toString() : "",
       deadRun: job.deadRun,
+      technicianNotes: job.technicianNotes,
+      photos: job.photos
+        ? {
+            before: job.photos.before?.map((photo) => ({
+              _id: photo._id.toString(),
+              url: photo.url,
+              timestamp: photo.timestamp,
+              technicianId: photo.technicianId,
+            })),
+            after: job.photos.after?.map((photo) => ({
+              _id: photo._id.toString(),
+              url: photo.url,
+              timestamp: photo.timestamp,
+              technicianId: photo.technicianId,
+            })),
+          }
+        : undefined,
+      signature: job.signature
+        ? {
+            _id: job.signature._id.toString(),
+            url: job.signature.url,
+            timestamp: job.signature.timestamp,
+            signerName: job.signature.signerName,
+            technicianId: job.signature.technicianId,
+          }
+        : undefined,
     }));
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch all scheduled jobs with shifts");
   }
 };
+
 /**
  * Fetch scheduled jobs filtered by a specific payroll period.
  * @param payrollPeriodId - The ID of the payroll period.
@@ -209,11 +244,44 @@ export const fetchSchedulesForTechnician = async (
     assignedTechnicians: schedule.assignedTechnicians,
     confirmed: schedule.confirmed,
     hours: schedule.hours,
-    shifts: schedule.shifts,
+    shifts: schedule.shifts?.map((shift) => ({
+      _id: shift._id.toString(),
+      technicianId: shift.technicianId,
+      clockIn: shift.clockIn,
+      clockOut: shift.clockOut,
+      jobDetails: shift.jobDetails,
+      hoursWorked: shift.hoursWorked,
+    })),
     payrollPeriod: schedule.payrollPeriod
       ? schedule.payrollPeriod.toString()
       : "",
     deadRun: schedule.deadRun,
+    technicianNotes: schedule.technicianNotes,
+    photos: schedule.photos
+      ? {
+          before: schedule.photos.before?.map((photo) => ({
+            _id: photo._id.toString(),
+            url: photo.url,
+            timestamp: photo.timestamp,
+            technicianId: photo.technicianId,
+          })),
+          after: schedule.photos.after?.map((photo) => ({
+            _id: photo._id.toString(),
+            url: photo.url,
+            timestamp: photo.timestamp,
+            technicianId: photo.technicianId,
+          })),
+        }
+      : undefined,
+    signature: schedule.signature
+      ? {
+          _id: schedule.signature._id.toString(),
+          url: schedule.signature.url,
+          timestamp: schedule.signature.timestamp,
+          signerName: schedule.signature.signerName,
+          technicianId: schedule.signature.technicianId,
+        }
+      : undefined,
   }));
 };
 

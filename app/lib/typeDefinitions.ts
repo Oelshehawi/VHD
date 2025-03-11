@@ -5,36 +5,6 @@ export type SearchParamProps = {
   searchParams: { [key: string]: string | string[] | undefined };
 };
 
-export type Transaction = {
-  id: string;
-  name: string;
-  paymentChannel: string;
-  type: string;
-  accountId: string;
-  amount: number;
-  pending: boolean;
-  category: {
-    confidence_level: string;
-    detailed: string;
-    primary: string;
-  };
-  date: string;
-  image: string;
-  $createdAt: string;
-  channel: string;
-  senderBankId: string;
-  receiverBankId: string;
-};
-
-export interface TransactionTableProps {
-  transactions: Transaction[];
-}
-
-export interface TransactionHistoryTableProps {
-  transactions: Transaction[];
-  page: number;
-}
-
 export interface ShiftType {
   _id: ObjectId | string;
   technicianId: string;
@@ -66,6 +36,12 @@ export interface ScheduleType {
   shifts?: ShiftType[];
   payrollPeriod: ObjectId | string;
   deadRun: boolean;
+  technicianNotes?: string;
+  signature?: SignatureType;
+  photos?: {
+    before?: PhotoType[];
+    after?: PhotoType[];
+  };
 }
 
 export interface TechnicianType {
@@ -81,66 +57,6 @@ export interface PayrollPeriodType {
   endDate: Date | string;
   cutoffDate: Date | string;
   payDay: Date | string;
-}
-
-export interface BankAccountType {
-  userId: string;
-  bankId: string;
-  accountId: string;
-  accessToken: string;
-  shareableId: string;
-  cursor: string | null;
-}
-
-export type NewDwollaCustomerParams = {
-  firstName: string;
-  lastName: string;
-  email: string;
-  type: string;
-  address1: string;
-  city: string;
-  state: string;
-  postalCode: string;
-  dateOfBirth: string;
-  ssn: string;
-};
-
-export interface TransactionType {
-  transactionId: string; // Added this line
-
-  bankAccountId: string;
-
-  id?: string;
-
-  $id?: string;
-
-  name?: string;
-
-  paymentChannel?: string;
-
-  type?: string;
-
-  accountId?: string;
-
-  amount?: number;
-
-  pending?: boolean;
-
-  category?: {
-    confidence_level?: string;
-
-    detailed?: string;
-
-    primary?: string;
-  };
-
-  date?: string;
-
-  image?: string;
-
-  $createdAt?: string;
-
-  channel?: string;
 }
 
 export interface ClientType {
@@ -167,12 +83,12 @@ export interface InvoiceType {
   notes?: string;
   status: "pending" | "overdue" | "paid";
   clientId: ObjectId | string;
-  signature?: SignatureType;
+  paymentEmailSent?: boolean;
   photos?: {
     before?: PhotoType[];
     after?: PhotoType[];
   };
-  paymentEmailSent?: boolean;
+  signature?: SignatureType;
 }
 
 export interface InvoiceItem {

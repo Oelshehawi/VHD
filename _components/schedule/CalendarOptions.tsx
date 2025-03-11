@@ -176,6 +176,7 @@ const Header = ({
             open={open}
             setOpen={() => setOpen(!open)}
             technicians={technicians}
+            scheduledJobs={scheduledJobs}
           />
         )}
       </AnimatePresence>
