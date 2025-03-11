@@ -42,7 +42,6 @@ next-env.d.ts
 
 /dump
 
-
 # PWA files
 /public/sw.js
 /public/sw.js.map
@@ -53,3 +52,5 @@ next-env.d.ts
 /public/swe-worker-*.js
 /public/swe-worker-*.js.map
 /public/fallback-*.js
+
+/scripts
