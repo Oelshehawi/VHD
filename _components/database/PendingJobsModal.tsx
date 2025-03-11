@@ -81,7 +81,6 @@ const PendingJobsModal = ({
     return { isProcessing, debouncedSubmit };
   };
 
-  console.log(invoices.filter((invoice) => invoice.jobTitle === "test"));
   return (
     <AnimatePresence>
       <motion.div

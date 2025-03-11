@@ -64,12 +64,10 @@ export default async function RootLayout({
 }) {
   const { sessionClaims } = await auth();
 
-  console.log((sessionClaims as any)?.isManager?.isManager);
 
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
-  console.log(canManage);
   const user: any = await currentUser();
 
   const serializedUser = {
