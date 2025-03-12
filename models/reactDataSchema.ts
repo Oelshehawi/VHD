@@ -56,6 +56,7 @@ const SignatureSchema = new Schema<SignatureType>({
   signerName: {
     type: String,
     required: true,
+    default: "Customer",
   },
   technicianId: {
     type: String,

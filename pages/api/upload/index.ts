@@ -1,3 +1,4 @@
+// pages/api/upload.ts
 import { NextApiRequest, NextApiResponse } from "next";
 import { v2 as cloudinary } from "cloudinary";
 import { getAuth } from "@clerk/nextjs/server";
@@ -27,6 +28,7 @@ interface UploadRequest {
   signerName?: string;
   scheduleId?: string;
   jobTitle?: string;
+  photoId?: string; // Added for idempotency check
 }
 
 export default async function handler(
@@ -48,6 +50,7 @@ export default async function handler(
       signerName,
       scheduleId = "unknown",
       jobTitle = "unknown job",
+      photoId, // Get photoId from request
     } = req.body as UploadRequest;
 
     if (!scheduleId || scheduleId === "unknown") {
@@ -80,6 +83,36 @@ export default async function handler(
       return res.status(404).json({ error: "Schedule not found" });
     }
 
+    // // Check if the photo already exists by photoId
+    // if (photoId && type !== "signature") {
+    //   const existingPhotos = schedule.photos?.[type] || [];
+    //   const photoExists = existingPhotos.some(
+    //     (photo: any) => photo._id === photoId || photo.id === photoId
+    //   );
+
+    //   if (photoExists) {
+    //     console.log(`Photo ${photoId} already exists, skipping upload`);
+    //     return res.status(200).json({
+    //       message: "Photo already exists",
+    //       type,
+    //       data: schedule.photos?.[type] || [],
+    //       alreadyUploaded: true,
+    //     });
+    //   }
+    // }
+
+    // // For signature, check if signature already exists
+    // if (type === "signature" && schedule.signature && photoId) {
+    //   if (schedule.signature._id === photoId) {
+    //     return res.status(200).json({
+    //       message: "Signature already exists",
+    //       type,
+    //       data: schedule.signature,
+    //       alreadyUploaded: true,
+    //     });
+    //   }
+    // }
+
     // Format date and create folder name
     const dateStr = schedule.startDateTime
       ? new Date(schedule.startDateTime).toISOString().split("T")[0]
@@ -110,7 +143,6 @@ export default async function handler(
         ? {
             $set: {
               signature: {
-                _id: new mongoose.Types.ObjectId().toString(),
                 url: results[0]?.secure_url || "",
                 timestamp: new Date(),
                 signerName: signerName || "",
@@ -122,7 +154,6 @@ export default async function handler(
             $addToSet: {
               [`photos.${type}`]: {
                 $each: results.map((result: { secure_url: string }) => ({
-                  _id: new mongoose.Types.ObjectId().toString(),
                   url: result.secure_url,
                   timestamp: new Date(),
                   technicianId,
@@ -131,24 +162,49 @@ export default async function handler(
             },
           };
 
-    const updatedSchedule = await Schedule.findOneAndUpdate(
-      { _id: scheduleObjectId },
-      updateQuery,
-      { new: true, runValidators: true, upsert: true },
-    );
+    try {
+      const updatedSchedule = await Schedule.findOneAndUpdate(
+        { _id: scheduleObjectId },
+        updateQuery,
+        { new: true, runValidators: true },
+      );
 
-    return res.status(200).json({
-      message: "Upload successful",
-      type,
-      data:
-        type === "signature"
-          ? updatedSchedule.signature
-          : updatedSchedule.photos?.[type] || [],
-    });
+      if (!updatedSchedule) {
+        return res.status(404).json({
+          error: "Failed to update schedule",
+          message: "The schedule was not found or could not be updated",
+        });
+      }
+
+      return res.status(200).json({
+        message: "Upload successful",
+        type,
+        data:
+          type === "signature"
+            ? updatedSchedule.signature
+            : updatedSchedule.photos?.[type] || [],
+        newlyUploaded: true,
+      });
+    } catch (dbError) {
+      console.error("Database update error:", dbError);
+      return res.status(400).json({
+        error: "Database validation error",
+        message:
+          dbError instanceof Error ? dbError.message : "Unknown database error",
+        details: dbError,
+      });
+    }
   } catch (error) {
+    console.error("Upload error:", error);
     return res.status(500).json({
       error: "Upload failed",
       message: error instanceof Error ? error.message : "Unknown error",
+      stack:
+        process.env.NODE_ENV === "development"
+          ? error instanceof Error
+            ? error.stack
+            : undefined
+          : undefined,
     });
   }
 }
