@@ -178,8 +178,6 @@ export async function updateInvoice(invoiceId: any, formData: any) {
   revalidatePath(`/invoices/${invoiceId}`);
 }
 
-
-
 export async function getMostRecentInvoice(clientId: string) {
   await connectMongo();
   try {
@@ -204,5 +202,40 @@ export async function getMostRecentInvoice(clientId: string) {
   } catch (error) {
     console.error("Database Error:", error);
     return null;
+  }
+}
+
+export async function getClientInvoicesForAutofill(clientId: string) {
+  await connectMongo();
+  try {
+    const invoices = await Invoice.find({ clientId })
+      .sort({ dateIssued: -1 }) // Sort by date issued, most recent first
+      .lean();
+
+    if (!invoices || invoices.length === 0) {
+      return [];
+    }
+
+    return invoices.map((invoice: any) => ({
+      _id: invoice._id.toString(),
+      invoiceId: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+      frequency: invoice.frequency,
+      location: invoice.location,
+      notes: invoice.notes,
+      items: invoice.items.map((item: any) => ({
+        description: item.description,
+        price: parseFloat(item.price) || 0,
+      })),
+      dateIssued:
+        invoice.dateIssued instanceof Date
+          ? invoice.dateIssued.toISOString().split("T")[0]
+          : typeof invoice.dateIssued === "string"
+            ? invoice.dateIssued
+            : null,
+    }));
+  } catch (error) {
+    console.error("Database Error:", error);
+    return [];
   }
 }

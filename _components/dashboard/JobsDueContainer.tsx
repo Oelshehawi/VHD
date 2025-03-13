@@ -8,6 +8,13 @@ import {
   fetchDueInvoices,
 } from "../../app/lib/dashboard.data";
 import { FaCalendarAlt } from "react-icons/fa";
+import ScheduledJobsBox from "./ScheduledJobsBox";
+import { DueInvoiceType } from "../../app/lib/typeDefinitions";
+
+// Helper function to serialize objects (convert to plain objects)
+const serializeData = <T,>(data: T): T => {
+  return JSON.parse(JSON.stringify(data));
+};
 
 const JobsDueContainer = async ({
   searchParams,
@@ -68,6 +75,14 @@ const JobsDueContainer = async ({
       : !invoice?.isScheduled,
   );
 
+  // Get scheduled invoices for the modal
+  const scheduledInvoices = invoicesWithSchedule.filter(
+    (invoice) => invoice?.isScheduled,
+  );
+
+  // Ensure we're passing serialized data to client components
+  const serializedScheduledInvoices = serializeData(scheduledInvoices);
+
   return (
     <div className="flex h-[50vh] w-full flex-col rounded-lg border bg-white p-4 shadow-lg transition-all hover:shadow-xl lg:h-[70vh] lg:w-[50%]">
       <div className="mb-4 flex items-center justify-between">
@@ -80,16 +95,12 @@ const JobsDueContainer = async ({
         </div>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 gap-2 text-sm">
-        <div className="rounded-lg bg-gray-100 p-2">
-          <p className="text-gray-600">Scheduled</p>
-          <p className="text-lg font-bold text-darkGreen">{scheduledCount}</p>
-        </div>
-        <div className="rounded-lg bg-gray-100 p-2">
-          <p className="text-gray-600">Unscheduled</p>
-          <p className="text-lg font-bold text-red-600">{unscheduledCount}</p>
-        </div>
-      </div>
+      {/* Client component for scheduled/unscheduled count boxes and modal */}
+      <ScheduledJobsBox
+        scheduledCount={scheduledCount}
+        unscheduledCount={unscheduledCount}
+        scheduledInvoices={serializedScheduledInvoices}
+      />
 
       <div className="mb-4 flex flex-wrap gap-2">
         <CustomSelect

@@ -42,6 +42,11 @@ const PhotoSchema = new Schema<PhotoType>({
     type: String,
     required: true,
   },
+  type: {
+    type: String,
+    enum: ["before", "after"],
+    required: true,
+  },
 });
 
 const SignatureSchema = new Schema<SignatureType>({
@@ -163,14 +168,8 @@ const scheduleSchema = new Schema<ScheduleType>({
     required: false,
   },
   photos: {
-    before: {
-      type: [PhotoSchema],
-      default: undefined,
-    },
-    after: {
-      type: [PhotoSchema],
-      default: undefined,
-    },
+    type: [PhotoSchema],
+    default: undefined,
   },
   technicianNotes: {
     type: String,

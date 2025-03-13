@@ -26,13 +26,15 @@ const JobModal = ({
     return tech?.name || techId;
   };
 
+  console.log(jobInfo);
   const hasBeforePhotos =
-    jobInfo.photos && jobInfo.photos.before && jobInfo.photos.before.length > 0;
+    jobInfo.photos && jobInfo.photos.some((photo) => photo.type === "before");
 
   const hasAfterPhotos =
-    jobInfo.photos && jobInfo.photos.after && jobInfo.photos.after.length > 0;
+    jobInfo.photos && jobInfo.photos.some((photo) => photo.type === "after");
 
   const hasSignature = !!jobInfo.signature;
+
 
   return (
     <div
@@ -133,10 +135,9 @@ const JobModal = ({
             </h3>
             {hasBeforePhotos ? (
               <MediaDisplay
-                photos={{
-                  before: jobInfo.photos!.before,
-                  after: [],
-                }}
+                photos={jobInfo.photos!.filter(
+                  (photo) => photo.type === "before",
+                )}
                 signature={null}
               />
             ) : (
@@ -154,10 +155,9 @@ const JobModal = ({
             </h3>
             {hasAfterPhotos ? (
               <MediaDisplay
-                photos={{
-                  before: [],
-                  after: jobInfo.photos!.after,
-                }}
+                photos={jobInfo.photos!.filter(
+                  (photo) => photo.type === "after",
+                )}
                 signature={null}
               />
             ) : (
@@ -174,10 +174,7 @@ const JobModal = ({
               Customer Signature
             </h3>
             {hasSignature ? (
-              <MediaDisplay
-                photos={{ before: [], after: [] }}
-                signature={jobInfo.signature!}
-              />
+              <MediaDisplay photos={[]} signature={jobInfo.signature!} />
             ) : (
               <p className="p-6 text-center text-gray-500">
                 No signature available

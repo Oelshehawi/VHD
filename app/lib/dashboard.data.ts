@@ -28,8 +28,11 @@ export const updateScheduleStatus = async (
       { new: true },
     );
 
+    // Serialize the MongoDB document before returning it
+    const serializedJob = JSON.parse(JSON.stringify(updatedJob));
+
     revalidatePath("/dashboard");
-    return updatedJob;
+    return serializedJob;
   } catch (error) {
     console.error("Error updating schedule status:", error);
     throw error;

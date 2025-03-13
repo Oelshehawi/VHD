@@ -40,20 +40,13 @@ export const fetchAllScheduledJobsWithShifts = async (): Promise<
       deadRun: job.deadRun,
       technicianNotes: job.technicianNotes,
       photos: job.photos
-        ? {
-            before: job.photos.before?.map((photo) => ({
-              _id: photo._id.toString(),
-              url: photo.url,
-              timestamp: photo.timestamp,
-              technicianId: photo.technicianId,
-            })),
-            after: job.photos.after?.map((photo) => ({
-              _id: photo._id.toString(),
-              url: photo.url,
-              timestamp: photo.timestamp,
-              technicianId: photo.technicianId,
-            })),
-          }
+        ? job.photos.map((photo) => ({
+            _id: photo._id.toString(),
+            url: photo.url,
+            timestamp: photo.timestamp,
+            technicianId: photo.technicianId,
+            type: photo.type,
+          }))
         : undefined,
       signature: job.signature
         ? {
@@ -258,20 +251,13 @@ export const fetchSchedulesForTechnician = async (
     deadRun: schedule.deadRun,
     technicianNotes: schedule.technicianNotes,
     photos: schedule.photos
-      ? {
-          before: schedule.photos.before?.map((photo) => ({
-            _id: photo._id.toString(),
-            url: photo.url,
-            timestamp: photo.timestamp,
-            technicianId: photo.technicianId,
-          })),
-          after: schedule.photos.after?.map((photo) => ({
-            _id: photo._id.toString(),
-            url: photo.url,
-            timestamp: photo.timestamp,
-            technicianId: photo.technicianId,
-          })),
-        }
+      ? schedule.photos.map((photo) => ({
+          _id: photo._id.toString(),
+          url: photo.url,
+          timestamp: photo.timestamp,
+          technicianId: photo.technicianId,
+          type: photo.type,
+        }))
       : undefined,
     signature: schedule.signature
       ? {

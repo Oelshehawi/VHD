@@ -2,7 +2,7 @@
 
 import { PhotoType, SignatureType } from "../../app/lib/typeDefinitions";
 import { CldImage } from "next-cloudinary";
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { formatDateFns } from "../../app/lib/utils";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
@@ -26,15 +26,12 @@ import styles from "./lightbox.module.css";
 import { FaDownload } from "react-icons/fa";
 
 interface MediaDisplayProps {
-  photos: {
-    before?: PhotoType[];
-    after?: PhotoType[];
-  };
+  photos: PhotoType[];
   signature: SignatureType | null;
 }
 
 export default function MediaDisplay({
-  photos: { before = [], after = [] },
+  photos = [],
   signature,
 }: MediaDisplayProps) {
   // State for lightbox
@@ -50,13 +47,24 @@ export default function MediaDisplay({
     }>
   >([]);
 
+  // Filter photos by type - memoize to prevent infinite loop
+  const beforePhotos = useMemo(
+    () => photos.filter((photo) => photo.type === "before"),
+    [photos],
+  );
+
+  const afterPhotos = useMemo(
+    () => photos.filter((photo) => photo.type === "after"),
+    [photos],
+  );
+
   // Prepare slides for the lightbox
   useEffect(() => {
     const newSlides = [];
 
     // Add before photos
-    if (before && before.length > 0) {
-      before.forEach((photo, idx) => {
+    if (beforePhotos && beforePhotos.length > 0) {
+      beforePhotos.forEach((photo, idx) => {
         newSlides.push({
           src: photo.url,
           title: "Before Photo",
@@ -68,8 +76,8 @@ export default function MediaDisplay({
     }
 
     // Add after photos
-    if (after && after.length > 0) {
-      after.forEach((photo, idx) => {
+    if (afterPhotos && afterPhotos.length > 0) {
+      afterPhotos.forEach((photo, idx) => {
         newSlides.push({
           src: photo.url,
           title: "After Photo",
@@ -92,7 +100,7 @@ export default function MediaDisplay({
     }
 
     setSlides(newSlides);
-  }, [before, after, signature]);
+  }, [beforePhotos, afterPhotos, signature]);
 
   // Function to open lightbox at specific index
   const openLightbox = useCallback((photoIndex: number) => {
@@ -102,8 +110,8 @@ export default function MediaDisplay({
 
   // Calculate indexes for the different sections
   const beforeStartIndex = 0;
-  const afterStartIndex = before.length;
-  const signatureIndex = before.length + after.length;
+  const afterStartIndex = beforePhotos.length;
+  const signatureIndex = beforePhotos.length + afterPhotos.length;
 
   return (
     <>
@@ -138,17 +146,17 @@ export default function MediaDisplay({
       )}
 
       {/* Photos Section */}
-      {(before.length > 0 || after.length > 0) && (
+      {(beforePhotos.length > 0 || afterPhotos.length > 0) && (
         <div className="mb-8 w-full">
           <div className="rounded border shadow">
             <div className="border-b px-4 py-2 text-xl">Job Photos</div>
             <div className="p-4">
               {/* Before Photos */}
-              {before.length > 0 && (
+              {beforePhotos.length > 0 && (
                 <div className="mb-6">
                   <h4 className="mb-2 font-medium">Before</h4>
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                    {before.map((photo, index) => (
+                    {beforePhotos.map((photo, index) => (
                       <div
                         key={index}
                         className="group relative aspect-video cursor-pointer overflow-hidden rounded-lg"
@@ -169,11 +177,11 @@ export default function MediaDisplay({
               )}
 
               {/* After Photos */}
-              {after.length > 0 && (
+              {afterPhotos.length > 0 && (
                 <div>
                   <h4 className="mb-2 font-medium">After</h4>
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                    {after.map((photo, index) => (
+                    {afterPhotos.map((photo, index) => (
                       <div
                         key={index}
                         className="group relative aspect-video cursor-pointer overflow-hidden rounded-lg"

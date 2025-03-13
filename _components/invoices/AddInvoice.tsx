@@ -6,11 +6,13 @@ import { calculateDueDate } from "../../app/lib/utils";
 import {
   createInvoice,
   getMostRecentInvoice,
+  getClientInvoicesForAutofill,
 } from "../../app/lib/actions/actions";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import ClientSearchSelect from "./ClientSearchSelect";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
 import { toast } from "react-hot-toast";
+import InvoiceSelectionModal from "./InvoiceSelectionModal";
 
 interface AddInvoiceProps {
   clients: ClientType[];
@@ -33,6 +35,9 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
   const [resetKey, setResetKey] = useState(0);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
   const [autoFilledFields, setAutoFilledFields] = useState<string[]>([]);
+  const [clientInvoices, setClientInvoices] = useState<any[]>([]);
+  const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
+  const [showInvoiceSelector, setShowInvoiceSelector] = useState(false);
 
   const {
     register,
@@ -79,48 +84,58 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
     setValue("clientId", client._id as string);
     setValue("prefix" as any, client.prefix);
     clearErrors(["clientId", "prefix" as any]);
+    setSelectedClient(client);
 
     setIsAutoFilling(true);
     setAutoFilledFields([]);
 
     try {
-      // Fetch most recent invoice data for the client
-      const recentInvoice = await getMostRecentInvoice(client._id as string);
+      // Fetch all invoices for the client
+      const invoices = await getClientInvoicesForAutofill(client._id as string);
 
-      if (recentInvoice) {
-        const fieldsToUpdate = [];
-
-        if (recentInvoice.jobTitle) {
-          setValue("jobTitle", recentInvoice.jobTitle);
-          fieldsToUpdate.push("jobTitle");
-        }
-        if (recentInvoice.frequency) {
-          setValue("frequency", recentInvoice.frequency);
-          fieldsToUpdate.push("frequency");
-        }
-        if (recentInvoice.location) {
-          setValue("location", recentInvoice.location);
-          fieldsToUpdate.push("location");
-        }
-        if (recentInvoice.notes) {
-          setValue("notes", recentInvoice.notes);
-          fieldsToUpdate.push("notes");
-        }
-        if (recentInvoice.items && recentInvoice.items.length > 0) {
-          setItems(recentInvoice.items);
-          setValue("items", recentInvoice.items);
-          fieldsToUpdate.push("items");
-        }
-
-        setAutoFilledFields(fieldsToUpdate);
-        toast.success("Form auto-filled from most recent invoice");
+      if (invoices.length > 0) {
+        setClientInvoices(invoices);
+        setShowInvoiceSelector(true);
+      } else {
+        toast("No previous invoices found for this client");
+        setShowInvoiceSelector(false);
       }
     } catch (error) {
-      console.error("Error auto-filling form:", error);
-      toast.error("Failed to auto-fill form");
+      console.error("Error fetching client invoices:", error);
+      toast.error("Failed to fetch client invoices");
     } finally {
       setIsAutoFilling(false);
     }
+  };
+
+  const handleInvoiceSelect = (invoice: any) => {
+    const fieldsToUpdate = [];
+
+    if (invoice.jobTitle) {
+      setValue("jobTitle", invoice.jobTitle);
+      fieldsToUpdate.push("jobTitle");
+    }
+    if (invoice.frequency) {
+      setValue("frequency", invoice.frequency);
+      fieldsToUpdate.push("frequency");
+    }
+    if (invoice.location) {
+      setValue("location", invoice.location);
+      fieldsToUpdate.push("location");
+    }
+    if (invoice.notes) {
+      setValue("notes", invoice.notes);
+      fieldsToUpdate.push("notes");
+    }
+    if (invoice.items && invoice.items.length > 0) {
+      setItems(invoice.items);
+      setValue("items", invoice.items);
+      fieldsToUpdate.push("items");
+    }
+
+    setAutoFilledFields(fieldsToUpdate);
+    setShowInvoiceSelector(false);
+    toast.success(`Form auto-filled from invoice ${invoice.invoiceId}`);
   };
 
   const { isProcessing, debouncedSubmit } = useDebounceSubmit({
@@ -224,6 +239,14 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
               register={register}
               error={errors.clientId}
               resetKey={resetKey}
+            />
+
+            {/* Invoice Selection Modal */}
+            <InvoiceSelectionModal
+              invoices={clientInvoices}
+              isOpen={showInvoiceSelector}
+              onClose={() => setShowInvoiceSelector(false)}
+              onSelect={handleInvoiceSelect}
             />
 
             {/* Input Fields */}

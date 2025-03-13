@@ -103,45 +103,29 @@ export default async function handler(
             foundUrl = targetSchedule.signature.url;
             foundPhotoType = "signature";
           }
-        } else if (type === "before" && targetSchedule.photos?.before) {
-          const photo = targetSchedule.photos.before.find(
-            (p) => p._id.toString() === cleanId,
+        } else if (
+          (type === "before" || type === "after") &&
+          targetSchedule.photos
+        ) {
+          const photo = targetSchedule.photos.find(
+            (p) => p._id.toString() === cleanId && p.type === type,
           );
           if (photo) {
             foundUrl = photo.url;
-            foundPhotoType = "before";
-          }
-        } else if (type === "after" && targetSchedule.photos?.after) {
-          const photo = targetSchedule.photos.after.find(
-            (p) => p._id.toString() === cleanId,
-          );
-          if (photo) {
-            foundUrl = photo.url;
-            foundPhotoType = "after";
+            foundPhotoType = type;
           }
         }
       }
       // If no type provided, search all photo types in the target schedule
       else {
-        // Check before photos
-        if (targetSchedule.photos?.before) {
-          const photo = targetSchedule.photos.before.find(
+        // Check photos
+        if (targetSchedule.photos) {
+          const photo = targetSchedule.photos.find(
             (p) => p._id.toString() === cleanId,
           );
           if (photo) {
             foundUrl = photo.url;
-            foundPhotoType = "before";
-          }
-        }
-
-        // Check after photos if not found yet
-        if (!foundUrl && targetSchedule.photos?.after) {
-          const photo = targetSchedule.photos.after.find(
-            (p) => p._id.toString() === cleanId,
-          );
-          if (photo) {
-            foundUrl = photo.url;
-            foundPhotoType = "after";
+            foundPhotoType = photo.type;
           }
         }
 
@@ -161,12 +145,8 @@ export default async function handler(
     // If no specific schedule targeted, search across all schedules
     else {
       // Find schedules containing the photo with the given ID
-      const scheduleWithBeforePhoto = await Schedule.findOne({
-        "photos.before._id": objectId,
-      });
-
-      const scheduleWithAfterPhoto = await Schedule.findOne({
-        "photos.after._id": objectId,
+      const scheduleWithPhoto = await Schedule.findOne({
+        "photos._id": objectId,
       });
 
       const scheduleWithSignature = await Schedule.findOne({
@@ -174,26 +154,14 @@ export default async function handler(
       });
 
       // Find which collection had the photo and get its URL
-      if (scheduleWithBeforePhoto && scheduleWithBeforePhoto.photos?.before) {
-        const photo = scheduleWithBeforePhoto.photos.before.find(
+      if (scheduleWithPhoto && scheduleWithPhoto.photos) {
+        const photo = scheduleWithPhoto.photos.find(
           (p) => p._id.toString() === cleanId,
         );
         if (photo) {
           foundUrl = photo.url;
-          foundSchedule = scheduleWithBeforePhoto;
-          foundPhotoType = "before";
-        }
-      } else if (
-        scheduleWithAfterPhoto &&
-        scheduleWithAfterPhoto.photos?.after
-      ) {
-        const photo = scheduleWithAfterPhoto.photos.after.find(
-          (p) => p._id.toString() === cleanId,
-        );
-        if (photo) {
-          foundUrl = photo.url;
-          foundSchedule = scheduleWithAfterPhoto;
-          foundPhotoType = "after";
+          foundSchedule = scheduleWithPhoto;
+          foundPhotoType = photo.type;
         }
       } else if (scheduleWithSignature && scheduleWithSignature.signature) {
         if (scheduleWithSignature.signature._id.toString() === cleanId) {

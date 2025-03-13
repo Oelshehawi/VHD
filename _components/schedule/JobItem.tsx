@@ -101,8 +101,8 @@ const JobItem = ({
   };
 
   // Check if job has photos or signatures
-  const hasBeforePhotos = job.photos?.before && job.photos.before.length > 0;
-  const hasAfterPhotos = job.photos?.after && job.photos.after.length > 0;
+  const hasBeforePhotos = job.photos?.some((photo) => photo.type === "before");
+  const hasAfterPhotos = job.photos?.some((photo) => photo.type === "after");
   const hasSignature = !!job.signature;
   const hasMedia = hasBeforePhotos || hasAfterPhotos || hasSignature;
 
@@ -222,13 +222,13 @@ const JobItem = ({
                       <div className="mb-4 flex border-b border-white/20">
                         <button
                           onClick={() => setActiveView("details")}
-                          className={`px-4 py-2 ${activeView === "details" ? "border-b-2 border-white text-white font-semibold" : "text-white/70"}`}
+                          className={`px-4 py-2 ${activeView === "details" ? "border-b-2 border-white font-semibold text-white" : "text-white/70"}`}
                         >
                           Details
                         </button>
                         <button
                           onClick={() => setActiveView("media")}
-                          className={`flex items-center px-4 py-2 ${activeView === "media" ? "border-b-2 border-white text-white font-semibold" : "text-white/70"}`}
+                          className={`flex items-center px-4 py-2 ${activeView === "media" ? "border-b-2 border-white font-semibold text-white" : "text-white/70"}`}
                         >
                           Media
                         </button>
@@ -301,10 +301,7 @@ const JobItem = ({
                     ) : (
                       <div className="max-h-[60vh] overflow-y-auto rounded bg-white p-4">
                         <MediaDisplay
-                          photos={{
-                            before: job.photos?.before || [],
-                            after: job.photos?.after || [],
-                          }}
+                          photos={job.photos || []}
                           signature={job.signature || null}
                         />
                         <button

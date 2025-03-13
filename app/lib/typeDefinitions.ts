@@ -38,10 +38,7 @@ export interface ScheduleType {
   deadRun: boolean;
   technicianNotes?: string;
   signature?: SignatureType;
-  photos?: {
-    before?: PhotoType[];
-    after?: PhotoType[];
-  };
+  photos?: PhotoType[];
 }
 
 export interface TechnicianType {
@@ -84,10 +81,7 @@ export interface InvoiceType {
   status: "pending" | "overdue" | "paid";
   clientId: ObjectId | string;
   paymentEmailSent?: boolean;
-  photos?: {
-    before?: PhotoType[];
-    after?: PhotoType[];
-  };
+  photos?: PhotoType[];
   signature?: SignatureType;
 }
 
@@ -102,6 +96,7 @@ export interface PhotoType {
   timestamp: Date;
   technicianId: string;
   _id: ObjectId | string;
+  type: "before" | "after";
 }
 
 export interface SignatureType {
