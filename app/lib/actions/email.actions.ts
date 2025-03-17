@@ -5,10 +5,12 @@ import connectMongo from "../connect";
 import { Invoice, Client, JobsDueSoon } from "../../../models/reactDataSchema";
 import { DueInvoiceType } from "../typeDefinitions";
 import { formatAmount } from "../utils";
+import { auth } from "@clerk/nextjs/server";
 
 const postmark = require("postmark");
 
 const getAbsoluteUrl = (path: string) => {
+  // For server-side requests, use the host from the request headers
   const baseUrl =
     process.env.NEXT_PUBLIC_APP_URL ||
     (process.env.VERCEL_URL
@@ -107,6 +109,10 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
   await connectMongo();
 
   try {
+    // Get Clerk session token
+    const session = await auth();
+    const token = await session.getToken();
+
     // Find the invoice
     const invoice = await Invoice.findById(invoiceId);
     if (!invoice) {
@@ -137,12 +143,15 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
     // Generate PDF invoice URL using the helper
     const pdfUrl = getAbsoluteUrl(`/invoices/${invoice._id}/pdf`);
 
-    // Fetch the PDF directly from the server
+    // Fetch the PDF directly from the server with auth token
     const pdfResponse = await fetch(pdfUrl, {
       method: "GET",
       headers: {
         Accept: "application/pdf",
+        "Cache-Control": "no-cache",
+        Authorization: `Bearer ${token}`,
       },
+      cache: "no-store",
     });
 
     if (!pdfResponse.ok) {

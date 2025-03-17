@@ -99,29 +99,6 @@ export const fetchInvoiceById = async (invoiceId: string) => {
       throw new Error("Invoice not found");
     }
 
-    // Properly serialize nested _ids in photos and signature
-    const serializedPhotos = {
-      before:
-        invoice.photos?.before?.map((photo) => ({
-          ...photo,
-          _id: photo._id.toString(),
-        })) || [],
-      after:
-        invoice.photos?.after?.map((photo) => ({
-          ...photo,
-          _id: photo._id.toString(),
-        })) || [],
-    };
-
-    const serializedSignature = invoice.signature
-      ? {
-          ...invoice.signature,
-          _id: invoice.signature._id.toString(),
-          // @ts-ignore
-          timestamp: invoice.signature.timestamp.toISOString(),
-        }
-      : null;
-
     return {
       ...invoice,
       _id: invoice._id.toString(),
@@ -131,8 +108,6 @@ export const fetchInvoiceById = async (invoiceId: string) => {
       dateIssued: invoice.dateIssued.toISOString().split("T")[0],
       clientId: invoice.clientId.toString(),
       items: formattedItems(invoice.items),
-      signature: serializedSignature,
-      photos: serializedPhotos,
     };
   } catch (error) {
     console.error("Database Error:", error);

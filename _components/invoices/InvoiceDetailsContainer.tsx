@@ -65,7 +65,7 @@ const InvoiceDetailsContainer = ({
           {canManage && <PriceBreakdown invoice={invoice} />}
         </div>
 
-        {/* Right side - Client Info & Signature */}
+        {/* Right side - Client Info */}
         <div className="space-y-4 lg:col-span-2">
           <ClientDetails client={client} canManage={canManage} />
         </div>
