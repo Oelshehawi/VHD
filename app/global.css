@@ -144,24 +144,6 @@ main {
     @apply flex gap-[18px] border-b-2 px-2 py-2 transition-all sm:px-4;
   }
 
-  /* Mobile nav */
-
-  /* PlaidLink */
-  .plaidlink-primary {
-    @apply text-16 border-bankGradient bg-bank-gradient shadow-form rounded-lg border font-semibold text-white;
-  }
-
-  .plaidlink-ghost {
-    @apply flex cursor-pointer items-center justify-center gap-3 rounded-lg px-3 py-7 hover:bg-white lg:justify-start;
-  }
-
-  .plaidlink-default {
-    @apply flex cursor-pointer flex-row !justify-start gap-3 rounded-lg !bg-transparent;
-  }
-
-  .bank-info_content {
-    @apply flex flex-1 items-center justify-between gap-2 overflow-hidden;
-  }
 
   /* Custom scrollbar styles */
   .scrollbar-thin {

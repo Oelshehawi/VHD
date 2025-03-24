@@ -142,7 +142,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
                             Recommended Frequency:
                           </span>{" "}
                           {report.recommendedCleaningFrequency
-                            ? `${report.recommendedCleaningFrequency} months`
+                            ? `${report.recommendedCleaningFrequency} times per year`
                             : "Not specified"}
                         </p>
                       </div>

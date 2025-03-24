@@ -67,7 +67,7 @@ export default function MediaDisplay({
         newSlides.push({
           src: photo.url,
           title: "Before Photo",
-          description: `Taken on: ${formatDateFns(photo.timestamp)}`,
+          description: `Uploaded on: ${formatDateFns(photo.timestamp)}`,
           downloadUrl: photo.url,
           downloadFilename: `before-photo-${idx + 1}.jpg`,
         });

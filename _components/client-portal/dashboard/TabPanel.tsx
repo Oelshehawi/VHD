@@ -109,6 +109,10 @@ const TabPanel = ({
     },
   ];
 
+  const calculateTotalAmount = (totalAmount: number) => {
+    return totalAmount * 0.05;
+  };
+
   return (
     <div className="w-full overflow-hidden rounded-xl bg-white shadow-sm">
       {/* Tab Navigation */}
@@ -261,7 +265,10 @@ const TabPanel = ({
                             {formatDateFns(invoice.dateIssued)}
                           </td>
                           <td className="whitespace-nowrap px-2 py-2 text-xs text-gray-500 sm:px-4 sm:py-3 sm:text-sm">
-                            {formatAmount(invoice.totalAmount)}
+                            {formatAmount(
+                              invoice.totalAmount +
+                                calculateTotalAmount(invoice.totalAmount),
+                            )}
                           </td>
                           <td className="whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3">
                             <span

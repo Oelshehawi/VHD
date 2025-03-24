@@ -282,7 +282,8 @@ export async function fetchClientInvoices(
       dateIssued: invoice.dateIssued.toLocaleString("en-US", {
         timeZone: "UTC",
       }),
-      totalAmount: invoice.totalAmount || 0,
+      totalAmount: invoice.items?.reduce((acc: number, item: any) => 
+        acc + (parseFloat(item.price) || 0), 0) || 0,
       status: invoice.status || "pending",
       jobTitle: invoice.jobTitle || "",
     }));
