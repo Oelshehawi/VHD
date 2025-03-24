@@ -3,6 +3,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useSignIn, useClerk } from "@clerk/nextjs";
 import Image from "next/image";
+import dynamic from "next/dynamic";
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -11,7 +12,7 @@ const LoadingSpinner = () => (
   </div>
 );
 
-export default function AcceptTokenPage() {
+function AcceptTokenContent() {
   const { isLoaded, signIn, setActive } = useSignIn();
   const { signOut } = useClerk();
   const router = useRouter();
@@ -138,3 +139,10 @@ export default function AcceptTokenPage() {
     </div>
   );
 }
+
+// Dynamically import the component with no SSR
+const AcceptTokenPage = dynamic(() => Promise.resolve(AcceptTokenContent), {
+  ssr: false,
+});
+
+export default AcceptTokenPage;
