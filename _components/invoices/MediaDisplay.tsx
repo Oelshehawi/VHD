@@ -80,7 +80,7 @@ export default function MediaDisplay({
         newSlides.push({
           src: photo.url,
           title: "After Photo",
-          description: `Taken on: ${formatDateFns(photo.timestamp)}`,
+          description: `Uploaded on: ${formatDateFns(photo.timestamp)}`,
           downloadUrl: photo.url,
           downloadFilename: `after-photo-${idx + 1}.jpg`,
         });
