@@ -1,19 +1,11 @@
 "use client";
-import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import {  useState } from "react";
 import UserSection from "./UserSection";
 import NavLinks from "./NavLinks";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 
 const SideNavBar = ({ canManage, user }: { canManage: boolean; user: any }) => {
   const [isNavOpen, setIsNavOpen] = useState(false);
-  const router = useRouter();
-
-  useEffect(() => {
-    if (!canManage) {
-      router.replace("/employee-dashboard");
-    }
-  }, [canManage, router]);
 
   const toggleNav = () => {
     setIsNavOpen((prev) => !prev);

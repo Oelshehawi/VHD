@@ -29,7 +29,7 @@ const DashboardPage = async ({
   const salesData = await fetchYearlySalesData(currentYear);
   const amount = await getPendingInvoiceAmount();
   const pendingInvoices = (await getPendingInvoices()) || [];
-  const {  sessionClaims } = await auth();
+  const { sessionClaims } = await auth();
 
   const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 

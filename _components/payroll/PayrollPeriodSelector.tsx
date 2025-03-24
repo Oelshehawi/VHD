@@ -25,12 +25,12 @@ const PayrollPeriodSelector = ({
   schedules,
   selectedPayrollPeriod,
 }: PayrollPeriodSelectorProps) => {
-  const filteredTechnicians = technicians.filter(
+  const filteredTechnicians = technicians?.filter(
     (tech) =>
-      !tech.name.includes("Ziad") &&
-      !tech.name.includes("Omar") &&
-      !tech.name.includes("Migo"),
+      tech.name.includes("Mohnad Elkeliny") ||
+      tech.name.includes("Ahmed Habib")
   );
+
   // State for managing selected payroll period
   const [selectedTechnician, setSelectedTechnician] =
     useState<TechnicianType | null>(null);

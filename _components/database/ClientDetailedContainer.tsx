@@ -5,6 +5,7 @@ import TransactionHistory from "./TransactionHistory";
 import InlineEditClient from "./EditClientModal";
 import { useRouter } from "next/navigation";
 import { ClientType } from "../../app/lib/typeDefinitions";
+import ClientPortalAccess from "../client-portal/ClientPortalAccess";
 
 const ClientDetailedContainer = ({
   client,
@@ -29,13 +30,19 @@ const ClientDetailedContainer = ({
           <FaArrowLeft className="lg:mr-2" />
           <span>Back</span>
         </button>
-        <button
-          className="mr-2 inline-flex items-center rounded bg-darkGreen px-4 py-2 text-white"
-          onClick={toggleEdit}
-        >
-          <FaPenSquare />
-          <span>Edit</span>
-        </button>
+        <div className="flex space-x-2">
+          <ClientPortalAccess
+            clientId={client._id as string}
+            clientName={client.clientName}
+          />
+          <button
+            className="inline-flex items-center rounded bg-darkGreen px-4 py-2 text-white"
+            onClick={toggleEdit}
+          >
+            <FaPenSquare className="mr-1" />
+            <span>Edit</span>
+          </button>
+        </div>
       </div>
       <div className="-mx-2 flex flex-wrap">
         <InlineEditClient

@@ -99,6 +99,59 @@ export interface PhotoType {
   type: "before" | "after";
 }
 
+export interface ReportType {
+  _id?: ObjectId | string;
+  scheduleId: ObjectId | string;
+  invoiceId: ObjectId | string;
+  dateCompleted: Date | string;
+  technicianId: string;
+  lastServiceDate?: Date | string;
+  fuelType?: "Natural Gas" | "Electric" | "Solid Fuel" | "Other";
+  cookingVolume?: "High" | "Medium" | "Low";
+  cookingEquipment?: {
+    griddles?: boolean;
+    deepFatFryers?: boolean;
+    woks?: boolean;
+  };
+  inspectionItems?: {
+    filtersInPlace?: "Yes" | "No" | "N/A";
+    filtersListed?: "Yes" | "No" | "N/A";
+    filtersNeedCleaningMoreOften?: "Yes" | "No" | "N/A";
+    filtersNeedReplacement?: "Yes" | "No" | "N/A";
+    washCycleWorking?: "Yes" | "No" | "N/A";
+    fireSuppressionNozzlesClear?: "Yes" | "No" | "N/A";
+    fanTipAccessible?: "Yes" | "No" | "N/A";
+    safeAccessToFan?: "Yes" | "No" | "N/A";
+    exhaustFanOperational?: "Yes" | "No" | "N/A";
+    ecologyUnitRequiresCleaning?: "Yes" | "No" | "N/A";
+    ecologyUnitCost?: string;
+    ecologyUnitDeficiencies?: "Yes" | "No" | "N/A";
+    greaseBuildupOnRoof?: "Yes" | "No" | "N/A";
+    systemCleanedPerCode?: "Yes" | "No" | "N/A";
+    systemInteriorAccessible?: "Yes" | "No" | "N/A";
+    multiStoreyVerticalCleaning?: "Yes" | "No" | "N/A";
+    adequateAccessPanels?: "Yes" | "No" | "N/A";
+    accessPanelsRequired?: string;
+    accessPanelCost?: string;
+  };
+  recommendedCleaningFrequency?: number;
+  comments?: string;
+  equipmentDetails: {
+    hoodType?: string;
+    filterType?: string;
+    ductworkType?: string;
+    fanType?: string;
+  };
+  cleaningDetails: {
+    hoodCleaned: boolean;
+    filtersCleaned: boolean;
+    ductworkCleaned: boolean;
+    fanCleaned: boolean;
+  };
+  recommendations?: string;
+  notes?: string;
+}
+
 export interface SignatureType {
   _id: string;
   url: string;
@@ -302,3 +355,10 @@ export const OBSERVANCES: Holiday[] = [
     type: "observance",
   },
 ];
+
+export interface ClientTokenData {
+  clientId: string;
+  clientName: string;
+  timestamp: number;
+  expiresAt: number;
+}

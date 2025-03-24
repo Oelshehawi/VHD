@@ -1,8 +1,16 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import connectMongo from "../connect";
-import { Schedule, PayrollPeriod } from "../../../models/reactDataSchema";
-import { PayrollPeriodType, ScheduleType } from "../typeDefinitions";
+import {
+  Schedule,
+  PayrollPeriod,
+  Report,
+} from "../../../models/reactDataSchema";
+import {
+  PayrollPeriodType,
+  ScheduleType,
+  ReportType,
+} from "../typeDefinitions";
 import { clerkClient } from "@clerk/nextjs/server";
 
 /**
@@ -249,5 +257,49 @@ export const updateDeadRun = async ({
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to update deadRun status");
+  }
+};
+
+export const createOrUpdateReport = async (reportData: ReportType) => {
+  await connectMongo();
+  try {
+    // Check if this schedule already has a report
+    let existingReport = await Report.findOne({
+      scheduleId: reportData.scheduleId,
+    });
+
+    if (existingReport) {
+      // Update existing report
+      existingReport = await Report.findByIdAndUpdate(
+        existingReport._id,
+        reportData,
+        { new: true },
+      );
+
+      // Return a plain JavaScript object, not a Mongoose document
+      return JSON.parse(JSON.stringify(existingReport));
+    } else {
+      // Create new report
+      const newReport = new Report(reportData);
+      await newReport.save();
+
+      // Return a plain JavaScript object, not a Mongoose document
+      return JSON.parse(JSON.stringify(newReport));
+    }
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to create/update report");
+  }
+};
+
+export const getReportByScheduleId = async (scheduleId: string) => {
+  await connectMongo();
+  try {
+    const report = await Report.findOne({ scheduleId });
+    // Convert to plain JavaScript object before returning
+    return report ? JSON.parse(JSON.stringify(report)) : null;
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch report");
   }
 };

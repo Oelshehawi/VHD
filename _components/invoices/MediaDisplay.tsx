@@ -23,7 +23,6 @@ import Captions from "yet-another-react-lightbox/plugins/captions";
 import "yet-another-react-lightbox/plugins/captions.css";
 // Import CSS module
 import styles from "./lightbox.module.css";
-import { FaDownload } from "react-icons/fa";
 
 interface MediaDisplayProps {
   photos: PhotoType[];

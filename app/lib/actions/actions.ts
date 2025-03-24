@@ -8,11 +8,10 @@ import {
   Schedule,
 } from "../../../models/reactDataSchema";
 import { ClientType } from "../typeDefinitions";
-import { calculateDueDate, encryptId, parseStringify } from "../utils";
-import { plaidClient } from "../plaid";
-import { CountryCode, Products } from "plaid";
+import { calculateDueDate } from "../utils";
 
-export async function updateInvoiceScheduleStatus(invoiceId) {
+
+export async function updateInvoiceScheduleStatus(invoiceId: string) {
   await connectMongo();
 
   try {
@@ -62,7 +61,7 @@ export async function deleteClient(clientId: string) {
   revalidatePath("/dashboard");
 }
 
-export async function updateClient(clientId, formData) {
+export async function updateClient(clientId: string, formData: any) {
   await connectMongo();
   try {
     await Client.findByIdAndUpdate(clientId, formData);
@@ -108,7 +107,7 @@ export async function deleteInvoice(invoiceId: string) {
   revalidatePath("/dashboard");
 }
 
-export async function createInvoice(invoiceData) {
+export async function createInvoice(invoiceData: any) {
   await connectMongo();
   try {
     // Find the invoice with the highest invoiceId for the client
@@ -122,7 +121,7 @@ export async function createInvoice(invoiceData) {
 
     if (latestInvoice) {
       // Extract the numeric part from the latest invoiceId
-      const latestNumber = parseInt(latestInvoice.invoiceId.split("-")[1], 10);
+      const latestNumber = parseInt(latestInvoice.invoiceId.split("-")[1] as string, 10);
       newInvoiceNumber = latestNumber + 1;
     }
 

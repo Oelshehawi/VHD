@@ -9,6 +9,7 @@ import {
   ShiftType,
   SignatureType,
   PhotoType,
+  ReportType,
 } from "../app/lib/typeDefinitions";
 
 const ClientSchema = new Schema<ClientType>({
@@ -177,6 +178,165 @@ const scheduleSchema = new Schema<ScheduleType>({
   },
 });
 
+const ReportSchema = new Schema<ReportType>({
+  scheduleId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Schedule",
+    required: true,
+  },
+  invoiceId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Invoice",
+    required: true,
+  },
+  dateCompleted: {
+    type: Date,
+    required: true,
+  },
+  technicianId: {
+    type: String,
+    required: true,
+  },
+  lastServiceDate: {
+    type: Date,
+  },
+  fuelType: {
+    type: String,
+    enum: ["Natural Gas", "Electric", "Solid Fuel", "Other"],
+  },
+  cookingVolume: {
+    type: String,
+    enum: ["High", "Medium", "Low"],
+  },
+  cookingEquipment: {
+    griddles: Boolean,
+    deepFatFryers: Boolean,
+    woks: Boolean,
+  },
+  inspectionItems: {
+    filtersInPlace: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    filtersListed: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    filtersNeedCleaningMoreOften: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    filtersNeedReplacement: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    washCycleWorking: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    fireSuppressionNozzlesClear: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    fanTipAccessible: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    safeAccessToFan: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    exhaustFanOperational: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    ecologyUnitRequiresCleaning: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    ecologyUnitCost: {
+      type: String,
+    },
+    ecologyUnitDeficiencies: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    greaseBuildupOnRoof: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    systemCleanedPerCode: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    systemInteriorAccessible: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    multiStoreyVerticalCleaning: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    adequateAccessPanels: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
+    accessPanelsRequired: {
+      type: String,
+    },
+    accessPanelCost: {
+      type: String,
+    },
+  },
+  recommendedCleaningFrequency: {
+    type: Number,
+  },
+  comments: {
+    type: String,
+  },
+  equipmentDetails: {
+    hoodType: String,
+    filterType: String,
+    ductworkType: String,
+    fanType: String,
+  },
+  cleaningDetails: {
+    hoodCleaned: {
+      type: Boolean,
+      default: true,
+    },
+    filtersCleaned: {
+      type: Boolean,
+      default: true,
+    },
+    ductworkCleaned: {
+      type: Boolean,
+      default: true,
+    },
+    fanCleaned: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  recommendations: String,
+});
+
 const PayrollPeriodSchema = new Schema<PayrollPeriodType>(
   {
     startDate: { type: Date, required: true },
@@ -232,4 +392,7 @@ const PayrollPeriod =
   (models.PayrollPeriod as Model<PayrollPeriodType>) ||
   model("PayrollPeriod", PayrollPeriodSchema);
 
-export { Client, Invoice, JobsDueSoon, Schedule, PayrollPeriod };
+const Report =
+  (models.Report as Model<ReportType>) || model("Report", ReportSchema);
+
+export { Client, Invoice, JobsDueSoon, Schedule, PayrollPeriod, Report };

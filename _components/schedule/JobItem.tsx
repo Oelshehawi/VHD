@@ -1,9 +1,10 @@
 "use client";
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
 import Link from "next/link";
 import DeleteModal from "../DeleteModal";
 import EditJobModal from "./EditJobModal";
+import ReportModal from "./ReportModal";
 import toast from "react-hot-toast";
 import {
   updateDeadRun,
@@ -11,11 +12,12 @@ import {
 } from "../../app/lib/actions/scheduleJobs.actions";
 import TechnicianPill from "./TechnicianPill";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaBan, FaCamera, FaSignature } from "react-icons/fa";
+import { FaBan, FaCamera, FaSignature, FaClipboardList } from "react-icons/fa";
 import { format } from "date-fns-tz";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { createPortal } from "react-dom";
 import MediaDisplay from "../invoices/MediaDisplay";
+import { getReportByScheduleId } from "../../app/lib/actions/scheduleJobs.actions";
 
 const JobItem = ({
   job,
@@ -31,7 +33,11 @@ const JobItem = ({
   const [isDeadRun, setIsDeadRun] = useState(() => job.deadRun || false);
   const [isModalOpen, setModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
-  const [activeView, setActiveView] = useState<"details" | "media">("details");
+  const [isReportMode, setIsReportMode] = useState(false);
+  const [activeView, setActiveView] = useState<"details" | "media" | "report">(
+    "details",
+  );
+  const [hasExistingReport, setHasExistingReport] = useState(false);
 
   const toggleConfirmedStatus = useCallback(async () => {
     if (isLoading) return;
@@ -94,9 +100,35 @@ const JobItem = ({
       "Unknown",
   );
 
+  // Find the current user's technician info from the assigned technicians
+  const currentTechnician = technicians.find((tech) =>
+    job.assignedTechnicians.includes(tech.id),
+  ) || {
+    id: job.assignedTechnicians[0] || "unknown",
+    name: "Unknown Technician",
+  };
+
+  // Check if a report already exists for this job
+  useEffect(() => {
+    const checkForExistingReport = async () => {
+      try {
+        const report = await getReportByScheduleId(job._id.toString());
+        setHasExistingReport(!!report);
+      } catch (error) {
+        console.error("Error checking for existing report:", error);
+      }
+    };
+
+    if (activeView === "report") {
+      checkForExistingReport();
+    }
+  }, [job._id, activeView]);
+
+  // Close modal handler
   const closeModal = () => {
     setModalOpen(false);
     setIsEditMode(false);
+    setIsReportMode(false);
     setActiveView("details");
   };
 
@@ -197,7 +229,19 @@ const JobItem = ({
                 onClick={(e) => e.stopPropagation()}
                 className={`relative w-full max-w-md overflow-hidden rounded-xl bg-gradient-to-br from-darkGreen to-darkBlue p-6 shadow-xl`}
               >
-                {!isEditMode ? (
+                {isReportMode ? (
+                  <ReportModal
+                    schedule={job}
+                    onClose={closeModal}
+                    technician={currentTechnician}
+                  />
+                ) : isEditMode ? (
+                  <EditJobModal
+                    job={job}
+                    onClose={closeModal}
+                    technicians={technicians}
+                  />
+                ) : (
                   <>
                     {/* View Mode */}
                     <div className="mb-6 flex items-start justify-between">
@@ -218,22 +262,28 @@ const JobItem = ({
                     </div>
 
                     {/* Tab navigation */}
-                    {hasMedia && (
-                      <div className="mb-4 flex border-b border-white/20">
-                        <button
-                          onClick={() => setActiveView("details")}
-                          className={`px-4 py-2 ${activeView === "details" ? "border-b-2 border-white font-semibold text-white" : "text-white/70"}`}
-                        >
-                          Details
-                        </button>
+                    <div className="mb-4 flex border-b border-white/20">
+                      <button
+                        onClick={() => setActiveView("details")}
+                        className={`px-4 py-2 ${activeView === "details" ? "border-b-2 border-white font-semibold text-white" : "text-white/70"}`}
+                      >
+                        Details
+                      </button>
+                      {hasMedia && (
                         <button
                           onClick={() => setActiveView("media")}
                           className={`flex items-center px-4 py-2 ${activeView === "media" ? "border-b-2 border-white font-semibold text-white" : "text-white/70"}`}
                         >
                           Media
                         </button>
-                      </div>
-                    )}
+                      )}
+                      <button
+                        onClick={() => setActiveView("report")}
+                        className={`flex items-center px-4 py-2 ${activeView === "report" ? "border-b-2 border-white font-semibold text-white" : "text-white/70"}`}
+                      >
+                        <FaClipboardList className="mr-1" /> Report
+                      </button>
+                    </div>
 
                     {activeView === "details" ? (
                       <div className="space-y-4">
@@ -298,7 +348,7 @@ const JobItem = ({
                           Close
                         </button>
                       </div>
-                    ) : (
+                    ) : activeView === "media" ? (
                       <div className="max-h-[60vh] overflow-y-auto rounded bg-white p-4">
                         <MediaDisplay
                           photos={job.photos || []}
@@ -311,14 +361,33 @@ const JobItem = ({
                           Back to Details
                         </button>
                       </div>
+                    ) : (
+                      activeView === "report" && (
+                        <div className="space-y-4">
+                          <p className="text-white/80">
+                            Complete a kitchen exhaust cleaning report for this
+                            job.
+                          </p>
+
+                          <button
+                            className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+                            onClick={() => setIsReportMode(true)}
+                          >
+                            {hasExistingReport
+                              ? "Edit Report"
+                              : "Create Report"}
+                          </button>
+
+                          <button
+                            className="mt-2 w-full rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
+                            onClick={() => setActiveView("details")}
+                          >
+                            Back to Details
+                          </button>
+                        </div>
+                      )
                     )}
                   </>
-                ) : (
-                  <EditJobModal
-                    job={job}
-                    onClose={closeModal}
-                    technicians={technicians}
-                  />
                 )}
               </motion.div>
             </motion.div>

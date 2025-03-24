@@ -126,7 +126,7 @@ export const fetchDueInvoices = async ({
     const dueInvoices = await fetchDueInvoicesFromDB(monthNumber, numericYear);
     if (!dueInvoices || dueInvoices.length === 0) return [];
 
-    await createOrUpdateJobsDueSoon(dueInvoices);
+    await createOrUpdateJobsDueSoon(dueInvoices as any[]);
     const jobsDue = await fetchJobsDue(monthNumber, numericYear);
     if (!jobsDue || jobsDue.length === 0) return [];
 

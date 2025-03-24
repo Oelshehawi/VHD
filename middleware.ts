@@ -1,23 +1,89 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
-
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
-  "/",
   "/manifest.json",
+  "/acceptToken(.*)",
+  "/images/(.*)",
+  "/favicon.ico",
 ]);
 
-export default clerkMiddleware(async (auth, request) => {
+// Define client portal routes
+const isClientPortalRoute = createRouteMatcher(["/client-portal/(.*)"]);
 
-  if (request.nextUrl.pathname === "/") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
+// Define admin routes
+const isAdminRoute = createRouteMatcher([
+  "/dashboard(.*)",
+  "/database(.*)",
+  "/invoices",
+  "/reports(.*)",
+  "/payroll(.*)",
+]);
+
+// Define employee routes
+const isEmployeeRoute = createRouteMatcher(["/employee-dashboard(.*)"]);
+
+export default clerkMiddleware(async (auth, req) => {
+  const { userId, sessionClaims } = await auth();
+
+  // Check user types
+  const isManager = (sessionClaims as any)?.metadata?.isManager === true;
+  const isClientPortalUser =
+    (sessionClaims as any)?.metadata?.isClientPortalUser === true;
+  // Employee is anyone who is neither manager nor client portal user
+  const isEmployee = userId && !isManager && !isClientPortalUser;
+
+  // Handle public routes - always accessible
+  if (isPublicRoute(req)) {
+    return NextResponse.next();
   }
 
-  if (!isPublicRoute(request)) {
-    await auth.protect();
+  // If not authenticated, redirect to sign-in
+  if (!userId) {
+    // Special case for client portal
+    if (isClientPortalRoute(req)) {
+      return NextResponse.redirect(
+        new URL("/client-portal/auth-error", req.url),
+      );
+    }
+    return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
+  // Redirect root to appropriate dashboard based on user type
+  if (req.nextUrl.pathname === "/") {
+    if (isClientPortalUser) {
+      return NextResponse.redirect(
+        new URL("/client-portal/dashboard", req.url),
+      );
+    } else if (isManager) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    } else {
+      return NextResponse.redirect(new URL("/employee-dashboard", req.url));
+    }
+  }
+
+  // Access control based on user types
+  if (isClientPortalUser) {
+    // Client portal users should only access client portal routes
+    if (!isClientPortalRoute(req)) {
+      return NextResponse.redirect(
+        new URL("/client-portal/dashboard", req.url),
+      );
+    }
+  } else if (isEmployee) {
+    // Employees should not access admin routes or client portal routes
+    if (isAdminRoute(req) || isClientPortalRoute(req)) {
+      return NextResponse.redirect(new URL("/employee-dashboard", req.url));
+    }
+  } else if (isManager) {
+    // Managers should not access client portal routes
+    if (isClientPortalRoute(req)) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+  }
+
+  // Continue for all other valid routes
   return NextResponse.next();
 });
 
