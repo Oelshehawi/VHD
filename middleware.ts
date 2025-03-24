@@ -7,10 +7,11 @@ const isPublicRoute = createRouteMatcher([
   "/acceptToken(.*)",
   "/images/(.*)",
   "/favicon.ico",
+  "/client-portal/auth-error"
 ]);
 
 // Define client portal routes
-const isClientPortalRoute = createRouteMatcher(["/client-portal/(.*)"]);
+const isClientPortalRoute = createRouteMatcher(["/client-portal/((?!auth-error).*)"]);
 
 // Define admin routes
 const isAdminRoute = createRouteMatcher([
