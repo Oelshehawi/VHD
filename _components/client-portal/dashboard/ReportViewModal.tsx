@@ -379,15 +379,6 @@ const ReportModal: React.FC<ReportModalProps> = ({
                     </p>
                   </div>
 
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
-                      Additional Notes
-                    </h3>
-                    <p className="whitespace-pre-wrap text-sm">
-                      {report.notes || "No additional notes."}
-                    </p>
-                  </div>
-
                   {report.comments && (
                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                       <h3 className="mb-2 text-sm font-semibold text-gray-700">
