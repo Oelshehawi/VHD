@@ -100,13 +100,10 @@ const JobItem = ({
       "Unknown",
   );
 
-  // Find the current user's technician info from the assigned technicians
-  const currentTechnician = technicians.find((tech) =>
+  // Filter technicians to only include those assigned to this job
+  const assignedTechnicians = technicians.filter((tech) =>
     job.assignedTechnicians.includes(tech.id),
-  ) || {
-    id: job.assignedTechnicians[0] || "unknown",
-    name: "Unknown Technician",
-  };
+  );
 
   // Check if a report already exists for this job
   useEffect(() => {
@@ -233,7 +230,7 @@ const JobItem = ({
                   <ReportModal
                     schedule={job}
                     onClose={closeModal}
-                    technician={currentTechnician}
+                    technicians={assignedTechnicians}
                   />
                 ) : isEditMode ? (
                   <EditJobModal

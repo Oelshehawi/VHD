@@ -22,7 +22,7 @@ type InspectionItemType = {
 interface ReportFormProps {
   schedule: ScheduleType;
   onClose: () => void;
-  technician: TechnicianType;
+  technicians: TechnicianType[];
 }
 
 interface FormData {
@@ -57,10 +57,15 @@ interface FormData {
   recommendations?: string;
 }
 
-const ReportModal = ({ schedule, onClose, technician }: ReportFormProps) => {
+const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
   const [step, setStep] = useState<FormStep>("basic");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // If there's only one technician, pre-select them
+  const defaultTechnicianId =
+    technicians.length === 1 ? technicians[0]?.id : "";
+
   const [formData, setFormData] = useState<FormData>({
     scheduleId: schedule._id.toString(),
     invoiceId:
@@ -68,7 +73,7 @@ const ReportModal = ({ schedule, onClose, technician }: ReportFormProps) => {
         ? schedule.invoiceRef
         : schedule.invoiceRef.toString(),
     dateCompleted: new Date(),
-    technicianId: technician.id,
+    technicianId: defaultTechnicianId || "",
     inspectionItems: [],
     equipmentDetails: {
       hoodType: "",
@@ -247,6 +252,13 @@ const ReportModal = ({ schedule, onClose, technician }: ReportFormProps) => {
   };
 
   const handleSubmit = async () => {
+    // Validate technician is selected
+    if (!formData.technicianId) {
+      toast.error("Please select a technician");
+      setStep("basic");
+      return;
+    }
+
     setSaving(true);
     try {
       // Create a serialized version with ISO date strings
@@ -406,6 +418,34 @@ const ReportModal = ({ schedule, onClose, technician }: ReportFormProps) => {
         >
           {step === "basic" && (
             <div className="space-y-4">
+              <div>
+                <h3 className="mb-2 font-semibold">Technician</h3>
+                {technicians.length === 1 ? (
+                  <div className="flex items-center rounded-md border border-gray-300 bg-gray-50 p-2">
+                    <span>{technicians[0]?.name}</span>
+                    <input type="hidden" value={technicians[0]?.id} />
+                  </div>
+                ) : (
+                  <select
+                    value={formData.technicianId}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        technicianId: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-md border border-gray-300 p-2"
+                  >
+                    <option value="">Select Technician</option>
+                    {technicians.map((tech) => (
+                      <option key={tech.id} value={tech.id}>
+                        {tech.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
               <div>
                 <h3 className="mb-2 font-semibold">Date of Service</h3>
                 <input
