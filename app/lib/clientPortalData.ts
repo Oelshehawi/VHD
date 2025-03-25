@@ -282,8 +282,11 @@ export async function fetchClientInvoices(
       dateIssued: invoice.dateIssued.toLocaleString("en-US", {
         timeZone: "UTC",
       }),
-      totalAmount: invoice.items?.reduce((acc: number, item: any) => 
-        acc + (parseFloat(item.price) || 0), 0) || 0,
+      totalAmount:
+        invoice.items?.reduce(
+          (acc: number, item: any) => acc + (parseFloat(item.price) || 0),
+          0,
+        ) || 0,
       status: invoice.status || "pending",
       jobTitle: invoice.jobTitle || "",
     }));
@@ -434,31 +437,23 @@ export async function fetchInvoiceDetails(
  */
 export async function fetchReportDetails(
   reportId: string,
-  clientId: string,
 ): Promise<ReportType | null> {
   // Verify client auth
-  const { userId, sessionClaims } = await auth();
+  const { userId } = await auth();
   if (!userId) {
     throw new Error("Not authenticated");
   }
-
   await connectMongo();
   try {
-    // First, get all invoices for this client
-    const clientInvoices = await Invoice.find({
-      clientId: new ObjectId(clientId),
-    }).lean();
-
-    // Get invoice IDs
-    const invoiceIds = clientInvoices.map((invoice) => invoice._id);
-
-    // Find the report and verify it belongs to one of the client's invoices
     const report = await Report.findOne({
       _id: new ObjectId(reportId),
-      invoiceId: { $in: invoiceIds },
     }).lean();
 
-    if (!report) {
+    const invoice = await Invoice.findOne({
+      _id: report?.invoiceId,
+    }).lean();
+
+    if (!report || !invoice) {
       console.log("Report not found or does not belong to client");
       return null;
     }
@@ -479,8 +474,17 @@ export async function fetchReportDetails(
         typeof reportDoc.invoiceId === "string"
           ? reportDoc.invoiceId
           : reportDoc.invoiceId.toString(),
-      dateCompleted: reportDoc.dateCompleted,
+      dateCompleted: reportDoc.dateCompleted.toLocaleString("en-US", {
+        timeZone: "UTC",
+      }),
       technicianId: reportDoc.technicianId || "",
+      lastServiceDate:
+        reportDoc.lastServiceDate.toLocaleString("en-US", {
+          timeZone: "UTC",
+        }) || "",
+      fuelType: reportDoc.fuelType || "",
+      cookingVolume: reportDoc.cookingVolume || "",
+      cookingEquipment: reportDoc.cookingEquipment || {},
       equipmentDetails: reportDoc.equipmentDetails || {},
       cleaningDetails: reportDoc.cleaningDetails || {
         hoodCleaned: false,
@@ -488,8 +492,11 @@ export async function fetchReportDetails(
         ductworkCleaned: false,
         fanCleaned: false,
       },
+      recommendedCleaningFrequency: reportDoc.recommendedCleaningFrequency || 0,
       recommendations: reportDoc.recommendations || "",
-      notes: reportDoc.notes || "",
+      comments: reportDoc.comments || "",
+      inspectionItems: reportDoc.inspectionItems || {},
+      jobTitle: invoice.jobTitle || "",
     };
 
     return reportData;

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import PortalAccessManager from "./PortalAccessManager";
+import { useRouter } from "next/navigation";
 
 interface ClientPortalAccessProps {
   clientId: string;
@@ -13,16 +14,31 @@ export default function ClientPortalAccess({
   clientName,
 }: ClientPortalAccessProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+
+  const handleViewAsClient = () => {
+    router.push(`/client-portal/dashboard?clientId=${clientId}`);
+  };
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setIsModalOpen(true)}
-        className="flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-      >
-        Client Portal Access
-      </button>
+      <div className="flex space-x-2">
+        <button
+          type="button"
+          onClick={() => setIsModalOpen(true)}
+          className="flex items-center justify-center rounded-md border border-transparent bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
+          Client Portal Access
+        </button>
+
+        <button
+          type="button"
+          onClick={handleViewAsClient}
+          className="flex items-center justify-center rounded-md border border-transparent bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+        >
+          View Client Portal
+        </button>
+      </div>
 
       {isModalOpen && (
         <div className="fixed inset-0 z-10 overflow-y-auto">

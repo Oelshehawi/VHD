@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -48,6 +48,15 @@ const TabPanel = ({
 
   const [selectedReport, setSelectedReport] = useState<ReportType | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  // Create a map of invoice IDs to job titles for easy lookup
+  const invoiceJobTitleMap = useMemo(() => {
+    const map = new Map<string, string>();
+    recentInvoices.forEach((invoice) => {
+      map.set(invoice._id, invoice.jobTitle || "Service Report");
+    });
+    return map;
+  }, [recentInvoices]);
 
   // Sort invoices by invoice number (assuming invoiceId is a string that can be parsed as a number)
   const sortedInvoices = [...recentInvoices].sort((a, b) => {
@@ -325,8 +334,12 @@ const TabPanel = ({
                       >
                         <div className="mb-3 flex-1 sm:mb-0">
                           <div className="font-medium text-gray-900">
-                            Exhaust Hood System Cleaning -{" "}
-                            {formatDateFns(report.dateCompleted)}
+                            {invoiceJobTitleMap.get(
+                              typeof report.invoiceId === "string"
+                                ? report.invoiceId
+                                : report.invoiceId.toString(),
+                            ) || "Service Report"}{" "}
+                            - {formatDateFns(report.dateCompleted)}
                           </div>
                           <div className="mt-1 text-xs text-gray-500 sm:text-sm">
                             {report.cleaningDetails && (
@@ -342,14 +355,17 @@ const TabPanel = ({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          {/* <Link
-                            href={`/client-portal/reports/${report._id}/pdf`}
-                            passHref
+                          <Link
+                            href={`/client-portal/reports/${report._id?.toString()}/pdf`}
                             className="flex items-center rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-darkGreen hover:bg-gray-100 sm:px-3 sm:py-1.5 sm:text-sm"
+                            target="_blank"
+                            rel="noopener noreferrer"
                           >
                             <ArrowDownTrayIcon className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-                            <span className="xs:inline hidden">Download</span>
-                          </Link> */}
+                            <span className="xs:inline hidden sm:inline">
+                              Download
+                            </span>
+                          </Link>
                           <button
                             onClick={() => openReportModal(report)}
                             className="hover:bg-darkGreen-2 flex items-center rounded-md bg-darkGreen px-2 py-1 text-xs font-medium text-white sm:px-3 sm:py-1.5 sm:text-sm"

@@ -7,11 +7,13 @@ const isPublicRoute = createRouteMatcher([
   "/acceptToken(.*)",
   "/images/(.*)",
   "/favicon.ico",
-  "/client-portal/auth-error"
+  "/client-portal/auth-error",
 ]);
 
 // Define client portal routes
-const isClientPortalRoute = createRouteMatcher(["/client-portal/((?!auth-error).*)"]);
+const isClientPortalRoute = createRouteMatcher([
+  "/client-portal/((?!auth-error).*)",
+]);
 
 // Define admin routes
 const isAdminRoute = createRouteMatcher([
@@ -22,8 +24,6 @@ const isAdminRoute = createRouteMatcher([
   "/payroll(.*)",
 ]);
 
-// Define employee routes
-const isEmployeeRoute = createRouteMatcher(["/employee-dashboard(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
@@ -78,9 +78,10 @@ export default clerkMiddleware(async (auth, req) => {
       return NextResponse.redirect(new URL("/employee-dashboard", req.url));
     }
   } else if (isManager) {
-    // Managers should not access client portal routes
+    // Managers can access both admin and client portal routes
     if (isClientPortalRoute(req)) {
-      return NextResponse.redirect(new URL("/dashboard", req.url));
+      // Allow access to client portal
+      return NextResponse.next();
     }
   }
 

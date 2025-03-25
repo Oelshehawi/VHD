@@ -149,7 +149,7 @@ export interface ReportType {
     fanCleaned: boolean;
   };
   recommendations?: string;
-  notes?: string;
+  jobTitle?: string;
 }
 
 export interface SignatureType {

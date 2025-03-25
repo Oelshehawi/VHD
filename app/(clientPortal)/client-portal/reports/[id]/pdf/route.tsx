@@ -1,5 +1,4 @@
 import {
-  fetchClientData,
   fetchReportDetails,
   fetchTechnicianByClerkId,
 } from "../../../../../lib/clientPortalData";
@@ -19,7 +18,6 @@ import {
 } from "@react-pdf/renderer";
 import fs from "fs";
 import path from "path";
-import { auth } from "@clerk/nextjs/server";
 
 const logoPath = path.resolve(process.cwd(), "public", "images", "logo.png");
 const logoBuffer = fs.readFileSync(logoPath);
@@ -38,10 +36,10 @@ Font.register({
 const styles = StyleSheet.create({
   page: {
     fontFamily: "Lato",
-    fontSize: 10,
-    paddingTop: 30,
-    paddingBottom: 50,
-    paddingHorizontal: 30,
+    fontSize: 9,
+    paddingTop: 25,
+    paddingBottom: 30,
+    paddingHorizontal: 25,
     color: "#000",
   },
   logoContainer: {
@@ -52,13 +50,13 @@ const styles = StyleSheet.create({
     right: 0,
     width: "10%",
     padding: 0,
-    height: 100,
+    height: 80,
     zIndex: 1,
     opacity: 0.7,
   },
   header: {
     position: "relative",
-    marginBottom: 20,
+    marginBottom: 15,
   },
   headerWave: {
     position: "absolute",
@@ -73,12 +71,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   reportTitle: {
-    fontSize: 28,
+    fontSize: 24,
     color: "#003e29",
     fontWeight: "bold",
   },
   companyTitle: {
-    fontSize: 18,
+    fontSize: 16,
     color: "#003e29",
     fontWeight: "bold",
     zIndex: 2,
@@ -88,7 +86,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 60,
+    height: 30,
     backgroundColor: "#003e29",
     color: "#FFFFFF",
     flexDirection: "row",
@@ -97,25 +95,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 25,
   },
   footerText: {
-    fontSize: 10,
+    fontSize: 9,
   },
   section: {
-    marginTop: 20,
+    marginTop: 10,
     borderWidth: 1,
     borderColor: "#ccc",
     borderRadius: 4,
-    padding: 10,
+    padding: 8,
+  },
+  rowContainer: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginTop: 10,
+    gap: 8,
+  },
+  columnSection: {
+    flex: 1,
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 4,
+    padding: 8,
   },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "bold",
     color: "#003e29",
-    marginBottom: 10,
+    marginBottom: 6,
   },
   table: {
     display: "flex",
     width: "auto",
-    marginTop: 5,
+    marginTop: 3,
     borderStyle: "solid",
     borderWidth: 1,
     borderColor: "#ccc",
@@ -130,7 +141,7 @@ const styles = StyleSheet.create({
     color: "#fff",
   },
   tableCell: {
-    padding: 5,
+    padding: 3,
     borderWidth: 0,
     borderRightWidth: 1,
     borderRightColor: "#ccc",
@@ -138,22 +149,22 @@ const styles = StyleSheet.create({
   infoGroup: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 15,
+    marginBottom: 8,
+  },
+  infoRow: {
+    flexDirection: "row",
+    marginBottom: 3,
+    gap: 15,
   },
   infoItem: {
-    marginBottom: 5,
+    marginBottom: 3,
   },
   boldText: {
     fontWeight: "bold",
   },
-  technicianList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 10,
-  },
   technicianItem: {
     backgroundColor: "#f5f5f5",
-    padding: 5,
+    padding: 3,
     borderRadius: 4,
   },
 });
@@ -162,7 +173,6 @@ interface ReportData {
   _id: string;
   scheduleId: string;
   dateCompleted: string | Date;
-  clientId: string;
   technicianId: string;
   lastServiceDate?: string | Date;
   fuelType?: string;
@@ -186,14 +196,13 @@ interface ReportData {
   };
   recommendations?: string;
   comments?: string;
-  notes?: string;
   recommendedCleaningFrequency?: number;
   inspectionItems?: Record<string, string>;
+  jobTitle?: string;
 }
 
 interface ReportPdfProps {
   report: ReportData;
-  clientName: string;
   technician: {
     id: string;
     firstName: string;
@@ -203,11 +212,7 @@ interface ReportPdfProps {
   };
 }
 
-const ReportPdf: React.FC<ReportPdfProps> = ({
-  report,
-  clientName,
-  technician,
-}) => (
+const ReportPdf: React.FC<ReportPdfProps> = ({ report, technician }) => (
   <Document>
     <Page size="A4" style={styles.page}>
       {/* Header */}
@@ -231,21 +236,22 @@ const ReportPdf: React.FC<ReportPdfProps> = ({
         <Image src={{ data: logoBuffer, format: "png" }} />
       </View>
 
-      {/* Report Info */}
+      {/* Report Info including Technician */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Report Information</Text>
         <View style={styles.infoGroup}>
           <View>
             <Text style={styles.infoItem}>
-              <Text style={styles.boldText}>Report ID:</Text>{" "}
-              {report._id ? report._id.toString() : report.scheduleId}
-            </Text>
-            <Text style={styles.infoItem}>
               <Text style={styles.boldText}>Date:</Text>{" "}
               {formatDateFns(report.dateCompleted)}
             </Text>
             <Text style={styles.infoItem}>
-              <Text style={styles.boldText}>Client:</Text> {clientName}
+              <Text style={styles.boldText}>Client:</Text>{" "}
+              {report.jobTitle || "N/A"}
+            </Text>
+            <Text style={styles.infoItem}>
+              <Text style={styles.boldText}>Technician:</Text>{" "}
+              {technician.fullName}
             </Text>
           </View>
           <View>
@@ -267,169 +273,162 @@ const ReportPdf: React.FC<ReportPdfProps> = ({
         </View>
       </View>
 
-      {/* Technician */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Technician</Text>
-        <View style={styles.technicianItem}>
-          <Text>{technician.fullName}</Text>
-        </View>
-      </View>
-
-      {/* Equipment Details */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Equipment Details</Text>
-        <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Component</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Type</Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Hood</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.equipmentDetails?.hoodType || "N/A"}
-            </Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Filters</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.equipmentDetails?.filterType || "N/A"}
-            </Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Ductwork</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.equipmentDetails?.ductworkType || "N/A"}
-            </Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Fan</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.equipmentDetails?.fanType || "N/A"}
-            </Text>
+      {/* All four tables in a dual-row layout */}
+      <View style={styles.rowContainer} wrap={false}>
+        {/* Equipment Details */}
+        <View style={styles.columnSection}>
+          <Text style={styles.sectionTitle}>Equipment Details</Text>
+          <View style={styles.table}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Component</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Type</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Hood</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.equipmentDetails?.hoodType || "N/A"}
+              </Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Filters</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.equipmentDetails?.filterType || "N/A"}
+              </Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Ductwork</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.equipmentDetails?.ductworkType || "N/A"}
+              </Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Fan</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.equipmentDetails?.fanType || "N/A"}
+              </Text>
+            </View>
           </View>
         </View>
-      </View>
 
-      {/* Cleaning Details */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Cleaning Details</Text>
-        <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Component</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Status</Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Hood</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.cleaningDetails?.hoodCleaned ? "Cleaned" : "Not Cleaned"}
-            </Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Filters</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.cleaningDetails?.filtersCleaned
-                ? "Cleaned"
-                : "Not Cleaned"}
-            </Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Ductwork</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.cleaningDetails?.ductworkCleaned
-                ? "Cleaned"
-                : "Not Cleaned"}
-            </Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Fan</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.cleaningDetails?.fanCleaned ? "Cleaned" : "Not Cleaned"}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Cooking Equipment */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Cooking Equipment</Text>
-        <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Equipment</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Present</Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Griddles</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.cookingEquipment?.griddles ? "Yes" : "No"}
-            </Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Deep Fat Fryers</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.cookingEquipment?.deepFatFryers ? "Yes" : "No"}
-            </Text>
-          </View>
-          <View style={styles.tableRow}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Woks</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>
-              {report.cookingEquipment?.woks ? "Yes" : "No"}
-            </Text>
+        {/* Cleaning Details */}
+        <View style={styles.columnSection}>
+          <Text style={styles.sectionTitle}>Cleaning Details</Text>
+          <View style={styles.table}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Component</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Status</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Hood</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.cleaningDetails?.hoodCleaned
+                  ? "Cleaned"
+                  : "Not Cleaned"}
+              </Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Filters</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.cleaningDetails?.filtersCleaned
+                  ? "Cleaned"
+                  : "Not Cleaned"}
+              </Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Ductwork</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.cleaningDetails?.ductworkCleaned
+                  ? "Cleaned"
+                  : "Not Cleaned"}
+              </Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Fan</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.cleaningDetails?.fanCleaned ? "Cleaned" : "Not Cleaned"}
+              </Text>
+            </View>
           </View>
         </View>
       </View>
 
-      {/* Inspection Items */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Inspection Items</Text>
-        <View style={styles.table}>
-          <View style={[styles.tableRow, styles.tableHeader]}>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Item</Text>
-            <Text style={[styles.tableCell, { flex: 1 }]}>Status</Text>
+      {/* Second row of tables */}
+      <View style={styles.rowContainer} wrap={false}>
+        {/* Cooking Equipment */}
+        <View style={styles.columnSection}>
+          <Text style={styles.sectionTitle}>Cooking Equipment</Text>
+          <View style={styles.table}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Equipment</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Present</Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Griddles</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.cookingEquipment?.griddles ? "Yes" : "No"}
+              </Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                Deep Fat Fryers
+              </Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.cookingEquipment?.deepFatFryers ? "Yes" : "No"}
+              </Text>
+            </View>
+            <View style={styles.tableRow}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Woks</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>
+                {report.cookingEquipment?.woks ? "Yes" : "No"}
+              </Text>
+            </View>
           </View>
-          {report.inspectionItems &&
-            Object.entries(report.inspectionItems).map(([key, value]) => {
-              const label = key
-                .replace(/([A-Z])/g, " $1")
-                .replace(/^./, (str) => str.toUpperCase())
-                .replace(/([A-Z])\s/g, "$1");
-              return (
-                <View key={key} style={styles.tableRow}>
-                  <Text style={[styles.tableCell, { flex: 1 }]}>{label}</Text>
-                  <Text style={[styles.tableCell, { flex: 1 }]}>
-                    {value || "N/A"}
-                  </Text>
-                </View>
-              );
-            })}
+        </View>
+
+        {/* Inspection Items with optimized rendering */}
+        <View style={styles.columnSection}>
+          <Text style={styles.sectionTitle}>Inspection Items</Text>
+          <View style={styles.table}>
+            <View style={[styles.tableRow, styles.tableHeader]}>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Item</Text>
+              <Text style={[styles.tableCell, { flex: 1 }]}>Status</Text>
+            </View>
+            {report.inspectionItems &&
+              Object.entries(report.inspectionItems)
+                .slice(0, 20)
+                .map(([key, value], index) => {
+                  const label = key
+                    .replace(/([A-Z])/g, " $1")
+                    .replace(/^./, (str) => str.toUpperCase())
+                    .replace(/([A-Z])\s/g, "$1");
+                  return (
+                    <View key={key} style={styles.tableRow}>
+                      <Text style={[styles.tableCell, { flex: 1 }]}>
+                        {label}
+                      </Text>
+                      <Text style={[styles.tableCell, { flex: 1 }]}>
+                        {value || "N/A"}
+                      </Text>
+                    </View>
+                  );
+                })}
+          </View>
         </View>
       </View>
 
       {/* Recommendations and Notes */}
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Recommendations</Text>
-        <Text style={{ marginBottom: 10 }}>
+      <View style={styles.section} wrap={false}>
+        <Text style={styles.sectionTitle}>Recommendations & Notes</Text>
+        <Text style={{ fontSize: 9 }}>
           {report.recommendations || "No recommendations provided."}
         </Text>
         {report.comments && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
-              Additional Notes
-            </Text>
-            <Text>{report.comments}</Text>
-          </>
-        )}
-        {report.notes && (
-          <>
-            <Text style={[styles.sectionTitle, { marginTop: 10 }]}>
-              Technician Notes
-            </Text>
-            <Text>{report.notes}</Text>
-          </>
+          <Text style={{ fontSize: 9, marginTop: 3 }}>{report.comments}</Text>
         )}
       </View>
 
       {/* Footer */}
-      <View style={styles.footer}>
+      <View fixed style={styles.footer}>
         <Text style={[styles.footerText, { marginLeft: 25 }]}>
           604-273-8717
         </Text>
@@ -451,26 +450,14 @@ export async function GET(
   { params }: { params: { id: string } },
 ) {
   try {
-    // Get client ID from auth
-    const { sessionClaims } = await auth();
-    const clientId = (sessionClaims as any)?.metadata?.clientId || "";
-
     // Add rate limiting header
     const response = new Response();
     response.headers.set("X-RateLimit-Limit", "100");
 
     // Fetch data
-    const report = await fetchReportDetails(params.id, clientId);
+    const report = await fetchReportDetails(params.id);
     if (!report) {
       return new Response(JSON.stringify({ error: "Report not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const client = await fetchClientData(clientId);
-    if (!client) {
-      return new Response(JSON.stringify({ error: "Client not found" }), {
         status: 404,
         headers: { "Content-Type": "application/json" },
       });
@@ -490,7 +477,6 @@ export async function GET(
       _id: report._id ? report._id.toString() : params.id,
       scheduleId: report.scheduleId ? report.scheduleId.toString() : params.id,
       dateCompleted: report.dateCompleted || new Date(),
-      clientId: clientId,
       technicianId: report.technicianId,
       lastServiceDate: report.lastServiceDate,
       fuelType: report.fuelType,
@@ -500,29 +486,21 @@ export async function GET(
       cookingEquipment: report.cookingEquipment,
       recommendations: report.recommendations,
       comments: report.comments,
-      notes: report.notes,
       recommendedCleaningFrequency: report.recommendedCleaningFrequency,
       inspectionItems: report.inspectionItems,
+      jobTitle: report.jobTitle || "Unknown Client",
     };
-
-    // Get job title for the filename (either from report or fallback)
-    const jobTitle = report.equipmentDetails?.hoodType || "Service-Report";
-    const safeJobTitle = jobTitle.replace(/[^a-zA-Z0-9-_]/g, "-");
 
     // Generate PDF buffer
     const pdfBuffer = await renderToBuffer(
-      <ReportPdf
-        report={reportData}
-        clientName={client.clientName}
-        technician={technician}
-      />,
+      <ReportPdf report={reportData} technician={technician} />,
     );
 
     // Return response with enhanced security headers
     return new Response(pdfBuffer, {
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=Report-${safeJobTitle}-${reportData.scheduleId}.pdf`,
+        "Content-Disposition": `attachment; filename=Report - ${report.jobTitle || "Unknown Client"}.pdf`,
         "Cache-Control": "no-store, max-age=0",
         "Content-Security-Policy": "default-src 'self'",
         "X-Content-Type-Options": "nosniff",

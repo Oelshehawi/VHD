@@ -6,6 +6,7 @@ import {
   fetchClientReports,
 } from "../../../lib/clientPortalData";
 import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 
 // Import components
 import WelcomeBanner from "../../../../_components/client-portal/dashboard/WelcomeBanner";
@@ -16,20 +17,74 @@ import TabPanel from "../../../../_components/client-portal/dashboard/TabPanel";
 // Google review URL
 const GOOGLE_REVIEW_URL = "https://g.page/r/CRLDtlapvtO3EAE/review";
 
-export default async function ClientDashboardPage() {
-  // Verify client access and get client ID
+interface ClientDashboardPageProps {
+  searchParams: { clientId?: string };
+}
+
+export default async function ClientDashboardPage({
+  searchParams,
+}: ClientDashboardPageProps) {
+  // Verify user authentication
   const { sessionClaims } = await auth();
-  const clientId = (sessionClaims as any)?.metadata?.clientId;
+  const isAdmin = (sessionClaims as any)?.metadata?.isManager === true;
+
+  let clientId: string;
+
+  // If admin is viewing as client (with clientId query param)
+  if (searchParams.clientId && isAdmin) {
+    clientId = searchParams.clientId;
+  } else {
+    // Regular client portal user flow
+    clientId = (sessionClaims as any)?.metadata?.clientId;
+
+    // If not admin and no clientId in claims, redirect to login
+    if (!clientId) {
+      redirect("/sign-in");
+    }
+  }
 
   // Fetch client data and other information
-  const client = await fetchClientData(clientId || "");
-  const upcomingServices = await fetchClientUpcomingSchedules(clientId || "");
-  const recentServices = await fetchClientPastSchedules(clientId || "");
-  const recentInvoices = await fetchClientInvoices(clientId || "");
-  const recentReports = await fetchClientReports(clientId || "");
+  const client = await fetchClientData(clientId);
+  const upcomingServices = await fetchClientUpcomingSchedules(clientId);
+  const recentServices = await fetchClientPastSchedules(clientId);
+  const recentInvoices = await fetchClientInvoices(clientId);
+  const recentReports = await fetchClientReports(clientId);
+
+  // Add admin viewing banner if needed
+  const isAdminView = isAdmin && searchParams.clientId;
 
   return (
     <div className="mx-auto max-w-7xl">
+      {/* Admin Viewing Banner */}
+      {isAdminView && (
+        <div className="mb-4 rounded-md bg-amber-100 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg
+                className="h-5 w-5 text-amber-400"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+              >
+                <path
+                  fillRule="evenodd"
+                  d="M8.485 3.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 3.495zM10 6a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 6zm0 9a1 1 0 100-2 1 1 0 000 2z"
+                  clipRule="evenodd"
+                />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-amber-800">Admin View</h3>
+              <div className="mt-2 text-sm text-amber-700">
+                <p>
+                  You are currently viewing the client portal as{" "}
+                  {client.clientName}.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Welcome Banner */}
       <WelcomeBanner clientName={client.clientName} />
 
