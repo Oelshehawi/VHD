@@ -88,6 +88,32 @@ export default async function handler(
       return res.status(404).json({ error: "Schedule not found" });
     }
 
+    // For photo uploads, check if the URL already exists to prevent duplicates
+    if (type !== "signature" && schedule.photos && schedule.photos.length > 0) {
+      const urlExists = schedule.photos.some(
+        (photo) => photo.url === cloudinaryUrl,
+      );
+
+      if (urlExists) {
+        return res.status(200).json({
+          success: true,
+          message: "Photo already exists",
+        });
+      }
+    }
+
+    // For signature, check if it's the same URL to avoid unnecessary updates
+    if (
+      type === "signature" &&
+      schedule.signature &&
+      schedule.signature.url === cloudinaryUrl
+    ) {
+      return res.status(200).json({
+        success: true,
+        message: "Signature already exists",
+      });
+    }
+
     // Create update query object
     const updateQuery: Record<string, any> = {};
 
