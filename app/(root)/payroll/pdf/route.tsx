@@ -13,9 +13,8 @@ import {
   fetchScheduledJobsByPayrollPeriod,
 } from "../../../lib//scheduleAndShifts";
 
-
-export const dynamic = 'force-dynamic'
-export const revalidate = 0
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 interface PaystubProps {
   employer: {
     name: string;
@@ -261,7 +260,6 @@ export async function GET(req: NextRequest) {
     const { searchParams } = new URL(req.url);
     const technicianId = searchParams.get("technicianId");
     const payrollPeriodId = searchParams.get("payrollPeriodId");
-
 
     if (!technicianId || !payrollPeriodId) {
       return NextResponse.json(

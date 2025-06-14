@@ -36,7 +36,10 @@ const EmployeesTable = ({
   // Calculate payroll data for each technician
   const employeeData: EmployeePayrollData[] = useMemo(() => {
     return technicians
-      .filter((tech) => tech.name !== "Ziad" && tech.name !== "Omar" && tech.name !== "Migo")
+      .filter(
+        (tech) =>
+          tech.name !== "Ziad" && tech.name !== "Omar" && tech.name !== "Migo",
+      )
       .map((tech) => {
         const techSchedules = schedules.filter((schedule) =>
           schedule.assignedTechnicians.includes(tech.id),
@@ -45,7 +48,7 @@ const EmployeesTable = ({
           (acc, schedule) => acc + (schedule.hours || 0),
           0,
         );
-        const grossPay = totalHours * tech.hourlyRate;
+        const grossPay = totalHours * (tech.hourlyRate || 0);
 
         return {
           technician: tech,
@@ -118,7 +121,7 @@ const EmployeesTable = ({
                   </td>
                   <td className="flex justify-start whitespace-nowrap px-6 py-4 text-sm font-medium">
                     <GeneratePaystub
-                    technicianName={technician.name}
+                      technicianName={technician.name}
                       technicianId={technician.id}
                       payrollPeriodId={payrollPeriod._id as string}
                     />

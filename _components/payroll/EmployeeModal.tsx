@@ -9,7 +9,6 @@ import { useForm, Controller } from "react-hook-form";
 import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
 import { updateShiftHours } from "../../app/lib/actions/scheduleJobs.actions";
-import Select from "react-select";
 import { formatDateFns } from "../../app/lib/utils";
 
 interface EmployeeModalProps {
@@ -40,6 +39,12 @@ const EmployeeModal = ({
   });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [originalShifts, setOriginalShifts] = useState<
+    {
+      scheduleId: string;
+      hoursWorked: number;
+    }[]
+  >([]);
 
   useEffect(() => {
     if (isOpen) {
@@ -49,9 +54,10 @@ const EmployeeModal = ({
         )
         .map((schedule) => ({
           scheduleId: schedule._id.toString(),
-          hoursWorked: schedule.hours || 4,
+          hoursWorked: Number(schedule.hours) || 4,
         }));
 
+      setOriginalShifts(shiftData);
       reset({ shifts: shiftData });
     }
   }, [isOpen, technician, schedules, reset]);
@@ -59,7 +65,21 @@ const EmployeeModal = ({
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
-      const updatePromises = data.shifts.map((shift) =>
+      // Only update shifts that have actually changed
+      const changedShifts = data.shifts.filter((shift) => {
+        const originalShift = originalShifts.find(
+          (orig) => orig.scheduleId === shift.scheduleId,
+        );
+        return originalShift && originalShift.hoursWorked !== shift.hoursWorked;
+      });
+
+      if (changedShifts.length === 0) {
+        toast.success("No changes to save");
+        onClose();
+        return;
+      }
+
+      const updatePromises = changedShifts.map((shift) =>
         updateShiftHours({
           scheduleId: shift.scheduleId,
           hoursWorked: shift.hoursWorked,
@@ -67,7 +87,7 @@ const EmployeeModal = ({
       );
 
       await Promise.all(updatePromises);
-      toast.success("Shifts updated successfully");
+      toast.success(`Updated ${changedShifts.length} shift(s) successfully`);
       onClose();
     } catch (error) {
       console.error("Failed to update shifts:", error);
@@ -78,12 +98,6 @@ const EmployeeModal = ({
   };
 
   if (!isOpen) return null;
-
-  // Define options for hours worked
-  const hoursOptions = Array.from({ length: 8 }, (_, i) => ({
-    value: i + 1,
-    label: `${i + 1}`,
-  }));
 
   // Extract shifts assigned to the technician
   const assignedSchedules = schedules.filter((schedule) =>
@@ -165,38 +179,17 @@ const EmployeeModal = ({
                         control={control}
                         name={`shifts.${index}.hoursWorked`}
                         render={({ field }) => (
-                          <Select
-                            options={hoursOptions}
-                            value={
-                              hoursOptions.find(
-                                (option) => option.value === field.value,
-                              ) || {
-                                value: field.value,
-                                label: `${field.value}`,
-                              }
-                            }
-                            onChange={(selectedOption) => {
-                              field.onChange(selectedOption?.value || 4);
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.5"
+                            value={field.value ?? 0}
+                            onChange={(e) => {
+                              const value = parseFloat(e.target.value) || 0;
+                              field.onChange(value);
                             }}
-                            className="w-24"
-                            styles={{
-                              control: (provided) => ({
-                                ...provided,
-                                borderColor: "#003e29",
-                                minHeight: "30px",
-                                boxShadow: "none",
-                                "&:hover": {
-                                  borderColor: "#003e29",
-                                },
-                              }),
-                              menu: (provided) => ({
-                                ...provided,
-                                zIndex: 1000,
-                              }),
-                              singleValue: (provided) => ({
-                                ...provided,
-                              }),
-                            }}
+                            onBlur={field.onBlur}
+                            className="w-24 rounded border border-darkGreen px-2 py-1 text-center focus:border-darkGreen focus:outline-none focus:ring-1 focus:ring-darkGreen"
                           />
                         )}
                       />
