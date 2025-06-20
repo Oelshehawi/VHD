@@ -12,7 +12,7 @@ import PayrollPeriodSelector from "../../../_components/payroll/PayrollPeriodSel
 import { auth } from "@clerk/nextjs/server";
 
 interface PayrollPageProps {
-  searchParams: { payrollPeriodId?: string };
+  searchParams: Promise<{ payrollPeriodId?: string }>;
 }
 
 const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
@@ -21,16 +21,19 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
   let schedules: ScheduleType[] = [];
   let selectedPayrollPeriod: PayrollPeriodType | null = null;
   const { sessionClaims }: any = await auth();
-  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+  const canManage =
+    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
-  if (searchParams.payrollPeriodId) {
+  const resolvedSearchParams = await searchParams;
+  if (resolvedSearchParams.payrollPeriodId) {
     selectedPayrollPeriod =
-      payrollPeriods.find((pp) => pp._id === searchParams.payrollPeriodId) ||
-      null;
+      payrollPeriods.find(
+        (pp) => pp._id === resolvedSearchParams.payrollPeriodId,
+      ) || null;
 
     if (selectedPayrollPeriod) {
       schedules = await fetchScheduledJobsByPayrollPeriod(
-        searchParams.payrollPeriodId,
+        resolvedSearchParams.payrollPeriodId,
       );
     } else {
       // If the payrollPeriodId is invalid, you might want to handle it

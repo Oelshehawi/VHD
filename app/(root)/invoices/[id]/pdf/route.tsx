@@ -64,10 +64,7 @@ const styles = StyleSheet.create({
   },
 
   // Header styles
-  header: {
-    position: "relative",
-    marginBottom: 20,
-  },
+  header: { position: "relative", marginBottom: 20 },
   headerWave: {
     position: "absolute",
     top: -270,
@@ -80,11 +77,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  invoiceTitle: {
-    fontSize: 36,
-    color: "#003e29",
-    fontWeight: "bold",
-  },
+  invoiceTitle: { fontSize: 36, color: "#003e29", fontWeight: "bold" },
   companyTitle: {
     fontSize: 18,
     color: "#003e29",
@@ -105,19 +98,10 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 25,
   },
-  footerText: {
-    fontSize: 10,
-  },
-  section: {
-    marginTop: 20,
-  },
-  infoGroup: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  infoList: {
-    flexGrow: 1,
-  },
+  footerText: { fontSize: 10 },
+  section: { marginTop: 20 },
+  infoGroup: { flexDirection: "row", justifyContent: "space-between" },
+  infoList: { flexGrow: 1 },
   table: {
     display: "flex",
     width: "auto",
@@ -126,42 +110,15 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#ccc",
   },
-  tableRow: {
-    flexDirection: "row",
-  },
-  tableHeader: {
-    backgroundColor: "#003e29",
-    color: "#fff",
-  },
-  tableCell: {
-    padding: 5,
-    borderWidth: 0,
-    borderBottomWidth: 1,
-  },
-  thankYou: {
-    marginTop: 20,
-    textAlign: "center",
-    fontWeight: "bold",
-  },
-  terms: {
-    marginTop: 20,
-  },
-  signature: {
-    marginTop: 60,
-    alignItems: "flex-end",
-  },
-  signatureLine: {
-    width: "50%",
-    borderTopWidth: 1,
-    borderTopColor: "#000",
-  },
-  signatureText: {
-    marginTop: 5,
-  },
-  noBreak: {
-    flexGrow: 1,
-    wrap: false,
-  },
+  tableRow: { flexDirection: "row" },
+  tableHeader: { backgroundColor: "#003e29", color: "#fff" },
+  tableCell: { padding: 5, borderWidth: 0, borderBottomWidth: 1 },
+  thankYou: { marginTop: 20, textAlign: "center", fontWeight: "bold" },
+  terms: { marginTop: 20 },
+  signature: { marginTop: 60, alignItems: "flex-end" },
+  signatureLine: { width: "50%", borderTopWidth: 1, borderTopColor: "#000" },
+  signatureText: { marginTop: 5 },
+  noBreak: { flexGrow: 1, wrap: false },
 });
 
 interface InvoicePdfProps {
@@ -227,11 +184,7 @@ const InvoicePdf: React.FC<InvoicePdfProps> = ({ invoiceData }) => (
       <View style={styles.section}>
         <Text style={{ fontWeight: "bold", margin: 0 }}>Bill To:</Text>
         <Text
-          style={{
-            color: "#003e29",
-            fontWeight: "bold",
-            paddingVertical: 3,
-          }}
+          style={{ color: "#003e29", fontWeight: "bold", paddingVertical: 3 }}
         >
           {invoiceData.jobTitle.trim()}
         </Text>
@@ -406,8 +359,10 @@ export async function GET(
     const response = new Response();
     response.headers.set("X-RateLimit-Limit", "100");
 
+    const { id } = await params;
+
     // Fetch data and prepare invoiceData
-    const invoice = (await fetchInvoiceById(params.id)) as InvoiceType;
+    const invoice = (await fetchInvoiceById(id)) as InvoiceType;
     if (!invoice) {
       return new Response(JSON.stringify({ error: "Invoice not found" }), {
         status: 404,

@@ -13,6 +13,7 @@ import {
 } from "../../lib/dashboard.data";
 import { FaPeopleGroup } from "react-icons/fa6";
 import YearlySales from "../../../_components/dashboard/YearlySales";
+//@ts-ignore
 import { auth } from "@clerk/nextjs/server";
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
 import { DashboardSearchParams } from "../../lib/typeDefinitions";
@@ -20,10 +21,11 @@ import { DashboardSearchParams } from "../../lib/typeDefinitions";
 const DashboardPage = async ({
   searchParams,
 }: {
-  searchParams: DashboardSearchParams;
+  searchParams: Promise<DashboardSearchParams>;
 }) => {
-  const currentYear = searchParams.salesYear
-    ? parseInt(searchParams.salesYear)
+  const resolvedSearchParams = await searchParams;
+  const currentYear = resolvedSearchParams.salesYear
+    ? parseInt(resolvedSearchParams.salesYear)
     : new Date().getFullYear();
 
   const salesData = await fetchYearlySalesData(currentYear);
@@ -31,7 +33,8 @@ const DashboardPage = async ({
   const pendingInvoices = (await getPendingInvoices()) || [];
   const { sessionClaims } = await auth();
 
-  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+  const canManage =
+    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
   if (!canManage)
     return (
@@ -63,7 +66,7 @@ const DashboardPage = async ({
           <YearlySales salesData={salesData} currentYear={currentYear} />
         </Suspense>
         <Suspense fallback={<JobsDueContainerSkeleton />}>
-          <JobsDueContainer searchParams={searchParams} />
+          <JobsDueContainer searchParams={resolvedSearchParams} />
         </Suspense>
       </div>
     </>

@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
+import { FaPlus } from "react-icons/fa";
 import { createClient } from "../../app/lib/actions/actions";
 import { isTextKey, isNumberKey } from "../../app/lib/utils";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
@@ -67,8 +68,9 @@ const AddClient = () => {
         <div className="fw-bold text-xl">Clients</div>
         <button
           onClick={() => setOpen(true)}
-          className="h-full rounded bg-darkGreen px-4 py-2 font-bold text-white shadow-sm hover:bg-darkBlue"
+          className="flex h-full items-center gap-2 rounded bg-darkGreen px-4 py-2 font-bold text-white shadow-sm hover:bg-darkBlue"
         >
+          <FaPlus className="h-4 w-4" />
           {"Add Client"}
         </button>
       </div>

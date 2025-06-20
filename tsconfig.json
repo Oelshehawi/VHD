@@ -6,7 +6,7 @@
       "esnext",
       "webworker"
     ],
-    "types":[
+    "types": [
       "@serwist/next/typings"
     ],
     "allowJs": true,
@@ -27,7 +27,8 @@
         "name": "next"
       }
     ],
-    "strictNullChecks": true
+    "strictNullChecks": true,
+    "target": "ES2017"
   },
   "include": [
     ".eslintrc.cjs",
@@ -36,8 +37,10 @@
     "**/*.tsx",
     // "**/*.cjs",
     "**/*.js",
-    ".next/types/**/*.ts"
-, "scripts/cleanup-invoice-photos.cjs", "scripts/migrate-photos-signatures.cjs"  ],
+    ".next/types/**/*.ts",
+    "scripts/cleanup-invoice-photos.cjs",
+    "scripts/migrate-photos-signatures.cjs"
+  ],
   "exclude": [
     "node_modules"
   ]

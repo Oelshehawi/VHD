@@ -10,103 +10,44 @@ import {
   SignatureType,
   PhotoType,
   ReportType,
+  EstimateType,
 } from "../app/lib/typeDefinitions";
 
 const ClientSchema = new Schema<ClientType>({
-  clientName: {
-    type: String,
-  },
-  email: {
-    type: String,
-  },
-  phoneNumber: {
-    type: String,
-  },
-  prefix: {
-    type: String,
-  },
-  notes: {
-    type: String,
-  },
+  clientName: { type: String },
+  email: { type: String },
+  phoneNumber: { type: String },
+  prefix: { type: String },
+  notes: { type: String },
 });
 
 const PhotoSchema = new Schema<PhotoType>({
-  url: {
-    type: String,
-    required: true,
-  },
-  timestamp: {
-    type: Date,
-    required: true,
-  },
-  technicianId: {
-    type: String,
-    required: true,
-  },
-  type: {
-    type: String,
-    enum: ["before", "after"],
-    required: true,
-  },
+  url: { type: String, required: true },
+  timestamp: { type: Date, required: true },
+  technicianId: { type: String, required: true },
+  type: { type: String, enum: ["before", "after"], required: true },
 });
 
 const SignatureSchema = new Schema<SignatureType>({
-  url: {
-    type: String,
-    required: true,
-  },
-  timestamp: {
-    type: Date,
-    required: true,
-  },
-  signerName: {
-    type: String,
-    required: true,
-    default: "Customer",
-  },
-  technicianId: {
-    type: String,
-    required: true,
-  },
+  url: { type: String, required: true },
+  timestamp: { type: Date, required: true },
+  signerName: { type: String, required: true, default: "Customer" },
+  technicianId: { type: String, required: true },
 });
 
 const invoiceSchema = new Schema<InvoiceType>({
-  invoiceId: {
-    type: String,
-    required: true,
-  },
-  jobTitle: {
-    type: String,
-    required: true,
-  },
-  dateIssued: {
-    type: Date,
-    required: true,
-  },
-  dateDue: {
-    type: Date,
-    required: true,
-  },
+  invoiceId: { type: String, required: true },
+  jobTitle: { type: String, required: true },
+  dateIssued: { type: Date, required: true },
+  dateDue: { type: Date, required: true },
   items: [
     {
-      description: {
-        type: String,
-        required: true,
-      },
-      price: {
-        type: Number,
-        required: true,
-      },
+      description: { type: String, required: true },
+      price: { type: Number, required: true },
     },
   ],
-  frequency: {
-    type: Number,
-    required: true,
-  },
-  location: {
-    type: String,
-    required: true,
-  },
+  frequency: { type: Number, required: true },
+  location: { type: String, required: true },
   notes: String,
   status: {
     type: String,
@@ -118,10 +59,7 @@ const invoiceSchema = new Schema<InvoiceType>({
     ref: "Client",
     required: true,
   },
-  paymentEmailSent: {
-    type: Boolean,
-    default: false,
-  },
+  paymentEmailSent: { type: Boolean, default: false },
 });
 
 const ShiftSchema = new Schema<ShiftType>({
@@ -138,44 +76,18 @@ const scheduleSchema = new Schema<ScheduleType>({
     ref: "Invoice",
     required: true,
   },
-  jobTitle: {
-    type: String,
-    required: true,
-  },
-  location: {
-    type: String,
-    required: true,
-  },
-  startDateTime: {
-    type: Date,
-    required: true,
-  },
-  assignedTechnicians: [
-    {
-      type: String,
-      required: true,
-    },
-  ],
-  confirmed: {
-    type: Boolean,
-    default: false,
-  },
+  jobTitle: { type: String, required: true },
+  location: { type: String, required: true },
+  startDateTime: { type: Date, required: true },
+  assignedTechnicians: [{ type: String, required: true }],
+  confirmed: { type: Boolean, default: false },
   hours: { type: Number, default: 4 },
   shifts: { type: [ShiftSchema], default: [] },
   payrollPeriod: { type: mongoose.Schema.Types.ObjectId, ref: "PayrollPeriod" },
   deadRun: { type: Boolean, default: false },
-  signature: {
-    type: SignatureSchema,
-    required: false,
-  },
-  photos: {
-    type: [PhotoSchema],
-    default: undefined,
-  },
-  technicianNotes: {
-    type: String,
-    default: "",
-  },
+  signature: { type: SignatureSchema, required: false },
+  photos: { type: [PhotoSchema], default: undefined },
+  technicianNotes: { type: String, default: "" },
 });
 
 const ReportSchema = new Schema<ReportType>({
@@ -189,25 +101,14 @@ const ReportSchema = new Schema<ReportType>({
     ref: "Invoice",
     required: true,
   },
-  dateCompleted: {
-    type: Date,
-    required: true,
-  },
-  technicianId: {
-    type: String,
-    required: true,
-  },
-  lastServiceDate: {
-    type: Date,
-  },
+  dateCompleted: { type: Date, required: true },
+  technicianId: { type: String, required: true },
+  lastServiceDate: { type: Date },
   fuelType: {
     type: String,
     enum: ["Natural Gas", "Electric", "Solid Fuel", "Other"],
   },
-  cookingVolume: {
-    type: String,
-    enum: ["High", "Medium", "Low"],
-  },
+  cookingVolume: { type: String, enum: ["High", "Medium", "Low"] },
   cookingEquipment: {
     griddles: Boolean,
     deepFatFryers: Boolean,
@@ -219,11 +120,7 @@ const ReportSchema = new Schema<ReportType>({
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
     },
-    filtersListed: {
-      type: String,
-      enum: ["Yes", "No", "N/A"],
-      default: "N/A",
-    },
+    filtersListed: { type: String, enum: ["Yes", "No", "N/A"], default: "N/A" },
     filtersNeedCleaningMoreOften: {
       type: String,
       enum: ["Yes", "No", "N/A"],
@@ -264,9 +161,7 @@ const ReportSchema = new Schema<ReportType>({
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
     },
-    ecologyUnitCost: {
-      type: String,
-    },
+    ecologyUnitCost: { type: String },
     ecologyUnitDeficiencies: {
       type: String,
       enum: ["Yes", "No", "N/A"],
@@ -297,19 +192,11 @@ const ReportSchema = new Schema<ReportType>({
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
     },
-    accessPanelsRequired: {
-      type: String,
-    },
-    accessPanelCost: {
-      type: String,
-    },
+    accessPanelsRequired: { type: String },
+    accessPanelCost: { type: String },
   },
-  recommendedCleaningFrequency: {
-    type: Number,
-  },
-  comments: {
-    type: String,
-  },
+  recommendedCleaningFrequency: { type: Number },
+  comments: { type: String },
   equipmentDetails: {
     hoodType: String,
     filterType: String,
@@ -317,22 +204,10 @@ const ReportSchema = new Schema<ReportType>({
     fanType: String,
   },
   cleaningDetails: {
-    hoodCleaned: {
-      type: Boolean,
-      default: true,
-    },
-    filtersCleaned: {
-      type: Boolean,
-      default: true,
-    },
-    ductworkCleaned: {
-      type: Boolean,
-      default: true,
-    },
-    fanCleaned: {
-      type: Boolean,
-      default: true,
-    },
+    hoodCleaned: { type: Boolean, default: true },
+    filtersCleaned: { type: Boolean, default: true },
+    ductworkCleaned: { type: Boolean, default: true },
+    fanCleaned: { type: Boolean, default: true },
   },
   recommendations: String,
 });
@@ -348,27 +223,11 @@ const PayrollPeriodSchema = new Schema<PayrollPeriodType>(
 );
 
 const jobsDueSoonSchema = new Schema<DueInvoiceType>({
-  invoiceId: {
-    type: String,
-    required: true,
-    unique: true,
-  },
-  jobTitle: {
-    type: String,
-    required: true,
-  },
-  dateDue: {
-    type: Date,
-    required: true,
-  },
-  isScheduled: {
-    type: Boolean,
-    default: false,
-  },
-  emailSent: {
-    type: Boolean,
-    default: false,
-  },
+  invoiceId: { type: String, required: true, unique: true },
+  jobTitle: { type: String, required: true },
+  dateDue: { type: Date, required: true },
+  isScheduled: { type: Boolean, default: false },
+  emailSent: { type: Boolean, default: false },
   clientId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "Client",
@@ -395,4 +254,55 @@ const PayrollPeriod =
 const Report =
   (models.Report as Model<ReportType>) || model("Report", ReportSchema);
 
-export { Client, Invoice, JobsDueSoon, Schedule, PayrollPeriod, Report };
+const EstimateSchema = new Schema<EstimateType>({
+  estimateNumber: { type: String, required: true, unique: true },
+  clientId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Client",
+    required: false,
+  },
+  prospectInfo: {
+    businessName: { type: String, required: false },
+    contactPerson: { type: String, required: false },
+    email: { type: String, required: false },
+    phone: { type: String, required: false },
+    address: { type: String, required: false },
+    projectLocation: { type: String, required: false },
+  },
+  status: {
+    type: String,
+    enum: ["draft", "sent", "approved", "rejected"],
+    default: "draft",
+  },
+  createdDate: { type: Date, default: Date.now },
+  items: [
+    {
+      description: { type: String, required: true },
+      price: { type: Number, required: true },
+    },
+  ],
+  subtotal: { type: Number, required: true },
+  gst: { type: Number, required: true },
+  total: { type: Number, required: true },
+  services: [{ type: String }],
+  terms: { type: String },
+  notes: { type: String },
+  convertedToInvoice: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Invoice",
+    required: false,
+  },
+});
+
+const Estimate =
+  (models.Estimate as Model<EstimateType>) || model("Estimate", EstimateSchema);
+
+export {
+  Client,
+  Invoice,
+  JobsDueSoon,
+  Schedule,
+  PayrollPeriod,
+  Report,
+  Estimate,
+};

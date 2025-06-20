@@ -4,8 +4,13 @@ import { Suspense } from "react";
 import { ClientDetailedSkeleton } from "../../../../_components/Skeletons";
 import { ClientType } from "../../../lib/typeDefinitions";
 
-const ClientDetailed = async ({ params }: { params: { id: string } }) => {
-  const clientId = params.id;
+const ClientDetailed = async ({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) => {
+  const { id } = await params;
+  const clientId = id;
   const client = await fetchClientById(clientId);
   const invoices = await fetchClientInvoices(clientId);
 

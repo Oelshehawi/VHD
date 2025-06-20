@@ -12,17 +12,18 @@ import { TableContainerSkeleton } from "../../../_components/Skeletons";
 const Invoice = async ({
   searchParams,
 }: {
-  searchParams?: {
+  searchParams: Promise<{
     query?: string;
     page?: string;
     filter?: string;
     sort?: string;
-  };
+  }>;
 }) => {
   const clients = (await fetchAllClients()) as ClientType[];
 
   const { sessionClaims } = await auth();
-  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+  const canManage =
+    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
   if (!canManage)
     return (
       <div className="flex min-h-[100vh] items-center justify-center text-3xl font-bold">
@@ -30,10 +31,11 @@ const Invoice = async ({
       </div>
     );
 
-  const query = searchParams?.query || "";
-  const currentPage = Number(searchParams?.page) || 1;
-  const filter = searchParams?.filter || "";
-  const sort = searchParams?.sort || "";
+  const resolvedSearchParams = await searchParams;
+  const query = resolvedSearchParams?.query || "";
+  const currentPage = Number(resolvedSearchParams?.page) || 1;
+  const filter = resolvedSearchParams?.filter || "";
+  const sort = resolvedSearchParams?.sort || "";
 
   const totalPages = await fetchInvoicesPages(query, filter, sort);
   return (

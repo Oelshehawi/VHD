@@ -18,7 +18,7 @@ import TabPanel from "../../../../_components/client-portal/dashboard/TabPanel";
 const GOOGLE_REVIEW_URL = "https://g.page/r/CRLDtlapvtO3EAE/review";
 
 interface ClientDashboardPageProps {
-  searchParams: { clientId?: string };
+  searchParams: Promise<{ clientId?: string }>;
 }
 
 export default async function ClientDashboardPage({
@@ -30,9 +30,10 @@ export default async function ClientDashboardPage({
 
   let clientId: string;
 
+  const resolvedSearchParams = await searchParams;
   // If admin is viewing as client (with clientId query param)
-  if (searchParams.clientId && isAdmin) {
-    clientId = searchParams.clientId;
+  if (resolvedSearchParams.clientId && isAdmin) {
+    clientId = resolvedSearchParams.clientId;
   } else {
     // Regular client portal user flow
     clientId = (sessionClaims as any)?.metadata?.clientId;
@@ -51,7 +52,7 @@ export default async function ClientDashboardPage({
   const recentReports = await fetchClientReports(clientId);
 
   // Add admin viewing banner if needed
-  const isAdminView = isAdmin && searchParams.clientId;
+  const isAdminView = isAdmin && resolvedSearchParams.clientId;
 
   return (
     <div className="mx-auto max-w-7xl">

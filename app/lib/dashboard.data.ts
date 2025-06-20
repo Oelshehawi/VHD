@@ -2,7 +2,6 @@
 
 import connectMongo from "./connect";
 import { Client, Invoice, JobsDueSoon } from "../../models/reactDataSchema";
-import { revalidatePath } from "next/cache";
 import {
   DueInvoiceType,
   InvoiceType,
@@ -31,7 +30,6 @@ export const updateScheduleStatus = async (
     // Serialize the MongoDB document before returning it
     const serializedJob = JSON.parse(JSON.stringify(updatedJob));
 
-    revalidatePath("/dashboard");
     return serializedJob;
   } catch (error) {
     console.error("Error updating schedule status:", error);
@@ -208,7 +206,6 @@ export const createOrUpdateJobsDueSoon = async (dueInvoices: InvoiceType[]) => {
   });
 
   await Promise.all(jobsDueSoonPromises);
-  revalidatePath("/dashboard");
 };
 
 export const checkEmailAndNotesPresence = async (
@@ -403,9 +400,7 @@ export const fetchYearlySalesData = async (
     },
   };
 
-  const sortByMonth: MongoSortStage = {
-    $sort: { "_id.month": 1 },
-  };
+  const sortByMonth: MongoSortStage = { $sort: { "_id.month": 1 } };
 
   const currentYearSales = await Invoice.aggregate<SalesAggregation>([
     matchCurrentYear as any,

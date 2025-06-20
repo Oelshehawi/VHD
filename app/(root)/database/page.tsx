@@ -11,15 +11,12 @@ import { TableContainerSkeleton } from "../../../_components/Skeletons";
 const Database = async ({
   searchParams,
 }: {
-  searchParams?: {
-    query?: string;
-    page?: string;
-    sort?: 1 | -1;
-  };
+  searchParams: Promise<{ query?: string; page?: string; sort?: 1 | -1 }>;
 }) => {
   // AUTH STUFF
-  const {  sessionClaims } = await auth();
-  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+  const { sessionClaims } = await auth();
+  const canManage =
+    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
   if (!canManage)
     return (
@@ -28,9 +25,10 @@ const Database = async ({
       </div>
     );
 
-  const query = searchParams?.query || "";
-  const sort = searchParams?.sort || 1;
-  const currentPage = Number(searchParams?.page) || 1;
+  const resolvedSearchParams = await searchParams;
+  const query = resolvedSearchParams?.query || "";
+  const sort = resolvedSearchParams?.sort || 1;
+  const currentPage = Number(resolvedSearchParams?.page) || 1;
 
   const totalPages = await fetchClientsPages(query);
 

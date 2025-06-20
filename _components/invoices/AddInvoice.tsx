@@ -385,8 +385,9 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
         <div className="fw-bold text-xl">Invoices</div>
         <button
           onClick={() => setOpen(true)}
-          className="h-full rounded bg-darkGreen px-4 py-2 font-bold text-white shadow-sm hover:bg-darkBlue"
+          className="flex h-full items-center gap-2 rounded bg-darkGreen px-4 py-2 font-bold text-white shadow-sm hover:bg-darkBlue"
         >
+          <FaPlus className="h-4 w-4" />
           {"Add Invoice"}
         </button>
       </div>

@@ -1,26 +1,38 @@
 "use client";
 import { useState } from "react";
-import {
-  deleteClient,
-  deleteInvoice,
-} from "../app/lib/actions/actions";
+import { deleteClient, deleteInvoice } from "../app/lib/actions/actions";
 import toast from "react-hot-toast";
 import { FaTrash } from "react-icons/fa";
 import { deleteJob } from "../app/lib/actions/scheduleJobs.actions";
+import { deleteEstimate } from "../app/lib/actions/estimates.actions";
 
 const DeleteModal = ({
   deleteText,
   deleteDesc,
   deletionId,
   deletingValue,
+  isOpen,
+  onClose,
 }: {
   deleteText: String;
   deleteDesc: String;
   deletionId: string;
   deletingValue: string;
+  isOpen?: boolean;
+  onClose?: () => void;
 }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [open, setOpen] = useState(false);
+
+  // Use external control if provided, otherwise use internal state
+  const isModalOpen = isOpen !== undefined ? isOpen : open;
+  const handleClose = () => {
+    if (onClose) {
+      onClose();
+    } else {
+      setOpen(false);
+    }
+  };
 
   const handleDelete = async (deletionId: string) => {
     setIsLoading(true);
@@ -31,7 +43,7 @@ const DeleteModal = ({
           deletionId.toString(),
         );
         await deleteClientWithId();
-        setOpen(false);
+        handleClose();
         setIsLoading(false);
         toast.success("Client and associated invoices deleted successfully");
       } else if (deletingValue === "invoice") {
@@ -40,15 +52,24 @@ const DeleteModal = ({
           deletionId.toString(),
         );
         await deleteInvoiceWithId();
-        setOpen(false);
+        handleClose();
         setIsLoading(false);
         toast.success("Invoices deleted successfully");
       } else if (deletingValue === "job") {
         const deleteJobWithId = deleteJob.bind(null, deletionId.toString());
         await deleteJobWithId();
         setIsLoading(false);
-        setOpen(false);
+        handleClose();
         toast.success("Job deleted successfully");
+      } else if (deletingValue === "estimate") {
+        const deleteEstimateWithId = deleteEstimate.bind(
+          null,
+          deletionId.toString(),
+        );
+        await deleteEstimateWithId();
+        setIsLoading(false);
+        handleClose();
+        toast.success("Estimate deleted successfully");
       }
     } catch (error) {
       console.error("Error updating invoice:", error);
@@ -61,14 +82,18 @@ const DeleteModal = ({
     return classes.filter(Boolean).join(" ");
   }
 
-  if (!open) {
+  if (!isModalOpen) {
+    // If controlled externally, don't render anything when closed
+    if (isOpen !== undefined) {
+      return null;
+    }
+
+    // Only render the delete button for internal state management
     return (
       <div className="flex justify-center">
         <FaTrash
           className="size-8 rounded bg-red-600 p-2 text-white hover:cursor-pointer hover:bg-red-800"
-          onClick={() => {
-            setOpen(true);
-          }}
+          onClick={() => setOpen(true)}
         />
       </div>
     );
@@ -76,21 +101,32 @@ const DeleteModal = ({
 
   return (
     <>
-      <div className="flex justify-center">
-        <FaTrash
-          className="size-8 rounded bg-red-600 p-2 text-white hover:cursor-pointer hover:bg-red-800"
-          onClick={() => {
-            setOpen(true);
-          }}
-        />
-      </div>
-      <div className="fixed inset-0 text-darkGray z-[1000] flex h-full w-full flex-wrap items-center justify-center overflow-auto p-4 font-[sans-serif] before:fixed before:inset-0 before:h-full before:w-full before:bg-[rgba(0,0,0,0.5)]">
-        <div className="relative w-full max-w-md rounded-md bg-white p-6 shadow-lg">
+      {/* Only show the trigger button when using internal state management */}
+      {isOpen === undefined && (
+        <div className="flex justify-center">
+          <FaTrash
+            className="size-8 rounded bg-red-600 p-2 text-white hover:cursor-pointer hover:bg-red-800"
+            onClick={() => {
+              setOpen(true);
+            }}
+          />
+        </div>
+      )}
+
+      {/* Modal content */}
+      <div
+        className="fixed inset-0 z-[1000] flex h-full w-full flex-wrap items-center justify-center overflow-auto p-4 font-[sans-serif] text-darkGray before:fixed before:inset-0 before:h-full before:w-full before:bg-[rgba(0,0,0,0.5)]"
+        onClick={handleClose}
+      >
+        <div
+          className="relative mx-4 w-full max-w-lg rounded-md bg-white p-6 shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            className="float-right w-3.5 shrink-0 cursor-pointer fill-black hover:fill-red-500"
+            className="fill-black float-right w-3.5 shrink-0 cursor-pointer hover:fill-red-500"
             viewBox="0 0 320.591 320.591"
-            onClick={() => setOpen(false)}
+            onClick={handleClose}
           >
             <path
               d="M30.391 318.583a30.37 30.37 0 0 1-21.56-7.288c-11.774-11.844-11.774-30.973 0-42.817L266.643 10.665c12.246-11.459 31.462-10.822 42.921 1.424 10.362 11.074 10.966 28.095 1.414 39.875L51.647 311.295a30.366 30.366 0 0 1-21.256 7.288z"
@@ -116,10 +152,12 @@ const DeleteModal = ({
                 data-original="#000000"
               />
             </svg>
-            <h4 className="mt-6 text-xl font-semibold text-black">
+            <h4 className="text-black mt-6 break-words text-xl font-semibold">
               {deleteText}
             </h4>
-            <p className="mt-4 text-sm text-gray-500">{deleteDesc}</p>
+            <p className="mt-4 break-words text-sm leading-relaxed text-gray-500">
+              {deleteDesc}
+            </p>
           </div>
           <div className="flex flex-col space-y-2">
             <button
@@ -153,8 +191,8 @@ const DeleteModal = ({
             </button>
             <button
               type="button"
-              className="rounded-md border-none bg-gray-200 px-6 py-2.5 text-sm font-semibold text-black outline-none hover:bg-gray-300 active:bg-gray-200"
-              onClick={() => setOpen(false)}
+              className="text-black rounded-md border-none bg-gray-200 px-6 py-2.5 text-sm font-semibold outline-none hover:bg-gray-300 active:bg-gray-200"
+              onClick={handleClose}
               disabled={isLoading}
             >
               Cancel

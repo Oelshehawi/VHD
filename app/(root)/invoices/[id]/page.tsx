@@ -5,13 +5,19 @@ import { fetchClientById, fetchInvoiceById } from "../../../lib/data";
 import { ClientType, InvoiceType } from "../../../lib/typeDefinitions";
 import { auth } from "@clerk/nextjs/server";
 
-const InvoiceDetailed = async ({ params }: { params: { id: string } }) => {
-  const invoiceId = params.id;
+const InvoiceDetailed = async ({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) => {
+  const { id } = await params;
+  const invoiceId = id;
   const invoice = await fetchInvoiceById(invoiceId);
   const client = await fetchClientById(invoice?.clientId);
-  const {  sessionClaims } = await auth();
+  const { sessionClaims } = await auth();
 
-  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+  const canManage =
+    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
   return (
     <div className="mt-4 px-3 lg:!px-5">

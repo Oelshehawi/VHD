@@ -71,10 +71,7 @@ export interface InvoiceType {
   jobTitle: string;
   dateIssued: Date | string | number;
   dateDue: Date | string;
-  items: {
-    description: string;
-    price: number;
-  }[];
+  items: { description: string; price: number }[];
   frequency: number;
   location: string;
   notes?: string;
@@ -197,19 +194,12 @@ export interface YearlySalesData {
 }
 
 export interface SalesAggregation {
-  _id: {
-    month: number;
-  };
+  _id: { month: number };
   totalSales: number;
 }
 
 export interface MongoMatchStage {
-  $match: {
-    dateIssued: {
-      $gte: Date;
-      $lte: Date;
-    };
-  };
+  $match: { dateIssued: { $gte: Date; $lte: Date } };
 }
 
 export interface MongoGroupStage {
@@ -361,4 +351,28 @@ export interface ClientTokenData {
   clientName: string;
   timestamp: number;
   expiresAt: number;
+}
+
+export interface EstimateType {
+  _id: ObjectId | string;
+  estimateNumber: string; // EST-2024-XXXX
+  clientId?: ObjectId | string; // Optional - for existing clients
+  prospectInfo?: {
+    businessName: string;
+    contactPerson?: string;
+    email?: string;
+    phone?: string;
+    address?: string;
+    projectLocation?: string;
+  };
+  status: "draft" | "sent" | "approved" | "rejected";
+  createdDate: Date | string;
+  items: { description: string; price: number }[];
+  subtotal: number;
+  gst: number;
+  total: number;
+  services: string[]; // Selected services from the predefined list
+  terms?: string;
+  notes?: string;
+  convertedToInvoice?: ObjectId | string;
 }

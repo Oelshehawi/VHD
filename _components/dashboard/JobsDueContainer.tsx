@@ -70,7 +70,7 @@ const JobsDueContainer = async ({
 
   // Filter for display based on isScheduled - default to showing unscheduled
   const displayInvoices = invoicesWithSchedule.filter((invoice) =>
-    searchParams.scheduled === "true"
+    searchParams?.scheduled === "true"
       ? invoice?.isScheduled
       : !invoice?.isScheduled,
   );
