@@ -1,55 +1,25 @@
-import { fetchClientById, fetchInvoiceById } from "../../../../../lib/data";
-import {
-  ClientType,
-  InvoiceData,
-  InvoiceType,
-} from "../../../../../lib/typeDefinitions";
-import {
-  calculateGST,
-  calculateSubtotal,
-  formatDateToString,
-} from "../../../../../lib/utils";
+import React from "react";
 import {
   Document,
   Page,
   Text,
   View,
   StyleSheet,
-  renderToBuffer,
-  Font,
   Link,
   Svg,
   Path,
   Image,
 } from "@react-pdf/renderer";
-import fs from "fs";
-import path from "path";
-
-const logoPath = path.resolve(process.cwd(), "public", "images", "logo.png");
-const logoBuffer = fs.readFileSync(logoPath);
-
-Font.register({
-  family: "Lato",
-  fonts: [
-    { src: path.resolve(process.cwd(), "public", "fonts", "Lato-Regular.ttf") },
-    {
-      src: path.resolve(process.cwd(), "public", "fonts", "Lato-Bold.ttf"),
-      fontWeight: "bold",
-    },
-  ],
-});
 
 const styles = StyleSheet.create({
   page: {
-    fontFamily: "Lato",
+    fontFamily: "Helvetica",
     fontSize: 10,
     paddingTop: 30,
     paddingBottom: 50,
     paddingHorizontal: 30,
     color: "#000",
   },
-
-  // New styles for the logo and overlay text
   logoContainer: {
     position: "absolute",
     left: 540,
@@ -62,12 +32,7 @@ const styles = StyleSheet.create({
     zIndex: 1,
     opacity: 0.7,
   },
-
-  // Header styles
-  header: {
-    position: "relative",
-    marginBottom: 20,
-  },
+  header: { position: "relative", marginBottom: 20 },
   headerWave: {
     position: "absolute",
     top: -270,
@@ -80,18 +45,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  invoiceTitle: {
-    fontSize: 36,
-    color: "#003e29",
-    fontWeight: "bold",
-  },
+  invoiceTitle: { fontSize: 36, color: "#003e29", fontWeight: "bold" },
   companyTitle: {
     fontSize: 18,
     color: "#003e29",
     fontWeight: "bold",
     zIndex: 2,
   },
-  // Footer styles
   footer: {
     position: "absolute",
     bottom: 0,
@@ -105,70 +65,51 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 25,
   },
-  footerText: {
-    fontSize: 10,
-  },
-  section: {
-    marginTop: 20,
-  },
-  infoGroup: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-  },
-  infoList: {
-    flexGrow: 1,
-  },
+  footerText: { fontSize: 10 },
+  section: { marginTop: 20 },
+  infoGroup: { flexDirection: "row", justifyContent: "space-between" },
+  infoList: { flexGrow: 1 },
   table: {
     display: "flex",
     width: "auto",
     marginTop: 20,
-    borderStyle: "solid",
-    borderWidth: 1,
-    borderColor: "#ccc",
+    border: "1px solid black",
   },
-  tableRow: {
-    flexDirection: "row",
-  },
-  tableHeader: {
-    backgroundColor: "#003e29",
-    color: "#fff",
-  },
-  tableCell: {
-    padding: 5,
-    borderWidth: 0,
-    borderBottomWidth: 1,
-  },
-  thankYou: {
-    marginTop: 20,
-    textAlign: "center",
-    fontWeight: "bold",
-  },
-  terms: {
-    marginTop: 20,
-  },
-  signature: {
-    marginTop: 60,
-    alignItems: "flex-end",
-  },
-  signatureLine: {
-    width: "50%",
-    borderTopWidth: 1,
-    borderTopColor: "#000",
-  },
-  signatureText: {
-    marginTop: 5,
-  },
-  noBreak: {
-    flexGrow: 1,
-    wrap: false,
-  },
+  tableRow: { flexDirection: "row" },
+  tableHeader: { backgroundColor: "#003e29", color: "#fff" },
+  tableCell: { padding: 5, borderBottom: "1px solid black" },
+  thankYou: { marginTop: 20, textAlign: "center", fontWeight: "bold" },
+  terms: { marginTop: 20 },
+  signature: { marginTop: 60, alignItems: "flex-end" },
+  signatureLine: { width: "50%", borderTopWidth: 1, borderTopColor: "#000" },
+  signatureText: { marginTop: 5 },
+  noBreak: { flexGrow: 1, wrap: false },
 });
 
-interface InvoicePdfProps {
+export interface InvoiceData {
+  invoiceId: string;
+  dateIssued: string;
+  jobTitle: string;
+  location: string;
+  clientName: string;
+  email: string;
+  phoneNumber: string;
+  items: Array<{ description: string; price: number; total: number }>;
+  subtotal: number;
+  gst: number;
+  totalAmount: number;
+  cheque: string;
+  eTransfer: string;
+  terms: string;
+}
+
+interface ClientInvoicePdfDocumentProps {
   invoiceData: InvoiceData;
 }
 
-const InvoicePdf: React.FC<InvoicePdfProps> = ({ invoiceData }) => (
+const ClientInvoicePdfDocument: React.FC<ClientInvoicePdfDocumentProps> = ({
+  invoiceData,
+}) => (
   <Document>
     <Page size="A4" style={styles.page}>
       {/* Header */}
@@ -189,7 +130,7 @@ const InvoicePdf: React.FC<InvoicePdfProps> = ({ invoiceData }) => (
 
       {/* Logo and Overlay Text */}
       <View style={styles.logoContainer}>
-        <Image src={{ data: logoBuffer, format: "png" }} />
+        <Image src="/images/logo.png" />
       </View>
 
       {/* Invoice Info */}
@@ -227,11 +168,7 @@ const InvoicePdf: React.FC<InvoicePdfProps> = ({ invoiceData }) => (
       <View style={styles.section}>
         <Text style={{ fontWeight: "bold", margin: 0 }}>Bill To:</Text>
         <Text
-          style={{
-            color: "#003e29",
-            fontWeight: "bold",
-            paddingVertical: 3,
-          }}
+          style={{ color: "#003e29", fontWeight: "bold", paddingVertical: 3 }}
         >
           {invoiceData.jobTitle.trim()}
         </Text>
@@ -266,6 +203,7 @@ const InvoicePdf: React.FC<InvoicePdfProps> = ({ invoiceData }) => (
               Total
             </Text>
           </View>
+
           {/* Table Rows */}
           {invoiceData.items.map((item, index) => (
             <View style={styles.tableRow} key={index}>
@@ -292,6 +230,7 @@ const InvoicePdf: React.FC<InvoicePdfProps> = ({ invoiceData }) => (
               </Text>
             </View>
           ))}
+
           {/* Subtotal, GST, Total */}
           <View style={styles.tableRow}>
             <Text
@@ -377,17 +316,14 @@ const InvoicePdf: React.FC<InvoicePdfProps> = ({ invoiceData }) => (
         <View style={styles.signatureLine}></View>
         <Text style={styles.signatureText}>Authorized Signature</Text>
       </View>
-      {/* Terms and Conditions */}
 
       {/* Footer */}
       <View style={styles.footer}>
-        <Text style={[styles.footerText, { marginLeft: 25 }]}>
-          604-273-8717
-        </Text>
-        <Text style={[styles.footerText, { marginRight: 25 }]}>
+        <Text style={styles.footerText}>604-273-8717</Text>
+        <Text style={styles.footerText}>
           <Link
             src="http://vancouverventcleaning.ca"
-            style={{ color: "#FFFFFF", textDecoration: "none" }}
+            style={{ color: "white", textDecoration: "none" }}
           >
             vancouverventcleaning.ca
           </Link>
@@ -397,89 +333,5 @@ const InvoicePdf: React.FC<InvoicePdfProps> = ({ invoiceData }) => (
   </Document>
 );
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } },
-) {
-  try {
-    // Add rate limiting header
-    const response = new Response();
-    response.headers.set("X-RateLimit-Limit", "100");
-
-    // Fetch data and prepare invoiceData
-    const invoice = (await fetchInvoiceById(params.id)) as InvoiceType;
-    if (!invoice) {
-      return new Response(JSON.stringify({ error: "Invoice not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const client = (await fetchClientById(
-      invoice.clientId as string,
-    )) as ClientType;
-    if (!client) {
-      return new Response(JSON.stringify({ error: "Client not found" }), {
-        status: 404,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-
-    const invoiceData = {
-      invoiceId: invoice.invoiceId,
-      dateIssued: formatDateToString(invoice.dateIssued as string),
-      jobTitle: invoice.jobTitle,
-      location: invoice.location,
-      clientName: client.clientName,
-      email: client.email,
-      phoneNumber: client.phoneNumber,
-      items: invoice.items.map((item: { description: any; price: any }) => ({
-        description: item.description,
-        price: item.price,
-        total: item.price,
-      })),
-      subtotal: calculateSubtotal(invoice.items),
-      gst: calculateGST(calculateSubtotal(invoice.items)),
-      totalAmount:
-        calculateSubtotal(invoice.items) +
-        calculateGST(calculateSubtotal(invoice.items)),
-      cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
-      eTransfer: "adam@vancouverventcleaning.ca",
-      terms:
-        "Please report any and all cleaning inquiries within 5 business days.",
-      thankYou: "Thank you for choosing Vancouver Hood Doctors!",
-    };
-
-    // Generate PDF buffer
-    const pdfBuffer = await renderToBuffer(
-      <InvoicePdf invoiceData={invoiceData} />,
-    );
-
-    // Return response with enhanced security headers
-    return new Response(pdfBuffer, {
-      headers: {
-        "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename=Invoice-${invoiceData.jobTitle}.pdf`,
-        "Cache-Control": "no-store, max-age=0",
-        "Content-Security-Policy": "default-src 'self'",
-        "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY",
-      },
-    });
-  } catch (error: any) {
-    console.error("Error generating PDF:", error);
-    return new Response(
-      JSON.stringify({
-        message: "Failed to generate PDF",
-        error: error.message,
-      }),
-      {
-        status: 500,
-        headers: {
-          "Content-Type": "application/json",
-          "Cache-Control": "no-store",
-        },
-      },
-    );
-  }
-}
+export default ClientInvoicePdfDocument;
+export type { ClientInvoicePdfDocumentProps };

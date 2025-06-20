@@ -9,7 +9,6 @@ import {
 } from "../../app/lib/typeDefinitions";
 import { motion } from "framer-motion";
 import { useMemo } from "react";
-import GeneratePaystub from "./GeneratePaystub";
 
 interface EmployeesTableProps {
   schedules: ScheduleType[];
@@ -120,11 +119,8 @@ const EmployeesTable = ({
                     })}
                   </td>
                   <td className="flex justify-start whitespace-nowrap px-6 py-4 text-sm font-medium">
-                    <GeneratePaystub
-                      technicianName={technician.name}
-                      technicianId={technician.id}
-                      payrollPeriodId={payrollPeriod._id as string}
-                    />
+                    {/* Paystub generation moved to server-side */}
+                    <span className="text-gray-400">-</span>
                   </td>
                   <td
                     onClick={() => onViewShifts(technician)}

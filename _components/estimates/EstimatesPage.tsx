@@ -53,8 +53,6 @@ export function EstimatesPage({
   const handleModalClose = () => {
     setIsModalOpen(false);
     setEditingEstimate(null);
-    // Refresh the page to show updated data
-    window.location.reload();
   };
 
   return (

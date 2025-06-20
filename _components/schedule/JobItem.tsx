@@ -1,10 +1,11 @@
 "use client";
 import { useState, useCallback, useEffect } from "react";
-import { ScheduleType } from "../../app/lib/typeDefinitions";
+import { ScheduleType, ReportType } from "../../app/lib/typeDefinitions";
 import Link from "next/link";
 import DeleteModal from "../DeleteModal";
 import EditJobModal from "./EditJobModal";
 import ReportModal from "./ReportModal";
+import GeneratePDF, { type PDFData } from "../pdf/GeneratePDF";
 import toast from "react-hot-toast";
 import {
   updateDeadRun,
@@ -12,7 +13,13 @@ import {
 } from "../../app/lib/actions/scheduleJobs.actions";
 import TechnicianPill from "./TechnicianPill";
 import { motion, AnimatePresence } from "framer-motion";
-import { FaBan, FaCamera, FaSignature, FaClipboardList } from "react-icons/fa";
+import {
+  FaBan,
+  FaCamera,
+  FaSignature,
+  FaClipboardList,
+  FaDownload,
+} from "react-icons/fa";
 import { format } from "date-fns-tz";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { createPortal } from "react-dom";
@@ -38,6 +45,8 @@ const JobItem = ({
     "details",
   );
   const [hasExistingReport, setHasExistingReport] = useState(false);
+  const [existingReportData, setExistingReportData] =
+    useState<ReportType | null>(null);
 
   const toggleConfirmedStatus = useCallback(async () => {
     if (isLoading) return;
@@ -111,6 +120,7 @@ const JobItem = ({
       try {
         const report = await getReportByScheduleId(job._id.toString());
         setHasExistingReport(!!report);
+        setExistingReportData(report);
       } catch (error) {
         console.error("Error checking for existing report:", error);
       }
@@ -134,6 +144,54 @@ const JobItem = ({
   const hasAfterPhotos = job.photos?.some((photo) => photo.type === "after");
   const hasSignature = !!job.signature;
   const hasMedia = hasBeforePhotos || hasAfterPhotos || hasSignature;
+
+  // Helper function to create report PDF data
+  const createReportPDFData = (report: ReportType): PDFData | undefined => {
+    try {
+      const reportData = {
+        _id:
+          typeof report._id === "string"
+            ? report._id
+            : report._id?.toString() || "",
+        scheduleId:
+          typeof report.scheduleId === "string"
+            ? report.scheduleId
+            : report.scheduleId.toString(),
+        dateCompleted: report.dateCompleted,
+        technicianId: report.technicianId,
+        lastServiceDate: report.lastServiceDate,
+        fuelType: report.fuelType,
+        cookingVolume: report.cookingVolume,
+        equipmentDetails: report.equipmentDetails,
+        cleaningDetails: report.cleaningDetails,
+        cookingEquipment: report.cookingEquipment,
+        recommendations: report.recommendations,
+        comments: report.comments,
+        recommendedCleaningFrequency: report.recommendedCleaningFrequency,
+        inspectionItems: report.inspectionItems,
+      };
+
+      // Get technician data from the assigned technicians
+      const assignedTech = technicians.find(
+        (tech) => tech.id === report.technicianId,
+      );
+      const technicianData = {
+        id: report.technicianId,
+        firstName: assignedTech?.name.split(" ")[0] || "Technician",
+        lastName: assignedTech?.name.split(" ")[1] || "Name",
+        fullName: assignedTech?.name || "Technician Name",
+        email: "technician@company.com",
+      };
+
+      return {
+        type: "report",
+        data: { report: reportData, technician: technicianData },
+      };
+    } catch (error) {
+      console.error("Error creating report PDF data:", error);
+      return undefined;
+    }
+  };
 
   return (
     <>
@@ -366,14 +424,27 @@ const JobItem = ({
                             job.
                           </p>
 
-                          <button
-                            className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
-                            onClick={() => setIsReportMode(true)}
-                          >
-                            {hasExistingReport
-                              ? "Edit Report"
-                              : "Create Report"}
-                          </button>
+                          <div className="flex flex-col gap-3">
+                            <button
+                              className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
+                              onClick={() => setIsReportMode(true)}
+                            >
+                              {hasExistingReport
+                                ? "Edit Report"
+                                : "Create Report"}
+                            </button>
+
+                            {hasExistingReport && existingReportData && (
+                              <GeneratePDF
+                                pdfData={createReportPDFData(
+                                  existingReportData,
+                                )}
+                                fileName={`${job.jobTitle} - Report.pdf`}
+                                buttonText="Download Report"
+                                className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                              />
+                            )}
+                          </div>
 
                           <button
                             className="mt-2 w-full rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"

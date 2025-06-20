@@ -9,6 +9,7 @@ import {
 } from "../../lib/scheduleAndShifts";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
 import PayrollPeriodSelector from "../../../_components/payroll/PayrollPeriodSelector";
+// @ts-ignore
 import { auth } from "@clerk/nextjs/server";
 
 interface PayrollPageProps {

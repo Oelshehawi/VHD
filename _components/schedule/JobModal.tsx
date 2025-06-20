@@ -26,7 +26,6 @@ const JobModal = ({
     return tech?.name || techId;
   };
 
-  console.log(jobInfo);
   const hasBeforePhotos =
     jobInfo.photos && jobInfo.photos.some((photo) => photo.type === "before");
 

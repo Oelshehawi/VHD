@@ -259,6 +259,8 @@ export async function fetchClientInvoices(
     totalAmount: number;
     status: string;
     jobTitle: string;
+    items: { description: string; price: number }[];
+    location: string;
   }[]
 > {
   // Verify client auth
@@ -269,9 +271,7 @@ export async function fetchClientInvoices(
 
   await connectMongo();
   try {
-    const invoices = await Invoice.find({
-      clientId: new ObjectId(clientId),
-    })
+    const invoices = await Invoice.find({ clientId: new ObjectId(clientId) })
       .sort({ dateIssued: -1 })
       .limit(limit)
       .lean();
@@ -289,6 +289,12 @@ export async function fetchClientInvoices(
         ) || 0,
       status: invoice.status || "pending",
       jobTitle: invoice.jobTitle || "",
+      items:
+        invoice.items?.map((item: any) => ({
+          description: item.description || "",
+          price: parseFloat(item.price) || 0,
+        })) || [],
+      location: invoice.location || "",
     }));
   } catch (error) {
     console.error("Error fetching client invoices:", error);
@@ -320,9 +326,7 @@ export async function fetchClientReports(
     const invoiceIds = clientInvoices.map((invoice) => invoice._id);
 
     // Find reports that reference these invoices
-    const reports = await Report.find({
-      invoiceId: { $in: invoiceIds },
-    })
+    const reports = await Report.find({ invoiceId: { $in: invoiceIds } })
       .sort({ dateCompleted: -1 })
       .limit(limit)
       .lean();
@@ -335,9 +339,7 @@ export async function fetchClientReports(
         timeZone: "UTC",
       }),
       lastServiceDate: report.lastServiceDate
-        ? report.lastServiceDate.toLocaleString("en-US", {
-            timeZone: "UTC",
-          })
+        ? report.lastServiceDate.toLocaleString("en-US", { timeZone: "UTC" })
         : "",
       fuelType: report.fuelType || "",
       cookingVolume: report.cookingVolume || "",
@@ -445,13 +447,9 @@ export async function fetchReportDetails(
   }
   await connectMongo();
   try {
-    const report = await Report.findOne({
-      _id: new ObjectId(reportId),
-    }).lean();
+    const report = await Report.findOne({ _id: new ObjectId(reportId) }).lean();
 
-    const invoice = await Invoice.findOne({
-      _id: report?.invoiceId,
-    }).lean();
+    const invoice = await Invoice.findOne({ _id: report?.invoiceId }).lean();
 
     if (!report || !invoice) {
       console.log("Report not found or does not belong to client");

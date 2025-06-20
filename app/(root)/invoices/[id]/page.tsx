@@ -3,6 +3,7 @@ import InvoiceDetailsContainer from "../../../../_components/invoices/InvoiceDet
 import { InvoiceDetailedSkeleton } from "../../../../_components/Skeletons";
 import { fetchClientById, fetchInvoiceById } from "../../../lib/data";
 import { ClientType, InvoiceType } from "../../../lib/typeDefinitions";
+// @ts-ignore
 import { auth } from "@clerk/nextjs/server";
 
 const InvoiceDetailed = async ({

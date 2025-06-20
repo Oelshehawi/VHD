@@ -8,13 +8,18 @@ import {
   DocumentTextIcon,
   CreditCardIcon,
   DocumentDuplicateIcon,
-  ArrowDownTrayIcon,
 } from "@heroicons/react/24/outline";
 import ServiceCard, {
   ScheduleType as ServiceCardScheduleType,
 } from "./ServiceCard";
 import ReportModal from "./ReportViewModal";
-import { formatDateFns, formatAmount } from "../../../app/lib/utils";
+import GeneratePDF, { type PDFData } from "../../pdf/GeneratePDF";
+import {
+  formatDateFns,
+  formatAmount,
+  calculateGST,
+  calculateSubtotal,
+} from "../../../app/lib/utils";
 import {
   ScheduleType as AppScheduleType,
   ReportType,
@@ -26,7 +31,9 @@ interface Invoice {
   dateIssued: string | Date;
   totalAmount: number;
   status: string;
-  jobTitle?: string;
+  jobTitle: string;
+  items: { description: string; price: number }[];
+  location: string;
 }
 
 interface TabPanelProps {
@@ -34,6 +41,8 @@ interface TabPanelProps {
   recentServices: AppScheduleType[];
   recentInvoices: Invoice[];
   recentReports: ReportType[];
+  clientData?: { clientName: string; email: string; phoneNumber: string };
+  technicianDataMap: Record<string, any>;
 }
 
 const TabPanel = ({
@@ -41,6 +50,8 @@ const TabPanel = ({
   recentServices,
   recentInvoices,
   recentReports,
+  clientData,
+  technicianDataMap,
 }: TabPanelProps) => {
   const [activeTab, setActiveTab] = useState<
     "schedules" | "invoices" | "reports"
@@ -91,6 +102,95 @@ const TabPanel = ({
     };
   };
 
+  // Helper function to create invoice PDF data
+  const createInvoicePDFData = (invoice: Invoice): PDFData | undefined => {
+    try {
+      // Format date properly - handle both Date objects and strings
+      const formatInvoiceDate = (date: string | Date): string => {
+        const dateObj = typeof date === "string" ? new Date(date) : date;
+        return dateObj.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+      };
+
+      const invoiceData = {
+        invoiceId: invoice.invoiceId,
+        dateIssued: formatInvoiceDate(invoice.dateIssued),
+        jobTitle: invoice.jobTitle,
+        location: invoice.location,
+        clientName: clientData?.clientName || "Client",
+        email: clientData?.email || "client@email.com",
+        phoneNumber: clientData?.phoneNumber || "Phone Number",
+        items: invoice.items.map((item: { description: any; price: any }) => ({
+          description: item.description,
+          price: item.price,
+          total: item.price,
+        })),
+        subtotal: calculateSubtotal(invoice.items),
+        gst: calculateGST(calculateSubtotal(invoice.items)),
+        totalAmount:
+          calculateSubtotal(invoice.items) +
+          calculateGST(calculateSubtotal(invoice.items)),
+        cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
+        eTransfer: "adam@vancouverventcleaning.ca",
+        terms:
+          "Please report any and all cleaning inquiries within 5 business days.",
+      };
+
+      return { type: "clientInvoice", data: invoiceData };
+    } catch (error) {
+      console.error("Error creating invoice PDF data:", error);
+      return undefined;
+    }
+  };
+
+  // Helper function to create report PDF data
+  const createReportPDFData = (report: ReportType): PDFData | undefined => {
+    try {
+      const reportData = {
+        _id:
+          typeof report._id === "string"
+            ? report._id
+            : report._id?.toString() || "",
+        scheduleId:
+          typeof report.scheduleId === "string"
+            ? report.scheduleId
+            : report.scheduleId.toString(),
+        dateCompleted: report.dateCompleted,
+        technicianId: report.technicianId,
+        lastServiceDate: report.lastServiceDate,
+        fuelType: report.fuelType,
+        cookingVolume: report.cookingVolume,
+        equipmentDetails: report.equipmentDetails,
+        cleaningDetails: report.cleaningDetails,
+        cookingEquipment: report.cookingEquipment,
+        recommendations: report.recommendations,
+        comments: report.comments,
+        recommendedCleaningFrequency: report.recommendedCleaningFrequency,
+        inspectionItems: report.inspectionItems,
+      };
+
+      // Use server-fetched technician data or fallback
+      const technicianData = technicianDataMap[report.technicianId] || {
+        id: report.technicianId,
+        firstName: "Technician",
+        lastName: "Name",
+        fullName: "Technician Name",
+        email: "technician@company.com",
+      };
+
+      return {
+        type: "report",
+        data: { report: reportData, technician: technicianData },
+      };
+    } catch (error) {
+      console.error("Error creating report PDF data:", error);
+      return undefined;
+    }
+  };
+
   const openReportModal = (report: ReportType) => {
     setSelectedReport(report);
     setIsReportModalOpen(true);
@@ -101,21 +201,9 @@ const TabPanel = ({
   };
 
   const tabs = [
-    {
-      id: "schedules",
-      label: "Services",
-      icon: CalendarIcon,
-    },
-    {
-      id: "invoices",
-      label: "Invoices",
-      icon: CreditCardIcon,
-    },
-    {
-      id: "reports",
-      label: "Reports",
-      icon: DocumentTextIcon,
-    },
+    { id: "schedules", label: "Services", icon: CalendarIcon },
+    { id: "invoices", label: "Invoices", icon: CreditCardIcon },
+    { id: "reports", label: "Reports", icon: DocumentTextIcon },
   ];
 
   const calculateTotalAmount = (totalAmount: number) => {
@@ -293,13 +381,12 @@ const TabPanel = ({
                             </span>
                           </td>
                           <td className="whitespace-nowrap px-2 py-2 text-right text-xs sm:px-4 sm:py-3 sm:text-sm">
-                            <Link
-                              href={`/client-portal/invoices/${invoice._id}/pdf`}
+                            <GeneratePDF
+                              pdfData={createInvoicePDFData(invoice)}
+                              fileName={`${invoice.jobTitle} - Invoice.pdf`}
+                              buttonText="PDF"
                               className="inline-flex items-center text-blue-600 hover:text-blue-900"
-                            >
-                              <ArrowDownTrayIcon className="mr-1 h-4 w-4" />
-                              <span className="hidden sm:inline">PDF</span>
-                            </Link>
+                            />
                           </td>
                         </motion.tr>
                       ))}
@@ -355,17 +442,18 @@ const TabPanel = ({
                         </div>
 
                         <div className="flex items-center gap-2">
-                          <Link
-                            href={`/client-portal/reports/${report._id?.toString()}/pdf`}
+                          <GeneratePDF
+                            pdfData={createReportPDFData(report)}
+                            fileName={`${
+                              invoiceJobTitleMap.get(
+                                typeof report.invoiceId === "string"
+                                  ? report.invoiceId
+                                  : report.invoiceId.toString(),
+                              ) || "Service Report"
+                            } - Report.pdf`}
+                            buttonText="Download"
                             className="flex items-center rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-darkGreen hover:bg-gray-100 sm:px-3 sm:py-1.5 sm:text-sm"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ArrowDownTrayIcon className="mr-1 h-3 w-3 sm:h-4 sm:w-4" />
-                            <span className="xs:inline hidden sm:inline">
-                              Download
-                            </span>
-                          </Link>
+                          />
                           <button
                             onClick={() => openReportModal(report)}
                             className="hover:bg-darkGreen-2 flex items-center rounded-md bg-darkGreen px-2 py-1 text-xs font-medium text-white sm:px-3 sm:py-1.5 sm:text-sm"

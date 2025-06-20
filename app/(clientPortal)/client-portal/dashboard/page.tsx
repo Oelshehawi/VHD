@@ -4,7 +4,9 @@ import {
   fetchClientPastSchedules,
   fetchClientInvoices,
   fetchClientReports,
+  fetchTechnicianByClerkId,
 } from "../../../lib/clientPortalData";
+// @ts-ignore
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 
@@ -50,6 +52,23 @@ export default async function ClientDashboardPage({
   const recentServices = await fetchClientPastSchedules(clientId);
   const recentInvoices = await fetchClientInvoices(clientId);
   const recentReports = await fetchClientReports(clientId);
+
+  // Fetch technician data for reports
+  const technicianDataMap: Record<string, any> = {};
+  const uniqueTechnicianIds = [
+    ...new Set(recentReports.map((report) => report.technicianId)),
+  ].filter(Boolean);
+
+  for (const technicianId of uniqueTechnicianIds) {
+    try {
+      const technicianData = await fetchTechnicianByClerkId(technicianId);
+      if (technicianData) {
+        technicianDataMap[technicianId] = technicianData;
+      }
+    } catch (error) {
+      console.error("Error fetching technician data:", error);
+    }
+  }
 
   // Add admin viewing banner if needed
   const isAdminView = isAdmin && resolvedSearchParams.clientId;
@@ -111,6 +130,12 @@ export default async function ClientDashboardPage({
             recentServices={recentServices}
             recentInvoices={recentInvoices}
             recentReports={recentReports}
+            clientData={{
+              clientName: client.clientName,
+              email: client.email,
+              phoneNumber: client.phoneNumber,
+            }}
+            technicianDataMap={technicianDataMap}
           />
         </div>
       </div>
