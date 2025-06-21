@@ -139,7 +139,7 @@ const TabPanel = ({
           "Please report any and all cleaning inquiries within 5 business days.",
       };
 
-      return { type: "clientInvoice", data: invoiceData };
+      return { type: "invoice", data: invoiceData };
     } catch (error) {
       console.error("Error creating invoice PDF data:", error);
       return undefined;
@@ -383,7 +383,7 @@ const TabPanel = ({
                           <td className="whitespace-nowrap px-2 py-2 text-right text-xs sm:px-4 sm:py-3 sm:text-sm">
                             <GeneratePDF
                               pdfData={createInvoicePDFData(invoice)}
-                              fileName={`${invoice.jobTitle} - Invoice.pdf`}
+                              fileName={`Invoice - ${invoice.jobTitle}.pdf`}
                               buttonText="PDF"
                               className="inline-flex items-center text-blue-600 hover:text-blue-900"
                             />

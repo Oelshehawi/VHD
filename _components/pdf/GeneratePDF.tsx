@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from "react";
 import { FaPrint } from "react-icons/fa";
 import { PDFDownloadLink } from "@react-pdf/renderer";
+import toast from "react-hot-toast";
 import InvoicePdfDocument, { type InvoiceData } from "./InvoicePdfDocument";
-import ClientInvoicePdfDocument from "./ClientInvoicePdfDocument";
+import ReceiptPdfDocument, { type ReceiptData } from "./ReceiptPdfDocument";
 import ReportPdfDocument, {
   type ReportData,
   type TechnicianData,
@@ -14,7 +15,11 @@ import ReportPdfDocument, {
 type PDFData =
   | { type: "invoice"; data: InvoiceData }
   | { type: "clientInvoice"; data: InvoiceData }
-  | { type: "report"; data: { report: ReportData; technician: TechnicianData } }
+  | { type: "receipt"; data: ReceiptData }
+  | {
+      type: "report";
+      data: { report: ReportData; technician: TechnicianData };
+    };
 
 interface GeneratePDFProps {
   pdfData?: PDFData;
@@ -51,7 +56,9 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
       case "invoice":
         return <InvoicePdfDocument invoiceData={pdfData.data} />;
       case "clientInvoice":
-        return <ClientInvoicePdfDocument invoiceData={pdfData.data} />;
+        return <InvoicePdfDocument invoiceData={pdfData.data} />;
+      case "receipt":
+        return <ReceiptPdfDocument receiptData={pdfData.data} />;
       case "report":
         return (
           <ReportPdfDocument
@@ -70,11 +77,13 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
 
     switch (pdfData.type) {
       case "invoice":
-        return `${pdfData.data.jobTitle.trim()} - Invoice.pdf`;
+        return `Invoice - ${pdfData.data.jobTitle.trim()}.pdf`;
       case "clientInvoice":
-        return `Invoice - ${pdfData.data.invoiceId}.pdf`;
+        return `Invoice - ${pdfData.data.jobTitle.trim()}.pdf`;
+      case "receipt":
+        return `Receipt - ${pdfData.data.jobTitle.trim()}.pdf`;
       case "report":
-        return `Service Report - ${pdfData.data.report._id}.pdf`;
+        return `Report - ${pdfData.data.report._id}.pdf`;
       default:
         return "document.pdf";
     }
@@ -100,10 +109,27 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
     );
   }
 
+  const handleDownloadClick = () => {
+    // Show success toast after a short delay to allow download to start
+    setTimeout(() => {
+      const fileType =
+        pdfData.type === "report"
+          ? "Report"
+          : pdfData.type === "receipt"
+            ? "Receipt"
+            : "Invoice";
+      toast.success(`${fileType} PDF downloaded successfully!`);
+    }, 500);
+  };
+
   return (
     <PDFDownloadLink document={document} fileName={generateFileName()}>
       {({ loading, error }) => (
-        <button className={className} disabled={loading}>
+        <button
+          className={className}
+          disabled={loading}
+          onClick={handleDownloadClick}
+        >
           {loading ? (
             <>
               <FaPrint className="lg:mr-2" />
@@ -122,4 +148,4 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
 };
 
 export default GeneratePDF;
-export type { PDFData };
+export type { PDFData, ReceiptData };

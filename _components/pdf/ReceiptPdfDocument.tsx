@@ -9,7 +9,6 @@ import {
   Svg,
   Path,
   Image,
-  Font,
 } from "@react-pdf/renderer";
 
 const styles = StyleSheet.create({
@@ -46,15 +45,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
   },
-  invoiceTitle: {
-    fontSize: 26,
-    color: "#003e29",
-    fontFamily: "Helvetica-Bold",
-  },
+  receiptTitle: { fontSize: 26, color: "#003e29", fontWeight: "bold" },
   companyTitle: {
     fontSize: 16,
     color: "#003e29",
-    fontFamily: "Helvetica-Bold",
+    fontWeight: "bold",
     zIndex: 2,
   },
   footer: {
@@ -64,17 +59,18 @@ const styles = StyleSheet.create({
     right: 0,
     height: 35,
     backgroundColor: "#003e29",
+    color: "#FFFFFF",
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     paddingHorizontal: 20,
   },
-  footerText: { fontSize: 10, color: "white", fontFamily: "Helvetica" },
-  section: { marginTop: 15 },
+  footerText: { fontSize: 10 },
+  section: { marginTop: 10 },
   infoGroup: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 15,
+    marginBottom: 10,
   },
   infoBox: {
     backgroundColor: "#f8f9fa",
@@ -100,13 +96,34 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   infoValue: { fontSize: 12, fontWeight: "bold", color: "#003e29" },
-  infoList: { flexGrow: 1 },
-  billingBox: {
+  receiptBox: {
+    backgroundColor: "#e8f5e8",
+    border: "2px solid #28a745",
+    borderRadius: 6,
+    padding: 12,
+    textAlign: "center",
+    marginTop: 10,
+    marginBottom: 10,
+  },
+  paidStamp: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: "#28a745",
+    marginBottom: 6,
+  },
+  receiptText: { fontSize: 12, color: "#495057", marginBottom: 4 },
+  amountPaid: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: "#003e29",
+    marginTop: 6,
+  },
+  serviceDetails: {
     backgroundColor: "#ffffff",
     border: "1px solid #dee2e6",
     borderRadius: 4,
-    padding: 12,
-    marginTop: 12,
+    padding: 10,
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 12,
@@ -116,37 +133,10 @@ const styles = StyleSheet.create({
     borderBottom: "1px solid #dee2e6",
     paddingBottom: 3,
   },
-  table: {
-    backgroundColor: "#ffffff",
-    border: "1px solid #dee2e6",
-    borderRadius: 4,
-    marginTop: 12,
-    padding: 12,
-  },
-  tableRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  tableHeader: { backgroundColor: "#003e29", color: "#fff" },
-  tableCell: {
-    padding: 3,
-    borderRightWidth: 1,
-    borderRightColor: "#ccc",
-    fontFamily: "Helvetica",
-  },
-  tableCellHeader: {
-    padding: 3,
-    borderRightWidth: 1,
-    borderRightColor: "#ccc",
-    color: "white",
-    fontFamily: "Helvetica-Bold",
-  },
   serviceItem: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 6,
-    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderBottom: "1px solid #f8f9fa",
   },
   serviceDescription: { fontSize: 11, color: "#495057", flex: 1 },
@@ -158,93 +148,48 @@ const styles = StyleSheet.create({
     textAlign: "right",
   },
   totalsSection: {
-    marginTop: 12,
-    paddingTop: 10,
-    paddingHorizontal: 8,
+    marginTop: 8,
+    paddingTop: 6,
     borderTop: "2px solid #003e29",
   },
   totalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 4,
+    paddingVertical: 3,
   },
   totalLabel: { fontSize: 11, color: "#495057" },
   totalValue: { fontSize: 11, fontWeight: "bold", color: "#003e29" },
   grandTotalRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    paddingVertical: 8,
-    marginTop: 8,
+    paddingVertical: 6,
+    marginTop: 5,
     backgroundColor: "#f8f9fa",
-    paddingHorizontal: 12,
+    paddingHorizontal: 10,
     borderRadius: 4,
   },
   grandTotalLabel: { fontSize: 14, fontWeight: "bold", color: "#003e29" },
   grandTotalValue: { fontSize: 16, fontWeight: "bold", color: "#003e29" },
   thankYou: {
-    marginTop: 25,
+    marginTop: 15,
     textAlign: "center",
     fontWeight: "bold",
     fontSize: 12,
     color: "#003e29",
   },
-  terms: { marginTop: 20 },
-  signature: { marginTop: 25, alignItems: "flex-end" },
-  signatureLine: { width: "50%", borderTop: "1px solid black" },
-  signatureText: { marginTop: 5, fontFamily: "Helvetica" },
-  text: { fontFamily: "Helvetica" },
-  boldText: { fontFamily: "Helvetica-Bold" },
-  greenText: { color: "#003e29", fontFamily: "Helvetica-Bold" },
-  paymentDetailsBox: {
-    backgroundColor: "#e8f5e8",
-    border: "3px solid #28a745",
-    borderRadius: 8,
-    padding: 15,
-    marginTop: 15,
-    marginBottom: 15,
-  },
-  paymentTitle: {
-    fontSize: 14,
-    fontWeight: "bold",
-    color: "#28a745",
+  notes: {
+    marginTop: 10,
+    fontSize: 9,
+    color: "#6c757d",
     textAlign: "center",
-    marginBottom: 12,
-    textTransform: "uppercase",
-  },
-  paymentInfoBox: {
-    backgroundColor: "#ffffff",
-    padding: 12,
-    borderRadius: 6,
-    border: "2px solid #28a745",
-    flex: 1,
-    marginRight: 8,
-  },
-  paymentInfoBoxLast: {
-    backgroundColor: "#ffffff",
-    padding: 12,
-    borderRadius: 6,
-    border: "2px solid #28a745",
-    flex: 1,
-    marginRight: 0,
-  },
-  paymentLabel: {
-    fontSize: 10,
-    fontWeight: "bold",
-    color: "#28a745",
-    marginBottom: 6,
-    textTransform: "uppercase",
-  },
-  paymentValue: {
-    fontSize: 11,
-    fontWeight: "bold",
-    color: "#003e29",
-    lineHeight: 1.4,
+    fontStyle: "italic",
   },
 });
 
-export interface InvoiceData {
+export interface ReceiptData {
+  receiptId: string;
   invoiceId: string;
-  dateIssued: string;
+  datePaid: string;
   jobTitle: string;
   location: string;
   clientName: string;
@@ -254,17 +199,15 @@ export interface InvoiceData {
   subtotal: number;
   gst: number;
   totalAmount: number;
-  cheque: string;
-  eTransfer: string;
-  terms: string;
+  paymentMethod?: string;
 }
 
-interface InvoicePdfDocumentProps {
-  invoiceData: InvoiceData;
+interface ReceiptPdfDocumentProps {
+  receiptData: ReceiptData;
 }
 
-const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
-  invoiceData,
+const ReceiptPdfDocument: React.FC<ReceiptPdfDocumentProps> = ({
+  receiptData,
 }) => (
   <Document>
     <Page size="A4" style={styles.page}>
@@ -279,85 +222,77 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
         </Svg>
         {/* Header Content */}
         <View style={styles.headerContent}>
-          <Text style={styles.invoiceTitle}>INVOICE</Text>
+          <Text style={styles.receiptTitle}>PAYMENT RECEIPT</Text>
           <Text style={styles.companyTitle}>Vancouver Hood Doctors</Text>
         </View>
       </View>
 
-      {/* Logo - Using public URL */}
+      {/* Logo */}
       <View style={styles.logoContainer}>
-        <Image
-          src="/images/logo.png"
-          style={{ width: "100%", height: "100%" }}
-        />
+        <Image src="/images/logo.png" />
       </View>
 
-      {/* Invoice Info */}
+      {/* Receipt Info */}
       <View style={styles.section}>
         <View style={styles.infoGroup}>
           <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>Invoice No</Text>
-            <Text style={styles.infoValue}>#{invoiceData.invoiceId}</Text>
+            <Text style={styles.infoTitle}>Receipt No</Text>
+            <Text style={styles.infoValue}>#{receiptData.receiptId}</Text>
           </View>
           <View style={styles.infoBox}>
-            <Text style={styles.infoTitle}>Date</Text>
-            <Text style={styles.infoValue}>{invoiceData.dateIssued}</Text>
+            <Text style={styles.infoTitle}>Invoice No</Text>
+            <Text style={styles.infoValue}>#{receiptData.invoiceId}</Text>
           </View>
           <View style={styles.infoBoxLast}>
-            <Text style={styles.infoTitle}>Payment Info</Text>
-            <Text style={styles.infoValue}>Mail/E-Transfer</Text>
+            <Text style={styles.infoTitle}>Date Paid</Text>
+            <Text style={styles.infoValue}>{receiptData.datePaid}</Text>
           </View>
         </View>
       </View>
 
-      {/* Billing Info */}
-      <View style={styles.billingBox}>
-        <Text style={styles.sectionTitle}>Bill To:</Text>
-        <Text style={styles.infoValue}>{invoiceData.jobTitle.trim()}</Text>
-        <Text style={{ fontSize: 10, color: "#495057", marginTop: 2 }}>
-          {invoiceData.location}
+      {/* Payment Confirmation Box */}
+      <View style={styles.receiptBox}>
+        <Text style={styles.paidStamp}>✓ PAYMENT RECEIVED</Text>
+        <Text style={styles.receiptText}>
+          We have received your payment for the services provided at:
         </Text>
-        <Text style={{ fontSize: 10, color: "#495057", marginTop: 2 }}>
-          {invoiceData.phoneNumber}
+        <Text style={styles.infoValue}>{receiptData.jobTitle}</Text>
+        <Text style={styles.receiptText}>{receiptData.location}</Text>
+        <Text style={styles.amountPaid}>
+          Amount Paid: ${receiptData.totalAmount.toFixed(2)} CAD
         </Text>
+        {receiptData.paymentMethod && (
+          <Text style={styles.receiptText}>
+            Payment Method: {receiptData.paymentMethod}
+          </Text>
+        )}
       </View>
 
-      {/* Payment Details - Prominent */}
-      <View style={{ marginTop: 15 }}>
+      {/* Customer Info */}
+      <View style={styles.section}>
         <View style={styles.infoGroup}>
-          <View style={styles.paymentInfoBox}>
-            <Text style={styles.paymentLabel}>MAIL PAYMENT TO:</Text>
-            <Text style={styles.paymentValue}>{invoiceData.cheque}</Text>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoTitle}>Customer</Text>
+            <Text style={styles.infoValue}>{receiptData.clientName}</Text>
           </View>
-          <View style={styles.paymentInfoBoxLast}>
-            <Text style={styles.paymentLabel}>E-TRANSFER TO:</Text>
-            <Text style={styles.paymentValue}>adam@vancouverventcleaning.ca</Text>
+          <View style={styles.infoBox}>
+            <Text style={styles.infoTitle}>Email</Text>
+            <Text style={styles.infoValue}>{receiptData.email}</Text>
+          </View>
+          <View style={styles.infoBoxLast}>
+            <Text style={styles.infoTitle}>Phone</Text>
+            <Text style={styles.infoValue}>{receiptData.phoneNumber}</Text>
           </View>
         </View>
       </View>
-
-      {/* Service Notice */}
-      <Text
-        style={{
-          color: "red",
-          textAlign: "center",
-          marginTop: 15,
-          marginBottom: 10,
-          fontSize: 10,
-        }}
-      >
-        Accessible Areas Serviced Only
-      </Text>
 
       {/* Service Details */}
-      <View style={styles.table}>
+      <View style={styles.serviceDetails}>
         <Text style={styles.sectionTitle}>Services Provided</Text>
 
-        {invoiceData.items.map((item, index) => (
+        {receiptData.items.map((item, index) => (
           <View style={styles.serviceItem} key={index}>
-            <Text style={styles.serviceDescription}>
-              {index + 1}. {item.description}
-            </Text>
+            <Text style={styles.serviceDescription}>{item.description}</Text>
             <Text style={styles.serviceAmount}>${item.total.toFixed(2)}</Text>
           </View>
         ))}
@@ -367,41 +302,30 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Subtotal:</Text>
             <Text style={styles.totalValue}>
-              ${invoiceData.subtotal.toFixed(2)}
+              ${receiptData.subtotal.toFixed(2)}
             </Text>
           </View>
           <View style={styles.totalRow}>
-            <Text style={styles.totalLabel}>GST# 814301065 (5%):</Text>
-            <Text style={styles.totalValue}>${invoiceData.gst.toFixed(2)}</Text>
+            <Text style={styles.totalLabel}>GST (5%):</Text>
+            <Text style={styles.totalValue}>${receiptData.gst.toFixed(2)}</Text>
           </View>
           <View style={styles.grandTotalRow}>
-            <Text style={styles.grandTotalLabel}>Total:</Text>
+            <Text style={styles.grandTotalLabel}>Total Paid:</Text>
             <Text style={styles.grandTotalValue}>
-              ${invoiceData.totalAmount.toFixed(2)} CAD
+              ${receiptData.totalAmount.toFixed(2)} CAD
             </Text>
           </View>
         </View>
       </View>
 
       {/* Thank You Note */}
-      <Text style={styles.thankYou}>THANK YOU FOR YOUR BUSINESS</Text>
+      <Text style={styles.thankYou}>THANK YOU FOR YOUR BUSINESS!</Text>
 
-      <View style={styles.terms}>
-        <Text style={{ color: "#003e29", fontWeight: "bold", marginBottom: 5 }}>
-          TERMS & CONDITIONS
-        </Text>
-        <Text>{invoiceData.terms}</Text>
-        <Text>
-          Invoices due within one month of cleaning date; 5% interest on overdue
-          amounts.
-        </Text>
-      </View>
-
-      {/* Signature */}
-      <View style={styles.signature}>
-        <View style={styles.signatureLine}></View>
-        <Text style={styles.signatureText}>Authorized Signature</Text>
-      </View>
+      {/* Notes */}
+      <Text style={styles.notes}>
+        This receipt serves as confirmation of payment received. Please keep
+        this for your records.
+      </Text>
 
       {/* Footer */}
       <View style={styles.footer}>
@@ -409,11 +333,7 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
         <Text style={styles.footerText}>
           <Link
             src="http://vancouverventcleaning.ca"
-            style={{
-              color: "white",
-              textDecoration: "none",
-              fontFamily: "Helvetica",
-            }}
+            style={{ color: "white", textDecoration: "none" }}
           >
             vancouverventcleaning.ca
           </Link>
@@ -423,4 +343,5 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
   </Document>
 );
 
-export default InvoicePdfDocument;
+export default ReceiptPdfDocument;
+export type { ReceiptPdfDocumentProps };
