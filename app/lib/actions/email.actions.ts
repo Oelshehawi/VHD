@@ -6,18 +6,13 @@ import { Invoice, Client, JobsDueSoon } from "../../../models/reactDataSchema";
 import { DueInvoiceType } from "../typeDefinitions";
 import { formatAmount } from "../utils";
 import { auth } from "@clerk/nextjs/server";
+import React from "react";
+import { renderToBuffer, renderToString } from "@react-pdf/renderer";
+import InvoicePdfDocument, {
+  type InvoiceData,
+} from "../../../_components/pdf/InvoicePdfDocument";
 
 const postmark = require("postmark");
-
-const getAbsoluteUrl = (path: string) => {
-  // For server-side requests, use the host from the request headers
-  const baseUrl =
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : "http://localhost:3000");
-  return `${baseUrl}${path}`;
-};
 
 /**
  * Send a cleaning reminder email using Postmark
@@ -109,10 +104,6 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
   await connectMongo();
 
   try {
-    // Get Clerk session token
-    const session = await auth();
-    const token = await session.getToken();
-
     // Find the invoice
     const invoice = await Invoice.findById(invoiceId);
     if (!invoice) {
@@ -140,27 +131,34 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
     const totalWithTax = total * 1.05; // Adding 5% tax
     const formattedAmount = formatAmount(totalWithTax).replace("$", "");
 
-    // Generate PDF invoice URL using the helper
-    const pdfUrl = getAbsoluteUrl(`/invoices/${invoice._id}/pdf`);
+    // Prepare invoice data for PDF generation
+    const invoiceData: InvoiceData = {
+      invoiceId: invoice.invoiceId,
+      dateIssued: issueDateFormatted,
+      jobTitle: invoice.jobTitle,
+      location: invoice.location,
+      clientName: clientDetails.clientName,
+      email: clientDetails.email,
+      phoneNumber: clientDetails.phoneNumber,
+      items: invoice.items.map((item: { description: any; price: any }) => ({
+        description: item.description,
+        price: item.price,
+        total: item.price,
+      })),
+      subtotal: total,
+      gst: total * 0.05, // 5% GST
+      totalAmount: totalWithTax,
+      cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
+      eTransfer: "adam@vancouverventcleaning.ca",
+      terms:
+        "Please report any and all cleaning inquiries within 5 business days.",
+    };
 
-    // Fetch the PDF directly from the server with auth token
-    const pdfResponse = await fetch(pdfUrl, {
-      method: "GET",
-      headers: {
-        Accept: "application/pdf",
-        "Cache-Control": "no-cache",
-        Authorization: `Bearer ${token}`,
-      },
-      cache: "no-store",
-    });
-
-    if (!pdfResponse.ok) {
-      throw new Error(`Failed to fetch PDF: ${pdfResponse.statusText}`);
-    }
-
-    // Convert the PDF to a buffer and then to base64
-    const pdfBuffer = await pdfResponse.arrayBuffer();
-    const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+    // Generate PDF using the PDF document component
+    const MyDocument = () =>
+      React.createElement(InvoicePdfDocument, { invoiceData });
+    const pdfBuffer = await renderToBuffer(React.createElement(MyDocument));
+    const pdfBase64 = pdfBuffer.toString("base64");
 
     // Send email using Postmark
     const client = new postmark.ServerClient(process.env.POSTMARK_CLIENT);

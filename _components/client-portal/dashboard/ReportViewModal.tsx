@@ -396,14 +396,6 @@ const ReportModal: React.FC<ReportModalProps> = ({
             {/* Footer */}
             <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
               <div className="flex justify-between">
-                {/* <a
-                  href={`/client-portal/reports/${report._id}/pdf`}
-                  className="rounded-md bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  Download PDF
-                </a> */}
                 <button
                   onClick={onClose}
                   className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"

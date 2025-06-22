@@ -11,6 +11,7 @@ import {
   Image,
   Font,
 } from "@react-pdf/renderer";
+import { getImageSrc } from "../../app/lib/imageUtils";
 
 const styles = StyleSheet.create({
   page: {
@@ -24,7 +25,7 @@ const styles = StyleSheet.create({
   logoContainer: {
     position: "absolute",
     left: 540,
-    top: 10,
+    top: 5,
     bottom: 0,
     right: 0,
     width: "10%",
@@ -284,10 +285,10 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
         </View>
       </View>
 
-      {/* Logo - Using public URL */}
+      {/* Logo - Using hybrid approach for client/server compatibility */}
       <View style={styles.logoContainer}>
         <Image
-          src="/images/logo.png"
+          src={getImageSrc("images/logo.png")}
           style={{ width: "100%", height: "100%" }}
         />
       </View>
@@ -331,7 +332,9 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
           </View>
           <View style={styles.paymentInfoBoxLast}>
             <Text style={styles.paymentLabel}>E-TRANSFER TO:</Text>
-            <Text style={styles.paymentValue}>adam@vancouverventcleaning.ca</Text>
+            <Text style={styles.paymentValue}>
+              adam@vancouverventcleaning.ca
+            </Text>
           </View>
         </View>
       </View>
