@@ -14,7 +14,7 @@ const LoadingSpinner = () => (
 
 function AcceptTokenContent() {
   const { isLoaded, signIn, setActive } = useSignIn();
-  const { signOut } = useClerk();
+  const { signOut, user } = useClerk();
   const router = useRouter();
   const searchParams = useSearchParams();
   const attemptRef = useRef(false);
@@ -24,23 +24,10 @@ function AcceptTokenContent() {
 
   const token = searchParams?.get("client_token");
 
-  useEffect(() => {
-    // Clean up any existing sessions
-    const performSignOut = async () => {
-      if (isLoaded) {
-        try {
-          await signOut();
-        } catch (err) {
-          // Ignore errors from signOut
-        }
-      }
-    };
 
-    performSignOut();
-  }, [isLoaded, signOut]);
 
   useEffect(() => {
-    async function verifyToken() {
+    async function handleAccess() {
       // Prevent multiple attempts
       if (attemptRef.current) return;
       attemptRef.current = true;
@@ -49,6 +36,26 @@ function AcceptTokenContent() {
         setError("Invalid or missing access token");
         setLoading(false);
         return;
+      }
+
+      // Check if user is already signed in as a client portal user
+      if (user && (user as any)?.publicMetadata?.isClientPortalUser) {
+        // User is already authenticated as client portal user, redirect directly
+        setTimeout(() => {
+          router.push("/client-portal/dashboard");
+        }, 1000);
+        return;
+      }
+
+      // If there's any existing session, sign out first
+      if (user) {
+        try {
+          await signOut();
+          // Wait a moment for signout to complete
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (err) {
+          // Ignore signout errors
+        }
       }
 
       try {
@@ -71,26 +78,30 @@ function AcceptTokenContent() {
       } catch (err: any) {
         console.error("Error signing in with token:", err);
 
-        // Handle rate limiting specifically
+        // Handle specific error cases
         if (err?.status === 429) {
           setError("Too many attempts. Please wait a moment and try again.");
+        } else if (err?.errors?.[0]?.code === "ticket_invalid") {
+          setError(
+            "This access link has already been used or has expired. Please contact support for a new link."
+          );
         } else {
           setError(
-            "Failed to sign in. The access link may have expired or is invalid.",
+            "Failed to sign in. The access link may have expired or is invalid."
           );
         }
         setLoading(false);
       }
     }
 
-    // Verify token when component is loaded and clerk is ready
+    // Handle access when component is loaded and clerk is ready
     if (isLoaded && token) {
-      verifyToken();
+      handleAccess();
     } else if (isLoaded && !token) {
       setError("No access token provided");
       setLoading(false);
     }
-  }, [isLoaded, router, setActive, signIn, token]);
+  }, [isLoaded, router, setActive, signIn, token, user, signOut]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">
