@@ -62,7 +62,7 @@ function AcceptTokenContent() {
 
           // Keep loading state while redirecting
           setTimeout(() => {
-            router.push("/client-portal");
+            router.push("/client-portal/dashboard");
           }, 1500);
         } else {
           setError("Sign-in failed. Please try again or contact support.");
