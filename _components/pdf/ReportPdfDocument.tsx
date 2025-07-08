@@ -254,7 +254,7 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
             {report.recommendedCleaningFrequency && (
               <Text style={styles.infoItem}>
                 <Text style={styles.boldText}>Recommended Frequency:</Text>{" "}
-                {report.recommendedCleaningFrequency} months
+                {report.recommendedCleaningFrequency} times per year
               </Text>
             )}
           </View>
