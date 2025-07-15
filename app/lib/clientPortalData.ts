@@ -12,8 +12,6 @@ import {
 } from "./typeDefinitions";
 import {
   fetchClientById as dataFetchClientById,
-  fetchClientInvoices as dataFetchClientInvoices,
-  fetchInvoiceById,
 } from "./data";
 
 /**
@@ -447,9 +445,9 @@ export async function fetchReportDetails(
   }
   await connectMongo();
   try {
-    const report = await Report.findOne({ _id: new ObjectId(reportId) }).lean();
+    const report = await Report.findOne({ _id: new ObjectId(reportId) }).lean<ReportType>();
 
-    const invoice = await Invoice.findOne({ _id: report?.invoiceId }).lean();
+    const invoice = await Invoice.findOne({ _id: report?.invoiceId }).lean<InvoiceType>();
 
     if (!report || !invoice) {
       console.log("Report not found or does not belong to client");

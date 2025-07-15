@@ -1,7 +1,7 @@
 import connectMongo from "./connect";
 import { Client, Invoice } from "../../models/reactDataSchema";
 import { formatPhoneNumber } from "./utils";
-import { Holiday, HolidayResponse, OBSERVANCES } from "./typeDefinitions";
+import { ClientType, Holiday, HolidayResponse, OBSERVANCES, InvoiceType } from "./typeDefinitions";
 
 export const fetchAllClients = async () => {
   await connectMongo();
@@ -21,16 +21,22 @@ export const fetchAllClients = async () => {
   }
 };
 
-export const fetchClientById = async (clientId: string) => {
+export const fetchClientById = async (clientId: string): Promise<ClientType> => {
   await connectMongo();
   try {
-    const client = await Client.findOne({ _id: clientId }).lean();
+    const client = await Client.findOne({ _id: clientId }).lean<ClientType>();
     if (!client) {
       throw new Error("Client not found");
     }
-    client._id = client._id.toString();
-    client.phoneNumber = formatPhoneNumber(client.phoneNumber);
-    return client;
+    const clientData: ClientType = {
+      _id: typeof client._id === "string" ? client._id : client._id.toString(),
+      clientName: client.clientName,
+      email: client.email,
+      phoneNumber: formatPhoneNumber(client.phoneNumber),
+      prefix: client.prefix,
+      notes: client.notes,
+    };
+    return clientData;
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Client could not be found by Id");
@@ -40,7 +46,7 @@ export const fetchClientById = async (clientId: string) => {
 export const fetchClientInvoices = async (clientId: string) => {
   await connectMongo();
   try {
-    const invoices = await Invoice.find({ clientId: clientId }).lean();
+    const invoices = await Invoice.find({ clientId: clientId }).lean<InvoiceType[]>();
 
     return invoices.map((invoice) => ({
       _id: invoice._id.toString(),
@@ -94,7 +100,7 @@ export const fetchInvoiceById = async (invoiceId: string) => {
         price: parseFloat(item.price) || 0,
       }));
 
-    const invoice = await Invoice.findOne({ _id: invoiceId }).lean();
+    const invoice = await Invoice.findOne({ _id: invoiceId }).lean<InvoiceType>();
     if (!invoice) {
       throw new Error("Invoice not found");
     }

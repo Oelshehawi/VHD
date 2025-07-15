@@ -1,5 +1,7 @@
 {
   "compilerOptions": {
+    "rootDir": "./",
+    "outDir": "./dist",
     "lib": [
       "dom",
       "dom.iterable",
@@ -11,10 +13,10 @@
     ],
     "allowJs": true,
     "skipLibCheck": true,
-    "noEmit": true,
+    "noEmit": false,
     "incremental": true,
     "esModuleInterop": true,
-    "module": "esnext",
+    "module": "ESNext",
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
@@ -40,7 +42,7 @@
     ".next/types/**/*.ts",
     "scripts/cleanup-invoice-photos.cjs",
     "scripts/migrate-photos-signatures.cjs"
-  ],
+, "scripts/test-scheduling.ts", "scripts/test-scheduling.js"  ],
   "exclude": [
     "node_modules"
   ]

@@ -176,8 +176,8 @@ export interface InvoiceData {
 }
 
 export interface DueInvoiceType {
-  _id?: string;
-  clientId: string;
+  _id?: ObjectId | string;
+  clientId: ObjectId | string; // ObjectId reference to Client collection
   invoiceId: string;
   jobTitle: string;
   dateDue: Date | string;
@@ -375,4 +375,221 @@ export interface EstimateType {
   terms?: string;
   notes?: string;
   convertedToInvoice?: ObjectId | string;
+}
+
+// Scheduling Optimization Types
+export interface LocationGeocodeType {
+  _id: ObjectId | string;
+  address: string; // raw address from invoice: "123 Main St, Vancouver, BC"
+  normalizedAddress: string; // cleaned version: "123 Main Street, Vancouver, BC V6B 1A1"
+  coordinates: [number, number]; // [lng, lat] for Mapbox
+  clusterId?: ObjectId | string; // which geographic cluster this belongs to
+  lastGeocoded: Date;
+  source: "mapbox" | "manual"; // how coordinates were obtained
+}
+
+export interface LocationClusterType {
+  _id: ObjectId | string;
+  clusterName: string; // "Vancouver Core", "Whistler Area", "Surrey/Langley"
+  centerCoordinates: { lat: number; lng: number };
+  radius: number; // radius in kilometers
+  constraints: {
+    maxJobsPerDay: number; // 4 for Vancouver, 2 for Whistler
+    preferredDays: string[]; // ["Monday", "Tuesday"] for Whistler bundling
+    specialRequirements?: string; // "Ferry required", "Bundle trips", "Early access only"
+    bufferTimeMinutes?: number; // extra time needed between jobs in this area
+  };
+  boundingBox?: {
+    north: number;
+    south: number;
+    east: number;
+    west: number;
+  };
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface MonthlyDistanceMatrixType {
+  _id: ObjectId | string;
+  month: string; // "2024-01" format
+  locations: string[]; // ordered array of normalized addresses
+  coordinates: [number, number][]; // corresponding [lng, lat] pairs
+  matrix: {
+    durations: number[][]; // travel times in seconds
+    distances: number[][]; // distances in meters
+  };
+  calculatedAt: Date;
+  isActive: boolean; // false when month is over or needs recalculation
+}
+
+export interface SchedulingPreferencesType {
+  _id: ObjectId | string;
+  globalSettings: {
+    defaultBufferMinutes: number; // 30 minutes between jobs
+    workDayStart: string; // "08:00"
+    workDayEnd: string; // "17:00"
+    maxJobsPerDay: number; // 4
+    maxDriveTimePerDay: number; // 240 minutes (4 hours)
+    lunchBreakDuration: number; // 60 minutes
+    lunchBreakStart: string; // "12:00"
+  };
+  jobTypePreferences: {
+    jobTitle: string; // "Restaurant Hood Cleaning"
+    estimatedDuration: number; // 120 minutes
+    bufferAfter: number; // 45 minutes (cleanup + travel buffer)
+    preferredTimeSlots: string[]; // ["09:00-12:00", "13:00-16:00"]
+    difficultyScore: number; // 1-5 scale (affects scheduling)
+    requiresSpecialEquipment?: boolean;
+  }[];
+  locationPreferences: {
+    location: string; // normalized address
+    accessNotes?: string; // "Loading dock access only 9-11am"
+    parkingDifficulty: number; // 1-5 scale
+    additionalSetupTime: number; // extra minutes for difficult locations
+  }[];
+  isDefault: boolean;
+  createdBy: string; // userId who created these preferences
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface HistoricalSchedulePatternType {
+  _id: ObjectId | string;
+  jobIdentifier: string; // combination of jobTitle + normalizedLocation
+  patterns: {
+    preferredHour: number; // 9 for 9am
+    hourConfidence: number; // 0-1 confidence score
+    preferredDayOfWeek: number; // 1-7 (Monday = 1)
+    dayConfidence: number; // 0-1 confidence score
+    preferredTechnicians: string[]; // technician IDs who usually do this job
+    technicianConfidence: number; // 0-1 confidence score
+    averageDuration: number; // actual time taken in minutes
+    seasonalPatterns?: {
+      month: number; // 1-12
+      frequencyMultiplier: number; // 1.2 for 20% more frequent in summer
+    }[];
+  };
+  historicalData: {
+    scheduleId: string;
+    startDateTime: Date;
+    actualDuration?: number;
+    assignedTechnicians: string[];
+    completionNotes?: string;
+  }[];
+  lastAnalyzed: Date;
+  totalOccurrences: number; // how many times this job has been scheduled
+}
+
+export interface OptimizationHistoryType {
+  _id: ObjectId | string;
+  runDate: Date;
+  periodStart: Date; // optimization period start
+  periodEnd: Date; // optimization period end
+  strategy: "efficiency" | "balanced" | "spread" | "historical";
+  inputJobs: {
+    jobId: string;
+    location: string;
+    dateDue: Date;
+  }[];
+  resultingMetrics: {
+    totalJobsOptimized: number;
+    totalDriveTimeMinutes: number;
+    totalDistanceKm: number;
+    averageJobsPerDay: number;
+    efficiencyScore: number; // 0-100
+  };
+  userInteractions: {
+    jobId: string;
+    suggestedDateTime: Date;
+    userModifiedDateTime?: Date;
+    wasAccepted: boolean;
+    rejectionReason?: string;
+  }[];
+  runBy: string; // userId
+}
+
+// Optimization Result Types (not saved to DB, just for API responses)
+export interface JobOptimizationData {
+  jobId: string;
+  invoiceId: string;
+  jobTitle: string;
+  location: string;
+  normalizedLocation: string;
+  clientName: string;
+  dateDue: Date;
+  estimatedDuration: number; // minutes
+  priority: number; // 1-10 scale
+  historicalPattern?: {
+    preferredHour: number;
+    confidence: number;
+    preferredTechnicians: string[];
+  };
+  constraints: {
+    earliestStart: Date;
+    latestStart: Date;
+    bufferAfter: number;
+    requiredTechnicians?: string[];
+  };
+}
+
+export interface OptimizationConstraints {
+  dateRange: {
+    start: Date;
+    end: Date;
+  };
+  globalSettings: SchedulingPreferencesType["globalSettings"];
+  techniciansAvailable: string[];
+  existingSchedules: ScheduleType[]; // to avoid conflicts
+  priorityWeights: {
+    efficiency: number; // 0-1 weight for travel time minimization
+    historical: number; // 0-1 weight for following historical patterns
+    balance: number; // 0-1 weight for workload distribution
+    urgency: number; // 0-1 weight for overdue jobs
+  };
+}
+
+export interface ScheduleSuggestion {
+  jobId: string;
+  suggestedDateTime: Date;
+  assignedTechnicians: string[];
+  estimatedEndTime: Date;
+  drivingTimeToNext?: number; // minutes to next job
+  drivingTimeToPrevious?: number; // minutes from previous job
+  confidence: number; // 0-1 how confident we are in this suggestion
+  reasoning: string[]; // ["Matches historical pattern", "Minimizes travel time"]
+  clusterId?: string;
+  clusterName?: string;
+}
+
+export interface OptimizedDaySchedule {
+  date: Date;
+  clusterId?: string;
+  clusterName?: string;
+  suggestions: ScheduleSuggestion[];
+  metrics: {
+    totalJobs: number;
+    totalWorkTime: number; // minutes
+    totalDriveTime: number; // minutes
+    efficiencyRatio: number; // work time / (work time + drive time)
+    workloadBalance: number; // 0-1 how balanced technician workload is
+  };
+  assignedTechnicians: string[];
+}
+
+export interface OptimizationResult {
+  strategy: "efficiency" | "balanced" | "spread" | "historical";
+  totalJobs: number;
+  optimizedDays: OptimizedDaySchedule[];
+  overallMetrics: {
+    totalDriveTime: number; // minutes
+    totalWorkTime: number; // minutes
+    totalDistance: number; // km
+    efficiencyScore: number; // 0-100
+    historicalAlignment: number; // 0-100 how well it matches historical patterns
+    workloadBalance: number; // 0-100 how evenly distributed workload is
+    averageJobsPerDay: number;
+  };
+  unscheduledJobs: JobOptimizationData[]; // jobs that couldn't be optimally placed
+  generatedAt: Date;
 }

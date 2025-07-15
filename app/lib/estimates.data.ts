@@ -12,7 +12,7 @@ export async function fetchAllEstimates() {
     const estimates = await Estimate.find()
       .populate("clientId", "clientName email phoneNumber")
       .sort({ createdDate: -1 })
-      .lean();
+      .lean<EstimateType[]>();
 
     return estimates.map((estimate) => ({
       ...estimate,
@@ -31,7 +31,7 @@ export async function fetchEstimateById(estimateId: string) {
   try {
     const estimate = await Estimate.findById(estimateId)
       .populate("clientId", "clientName email phoneNumber")
-      .lean();
+      .lean<EstimateType>();
 
     if (!estimate) {
       throw new Error("Estimate not found");
@@ -94,7 +94,7 @@ export async function fetchFilteredEstimates(
       .sort({ createdDate: -1 })
       .skip(offset)
       .limit(ITEMS_PER_PAGE)
-      .lean();
+      .lean<EstimateType[]>();
 
     return estimates.map((estimate) => ({
       ...estimate,
