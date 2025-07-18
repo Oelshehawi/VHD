@@ -6,7 +6,7 @@ import {
   Schedule,
   LocationGeocode,
   LocationCluster,
-  MonthlyDistanceMatrix,
+  OptimizationDistanceMatrix,
   SchedulingPreferences,
   HistoricalSchedulePattern,
 } from "../../models/reactDataSchema";
@@ -14,7 +14,7 @@ import {
   JobOptimizationData,
   LocationGeocodeType,
   LocationClusterType,
-  MonthlyDistanceMatrixType,
+  OptimizationDistanceMatrixType,
   SchedulingPreferencesType,
   HistoricalSchedulePatternType,
   ScheduleType,
@@ -603,35 +603,295 @@ export async function getLocationClusters(): Promise<LocationClusterType[]> {
 }
 
 /**
- * Get monthly distance matrix (cache)
+ * Get optimization distance matrix (cache)
  */
-export async function getMonthlyDistanceMatrix(
-  month: string,
-): Promise<MonthlyDistanceMatrixType | null> {
+export async function getOptimizationDistanceMatrix(
+  optimizationId: string,
+): Promise<OptimizationDistanceMatrixType | null> {
   await connectMongo();
 
   try {
-    const matrix = await MonthlyDistanceMatrix.findOne({
-      month,
+    const matrix = await OptimizationDistanceMatrix.findOne({
+      optimizationId,
       isActive: true,
     }).lean();
 
     if (!matrix) return null;
 
     // Convert to proper type
-    const typedMatrix: MonthlyDistanceMatrixType = {
+    const typedMatrix: OptimizationDistanceMatrixType = {
       _id: (matrix as any)._id.toString(),
-      month: (matrix as any).month,
+      optimizationId: (matrix as any).optimizationId,
       locations: (matrix as any).locations,
       coordinates: (matrix as any).coordinates,
       matrix: (matrix as any).matrix,
       calculatedAt: (matrix as any).calculatedAt,
       isActive: (matrix as any).isActive,
+      dateRange: (matrix as any).dateRange,
     };
 
     return typedMatrix;
   } catch (error) {
-    console.error("Error getting monthly distance matrix:", error);
+    console.error("Error getting optimization distance matrix:", error);
+    return null;
+  }
+}
+
+/**
+ * Save optimization distance matrix to cache
+ */
+export async function saveOptimizationDistanceMatrix(
+  optimizationId: string,
+  locations: string[],
+  coordinates: Array<[number, number]>,
+  matrix: { durations: number[][]; distances: number[][] },
+  dateRange: { start: Date; end: Date },
+): Promise<OptimizationDistanceMatrixType> {
+  await connectMongo();
+
+  try {
+    // Deactivate any existing matrix for this optimization
+    await OptimizationDistanceMatrix.updateMany(
+      { optimizationId },
+      { isActive: false }
+    );
+
+    // Create new matrix
+    const newMatrix = new OptimizationDistanceMatrix({
+      optimizationId,
+      locations,
+      coordinates,
+      matrix,
+      dateRange,
+      calculatedAt: new Date(),
+      isActive: true,
+    } as any);
+
+    const savedMatrix = await newMatrix.save();
+
+    return {
+      _id: savedMatrix._id.toString(),
+      optimizationId: savedMatrix.optimizationId,
+      locations: savedMatrix.locations,
+      coordinates: savedMatrix.coordinates,
+      matrix: savedMatrix.matrix,
+      calculatedAt: savedMatrix.calculatedAt,
+      isActive: savedMatrix.isActive,
+      dateRange: savedMatrix.dateRange,
+    };
+  } catch (error) {
+    console.error("Error saving optimization distance matrix:", error);
+    throw new Error("Failed to save optimization distance matrix");
+  }
+}
+
+/**
+ * Batch geocode all unique locations for unscheduled jobs
+ */
+export async function batchGeocodeJobLocations(
+  jobs: JobOptimizationData[],
+): Promise<Map<string, { lat: number; lng: number }>> {
+  await connectMongo();
+
+  try {
+    // Get unique locations
+    const uniqueLocations = Array.from(new Set(jobs.map(job => job.location)));
+    console.log(`🗺️ Batch geocoding ${uniqueLocations.length} unique locations...`);
+
+    // Check which locations we already have geocoded
+    const existingGeocodes = await LocationGeocode.find({
+      address: { $in: uniqueLocations }
+    }).lean();
+
+    const geocodeMap = new Map<string, { lat: number; lng: number }>();
+    const locationsToGeocode: string[] = [];
+
+    // Add existing geocodes to map
+    for (const geocode of existingGeocodes) {
+      const [lng, lat] = geocode.coordinates;
+      geocodeMap.set(geocode.address, { lat, lng });
+      console.log(`📍 Using cached coordinates for: ${geocode.address}`);
+    }
+
+    // Find locations that need geocoding
+    for (const location of uniqueLocations) {
+      if (!geocodeMap.has(location)) {
+        locationsToGeocode.push(location);
+      }
+    }
+
+    if (locationsToGeocode.length > 0) {
+      console.log(`🌐 Geocoding ${locationsToGeocode.length} new locations...`);
+      
+      // Use the existing geocoding API endpoint
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/geocode`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ addresses: locationsToGeocode }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Geocoding API error: ${response.status}`);
+      }
+
+      const geocodeResults = await response.json();
+      
+      // Add new geocodes to map and save to database
+      // Note: geocodeResults.results only contains successful results
+      for (const result of geocodeResults.results || []) {
+        if (result && result.coordinates) {
+          const [lng, lat] = result.coordinates;
+          geocodeMap.set(result.address, { lat, lng });
+          
+          // Save to database (already done by the API, but this ensures consistency)
+          await LocationGeocode.findOneAndUpdate(
+            { address: result.address },
+            {
+              address: result.address,
+              normalizedAddress: normalizeAddress(result.address),
+              coordinates: [lng, lat],
+              lastGeocoded: new Date(),
+              source: 'openroute',
+            },
+            { upsert: true }
+          );
+          
+          console.log(`✅ Geocoded and cached: ${result.address} → [${lat}, ${lng}]`);
+        }
+      }
+
+      // Log any locations that weren't geocoded
+      const geocodedAddresses = new Set((geocodeResults.results || []).map((r: any) => r.address));
+      for (const location of locationsToGeocode) {
+        if (!geocodedAddresses.has(location)) {
+          console.warn(`❌ Failed to geocode: ${location}`);
+        }
+      }
+    }
+
+    console.log(`📍 Geocoding complete: ${existingGeocodes.length} cached, ${locationsToGeocode.length} new`);
+    return geocodeMap;
+  } catch (error) {
+    console.error("Error batch geocoding locations:", error);
+    throw new Error("Failed to batch geocode locations");
+  }
+}
+
+/**
+ * Calculate and save distance matrix for optimization
+ */
+export async function calculateOptimizationDistanceMatrix(
+  optimizationId: string,
+  jobs: JobOptimizationData[],
+  dateRange: { start: Date; end: Date },
+): Promise<OptimizationDistanceMatrixType | null> {
+  try {
+    // First, batch geocode all locations
+    const geocodeMap = await batchGeocodeJobLocations(jobs);
+    
+    // Prepare coordinates array
+    const locations: string[] = [];
+    const coordinates: Array<[number, number]> = [];
+    
+    for (const job of jobs) {
+      const coords = geocodeMap.get(job.location);
+      if (coords) {
+        locations.push(job.location);
+        coordinates.push([coords.lng, coords.lat]);
+      }
+    }
+
+    if (coordinates.length < 2) {
+      console.warn("Not enough geocoded locations for distance matrix calculation");
+      return null;
+    }
+
+    // Sort locations for consistent comparison
+    const sortedLocations = [...locations].sort();
+    
+    console.log(`🗺️ Checking for existing distance matrix with ${sortedLocations.length} locations...`);
+
+    // Check if we already have a matrix with the same set of locations
+    await connectMongo();
+    
+    try {
+      const existingMatrices = await OptimizationDistanceMatrix.find({
+        isActive: true,
+        locations: { $size: sortedLocations.length },
+      }).lean();
+
+      // Find a matrix with exactly the same locations
+      const existingMatrix = existingMatrices.find((matrix: any) => {
+        const matrixLocations = [...matrix.locations].sort();
+        return JSON.stringify(matrixLocations) === JSON.stringify(sortedLocations);
+      });
+
+      if (existingMatrix) {
+        const calculatedDate = new Date((existingMatrix as any).calculatedAt);
+        console.log(`✅ Found existing distance matrix from ${calculatedDate.toISOString().replace('T', ' ').substring(0, 19)} UTC`);
+        console.log(`🔄 Reusing matrix for optimization: ${optimizationId}`);
+        
+        // Create a new matrix entry for this optimization that references the same data
+        const newMatrix = new OptimizationDistanceMatrix({
+          optimizationId,
+          locations: (existingMatrix as any).locations,
+          coordinates: (existingMatrix as any).coordinates,
+          matrix: (existingMatrix as any).matrix,
+          dateRange,
+          calculatedAt: new Date(),
+          isActive: true,
+        } as any);
+
+        const savedMatrix = await newMatrix.save();
+
+        return {
+          _id: savedMatrix._id.toString(),
+          optimizationId: savedMatrix.optimizationId,
+          locations: savedMatrix.locations,
+          coordinates: savedMatrix.coordinates,
+          matrix: savedMatrix.matrix,
+          calculatedAt: savedMatrix.calculatedAt,
+          isActive: savedMatrix.isActive,
+          dateRange: savedMatrix.dateRange,
+        };
+      }
+    } catch (error) {
+      console.warn("Error checking for existing matrix, proceeding with new calculation:", error);
+    }
+
+    console.log(`🗺️ No existing matrix found. Calculating new distance matrix for ${coordinates.length} locations...`);
+
+    // Calculate distance matrix using the API
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+    const response = await fetch(`${baseUrl}/api/distance-matrix`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ coordinates }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Distance matrix API error: ${response.status}`);
+    }
+
+    const matrixResult = await response.json();
+    
+    // Save to database
+    const savedMatrix = await saveOptimizationDistanceMatrix(
+      optimizationId,
+      locations,
+      coordinates,
+      {
+        durations: matrixResult.durations, // Already in minutes
+        distances: matrixResult.distances, // Already in kilometers
+      },
+      dateRange
+    );
+
+    console.log(`✅ Distance matrix calculated and saved for optimization: ${optimizationId}`);
+    return savedMatrix;
+  } catch (error) {
+    console.error("Error calculating optimization distance matrix:", error);
     return null;
   }
 }

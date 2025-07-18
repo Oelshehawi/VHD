@@ -8,6 +8,7 @@ import {
   DocumentIcon,
   CurrencyDollarIcon,
   ClipboardDocumentListIcon,
+  ChartBarIcon,
 } from "@heroicons/react/24/solid";
 import { usePathname } from "next/navigation";
 
@@ -38,6 +39,7 @@ const NavLinks = ({
         { href: "/estimates", icon: ClipboardDocumentListIcon },
         { href: "/invoices", icon: DocumentIcon },
         { href: "/schedule", icon: CalendarIcon },
+        { href: "/optimization", icon: ChartBarIcon },
         { href: "/payroll", icon: CurrencyDollarIcon },
       ]
     : [

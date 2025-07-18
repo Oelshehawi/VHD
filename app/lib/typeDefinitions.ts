@@ -404,17 +404,21 @@ export interface LocationClusterType {
   updatedAt: Date;
 }
 
-export interface MonthlyDistanceMatrixType {
+export interface OptimizationDistanceMatrixType {
   _id: ObjectId | string;
-  month: string; // "2024-01" format
+  optimizationId: string; // unique identifier for this optimization run
   locations: string[]; // ordered array of normalized addresses
   coordinates: [number, number][]; // corresponding [lng, lat] pairs
   matrix: {
-    durations: number[][]; // travel times in seconds
-    distances: number[][]; // distances in meters
+    durations: number[][]; // travel times in minutes
+    distances: number[][]; // distances in kilometers
   };
   calculatedAt: Date;
-  isActive: boolean; // false when month is over or needs recalculation
+  isActive: boolean;
+  dateRange: {
+    start: Date;
+    end: Date;
+  };
 }
 
 export interface SchedulingPreferencesType {

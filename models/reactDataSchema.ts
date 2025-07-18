@@ -13,7 +13,7 @@ import {
   EstimateType,
   LocationGeocodeType,
   LocationClusterType,
-  MonthlyDistanceMatrixType,
+  OptimizationDistanceMatrixType,
   SchedulingPreferencesType,
   HistoricalSchedulePatternType,
 } from "../app/lib/typeDefinitions";
@@ -348,12 +348,11 @@ const LocationClusterSchema = new Schema<LocationClusterType>({
   updatedAt: { type: Date, required: true, default: Date.now },
 });
 
-const MonthlyDistanceMatrixSchema = new Schema<MonthlyDistanceMatrixType>({
-  month: {
+const OptimizationDistanceMatrixSchema = new Schema<OptimizationDistanceMatrixType>({
+  optimizationId: {
     type: String,
     required: true,
     unique: true,
-    match: /^\d{4}-\d{2}$/, // YYYY-MM format
   },
   locations: [{ type: String, required: true }],
   coordinates: [
@@ -380,6 +379,10 @@ const MonthlyDistanceMatrixSchema = new Schema<MonthlyDistanceMatrixType>({
   },
   calculatedAt: { type: Date, required: true, default: Date.now },
   isActive: { type: Boolean, required: true, default: true },
+  dateRange: {
+    start: { type: Date, required: true },
+    end: { type: Date, required: true },
+  },
 });
 
 const SchedulingPreferencesSchema = new Schema(
@@ -453,7 +456,7 @@ LocationClusterSchema.index({
   "centerCoordinates.lat": 1,
   "centerCoordinates.lng": 1,
 }); // Geospatial queries
-MonthlyDistanceMatrixSchema.index({ month: 1, isActive: 1 }); // Matrix cache lookups
+OptimizationDistanceMatrixSchema.index({ optimizationId: 1, isActive: 1 }); // Matrix cache lookups
 SchedulingPreferencesSchema.index({ isDefault: 1 }); // Default preferences
 SchedulingPreferencesSchema.index({ createdBy: 1 }); // User preferences
 HistoricalSchedulePatternSchema.index({ lastAnalyzed: 1 }); // Pattern freshness
@@ -477,9 +480,9 @@ const LocationCluster =
   (models.LocationCluster as typeof Model<LocationClusterType>) ||
   model("LocationCluster", LocationClusterSchema);
 
-const MonthlyDistanceMatrix =
-  (models.MonthlyDistanceMatrix as typeof Model<MonthlyDistanceMatrixType>) ||
-  model("MonthlyDistanceMatrix", MonthlyDistanceMatrixSchema);
+const OptimizationDistanceMatrix =
+  (models.OptimizationDistanceMatrix as typeof Model<OptimizationDistanceMatrixType>) ||
+  model("OptimizationDistanceMatrix", OptimizationDistanceMatrixSchema);
 
 const SchedulingPreferences =
   (models.SchedulingPreferences as typeof Model<SchedulingPreferencesType>) ||
@@ -499,7 +502,7 @@ export {
   Estimate,
   LocationGeocode,
   LocationCluster,
-  MonthlyDistanceMatrix,
+  OptimizationDistanceMatrix,
   SchedulingPreferences,
   HistoricalSchedulePattern,
 };

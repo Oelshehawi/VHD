@@ -4,14 +4,15 @@ import {
   SchedulingPreferencesType,
   HistoricalSchedulePatternType,
   ScheduleType,
-  MonthlyDistanceMatrixType,
+  OptimizationDistanceMatrixType,
 } from "./typeDefinitions";
 import {
   fetchUnscheduledJobsForOptimization,
   analyzeHistoricalPatterns,
   getSchedulingPreferences,
   getLocationClusters,
-  getMonthlyDistanceMatrix,
+  getOptimizationDistanceMatrix,
+  calculateOptimizationDistanceMatrix,
   getExistingSchedules,
   generateJobIdentifier,
 } from "./schedulingOptimizations.data";
@@ -21,50 +22,20 @@ import openRouteService, {
   LocationCoordinates,
   OpenRouteService,
 } from "./openroute.service";
+import type {
+  OptimizedScheduleGroup,
+  OptimizedJob,
+  OptimizationResult,
+} from "./schedulingOptimizations.types";
+import { SchedulingStrategy } from "./schedulingOptimizations.types";
 
-// Types for optimization results
-export interface OptimizedScheduleGroup {
-  clusterId: string;
-  clusterName: string;
-  date: Date;
-  jobs: OptimizedJob[];
-  totalDriveTime: number;
-  totalWorkTime: number;
-  estimatedStartTime: Date;
-  estimatedEndTime: Date;
-  assignedTechnicians: string[];
-  routeOptimized: boolean;
-}
-
-export interface OptimizedJob {
-  jobId: string;
-  originalJob: JobOptimizationData;
-  scheduledTime: Date;
-  estimatedDuration: number;
-  driveTimeToPrevious: number;
-  driveTimeToNext: number;
-  orderInRoute: number;
-  confidence: number;
-  historicalPattern?: HistoricalSchedulePatternType;
-}
-
-export interface OptimizationResult {
-  strategy: SchedulingStrategy;
-  totalJobs: number;
-  scheduledGroups: OptimizedScheduleGroup[];
-  unscheduledJobs: JobOptimizationData[];
-  metrics: {
-    totalDriveTime: number;
-    averageJobsPerDay: number;
-    utilizationRate: number;
-    conflictsResolved: number;
-  };
-  generatedAt: Date;
-}
-
-export enum SchedulingStrategy {
-  HYBRID_HISTORICAL_EFFICIENCY = "hybrid_historical_efficiency",
-}
+// Re-export client-safe types
+export type {
+  OptimizedScheduleGroup,
+  OptimizedJob,
+  OptimizationResult,
+} from "./schedulingOptimizations.types";
+export { SchedulingStrategy } from "./schedulingOptimizations.types";
 
 /**
  * Main optimization engine - orchestrates the entire optimization process
@@ -72,7 +43,7 @@ export enum SchedulingStrategy {
 export class SchedulingOptimizer {
   private preferences: SchedulingPreferencesType | null = null;
   private clusters: LocationClusterType[] = [];
-  private distanceMatrix: MonthlyDistanceMatrixType | null = null;
+  private distanceMatrix: OptimizationDistanceMatrixType | null = null;
   private existingSchedules: ScheduleType[] = [];
   private adminControls: SchedulingPreferencesType | null = null;
 
@@ -148,18 +119,29 @@ export class SchedulingOptimizer {
           }
         : undefined);
 
-    // Load distance matrix for the optimization date range month
-    if (effectiveDateRange) {
-      const optimizationMonth = new Date(effectiveDateRange.start)
-        .toISOString()
-        .slice(0, 7); // YYYY-MM format
-      this.distanceMatrix = await getMonthlyDistanceMatrix(optimizationMonth);
-    }
-
     // Fetch unscheduled jobs
     const unscheduledJobs =
       await fetchUnscheduledJobsForOptimization(effectiveDateRange);
     console.log(`Found ${unscheduledJobs.length} unscheduled jobs`);
+
+    // Generate unique optimization ID
+    const optimizationId = `opt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+
+    // Try to load existing distance matrix or calculate new one
+    if (unscheduledJobs.length > 0) {
+      this.distanceMatrix = await getOptimizationDistanceMatrix(optimizationId);
+      
+      if (!this.distanceMatrix) {
+        console.log("🗺️ Calculating new distance matrix for optimization...");
+        this.distanceMatrix = await calculateOptimizationDistanceMatrix(
+          optimizationId,
+          unscheduledJobs,
+          effectiveDateRange!
+        );
+      } else {
+        console.log("📋 Using cached distance matrix for optimization");
+      }
+    }
 
     if (unscheduledJobs.length === 0) {
       return {
@@ -642,7 +624,7 @@ export class SchedulingOptimizer {
   }
 
   /**
-   * Nearest neighbor TSP optimization for job sequencing
+   * Nearest neighbor TSP optimization for job sequencing - OPTIMIZED VERSION
    */
   private async optimizeJobSequenceNearestNeighbor(
     jobs: OptimizedJob[],
@@ -654,69 +636,145 @@ export class SchedulingOptimizer {
       `   🧭 Optimizing route for ${jobs.length} jobs using nearest neighbor TSP`,
     );
 
-    const unvisited = [...jobs];
+    // EFFICIENCY FIX: Batch calculate all coordinates and distance matrix once
+    const jobCoords: (LocationCoordinates | null)[] = [];
+    const coordsToJobs = new Map<number, OptimizedJob>();
+
+    // Collect all coordinates in one pass
+    for (let i = 0; i < jobs.length; i++) {
+      const coords = await this.getJobCoordinates(jobs[i]!.originalJob);
+      jobCoords.push(coords);
+      if (coords) {
+        coordsToJobs.set(i, jobs[i]!);
+      }
+    }
+
+    // Filter out jobs without coordinates for matrix calculation
+    const validCoords: Array<[number, number]> = [];
+    const coordIndexToJobIndex = new Map<number, number>();
+    let coordIndex = 0;
+
+    for (let i = 0; i < jobCoords.length; i++) {
+      if (jobCoords[i]) {
+        const coords = jobCoords[i]!;
+        validCoords.push([coords.longitude, coords.latitude]);
+        coordIndexToJobIndex.set(coordIndex, i);
+        coordIndex++;
+      }
+    }
+
+    // Check if we can use the optimization distance matrix for all jobs
+    const allJobsInOptimizationMatrix = this.distanceMatrix && 
+      jobs.every(job => this.distanceMatrix!.locations.includes(job.originalJob.location));
+
+    let distanceMatrix: number[][] = [];
+    if (!allJobsInOptimizationMatrix && validCoords.length > 1) {
+      try {
+        console.log(
+          `   📊 Calculating distance matrix for ${validCoords.length} locations (batch)`,
+        );
+        const matrixResult =
+          await openRouteService.calculateDistanceMatrix(validCoords);
+        distanceMatrix = matrixResult.durations;
+        console.log(
+          `   ✅ Distance matrix calculated - reduced from ${jobs.length * jobs.length} to 1 API call!`,
+        );
+      } catch (error) {
+        console.warn(
+          `   ⚠️ Distance matrix failed, falling back to individual calculations`,
+        );
+      }
+    } else if (allJobsInOptimizationMatrix) {
+      console.log(`   🗂️ Using optimization distance matrix for all ${jobs.length} jobs - skipping TSP matrix calculation`);
+    }
+
+    // Helper function to get distance between two jobs using cached optimization matrix or local matrix
+    const getJobDistance = (jobIndex1: number, jobIndex2: number): number => {
+      const job1Location = jobs[jobIndex1]!.originalJob.location;
+      const job2Location = jobs[jobIndex2]!.originalJob.location;
+
+      // First, try to use the cached optimization distance matrix
+      if (this.distanceMatrix) {
+        const optIndex1 = this.distanceMatrix.locations.indexOf(job1Location);
+        const optIndex2 = this.distanceMatrix.locations.indexOf(job2Location);
+        
+        if (optIndex1 >= 0 && optIndex2 >= 0 && this.distanceMatrix.matrix.durations[optIndex1]?.[optIndex2] !== undefined) {
+          const cachedDuration = this.distanceMatrix.matrix.durations[optIndex1]![optIndex2]!;
+          console.log(`🗂️ Using cached duration: ${job1Location} → ${job2Location} = ${cachedDuration} min`);
+          return cachedDuration;
+        }
+      }
+
+      // Fallback to local TSP matrix if optimization matrix doesn't have this pair
+      if (
+        !jobCoords[jobIndex1] ||
+        !jobCoords[jobIndex2] ||
+        distanceMatrix.length === 0
+      ) {
+        return this.calculateTextualDistance(job1Location, job2Location);
+      }
+
+      // Find matrix indices for these jobs in the local TSP matrix
+      let matrixIndex1 = -1,
+        matrixIndex2 = -1;
+      for (const [coordIdx, jobIdx] of coordIndexToJobIndex.entries()) {
+        if (jobIdx === jobIndex1) matrixIndex1 = coordIdx;
+        if (jobIdx === jobIndex2) matrixIndex2 = coordIdx;
+      }
+
+      if (matrixIndex1 >= 0 && matrixIndex2 >= 0) {
+        const localDuration = distanceMatrix[matrixIndex1]?.[matrixIndex2] || Infinity;
+        console.log(`📊 Using local TSP matrix: ${job1Location} → ${job2Location} = ${localDuration} min`);
+        return localDuration;
+      }
+
+      return this.calculateTextualDistance(job1Location, job2Location);
+    };
+
+    // NOW run the TSP algorithm using cached distances
+    const unvisited = jobs.map((_, index) => index); // Work with indices
     const optimizedSequence: OptimizedJob[] = [];
 
     // Start with the job that has the highest historical confidence or earliest preferred time
-    let currentJob = unvisited.reduce((best, job) => {
-      const bestConfidence =
-        best.historicalPattern?.patterns.hourConfidence || 0;
-      const jobConfidence = job.historicalPattern?.patterns.hourConfidence || 0;
+    let currentJobIndex = unvisited.reduce((bestIndex, jobIndex) => {
+      const bestJob = jobs[bestIndex]!;
+      const currentJob = jobs[jobIndex]!;
 
-      if (jobConfidence > bestConfidence) return job;
+      const bestConfidence =
+        bestJob.historicalPattern?.patterns.hourConfidence || 0;
+      const jobConfidence =
+        currentJob.historicalPattern?.patterns.hourConfidence || 0;
+
+      if (jobConfidence > bestConfidence) return jobIndex;
       if (jobConfidence === bestConfidence) {
-        // If same confidence, prefer earlier scheduled time
-        return job.scheduledTime < best.scheduledTime ? job : best;
+        return currentJob.scheduledTime < bestJob.scheduledTime
+          ? jobIndex
+          : bestIndex;
       }
-      return best;
+      return bestIndex;
     });
 
     // Remove starting job from unvisited and add to sequence
-    unvisited.splice(unvisited.indexOf(currentJob), 1);
-    optimizedSequence.push(currentJob);
+    unvisited.splice(unvisited.indexOf(currentJobIndex), 1);
+    optimizedSequence.push(jobs[currentJobIndex]!);
 
-    // Apply nearest neighbor algorithm
+    // Apply nearest neighbor algorithm using cached distances
     while (unvisited.length > 0) {
-      let nearestJob = unvisited[0]!;
-      let shortestDistance = Infinity;
+      let nearestJobIndex = unvisited[0]!;
+      let shortestDistance = getJobDistance(currentJobIndex, nearestJobIndex);
 
-      const currentCoords = await this.getJobCoordinates(
-        currentJob.originalJob,
-      );
-
-      for (const candidateJob of unvisited) {
-        const candidateCoords = await this.getJobCoordinates(
-          candidateJob.originalJob,
-        );
-
-        if (currentCoords && candidateCoords) {
-          const distanceResult =
-            await openRouteService.getDistanceBetweenPoints(
-              currentCoords,
-              candidateCoords,
-            );
-
-          if (distanceResult.duration < shortestDistance) {
-            shortestDistance = distanceResult.duration;
-            nearestJob = candidateJob;
-          }
-        } else {
-          // Fallback to string-based distance if geocoding fails
-          const textDistance = this.calculateTextualDistance(
-            currentJob.originalJob.location,
-            candidateJob.originalJob.location,
-          );
-          if (textDistance < shortestDistance) {
-            shortestDistance = textDistance;
-            nearestJob = candidateJob;
-          }
+      for (const candidateJobIndex of unvisited) {
+        const distance = getJobDistance(currentJobIndex, candidateJobIndex);
+        if (distance < shortestDistance) {
+          shortestDistance = distance;
+          nearestJobIndex = candidateJobIndex;
         }
       }
 
       // Move nearest job to optimized sequence
-      unvisited.splice(unvisited.indexOf(nearestJob), 1);
-      optimizedSequence.push(nearestJob);
-      currentJob = nearestJob;
+      unvisited.splice(unvisited.indexOf(nearestJobIndex), 1);
+      optimizedSequence.push(jobs[nearestJobIndex]!);
+      currentJobIndex = nearestJobIndex;
     }
 
     console.log(`   ✅ TSP optimization complete - route order:`);
@@ -738,23 +796,33 @@ export class SchedulingOptimizer {
   }
 
   /**
-   * Calculate real drive time between two jobs using Mapbox API
+   * Calculate real drive time between two jobs using cached matrix or API
    */
   private async calculateDriveTime(
     job1: OptimizedJob,
     job2: OptimizedJob,
   ): Promise<number> {
     try {
-      // Get coordinates for both locations
+      // Try to use cached distance matrix first
+      if (this.distanceMatrix) {
+        const index1 = this.distanceMatrix.locations.indexOf(job1.originalJob.location);
+        const index2 = this.distanceMatrix.locations.indexOf(job2.originalJob.location);
+        
+        if (index1 >= 0 && index2 >= 0 && this.distanceMatrix.matrix.durations[index1]?.[index2] !== undefined) {
+          const cachedDuration = this.distanceMatrix.matrix.durations[index1]![index2]!;
+          console.log(`🗂️ Using cached duration: ${job1.originalJob.location} → ${job2.originalJob.location} = ${cachedDuration} min`);
+          return cachedDuration;
+        }
+      }
+
+      // Fall back to real-time API call
       const coords1 = await this.getJobCoordinates(job1.originalJob);
       const coords2 = await this.getJobCoordinates(job2.originalJob);
 
       if (!coords1 || !coords2) {
-        // Fallback to estimate based on location similarity
         return this.estimateDriveTimeFallback(job1, job2);
       }
 
-      // Get real distance and duration from OpenRouteService
       const result = await openRouteService.getDistanceBetweenPoints(
         coords1,
         coords2,
@@ -767,7 +835,6 @@ export class SchedulingOptimizer {
         return this.estimateDriveTimeFallback(job1, job2);
       }
 
-      // Duration is already in minutes from OpenRouteService
       return Math.round(result.duration);
     } catch (error) {
       console.error("Drive time calculation error:", error);
@@ -799,13 +866,29 @@ export class SchedulingOptimizer {
   ): Promise<LocationCoordinates | null> {
     const cacheKey = job.location;
 
-    // Check cache first
+    // Check memory cache first
     if (this.locationCache.has(cacheKey)) {
       return this.locationCache.get(cacheKey) || null;
     }
 
+    // Check if we have it in the optimization distance matrix
+    if (this.distanceMatrix) {
+      const locationIndex = this.distanceMatrix.locations.indexOf(job.location);
+      if (locationIndex >= 0) {
+        const [lng, lat] = this.distanceMatrix.coordinates[locationIndex]!;
+        const coordinates: LocationCoordinates = {
+          longitude: lng,
+          latitude: lat,
+          address: job.location,
+        };
+        this.locationCache.set(cacheKey, coordinates);
+        return coordinates;
+      }
+    }
+
     try {
-      // Try geocoding the address
+      // Last resort: individual geocoding call
+      console.log(`📍 Individual geocoding for: ${job.location}`);
       const coordinates = await openRouteService.addressToCoordinates(
         job.location,
       );

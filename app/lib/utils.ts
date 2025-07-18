@@ -235,3 +235,13 @@ export const formatDateFns = (date: string | Date): string => {
   const parsedDate = typeof date === "string" ? new Date(date) : date;
   return format(parsedDate, "MMMM do, yyyy", { timeZone: "UTC" }); // e.g., "October 15th, 2024"
 };
+
+
+// Will take in a UTC date and keeep the date in the utc date
+export const formatDateFnsUTC = (date: string | Date): string => {
+  return format(date, "MMMM do, yyyy", { timeZone: "UTC" }); // e.g., "October 15th, 2024"
+};
+
+
+
+
