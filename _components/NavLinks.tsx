@@ -39,7 +39,6 @@ const NavLinks = ({
         { href: "/estimates", icon: ClipboardDocumentListIcon },
         { href: "/invoices", icon: DocumentIcon },
         { href: "/schedule", icon: CalendarIcon },
-        { href: "/optimization", icon: ChartBarIcon },
         { href: "/payroll", icon: CurrencyDollarIcon },
       ]
     : [

@@ -1,62 +1,79 @@
 "use client";
-import { useState, useCallback, useEffect } from "react";
-import { ScheduleType, ReportType } from "../../app/lib/typeDefinitions";
+import { useState, useCallback, useMemo } from "react";
+import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
 import Link from "next/link";
-import DeleteModal from "../DeleteModal";
-import EditJobModal from "./EditJobModal";
-import ReportModal from "./ReportModal";
-import GeneratePDF, { type PDFData } from "../pdf/GeneratePDF";
 import toast from "react-hot-toast";
 import {
   updateDeadRun,
   updateSchedule,
 } from "../../app/lib/actions/scheduleJobs.actions";
 import TechnicianPill from "./TechnicianPill";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   FaBan,
   FaCamera,
   FaSignature,
-  FaClipboardList,
-  FaDownload,
 } from "react-icons/fa";
 import { format } from "date-fns-tz";
-import { XMarkIcon } from "@heroicons/react/24/outline";
-import { createPortal } from "react-dom";
-import MediaDisplay from "../invoices/MediaDisplay";
-import { getReportByScheduleId } from "../../app/lib/actions/scheduleJobs.actions";
+import { calculateJobDurationFromPrice, convertMinutesToHours } from "../../app/lib/utils";
 
-const JobItem = ({
-  job,
-  canManage,
-  technicians,
-}: {
+// Function to calculate height based on actual job hours
+
+
+interface JobItemProps {
+  invoices: InvoiceType[];
   job: ScheduleType;
   canManage: boolean;
   technicians: { id: string; name: string }[];
-}) => {
+  onJobClick?: (job: ScheduleType) => void;
+}
+
+const JobItem = ({
+  invoices,
+  job,
+  canManage,
+  technicians,
+  onJobClick,
+}: JobItemProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmed, setConfirmed] = useState(() => job.confirmed);
   const [isDeadRun, setIsDeadRun] = useState(() => job.deadRun || false);
-  const [isModalOpen, setModalOpen] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isReportMode, setIsReportMode] = useState(false);
-  const [activeView, setActiveView] = useState<"details" | "media" | "report">(
-    "details",
-  );
-  const [hasExistingReport, setHasExistingReport] = useState(false);
-  const [existingReportData, setExistingReportData] =
-    useState<ReportType | null>(null);
 
-  const toggleConfirmedStatus = useCallback(async () => {
-    if (isLoading) return;
-    setIsLoading(true);
-    if (!canManage) {
-      toast.error("You do not have permission to perform this action");
-      setIsLoading(false);
+  // Calculate duration from invoice price
+  const calculatedDuration = useMemo(() => {
+    // Find the invoice for this job
+    const invoice = invoices.find(inv => 
+      inv._id.toString() === job.invoiceRef.toString()
+    );
+    
+    if (invoice && invoice.items) {
+      const totalPrice = invoice.items.reduce(
+        (sum, item) => sum + (item.price || 0),
+        0
+      );
+      const durationInMinutes = calculateJobDurationFromPrice(totalPrice);
+      return convertMinutesToHours(durationInMinutes);
+    }
+    
+    // Fallback to job.hours if no invoice found
+    return job.hours || 2.5;
+  }, [invoices, job.invoiceRef, job.hours]);
+
+  // Height is now controlled by parent container, so we use h-full
+  const jobHeight = "h-full";
+
+  const toggleConfirmedStatus = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isLoading || !canManage) {
+      if (!canManage) {
+        toast.error("You do not have permission to perform this action");
+      }
       return;
     }
+    
+    setIsLoading(true);
     const newStatus = !isConfirmed;
+    
     try {
       await updateSchedule({
         scheduleId: job._id.toString(),
@@ -72,19 +89,23 @@ const JobItem = ({
       toast.error("Failed to update the job status");
     } finally {
       setIsLoading(false);
-      setModalOpen(false);
     }
   }, [canManage, isConfirmed, isLoading, job._id]);
 
-  const toggleDeadRun = useCallback(async () => {
-    if (isLoading) return;
-    setIsLoading(true);
-    if (!canManage) {
-      toast.error("You do not have permission to perform this action");
-      setIsLoading(false);
+  const toggleDeadRun = useCallback(async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (isLoading || !canManage) {
+      if (!canManage) {
+        toast.error("You do not have permission to perform this action");
+      }
       return;
     }
+    
+    setIsLoading(true);
     const newDeadRun = !isDeadRun;
+    
     try {
       await updateDeadRun({
         scheduleId: job._id.toString(),
@@ -109,360 +130,135 @@ const JobItem = ({
       "Unknown",
   );
 
-  // Filter technicians to only include those assigned to this job
-  const assignedTechnicians = technicians.filter((tech) =>
-    job.assignedTechnicians.includes(tech.id),
-  );
-
-  // Check if a report already exists for this job
-  useEffect(() => {
-    const checkForExistingReport = async () => {
-      try {
-        const report = await getReportByScheduleId(job._id.toString());
-        setHasExistingReport(!!report);
-        setExistingReportData(report);
-      } catch (error) {
-        console.error("Error checking for existing report:", error);
-      }
-    };
-
-    if (activeView === "report") {
-      checkForExistingReport();
-    }
-  }, [job._id, activeView]);
-
-  // Close modal handler
-  const closeModal = () => {
-    setModalOpen(false);
-    setIsEditMode(false);
-    setIsReportMode(false);
-    setActiveView("details");
-  };
-
-  // Check if job has photos or signatures
+  // Check if job has media
   const hasBeforePhotos = job.photos?.some((photo) => photo.type === "before");
   const hasAfterPhotos = job.photos?.some((photo) => photo.type === "after");
   const hasSignature = !!job.signature;
   const hasMedia = hasBeforePhotos || hasAfterPhotos || hasSignature;
 
-  // Helper function to create report PDF data
-  const createReportPDFData = (report: ReportType): PDFData | undefined => {
-    try {
-      const reportData = {
-        _id:
-          typeof report._id === "string"
-            ? report._id
-            : report._id?.toString() || "",
-        scheduleId:
-          typeof report.scheduleId === "string"
-            ? report.scheduleId
-            : report.scheduleId.toString(),
-        dateCompleted: report.dateCompleted,
-        technicianId: report.technicianId,
-        lastServiceDate: report.lastServiceDate,
-        fuelType: report.fuelType,
-        cookingVolume: report.cookingVolume,
-        equipmentDetails: report.equipmentDetails,
-        cleaningDetails: report.cleaningDetails,
-        cookingEquipment: report.cookingEquipment,
-        recommendations: report.recommendations,
-        comments: report.comments,
-        recommendedCleaningFrequency: report.recommendedCleaningFrequency,
-        inspectionItems: report.inspectionItems,
-      };
-
-      // Get technician data from the assigned technicians
-      const assignedTech = technicians.find(
-        (tech) => tech.id === report.technicianId,
-      );
-      const technicianData = {
-        id: report.technicianId,
-        firstName: assignedTech?.name.split(" ")[0] || "Technician",
-        lastName: assignedTech?.name.split(" ")[1] || "Name",
-        fullName: assignedTech?.name || "Technician Name",
-        email: "technician@company.com",
-      };
-
-      return {
-        type: "report",
-        data: { report: reportData, technician: technicianData },
-      };
-    } catch (error) {
-      console.error("Error creating report PDF data:", error);
-      return undefined;
+  const handleJobClick = () => {
+    if (onJobClick) {
+      onJobClick(job);
     }
   };
 
   return (
-    <>
-      <li
-        className={`group relative z-0 flex items-center justify-between rounded-xl border-l-4 bg-white/90 px-4 py-2 shadow-custom backdrop-blur-sm ${
-          isConfirmed ? "border-green-500" : "border-red-500"
-        } cursor-pointer transition-all hover:bg-gray-100 hover:shadow-lg`}
-      >
-        {/* DeadRun Toggle Button */}
-        <AnimatePresence>
-          {isDeadRun && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 3 }}
-              exit={{ scale: 0 }}
-              transition={{ duration: 0.3 }}
-              className="pointer-events-none absolute inset-0 flex items-center justify-center"
+    <motion.div
+      layout
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ scale: 1.02 }}
+      transition={{ duration: 0.2 }}
+      className={`group relative overflow-hidden rounded-lg border bg-white shadow-sm transition-all hover:shadow-md ${jobHeight} ${
+        isConfirmed 
+          ? "border-emerald-200 bg-emerald-50/50" 
+          : "border-rose-200 bg-rose-50/50"
+      } cursor-pointer`}
+      onClick={handleJobClick}
+    >
+      {/* Dead Run Overlay - Enhanced visibility */}
+      {isDeadRun && (
+        <div className="absolute inset-0 bg-red-600/30 pointer-events-none z-10">
+          <div className="absolute inset-0 bg-gradient-to-br from-red-500/40 to-red-700/40"></div>
+        </div>
+      )}
+
+      {/* Status Indicator Bar */}
+      <div 
+        className={`h-1 w-full ${
+          isConfirmed ? "bg-emerald-500" : "bg-rose-500"
+        }`} 
+      />
+
+      <div className="p-2 h-full flex flex-col justify-between">
+        {/* Header Row - Improved text sizes */}
+        <div className="flex items-start justify-between mb-1">
+          <div className="flex-1 min-w-0">
+            <Link
+              href={`/invoices/${job.invoiceRef}`}
+              onClick={(e) => e.stopPropagation()}
+              className="group/link"
             >
-              <FaBan className="text-2xl text-red-600/80" />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Photos/Signatures Indicator */}
-        {hasMedia && (
-          <div className="absolute right-9 top-1 flex space-x-1">
-            {(hasBeforePhotos || hasAfterPhotos) && (
-              <FaCamera className="text-xs text-blue-500" />
-            )}
-            {hasSignature && <FaSignature className="text-xs text-blue-500" />}
+              <h3 className="text-sm font-semibold text-gray-900 truncate group-hover/link:text-blue-600 transition-colors leading-tight">
+                {job.jobTitle}
+              </h3>
+            </Link>
+            <p className="text-xs text-gray-500 truncate leading-tight">{job.location}</p>
           </div>
-        )}
 
-        {/* List Item Content */}
-        <div
-          className="z-0 flex w-full flex-col overflow-hidden"
-          onClick={() => !isModalOpen && setModalOpen(true)}
-        >
-          <span className="flex w-full justify-center gap-1 rounded bg-blue-600 p-1 text-center text-white shadow-sm">
-            {techNames.map((tech, index) => (
-              <TechnicianPill key={index} name={tech} />
-            ))}
-          </span>
-          <span className="mt-1 font-semibold text-gray-800">
-            {job.jobTitle}
-          </span>
-          <span className="text-sm text-gray-500">
-            {format(job.startDateTime, "h:mm a", { timeZone: "PST" })}
-          </span>
+          {/* Media Indicators - Larger icons */}
+          {hasMedia && (
+            <div className="flex items-center space-x-1 ml-1">
+              {(hasBeforePhotos || hasAfterPhotos) && (
+                <FaCamera className="h-3 w-3 text-blue-500" />
+              )}
+              {hasSignature && (
+                <FaSignature className="h-3 w-3 text-green-500" />
+              )}
+            </div>
+          )}
         </div>
 
-        {/* DeadRun Toggle Button on List Item */}
-        {canManage && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              toggleDeadRun();
-            }}
-            className={`absolute bottom-1 right-2 rounded-full p-2 shadow-sm ${
-              isDeadRun ? "bg-red-600" : "bg-gray-300"
-            } transition-all duration-200 hover:bg-red-700 hover:shadow-md disabled:cursor-not-allowed disabled:opacity-50`}
-            disabled={isLoading}
-            aria-label="Toggle Dead Run"
-          >
-            <FaBan
-              className={`text-white transition-all duration-200 ${
-                isDeadRun ? "text-xl" : "text-lg"
-              } ${isDeadRun ? "rotate-0" : "rotate-45"}`}
-            />
-          </button>
-        )}
-      </li>
+        {/* Middle Content - Better text sizes and responsive spacing */}
+        <div className="flex-1 flex flex-col justify-center space-y-1 min-h-0">
+          {/* Time Display */}
+          <div>
+            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-700">
+              {format(job.startDateTime, "h:mm a", { timeZone: "PST" })}
+            </span>
+          </div>
 
-      {/* Portal the modal to document.body */}
-      {isModalOpen &&
-        createPortal(
-          <AnimatePresence>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={closeModal}
-              className="bg-black/60 fixed inset-0 z-50 flex items-center justify-center overflow-y-auto p-4 backdrop-blur-sm"
-            >
-              <motion.div
-                initial={{ scale: 0.95, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.95, opacity: 0 }}
-                transition={{ duration: 0.2 }}
-                onClick={(e) => e.stopPropagation()}
-                className={`relative w-full max-w-md overflow-hidden rounded-xl bg-gradient-to-br from-darkGreen to-darkBlue p-6 shadow-xl`}
+          {/* Technician Pills - Compact for small heights */}
+          <div className="flex flex-wrap gap-0.5">
+            {techNames.map((tech, index) => (
+              <span
+                key={index}
+                className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
               >
-                {isReportMode ? (
-                  <ReportModal
-                    schedule={job}
-                    onClose={closeModal}
-                    technicians={assignedTechnicians}
-                  />
-                ) : isEditMode ? (
-                  <EditJobModal
-                    job={job}
-                    onClose={closeModal}
-                    technicians={technicians}
-                  />
-                ) : (
-                  <>
-                    {/* View Mode */}
-                    <div className="mb-6 flex items-start justify-between">
-                      <Link
-                        href={`/invoices/${job.invoiceRef}`}
-                        className="group"
-                      >
-                        <h2 className="text-xl font-semibold text-white transition-colors group-hover:text-green-400">
-                          {job.jobTitle}
-                        </h2>
-                      </Link>
-                      <button
-                        onClick={closeModal}
-                        className="rounded-full p-1 text-white/80 hover:bg-white/10 hover:text-white"
-                      >
-                        <XMarkIcon className="h-6 w-6" />
-                      </button>
-                    </div>
+                {tech}
+              </span>
+            ))}
+          </div>
 
-                    {/* Tab navigation */}
-                    <div className="mb-4 flex border-b border-white/20">
-                      <button
-                        onClick={() => setActiveView("details")}
-                        className={`px-4 py-2 ${activeView === "details" ? "border-b-2 border-white font-semibold text-white" : "text-white/70"}`}
-                      >
-                        Details
-                      </button>
-                      {hasMedia && (
-                        <button
-                          onClick={() => setActiveView("media")}
-                          className={`flex items-center px-4 py-2 ${activeView === "media" ? "border-b-2 border-white font-semibold text-white" : "text-white/70"}`}
-                        >
-                          Media
-                        </button>
-                      )}
-                      <button
-                        onClick={() => setActiveView("report")}
-                        className={`flex items-center px-4 py-2 ${activeView === "report" ? "border-b-2 border-white font-semibold text-white" : "text-white/70"}`}
-                      >
-                        <FaClipboardList className="mr-1" /> Report
-                      </button>
-                    </div>
+          {/* Job Duration Info - Only show if there's space */}
+          <div className="text-xs text-gray-500 leading-tight overflow-hidden">
+            <div className="truncate">{calculatedDuration}h duration</div>
+          </div>
+        </div>
 
-                    {activeView === "details" ? (
-                      <div className="space-y-4">
-                        <p className="text-white/80">
-                          Scheduled at{" "}
-                          {format(job.startDateTime, "h:mm a", {
-                            timeZone: "UTC",
-                          })}
-                        </p>
+        {/* Action Buttons - Always visible with compact design */}
+        {canManage && (
+          <div className="flex items-center justify-between pt-1 border-t border-gray-100 mt-auto flex-shrink-0">
+            <button
+              onClick={toggleConfirmedStatus}
+              disabled={isLoading}
+              className={`flex-1 px-1.5 py-0.5 text-xs font-medium rounded transition-colors mr-1 ${
+                isConfirmed
+                  ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
+                  : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {isLoading ? "..." : isConfirmed ? "Unconfirm" : "Confirm"}
+            </button>
 
-                        {job.technicianNotes && (
-                          <div className="rounded bg-white/10 p-3">
-                            <h4 className="mb-1 font-medium text-white">
-                              Technician Notes:
-                            </h4>
-                            <p className="text-sm text-white/90">
-                              {job.technicianNotes}
-                            </p>
-                          </div>
-                        )}
-
-                        {canManage && (
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-center gap-3">
-                              <button
-                                className={`flex-1 rounded-lg px-4 py-2 text-sm font-medium ${
-                                  isConfirmed
-                                    ? "bg-red-500 hover:bg-red-600"
-                                    : "bg-green-500 hover:bg-green-600"
-                                } text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50`}
-                                onClick={toggleConfirmedStatus}
-                                disabled={isLoading}
-                              >
-                                {isLoading
-                                  ? "Loading..."
-                                  : isConfirmed
-                                    ? "Unconfirm Job"
-                                    : "Confirm Job"}
-                              </button>
-                              <DeleteModal
-                                deleteText={
-                                  "Are you sure you want to delete this Job?"
-                                }
-                                deleteDesc={""}
-                                deletionId={job._id as string}
-                                deletingValue="job"
-                              />
-                            </div>
-                            <button
-                              className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
-                              onClick={() => setIsEditMode(true)}
-                            >
-                              Edit Job
-                            </button>
-                          </div>
-                        )}
-
-                        <button
-                          className="mt-2 w-full rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-                          onClick={closeModal}
-                        >
-                          Close
-                        </button>
-                      </div>
-                    ) : activeView === "media" ? (
-                      <div className="max-h-[60vh] overflow-y-auto rounded bg-white p-4">
-                        <MediaDisplay
-                          photos={job.photos || []}
-                          signature={job.signature || null}
-                        />
-                        <button
-                          className="mt-4 w-full rounded-lg bg-darkGreen px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-opacity-90"
-                          onClick={() => setActiveView("details")}
-                        >
-                          Back to Details
-                        </button>
-                      </div>
-                    ) : (
-                      activeView === "report" && (
-                        <div className="space-y-4">
-                          <p className="text-white/80">
-                            Complete a kitchen exhaust cleaning report for this
-                            job.
-                          </p>
-
-                          <div className="flex flex-col gap-3">
-                            <button
-                              className="w-full rounded-lg bg-white/10 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/20"
-                              onClick={() => setIsReportMode(true)}
-                            >
-                              {hasExistingReport
-                                ? "Edit Report"
-                                : "Create Report"}
-                            </button>
-
-                            {hasExistingReport && existingReportData && (
-                              <GeneratePDF
-                                pdfData={createReportPDFData(
-                                  existingReportData,
-                                )}
-                                fileName={`Report - ${job.jobTitle}.pdf`}
-                                buttonText="Download Report"
-                                className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                              />
-                            )}
-                          </div>
-
-                          <button
-                            className="mt-2 w-full rounded-lg bg-white/5 px-4 py-2 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white"
-                            onClick={() => setActiveView("details")}
-                          >
-                            Back to Details
-                          </button>
-                        </div>
-                      )
-                    )}
-                  </>
-                )}
-              </motion.div>
-            </motion.div>
-          </AnimatePresence>,
-          document.body,
+            <button
+              onClick={toggleDeadRun}
+              onMouseDown={(e) => e.stopPropagation()}
+              onTouchStart={(e) => e.stopPropagation()}
+              disabled={isLoading}
+              className={`p-1 rounded transition-colors relative z-30 flex-shrink-0 ${
+                isDeadRun 
+                  ? "bg-red-500 text-white hover:bg-red-600" 
+                  : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+              } disabled:opacity-50 disabled:cursor-not-allowed`}
+              title={isDeadRun ? "Disable Dead Run" : "Enable Dead Run"}
+            >
+              <FaBan className="h-3 w-3" />
+            </button>
+          </div>
         )}
-    </>
+      </div>
+    </motion.div>
   );
 };
 

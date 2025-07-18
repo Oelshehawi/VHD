@@ -2,9 +2,11 @@
 import MiniCalendar from "./MiniCalendar";
 import FullCalendar from "./FullCalendar";
 import SearchSelect from "./JobSearchSelect";
+import OptimizationControls from "./OptimizationControls";
 import { useState, useEffect } from "react";
 import { InvoiceType, ScheduleType } from "../../app/lib/typeDefinitions";
-import { add, startOfWeek, eachDayOfInterval } from "date-fns";
+import { SerializedOptimizationResult } from "../../app/lib/schedulingOptimizations.types";
+import { add, startOfWeek, eachDayOfInterval, format } from "date-fns";
 import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/24/solid";
 import { AnimatePresence } from "framer-motion";
 import AddEvent from "./AddEvent";
@@ -30,6 +32,8 @@ const CalendarOptions = ({
   technicians: { id: string; name: string }[];
 }) => {
   const [calendarOption, setCalendarOption] = useState<boolean>(false);
+  const [optimizationResult, setOptimizationResult] = useState<SerializedOptimizationResult | null>(null);
+  const [showOptimization, setShowOptimization] = useState<boolean>(false);
   const [currentWeek, setCurrentWeek] = useState<Date[]>(() => {
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 0 });
@@ -67,6 +71,10 @@ const CalendarOptions = ({
         canManage={canManage}
         isMobile={isMobileDevice()}
         technicians={technicians}
+        showOptimization={showOptimization}
+        setShowOptimization={setShowOptimization}
+        optimizationResult={optimizationResult}
+        setOptimizationResult={setOptimizationResult}
       />
 
       <main className="flex-1 overflow-y-auto">
@@ -84,11 +92,14 @@ const CalendarOptions = ({
         ) : (
           <div className="h-full">
             <FullCalendar
+              invoices={invoices}
               scheduledJobs={scheduledJobs}
               canManage={canManage}
               currentWeek={currentWeek}
               holidays={holidays}
               technicians={technicians}
+              optimizationResult={optimizationResult}
+              showOptimization={showOptimization}
             />
           </div>
         )}
@@ -110,6 +121,10 @@ const Header = ({
   canManage,
   isMobile,
   technicians,
+  showOptimization,
+  setShowOptimization,
+  optimizationResult,
+  setOptimizationResult,
 }: {
   setCalendarOption: () => void;
   calendarOption: boolean;
@@ -121,54 +136,105 @@ const Header = ({
   canManage: boolean;
   isMobile: boolean;
   technicians: { id: string; name: string }[];
+  showOptimization: boolean;
+  setShowOptimization: (show: boolean) => void;
+  optimizationResult: SerializedOptimizationResult | null;
+  setOptimizationResult: (result: SerializedOptimizationResult | null) => void;
 }) => {
   const [open, setOpen] = useState(false);
-  const buttonLabel = calendarOption
-    ? "Show Full Calendar"
-    : "Show Mini Calendar";
+  
+  const weekStart = currentWeek[0];
+  const weekEnd = currentWeek[currentWeek.length - 1];
+  const weekLabel = `${format(weekStart as Date, "MMM d")} - ${format(weekEnd as Date, "MMM d, yyyy")}`;
 
   return (
-    <div className="flex flex-col gap-2 px-4 py-2 shadow-custom md:flex-row md:items-center md:justify-between md:gap-0 md:py-0">
-      <div className="flex w-full flex-col items-center gap-0 md:flex-row md:gap-4">
-        <SearchSelect
-          scheduledJobs={scheduledJobs}
-          placeholder="Search for a job"
-          technicians={technicians}
-        />
-        <button
-          onClick={() => setOpen(!open)}
-          className={`flex max-h-[50%] w-full items-center justify-center gap-2 text-nowrap rounded-lg bg-darkGreen p-2 text-white shadow-custom hover:bg-darkBlue md:w-[20%] ${
-            canManage ? "block" : "hidden"
-          }`}
-        >
-          Add Job
-        </button>
+    <div className="bg-white border-b border-gray-200 shadow-sm">
+      <div className="px-6 py-4">
+        {/* Single Row Layout */}
+        <div className="flex items-center justify-between">
+          {/* Left Section - Search and Add Job */}
+          <div className="flex items-center space-x-4">
+            {/* Enhanced Search */}
+            <div className="w-80">
+              <SearchSelect
+                scheduledJobs={scheduledJobs}
+                placeholder="Search jobs..."
+                technicians={technicians}
+                canManage={canManage}
+              />
+            </div>
+
+            {/* Add Job Button */}
+            {canManage && (
+              <button
+                onClick={() => setOpen(!open)}
+                className="flex items-center px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl font-medium text-sm hover:from-emerald-600 hover:to-emerald-700 shadow-sm hover:shadow-md transition-all duration-200"
+              >
+                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Job
+              </button>
+            )}
+          </div>
+
+          {/* Center Section - Week Navigation (only for full calendar) */}
+          {!calendarOption && (
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={previousWeek}
+                  className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-all duration-200"
+                >
+                  <ArrowLeftIcon className="h-5 w-5" />
+                </button>
+                
+                <button
+                  onClick={nextWeek}
+                  className="p-2 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-900 transition-all duration-200"
+                >
+                  <ArrowRightIcon className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="px-4 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                <span className="text-sm font-medium text-gray-900">{weekLabel}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Right Section - View Toggle and Optimization */}
+          <div className="flex items-center space-x-4">
+            {/* Optimization Controls */}
+            <OptimizationControls
+              showOptimization={showOptimization}
+              setShowOptimization={setShowOptimization}
+              optimizationResult={optimizationResult}
+              setOptimizationResult={setOptimizationResult}
+              canManage={canManage}
+            />
+
+            {/* View Toggle */}
+            {!isMobile && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-500">View:</span>
+                <button
+                  onClick={setCalendarOption}
+                  className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                    calendarOption
+                      ? "bg-blue-100 text-blue-700 hover:bg-blue-200"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  }`}
+                >
+                  {calendarOption ? "Week" : "Month"}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
       </div>
 
-      <div className="flex items-center justify-between gap-2 md:gap-4">
-        <div
-          className={`${calendarOption ? "hidden" : "flex items-center gap-2"}`}
-        >
-          <button onClick={previousWeek}>
-            <ArrowLeftIcon className="size-8 rounded-full p-1.5 shadow-custom hover:bg-gray-300 md:size-10 md:p-2" />
-          </button>
-          <button onClick={nextWeek}>
-            <ArrowRightIcon className="size-8 rounded-full p-1.5 shadow-custom hover:bg-gray-300 md:size-10 md:p-2" />
-          </button>
-        </div>
-        {!isMobile && (
-          <button
-            onClick={setCalendarOption}
-            className={`hidden h-10 items-center justify-center whitespace-nowrap rounded-lg border border-gray-300 px-4 transition-colors duration-300 md:flex ${
-              calendarOption
-                ? "bg-darkGreen text-white"
-                : "border-darkGreen bg-white text-darkGreen"
-            }`}
-          >
-            <span>{buttonLabel}</span>
-          </button>
-        )}
-      </div>
+      {/* Add Job Modal */}
       <AnimatePresence>
         {open && (
           <AddEvent

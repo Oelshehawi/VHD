@@ -16,6 +16,7 @@ interface TechnicianSelectProps {
   technicians: { id: string; name: string }[];
   placeholder?: string;
   error?: any;
+  theme?: "light" | "dark";
 }
 
 const TechnicianSelect: React.FC<TechnicianSelectProps> = ({
@@ -24,11 +25,14 @@ const TechnicianSelect: React.FC<TechnicianSelectProps> = ({
   technicians,
   placeholder = "Select Technicians",
   error,
+  theme = "light",
 }) => {
   const options: TechnicianOption[] = technicians.map((tech) => ({
     value: tech.id,
     label: tech.name.split(" ")[0] || "Unknown",
   }));
+
+  const isDark = theme === "dark";
 
   return (
     <div>
@@ -50,16 +54,26 @@ const TechnicianSelect: React.FC<TechnicianSelectProps> = ({
             styles={{
               control: (provided, state) => ({
                 ...provided,
-                borderColor: error ? "#f87171" : state.isFocused ? "#ffffff33" : "#ffffff1a",
-                backgroundColor: "rgba(255, 255, 255, 0.05)",
-                boxShadow: "none",
+                borderColor: error 
+                  ? "#f87171" 
+                  : state.isFocused 
+                    ? isDark ? "#ffffff33" : "#3b82f6"
+                    : isDark ? "#ffffff1a" : "#d1d5db",
+                backgroundColor: isDark ? "rgba(255, 255, 255, 0.05)" : "#ffffff",
+                boxShadow: state.isFocused 
+                  ? isDark ? "0 0 0 1px rgba(255,255,255,0.2)" : "0 0 0 1px #3b82f6"
+                  : "none",
                 "&:hover": {
-                  borderColor: error ? "#f87171" : "#ffffff33",
+                  borderColor: error 
+                    ? "#f87171" 
+                    : isDark ? "#ffffff33" : "#9ca3af",
                 },
+                minHeight: "38px",
               }),
               menu: (provided) => ({
                 ...provided,
-                backgroundColor: "#1a1a1a",
+                backgroundColor: isDark ? "#1a1a1a" : "#ffffff",
+                border: isDark ? "1px solid #374151" : "1px solid #d1d5db",
                 zIndex: 9999,
               }),
               menuList: (provided) => ({
@@ -69,51 +83,55 @@ const TechnicianSelect: React.FC<TechnicianSelectProps> = ({
                   width: "8px",
                 },
                 "::-webkit-scrollbar-track": {
-                  background: "#2d2d2d",
+                  background: isDark ? "#2d2d2d" : "#f3f4f6",
                 },
                 "::-webkit-scrollbar-thumb": {
-                  background: "#666",
+                  background: isDark ? "#666" : "#9ca3af",
                   borderRadius: "4px",
                 },
                 "::-webkit-scrollbar-thumb:hover": {
-                  background: "#888",
+                  background: isDark ? "#888" : "#6b7280",
                 },
               }),
               option: (provided, state) => ({
                 ...provided,
-                backgroundColor: state.isFocused ? "#333" : "#1a1a1a",
-                color: "white",
+                backgroundColor: state.isFocused 
+                  ? isDark ? "#333" : "#f3f4f6"
+                  : isDark ? "#1a1a1a" : "#ffffff",
+                color: isDark ? "white" : "#374151",
                 "&:hover": {
-                  backgroundColor: "#333",
+                  backgroundColor: isDark ? "#333" : "#f3f4f6",
                 },
               }),
               multiValue: (provided) => ({
                 ...provided,
-                backgroundColor: "rgba(255, 255, 255, 0.1)",
+                backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "#e5e7eb",
               }),
               multiValueLabel: (provided) => ({
                 ...provided,
-                color: "white",
+                color: isDark ? "white" : "#374151",
+                fontSize: "12px",
               }),
               multiValueRemove: (provided) => ({
                 ...provided,
-                color: "white",
+                color: isDark ? "white" : "#6b7280",
                 "&:hover": {
-                  backgroundColor: "rgba(255, 255, 255, 0.2)",
-                  color: "white",
+                  backgroundColor: isDark ? "rgba(255, 255, 255, 0.2)" : "#d1d5db",
+                  color: isDark ? "white" : "#374151",
                 },
               }),
               placeholder: (provided) => ({
                 ...provided,
-                color: "rgba(255, 255, 255, 0.5)",
+                color: isDark ? "rgba(255, 255, 255, 0.5)" : "#9ca3af",
+                fontSize: "14px",
               }),
               input: (provided) => ({
                 ...provided,
-                color: "white",
+                color: isDark ? "white" : "#374151",
               }),
               singleValue: (provided) => ({
                 ...provided,
-                color: "white",
+                color: isDark ? "white" : "#374151",
               }),
             }}
             menuPlacement="auto"
@@ -121,7 +139,11 @@ const TechnicianSelect: React.FC<TechnicianSelectProps> = ({
           />
         )}
       />
-      {error && <p className="mt-1 text-sm text-red-400">{error.message}</p>}
+      {error && (
+        <p className={`mt-1 text-sm ${isDark ? "text-red-400" : "text-red-600"}`}>
+          {error.message}
+        </p>
+      )}
     </div>
   );
 };

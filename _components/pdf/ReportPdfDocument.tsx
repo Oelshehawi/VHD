@@ -343,7 +343,9 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
                         .replace(/^./, (str) => str.toUpperCase())}
                     </Text>
                     <Text style={[styles.tableCell, { width: "50%" }]}>
-                      {value}
+                      {typeof value === 'object' && value !== null 
+                        ? (value as any).status || JSON.stringify(value)
+                        : String(value || 'N/A')}
                     </Text>
                   </View>
                 ))}

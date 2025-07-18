@@ -17,6 +17,12 @@ import {
   SerializedHistoricalSchedulePatternType,
 } from "../schedulingOptimizations.types";
 import { JobOptimizationData, HistoricalSchedulePatternType } from "../typeDefinitions";
+import { Invoice, Client, JobsDueSoon } from "../../../models/reactDataSchema";
+import { createInvoice } from "./actions";
+import { createSchedule } from "./scheduleJobs.actions";
+import { revalidatePath } from "next/cache";
+import connectMongo from "../connect";
+import { convertMinutesToHours } from "../utils";
 
 // Helper function to serialize a job
 function serializeJob(job: JobOptimizationData): SerializedJobOptimizationData {
@@ -262,6 +268,99 @@ export async function getDistanceMatrixForOptimization(optimizationId: string) {
         error instanceof Error
           ? error.message
           : "Failed to get distance matrix",
+    };
+  }
+}
+
+export async function acceptOptimizedJob(optimizedJob: SerializedOptimizedJob) {
+  try {
+    await connectMongo();
+    
+    // First, check if the job already has an invoice
+    const existingInvoice = await Invoice.findById(optimizedJob.originalJob.invoiceId);
+    
+    let invoiceId = optimizedJob.originalJob.invoiceId;
+    
+    // If no existing invoice, create one based on the job data
+    if (!existingInvoice) {
+      console.log("Creating new invoice for optimized job:", optimizedJob.originalJob.jobTitle);
+      
+      // Find the client to get the prefix
+      const client = await Client.findOne({ clientName: optimizedJob.originalJob.clientName });
+      if (!client) {
+        throw new Error("Client not found");
+      }
+
+      // Create invoice data
+      const invoiceData = {
+        clientId: client._id,
+        prefix: client.prefix,
+        jobTitle: optimizedJob.originalJob.jobTitle,
+        location: optimizedJob.originalJob.location,
+        dateIssued: new Date(),
+        dateDue: new Date(optimizedJob.originalJob.dateDue),
+        frequency: 1, // Default frequency
+        items: [
+          {
+            description: optimizedJob.originalJob.jobTitle,
+            price: 100, // Default price - should be customizable
+          }
+        ],
+        notes: "Created from optimization",
+      };
+
+      // Create the invoice
+      await createInvoice(invoiceData);
+      
+      // Get the created invoice ID
+      const newInvoice = await Invoice.findOne({
+        clientId: client._id,
+        jobTitle: optimizedJob.originalJob.jobTitle,
+      }).sort({ _id: -1 });
+      
+      if (newInvoice) {
+        invoiceId = newInvoice._id.toString();
+      }
+    }
+
+    // Create the schedule entry with all required fields
+    const scheduleData: any = {
+      invoiceRef: invoiceId,
+      jobTitle: optimizedJob.originalJob.jobTitle,
+      location: optimizedJob.originalJob.location,
+      startDateTime: new Date(optimizedJob.scheduledTime),
+      assignedTechnicians: [], // Default to empty, can be assigned later
+      confirmed: false,
+      hours: convertMinutesToHours(optimizedJob.estimatedDuration), // Convert minutes to hours consistently
+      shifts: [],
+      deadRun: false,
+      technicianNotes: optimizedJob.historicalPattern ? 
+        `Optimized job - Historical confidence: ${Math.round(optimizedJob.confidence * 100)}%` : 
+        `Optimized job - Confidence: ${Math.round(optimizedJob.confidence * 100)}%`,
+    };
+
+    // Create the schedule
+    await createSchedule(scheduleData);
+
+    // Mark the job as scheduled in JobsDueSoon
+    await JobsDueSoon.findOneAndUpdate(
+      { invoiceId },
+      { $set: { isScheduled: true } },
+      { new: true }
+    );
+
+    // Revalidate the schedule page
+    revalidatePath("/schedule");
+
+    return {
+      success: true,
+      message: "Job successfully scheduled from optimization",
+    };
+  } catch (error) {
+    console.error("Error accepting optimized job:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to accept optimized job",
     };
   }
 }

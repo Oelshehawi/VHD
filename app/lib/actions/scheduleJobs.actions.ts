@@ -12,6 +12,9 @@ import {
   ReportType,
 } from "../typeDefinitions";
 import { clerkClient } from "@clerk/nextjs/server";
+import { calculateJobDurationFromPrice, convertMinutesToHours } from "../utils";
+import { Invoice } from "../../../models/reactDataSchema";
+import { InvoiceType } from "../typeDefinitions";
 
 /**
  * Adds a specified number of days to a date.
@@ -19,7 +22,7 @@ import { clerkClient } from "@clerk/nextjs/server";
  * @param {number} days - Number of days to add.
  * @returns {Date} - The new date.
  */
-const addDays = (date: Date, days: number): Date => {
+const addDays: (date: Date, days: number) => Date = (date: Date, days: number): Date => {
   const result = new Date(date);
   result.setUTCDate(result.getUTCDate() + days);
   result.setUTCHours(0, 0, 0, 0); // Reset to start of day (UTC)
@@ -84,7 +87,7 @@ export const findOrCreatePayrollPeriod = async (
       endDate: newEndDate,
       cutoffDate: newEndDate,
       payDay: payDay,
-    });
+    } as PayrollPeriodType);
 
     await newPayrollPeriod.save();
 
@@ -109,6 +112,30 @@ export async function createSchedule(scheduleData: ScheduleType) {
       scheduleData.startDateTime = new Date(
         scheduleData.startDateTime,
       ) as Date & string;
+    }
+
+    // If hours are not provided or are the default 4, calculate based on invoice price
+    if (!scheduleData.hours || scheduleData.hours === 4) {
+      try {
+        // Fetch the invoice to get the total price
+        const invoice = await Invoice.findById(scheduleData.invoiceRef).lean<InvoiceType>();
+        if (invoice && invoice.items) {
+          const totalPrice = invoice.items.reduce(
+            (sum: number, item: any) => sum + (item.price || 0),
+            0,
+          );
+          
+          // Calculate duration in minutes and convert to hours
+          const durationInMinutes = calculateJobDurationFromPrice(totalPrice);
+          scheduleData.hours = convertMinutesToHours(durationInMinutes);
+          
+          console.log(`Calculated job duration: $${totalPrice} → ${durationInMinutes} minutes → ${scheduleData.hours} hours`);
+        }
+      } catch (error) {
+        console.warn("Could not calculate duration from invoice price, using default:", error);
+        // Fall back to default 2.5 hours if calculation fails
+        scheduleData.hours = 2.5;
+      }
     }
 
     // Find or create the appropriate payroll period

@@ -20,7 +20,7 @@ import {
   ScheduleType,
   ClientType,
 } from "./typeDefinitions";
-import { formatDateFns } from "./utils";
+import { formatDateFns, calculateJobDurationFromPrice } from "./utils";
 import { format } from "date-fns";
 
 /**
@@ -242,15 +242,6 @@ export async function analyzeHistoricalPatterns(
     console.error("Error analyzing historical patterns:", error);
     throw new Error("Failed to analyze historical patterns");
   }
-}
-
-/**
- * Calculate job duration based on invoice price (business rule)
- */
-function calculateJobDurationFromPrice(totalPrice: number): number {
-  if (totalPrice < 600) return 150; // 2.5 hours
-  if (totalPrice < 900) return 180; // 3 hours
-  return 240; // 4 hours
 }
 
 /**

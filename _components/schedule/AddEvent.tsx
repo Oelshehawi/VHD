@@ -137,15 +137,15 @@ const AddEvent = ({
           animate={{ opacity: 1, scale: 1 }}
           exit={{ opacity: 0, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className="relative w-full max-w-lg overflow-hidden rounded-2xl bg-gradient-to-br from-darkGreen to-darkBlue shadow-xl"
+          className="relative w-full max-w-lg overflow-hidden rounded-xl bg-white shadow-2xl border border-gray-200"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-white/10 px-6 py-4">
-            <h2 className="text-xl font-semibold text-white">Add New Job</h2>
+          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
+            <h2 className="text-xl font-semibold text-gray-900">Add New Job</h2>
             <button
               onClick={setOpen}
-              className="rounded-full p-1 text-white/80 hover:bg-white/10 hover:text-white"
+              className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
             >
               <XMarkIcon className="h-6 w-6" />
             </button>
@@ -158,7 +158,7 @@ const AddEvent = ({
           >
             {/* Invoice SearchSelect */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-white/90">
+              <label className="text-sm font-medium text-gray-700">
                 Select Invoice
               </label>
               <div className="relative">
@@ -175,11 +175,11 @@ const AddEvent = ({
             {/* Other Input Fields */}
             {formFields.map(({ name, placeholder, type, isRequired, icon }) => (
               <div className="space-y-1" key={name}>
-                <label className="text-sm font-medium text-white/90">
+                <label className="text-sm font-medium text-gray-700">
                   {placeholder}
                 </label>
                 <div className="relative">
-                  <span className="absolute left-3 top-1/2 -translate-y-1/2">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                     {icon}
                   </span>
                   <input
@@ -188,16 +188,16 @@ const AddEvent = ({
                     })}
                     type={type}
                     placeholder={placeholder}
-                    className={`w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-3 text-white placeholder-white/50 shadow-sm transition-colors focus:border-white/20 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-white/20 ${
+                    className={`w-full rounded-lg border px-3 py-2 pl-10 text-gray-900 placeholder-gray-500 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
                       errors[name as "jobTitle" | "startDateTime"]
                         ? "border-red-500"
-                        : ""
+                        : "border-gray-300"
                     }`}
                   />
                 </div>
                 {errors[name as "jobTitle" | "startDateTime"]?.type ===
                   "required" && (
-                  <p className="text-sm text-red-400">
+                  <p className="text-sm text-red-600">
                     {placeholder} is required
                   </p>
                 )}
@@ -206,7 +206,7 @@ const AddEvent = ({
 
             {/* Technician Select */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-white/90">
+              <label className="text-sm font-medium text-gray-700">
                 Assign Technicians
               </label>
               <div className="relative">
@@ -216,22 +216,23 @@ const AddEvent = ({
                   technicians={technicians}
                   placeholder="Select technicians..."
                   error={errors.assignedTechnicians}
+                  theme="light"
                 />
               </div>
             </div>
 
             {/* Technician Notes */}
             <div className="space-y-1">
-              <label className="text-sm font-medium text-white/90">
+              <label className="text-sm font-medium text-gray-700">
                 Technician Notes
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-3">📝</span>
+                <span className="absolute left-3 top-3 text-gray-400">📝</span>
                 <textarea
                   {...register("technicianNotes")}
                   rows={4}
                   placeholder="Enter any notes about this job (equipment, access instructions, etc.)"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 py-2 pl-10 pr-3 text-white placeholder-white/50 shadow-sm transition-colors focus:border-white/20 focus:bg-white/10 focus:outline-none focus:ring-1 focus:ring-white/20"
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 pl-10 text-gray-900 placeholder-gray-500 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
                 />
               </div>
             </div>
@@ -244,8 +245,8 @@ const AddEvent = ({
                 className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors
                   ${
                     isLoading || !isValid
-                      ? "cursor-not-allowed bg-white/20"
-                      : "bg-white/10 hover:bg-white/20 active:bg-white/30"
+                      ? "cursor-not-allowed bg-gray-400"
+                      : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
                   }`}
               >
                 {isLoading ? (

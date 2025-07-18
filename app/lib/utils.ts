@@ -242,6 +242,41 @@ export const formatDateFnsUTC = (date: string | Date): string => {
   return format(date, "MMMM do, yyyy", { timeZone: "UTC" }); // e.g., "October 15th, 2024"
 };
 
+/**
+ * Calculate job duration based on invoice price (business rule)
+ * @param totalPrice - Total price of the invoice
+ * @returns Duration in minutes
+ */
+export function calculateJobDurationFromPrice(totalPrice: number): number {
+  if (totalPrice <= 350) return 90;  // 1.5 hours
+  if (totalPrice < 600) return 150;  // 2.5 hours
+  if (totalPrice <= 800) return 180; // 3 hours
+  if (totalPrice <= 1000) return 210; // 3.5 hours
+  if (totalPrice <= 1500) return 240; // 4 hours
+  
+  // For amounts over $1500, add 1 hour for every $300
+  // Calculate how many $300 increments over $1500
+  const overBase = totalPrice - 1500;
+  const additionalHours = Math.ceil(overBase / 300);
+  const totalHours = 4 + additionalHours;
+  
+  // Cap at 8 hours maximum
+  const cappedHours = Math.min(totalHours, 8);
+  
+  return cappedHours * 60; // Convert to minutes
+}
+
+/**
+ * Convert duration from minutes to hours (rounded up)
+ * @param durationInMinutes - Duration in minutes
+ * @returns Duration in hours (rounded up to nearest 0.5)
+ */
+export function convertMinutesToHours(durationInMinutes: number): number {
+  const hours = durationInMinutes / 60;
+  // Round to nearest 0.5 hour increment
+  return Math.ceil(hours * 2) / 2;
+}
+
 
 
 

@@ -12,6 +12,7 @@ import {
 } from "../../app/lib/actions/scheduleJobs.actions";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
+import { format } from "date-fns";
 
 type FormStep = "basic" | "equipment" | "inspection" | "recommendations";
 
@@ -62,9 +63,25 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  // If there's only one technician, pre-select them
-  const defaultTechnicianId =
-    technicians.length === 1 ? technicians[0]?.id : "";
+  // Smart technician pre-selection
+  const getDefaultTechnician = () => {
+    // If only one technician, select them
+    if (technicians.length === 1) {
+      return technicians[0]?.id || "";
+    }
+    
+    // If job has assigned technicians, try to match one
+    if (schedule.assignedTechnicians && schedule.assignedTechnicians.length > 0) {
+      const assignedTech = technicians.find(tech => 
+        schedule.assignedTechnicians.includes(tech.id)
+      );
+      if (assignedTech) {
+        return assignedTech.id;
+      }
+    }
+    
+    return "";
+  };
 
   const [formData, setFormData] = useState<FormData>({
     scheduleId: schedule._id.toString(),
@@ -73,7 +90,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
         ? schedule.invoiceRef
         : schedule.invoiceRef.toString(),
     dateCompleted: new Date(),
-    technicianId: defaultTechnicianId || "",
+    technicianId: getDefaultTechnician(),
     inspectionItems: [],
     equipmentDetails: {
       hoodType: "",
@@ -156,7 +173,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
           }
 
           // Update the form data with the report and mapped inspection items
-          setFormData({
+          setFormData(prevData => ({
             ...report,
             scheduleId: schedule._id.toString(),
             invoiceId:
@@ -164,7 +181,10 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
                 ? schedule.invoiceRef
                 : schedule.invoiceRef.toString(),
             inspectionItems: arrayInspectionItems,
-          });
+            // Ensure technicianId is preserved from the report
+            technicianId: report.technicianId || prevData.technicianId,
+          }));
+          
         }
       } catch (error) {
         console.error("Error fetching report:", error);
@@ -340,10 +360,17 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black-2 bg-opacity-50 p-4 md:p-0">
-        <div className="w-full max-w-3xl rounded-md border-4 border-darkGreen bg-white p-6">
-          <div className="flex h-40 items-center justify-center">
-            <div className="h-8 w-8 animate-spin rounded-full border-4 border-solid border-darkGreen border-t-transparent"></div>
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-2xl p-8">
+          <div className="flex flex-col items-center space-y-4">
+            <div className="relative">
+              <div className="h-12 w-12 rounded-full border-4 border-gray-200"></div>
+              <div className="absolute top-0 left-0 h-12 w-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Report</h3>
+              <p className="text-sm text-gray-500">Please wait while we fetch the report data...</p>
+            </div>
           </div>
         </div>
       </div>
@@ -351,535 +378,561 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black-2 bg-opacity-50 p-4 md:p-0">
-      <div className="relative w-full max-w-3xl rounded-md border-4 border-darkGreen bg-white p-6">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="relative w-full max-w-4xl rounded-xl border border-gray-200 bg-white shadow-2xl max-h-[90vh] overflow-hidden">
         <button
           onClick={onClose}
-          className="absolute right-4 top-4 text-gray-600 hover:text-gray-900"
+          className="absolute right-4 top-4 z-10 rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
         >
           <XMarkIcon className="h-6 w-6" />
         </button>
 
-        <h2 className="mb-4 text-xl font-semibold text-darkGreen">
-          Kitchen Exhaust System Cleaning Report
-        </h2>
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-semibold text-gray-900">
+              Kitchen Exhaust System Cleaning Report
+            </h2>
+          </div>
+        </div>
 
         {/* Progress Bar */}
-        <div className="mb-6 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-          <div
-            className="h-full bg-darkGreen transition-all duration-300 ease-in-out"
-            style={{
-              width:
-                step === "basic"
-                  ? "25%"
-                  : step === "equipment"
-                    ? "50%"
-                    : step === "inspection"
-                      ? "75%"
-                      : "100%",
-            }}
-          ></div>
+        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+          <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+            <div
+              className="h-full bg-blue-600 transition-all duration-300 ease-in-out"
+              style={{
+                width:
+                  step === "basic"
+                    ? "25%"
+                    : step === "equipment"
+                      ? "50%"
+                      : step === "inspection"
+                        ? "75%"
+                        : "100%",
+              }}
+            ></div>
+          </div>
+
+          <div className="flex justify-between">
+            <button
+              onClick={() => setStep("basic")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                step === "basic" 
+                  ? "bg-blue-600 text-white" 
+                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+              }`}
+            >
+              Basic Info
+            </button>
+            <button
+              onClick={() => setStep("equipment")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                step === "equipment" 
+                  ? "bg-blue-600 text-white" 
+                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+              }`}
+            >
+              Equipment
+            </button>
+            <button
+              onClick={() => setStep("inspection")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                step === "inspection" 
+                  ? "bg-blue-600 text-white" 
+                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+              }`}
+            >
+              Inspection
+            </button>
+            <button
+              onClick={() => setStep("recommendations")}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                step === "recommendations" 
+                  ? "bg-blue-600 text-white" 
+                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+              }`}
+            >
+              Recommendations
+            </button>
+          </div>
         </div>
 
-        <div className="mb-4 flex justify-between">
-          <div
-            onClick={() => setStep("basic")}
-            className={`cursor-pointer rounded-full px-3 py-1 text-sm ${step === "basic" ? "bg-darkGreen text-white" : "bg-gray-200 text-gray-600"}`}
+        <div className="p-6 overflow-y-auto max-h-[60vh]">
+          <motion.div
+            key={step}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+            className="min-h-[400px]"
           >
-            Basic Info
-          </div>
-          <div
-            onClick={() => setStep("equipment")}
-            className={`cursor-pointer rounded-full px-3 py-1 text-sm ${step === "equipment" ? "bg-darkGreen text-white" : "bg-gray-200 text-gray-600"}`}
-          >
-            Equipment
-          </div>
-          <div
-            onClick={() => setStep("inspection")}
-            className={`cursor-pointer rounded-full px-3 py-1 text-sm ${step === "inspection" ? "bg-darkGreen text-white" : "bg-gray-200 text-gray-600"}`}
-          >
-            Inspection Items
-          </div>
-          <div
-            onClick={() => setStep("recommendations")}
-            className={`cursor-pointer rounded-full px-3 py-1 text-sm ${step === "recommendations" ? "bg-darkGreen text-white" : "bg-gray-200 text-gray-600"}`}
-          >
-            Recommendations
-          </div>
-        </div>
+            {step === "basic" && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="mb-2 font-semibold">Technician</h3>
+                  {technicians.length === 1 ? (
+                    <div className="flex items-center rounded-md border border-gray-300 bg-gray-50 p-2">
+                      <span>{technicians[0]?.name}</span>
+                      <input type="hidden" value={technicians[0]?.id} />
+                    </div>
+                  ) : (
+                    <div>
+                      <select
+                        value={formData.technicianId}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            technicianId: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 p-2"
+                      >
+                        <option value="">Select Technician</option>
+                        {technicians.map((tech) => (
+                          <option key={tech.id} value={tech.id}>
+                            {tech.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </div>
 
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
-          className="min-h-[400px]"
-        >
-          {step === "basic" && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="mb-2 font-semibold">Technician</h3>
-                {technicians.length === 1 ? (
-                  <div className="flex items-center rounded-md border border-gray-300 bg-gray-50 p-2">
-                    <span>{technicians[0]?.name}</span>
-                    <input type="hidden" value={technicians[0]?.id} />
-                  </div>
-                ) : (
-                  <select
-                    value={formData.technicianId}
+                <div>
+                  <h3 className="mb-2 font-semibold">Date of Service</h3>
+                  <input
+                    type="date"
+                    value={
+                      formData.dateCompleted
+                        ? new Date(formData.dateCompleted)
+                            .toISOString()
+                            .split("T")[0]
+                        : ""
+                    }
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        technicianId: e.target.value,
+                        dateCompleted: e.target.value,
                       }))
                     }
                     className="w-full rounded-md border border-gray-300 p-2"
-                  >
-                    <option value="">Select Technician</option>
-                    {technicians.map((tech) => (
-                      <option key={tech.id} value={tech.id}>
-                        {tech.name}
-                      </option>
-                    ))}
-                  </select>
-                )}
-              </div>
+                  />
+                </div>
 
-              <div>
-                <h3 className="mb-2 font-semibold">Date of Service</h3>
-                <input
-                  type="date"
-                  value={
-                    formData.dateCompleted
-                      ? new Date(formData.dateCompleted)
-                          .toISOString()
-                          .split("T")[0]
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      dateCompleted: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-md border border-gray-300 p-2"
-                />
-              </div>
+                <div>
+                  <h3 className="mb-2 font-semibold">Last Service Date</h3>
+                  <input
+                    type="date"
+                    value={
+                      formData.lastServiceDate
+                        ? new Date(formData.lastServiceDate)
+                            .toISOString()
+                            .split("T")[0]
+                        : ""
+                    }
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        lastServiceDate: e.target.value,
+                      }))
+                    }
+                    className="w-full rounded-md border border-gray-300 p-2"
+                  />
+                </div>
 
-              <div>
-                <h3 className="mb-2 font-semibold">Last Service Date</h3>
-                <input
-                  type="date"
-                  value={
-                    formData.lastServiceDate
-                      ? new Date(formData.lastServiceDate)
-                          .toISOString()
-                          .split("T")[0]
-                      : ""
-                  }
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      lastServiceDate: e.target.value,
-                    }))
-                  }
-                  className="w-full rounded-md border border-gray-300 p-2"
-                />
-              </div>
+                <div>
+                  <h3 className="mb-2 font-semibold">Fuel Type</h3>
+                  <div className="flex flex-wrap gap-4">
+                    {["Natural Gas", "Electric", "Solid Fuel", "Other"].map(
+                      (type) => (
+                        <label key={type} className="flex items-center gap-2">
+                          <input
+                            type="radio"
+                            value={type}
+                            checked={formData.fuelType === type}
+                            onChange={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                fuelType: type as any,
+                              }))
+                            }
+                            className="h-4 w-4"
+                          />
+                          {type}
+                        </label>
+                      ),
+                    )}
+                  </div>
+                </div>
 
-              <div>
-                <h3 className="mb-2 font-semibold">Fuel Type</h3>
-                <div className="flex flex-wrap gap-4">
-                  {["Natural Gas", "Electric", "Solid Fuel", "Other"].map(
-                    (type) => (
-                      <label key={type} className="flex items-center gap-2">
+                <div>
+                  <h3 className="mb-2 font-semibold">Cooking Volume</h3>
+                  <div className="flex gap-4">
+                    {["High", "Medium", "Low"].map((volume) => (
+                      <label key={volume} className="flex items-center gap-2">
                         <input
                           type="radio"
-                          value={type}
-                          checked={formData.fuelType === type}
+                          value={volume}
+                          checked={formData.cookingVolume === volume}
                           onChange={() =>
                             setFormData((prev) => ({
                               ...prev,
-                              fuelType: type as any,
+                              cookingVolume: volume as any,
                             }))
                           }
                           className="h-4 w-4"
                         />
-                        {type}
+                        {volume}
                       </label>
-                    ),
-                  )}
+                    ))}
+                  </div>
                 </div>
-              </div>
 
-              <div>
-                <h3 className="mb-2 font-semibold">Cooking Volume</h3>
-                <div className="flex gap-4">
-                  {["High", "Medium", "Low"].map((volume) => (
-                    <label key={volume} className="flex items-center gap-2">
+                <div>
+                  <h3 className="mb-2 font-semibold">Cooking Equipment</h3>
+                  <div className="grid grid-cols-3 gap-4">
+                    <label className="flex items-center gap-2">
                       <input
-                        type="radio"
-                        value={volume}
-                        checked={formData.cookingVolume === volume}
-                        onChange={() =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            cookingVolume: volume as any,
-                          }))
+                        type="checkbox"
+                        checked={formData.cookingEquipment?.griddles || false}
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "cookingEquipment",
+                            "griddles",
+                            e.target.checked,
+                          )
                         }
                         className="h-4 w-4"
                       />
-                      {volume}
+                      Griddles
                     </label>
-                  ))}
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          formData.cookingEquipment?.deepFatFryers || false
+                        }
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "cookingEquipment",
+                            "deepFatFryers",
+                            e.target.checked,
+                          )
+                        }
+                        className="h-4 w-4"
+                      />
+                      Deep Fat Fryers
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.cookingEquipment?.woks || false}
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "cookingEquipment",
+                            "woks",
+                            e.target.checked,
+                          )
+                        }
+                        className="h-4 w-4"
+                      />
+                      Woks
+                    </label>
+                  </div>
                 </div>
               </div>
+            )}
 
-              <div>
-                <h3 className="mb-2 font-semibold">Cooking Equipment</h3>
-                <div className="grid grid-cols-3 gap-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.cookingEquipment?.griddles || false}
-                      onChange={(e) =>
-                        handleNestedChange(
-                          "cookingEquipment",
-                          "griddles",
-                          e.target.checked,
-                        )
-                      }
-                      className="h-4 w-4"
-                    />
-                    Griddles
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={
-                        formData.cookingEquipment?.deepFatFryers || false
-                      }
-                      onChange={(e) =>
-                        handleNestedChange(
-                          "cookingEquipment",
-                          "deepFatFryers",
-                          e.target.checked,
-                        )
-                      }
-                      className="h-4 w-4"
-                    />
-                    Deep Fat Fryers
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.cookingEquipment?.woks || false}
-                      onChange={(e) =>
-                        handleNestedChange(
-                          "cookingEquipment",
-                          "woks",
-                          e.target.checked,
-                        )
-                      }
-                      className="h-4 w-4"
-                    />
-                    Woks
-                  </label>
+            {step === "equipment" && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="mb-2 font-semibold">Hood Type</h3>
+                  <input
+                    type="text"
+                    name="equipmentDetails.hoodType"
+                    value={formData.equipmentDetails?.hoodType || ""}
+                    onChange={(e) =>
+                      handleNestedChange(
+                        "equipmentDetails",
+                        "hoodType",
+                        e.target.value,
+                      )
+                    }
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    placeholder="Enter hood type"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold">Filter Type</h3>
+                  <input
+                    type="text"
+                    name="equipmentDetails.filterType"
+                    value={formData.equipmentDetails?.filterType || ""}
+                    onChange={(e) =>
+                      handleNestedChange(
+                        "equipmentDetails",
+                        "filterType",
+                        e.target.value,
+                      )
+                    }
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    placeholder="Enter filter type"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold">Ductwork Type</h3>
+                  <input
+                    type="text"
+                    name="equipmentDetails.ductworkType"
+                    value={formData.equipmentDetails?.ductworkType || ""}
+                    onChange={(e) =>
+                      handleNestedChange(
+                        "equipmentDetails",
+                        "ductworkType",
+                        e.target.value,
+                      )
+                    }
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    placeholder="Enter ductwork type"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold">Fan Type</h3>
+                  <input
+                    type="text"
+                    name="equipmentDetails.fanType"
+                    value={formData.equipmentDetails?.fanType || ""}
+                    onChange={(e) =>
+                      handleNestedChange(
+                        "equipmentDetails",
+                        "fanType",
+                        e.target.value,
+                      )
+                    }
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    placeholder="Enter fan type"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold">Cleaning Details</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.cleaningDetails?.hoodCleaned || false}
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "cleaningDetails",
+                            "hoodCleaned",
+                            e.target.checked,
+                          )
+                        }
+                        className="h-4 w-4"
+                      />
+                      Hood Cleaned
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          formData.cleaningDetails?.filtersCleaned || false
+                        }
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "cleaningDetails",
+                            "filtersCleaned",
+                            e.target.checked,
+                          )
+                        }
+                        className="h-4 w-4"
+                      />
+                      Filters Cleaned
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={
+                          formData.cleaningDetails?.ductworkCleaned || false
+                        }
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "cleaningDetails",
+                            "ductworkCleaned",
+                            e.target.checked,
+                          )
+                        }
+                        className="h-4 w-4"
+                      />
+                      Ductwork Cleaned
+                    </label>
+                    <label className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={formData.cleaningDetails?.fanCleaned || false}
+                        onChange={(e) =>
+                          handleNestedChange(
+                            "cleaningDetails",
+                            "fanCleaned",
+                            e.target.checked,
+                          )
+                        }
+                        className="h-4 w-4"
+                      />
+                      Fan Cleaned
+                    </label>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {step === "equipment" && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="mb-2 font-semibold">Hood Type</h3>
-                <input
-                  type="text"
-                  name="equipmentDetails.hoodType"
-                  value={formData.equipmentDetails?.hoodType || ""}
-                  onChange={(e) =>
-                    handleNestedChange(
-                      "equipmentDetails",
-                      "hoodType",
-                      e.target.value,
-                    )
-                  }
-                  className="w-full rounded-md border border-gray-300 p-2"
-                  placeholder="Enter hood type"
-                />
-              </div>
-
-              <div>
-                <h3 className="mb-2 font-semibold">Filter Type</h3>
-                <input
-                  type="text"
-                  name="equipmentDetails.filterType"
-                  value={formData.equipmentDetails?.filterType || ""}
-                  onChange={(e) =>
-                    handleNestedChange(
-                      "equipmentDetails",
-                      "filterType",
-                      e.target.value,
-                    )
-                  }
-                  className="w-full rounded-md border border-gray-300 p-2"
-                  placeholder="Enter filter type"
-                />
-              </div>
-
-              <div>
-                <h3 className="mb-2 font-semibold">Ductwork Type</h3>
-                <input
-                  type="text"
-                  name="equipmentDetails.ductworkType"
-                  value={formData.equipmentDetails?.ductworkType || ""}
-                  onChange={(e) =>
-                    handleNestedChange(
-                      "equipmentDetails",
-                      "ductworkType",
-                      e.target.value,
-                    )
-                  }
-                  className="w-full rounded-md border border-gray-300 p-2"
-                  placeholder="Enter ductwork type"
-                />
-              </div>
-
-              <div>
-                <h3 className="mb-2 font-semibold">Fan Type</h3>
-                <input
-                  type="text"
-                  name="equipmentDetails.fanType"
-                  value={formData.equipmentDetails?.fanType || ""}
-                  onChange={(e) =>
-                    handleNestedChange(
-                      "equipmentDetails",
-                      "fanType",
-                      e.target.value,
-                    )
-                  }
-                  className="w-full rounded-md border border-gray-300 p-2"
-                  placeholder="Enter fan type"
-                />
-              </div>
-
-              <div>
-                <h3 className="mb-2 font-semibold">Cleaning Details</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.cleaningDetails?.hoodCleaned || false}
-                      onChange={(e) =>
-                        handleNestedChange(
-                          "cleaningDetails",
-                          "hoodCleaned",
-                          e.target.checked,
-                        )
-                      }
-                      className="h-4 w-4"
-                    />
-                    Hood Cleaned
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={
-                        formData.cleaningDetails?.filtersCleaned || false
-                      }
-                      onChange={(e) =>
-                        handleNestedChange(
-                          "cleaningDetails",
-                          "filtersCleaned",
-                          e.target.checked,
-                        )
-                      }
-                      className="h-4 w-4"
-                    />
-                    Filters Cleaned
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={
-                        formData.cleaningDetails?.ductworkCleaned || false
-                      }
-                      onChange={(e) =>
-                        handleNestedChange(
-                          "cleaningDetails",
-                          "ductworkCleaned",
-                          e.target.checked,
-                        )
-                      }
-                      className="h-4 w-4"
-                    />
-                    Ductwork Cleaned
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.cleaningDetails?.fanCleaned || false}
-                      onChange={(e) =>
-                        handleNestedChange(
-                          "cleaningDetails",
-                          "fanCleaned",
-                          e.target.checked,
-                        )
-                      }
-                      className="h-4 w-4"
-                    />
-                    Fan Cleaned
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {step === "inspection" && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="mb-2 font-semibold">Inspection</h3>
-                <div className="max-h-[300px] space-y-4 overflow-y-auto">
-                  {inspectionItems.map((item, index) => (
-                    <div
-                      key={index}
-                      className="flex flex-col rounded-md border border-gray-300 p-4"
-                    >
-                      <div className="flex justify-between">
-                        <h4 className="font-medium">{item.name}</h4>
-                        <div className="flex items-center space-x-4">
-                          <label className="flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              value="Yes"
-                              checked={
-                                (formData.inspectionItems?.[index]?.status ||
-                                  "") === "Yes"
-                              }
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  handleInspectionChange(
-                                    index,
-                                    "status",
-                                    "Yes",
-                                  );
+            {step === "inspection" && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="mb-2 font-semibold">Inspection</h3>
+                  <div className="max-h-[300px] space-y-4 overflow-y-auto">
+                    {inspectionItems.map((item, index) => (
+                      <div
+                        key={index}
+                        className="flex flex-col rounded-md border border-gray-300 p-4"
+                      >
+                        <div className="flex justify-between">
+                          <h4 className="font-medium">{item.name}</h4>
+                          <div className="flex items-center space-x-4">
+                            <label className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                value="Yes"
+                                checked={
+                                  (formData.inspectionItems?.[index]?.status ||
+                                    "") === "Yes"
                                 }
-                              }}
-                              className="h-4 w-4"
-                            />
-                            <span>Yes</span>
-                          </label>
-                          <label className="flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              value="No"
-                              checked={
-                                (formData.inspectionItems?.[index]?.status ||
-                                  "") === "No"
-                              }
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  handleInspectionChange(index, "status", "No");
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    handleInspectionChange(
+                                      index,
+                                      "status",
+                                      "Yes",
+                                    );
+                                  }
+                                }}
+                                className="h-4 w-4"
+                              />
+                              <span>Yes</span>
+                            </label>
+                            <label className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                value="No"
+                                checked={
+                                  (formData.inspectionItems?.[index]?.status ||
+                                    "") === "No"
                                 }
-                              }}
-                              className="h-4 w-4"
-                            />
-                            <span>No</span>
-                          </label>
-                          <label className="flex items-center space-x-2">
-                            <input
-                              type="radio"
-                              value="N/A"
-                              checked={
-                                (formData.inspectionItems?.[index]?.status ||
-                                  "") === "N/A"
-                              }
-                              onChange={(e) => {
-                                if (e.target.checked) {
-                                  handleInspectionChange(
-                                    index,
-                                    "status",
-                                    "N/A",
-                                  );
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    handleInspectionChange(index, "status", "No");
+                                  }
+                                }}
+                                className="h-4 w-4"
+                              />
+                              <span>No</span>
+                            </label>
+                            <label className="flex items-center space-x-2">
+                              <input
+                                type="radio"
+                                value="N/A"
+                                checked={
+                                  (formData.inspectionItems?.[index]?.status ||
+                                    "") === "N/A"
                                 }
-                              }}
-                              className="h-4 w-4"
-                            />
-                            <span>N/A</span>
-                          </label>
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    handleInspectionChange(
+                                      index,
+                                      "status",
+                                      "N/A",
+                                    );
+                                  }
+                                }}
+                                className="h-4 w-4"
+                              />
+                              <span>N/A</span>
+                            </label>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {step === "recommendations" && (
-            <div className="space-y-4">
-              <div>
-                <h3 className="mb-2 font-semibold">
-                  Recommended Cleaning Frequency (per year)
-                </h3>
-                <input
-                  type="number"
-                  value={formData.recommendedCleaningFrequency || ""}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      recommendedCleaningFrequency:
-                        parseInt(e.target.value) || undefined,
-                    }))
-                  }
-                  min="1"
-                  max="12"
-                  className="w-full rounded-md border border-gray-300 p-2"
-                />
+            {step === "recommendations" && (
+              <div className="space-y-4">
+                <div>
+                  <h3 className="mb-2 font-semibold">
+                    Recommended Cleaning Frequency (per year)
+                  </h3>
+                  <input
+                    type="number"
+                    value={formData.recommendedCleaningFrequency || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        recommendedCleaningFrequency:
+                          parseInt(e.target.value) || undefined,
+                      }))
+                    }
+                    min="1"
+                    max="12"
+                    className="w-full rounded-md border border-gray-300 p-2"
+                  />
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold">Comments</h3>
+                  <textarea
+                    value={formData.comments || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        comments: e.target.value,
+                      }))
+                    }
+                    rows={4}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    placeholder="Enter comments here..."
+                  ></textarea>
+                </div>
+
+                <div>
+                  <h3 className="mb-2 font-semibold">Recommendations</h3>
+                  <textarea
+                    value={formData.recommendations || ""}
+                    onChange={(e) =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        recommendations: e.target.value,
+                      }))
+                    }
+                    rows={4}
+                    className="w-full rounded-md border border-gray-300 p-2"
+                    placeholder="Enter recommendations here..."
+                  ></textarea>
+                </div>
               </div>
+            )}
+          </motion.div>
+        </div>
 
-              <div>
-                <h3 className="mb-2 font-semibold">Comments</h3>
-                <textarea
-                  value={formData.comments || ""}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      comments: e.target.value,
-                    }))
-                  }
-                  rows={4}
-                  className="w-full rounded-md border border-gray-300 p-2"
-                  placeholder="Enter comments here..."
-                ></textarea>
-              </div>
-
-              <div>
-                <h3 className="mb-2 font-semibold">Recommendations</h3>
-                <textarea
-                  value={formData.recommendations || ""}
-                  onChange={(e) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      recommendations: e.target.value,
-                    }))
-                  }
-                  rows={4}
-                  className="w-full rounded-md border border-gray-300 p-2"
-                  placeholder="Enter recommendations here..."
-                ></textarea>
-              </div>
-            </div>
-          )}
-        </motion.div>
-
-        <div className="mt-6 flex justify-between">
+        <div className="mt-6 flex justify-between px-6 pb-6">
           {step !== "basic" ? (
             <button
               onClick={prevStep}
-              className="rounded bg-gray-300 px-4 py-2 text-gray-800 hover:bg-gray-400"
+              className="rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200 transition-colors"
             >
               Previous
             </button>
@@ -890,7 +943,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
           {step !== "recommendations" ? (
             <button
               onClick={nextStep}
-              className="rounded bg-darkGreen px-4 py-2 text-white hover:bg-opacity-90"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"
             >
               Next
             </button>
@@ -898,7 +951,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="rounded bg-darkGreen px-4 py-2 text-white hover:bg-opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
             >
               {saving ? "Saving..." : "Save Report"}
             </button>
