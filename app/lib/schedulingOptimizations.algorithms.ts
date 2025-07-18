@@ -1,0 +1,1076 @@
+import {
+  JobOptimizationData,
+  LocationClusterType,
+  SchedulingPreferencesType,
+  HistoricalSchedulePatternType,
+  ScheduleType,
+  MonthlyDistanceMatrixType,
+} from "./typeDefinitions";
+import {
+  fetchUnscheduledJobsForOptimization,
+  analyzeHistoricalPatterns,
+  getSchedulingPreferences,
+  getLocationClusters,
+  getMonthlyDistanceMatrix,
+  getExistingSchedules,
+  generateJobIdentifier,
+} from "./schedulingOptimizations.data";
+import { formatDateFns } from "./utils";
+import { format, addDays, addWeeks, isValid } from "date-fns";
+import openRouteService, {
+  LocationCoordinates,
+  OpenRouteService,
+} from "./openroute.service";
+
+// Types for optimization results
+export interface OptimizedScheduleGroup {
+  clusterId: string;
+  clusterName: string;
+  date: Date;
+  jobs: OptimizedJob[];
+  totalDriveTime: number;
+  totalWorkTime: number;
+  estimatedStartTime: Date;
+  estimatedEndTime: Date;
+  assignedTechnicians: string[];
+  routeOptimized: boolean;
+}
+
+export interface OptimizedJob {
+  jobId: string;
+  originalJob: JobOptimizationData;
+  scheduledTime: Date;
+  estimatedDuration: number;
+  driveTimeToPrevious: number;
+  driveTimeToNext: number;
+  orderInRoute: number;
+  confidence: number;
+  historicalPattern?: HistoricalSchedulePatternType;
+}
+
+export interface OptimizationResult {
+  strategy: SchedulingStrategy;
+  totalJobs: number;
+  scheduledGroups: OptimizedScheduleGroup[];
+  unscheduledJobs: JobOptimizationData[];
+  metrics: {
+    totalDriveTime: number;
+    averageJobsPerDay: number;
+    utilizationRate: number;
+    conflictsResolved: number;
+  };
+  generatedAt: Date;
+}
+
+export enum SchedulingStrategy {
+  HYBRID_HISTORICAL_EFFICIENCY = "hybrid_historical_efficiency",
+}
+
+/**
+ * Main optimization engine - orchestrates the entire optimization process
+ */
+export class SchedulingOptimizer {
+  private preferences: SchedulingPreferencesType | null = null;
+  private clusters: LocationClusterType[] = [];
+  private distanceMatrix: MonthlyDistanceMatrixType | null = null;
+  private existingSchedules: ScheduleType[] = [];
+  private adminControls: SchedulingPreferencesType | null = null;
+
+  constructor() {}
+
+  /**
+   * Initialize the optimizer with current data
+   */
+  async initialize(dateRange: { start: Date; end: Date }): Promise<void> {
+    try {
+      // Load all required data in parallel
+      const [preferences, clusters, existingSchedules] = await Promise.all([
+        getSchedulingPreferences(),
+        getLocationClusters(),
+        getExistingSchedules(dateRange),
+      ]);
+
+      this.preferences = preferences;
+      this.clusters = clusters;
+      this.existingSchedules = existingSchedules;
+      this.adminControls = preferences; // Use preferences for admin controls
+
+      console.log(
+        `Optimizer initialized with ${clusters.length} clusters and ${existingSchedules.length} existing schedules`,
+      );
+    } catch (error) {
+      console.error("Failed to initialize scheduling optimizer:", error);
+      throw new Error("Optimization initialization failed");
+    }
+  }
+
+  /**
+   * Run hybrid optimization combining historical patterns with drive time minimization
+   */
+  async optimize(
+    strategy: SchedulingStrategy = SchedulingStrategy.HYBRID_HISTORICAL_EFFICIENCY,
+    dateRange?: { start: Date; end: Date },
+    adminControls?: SchedulingPreferencesType,
+  ): Promise<OptimizationResult> {
+    if (!this.preferences) {
+      throw new Error("Optimizer not initialized. Call initialize() first.");
+    }
+
+    // Set admin controls if provided
+    this.adminControls = adminControls || this.preferences;
+
+    console.log(`Starting optimization with strategy: ${strategy}`);
+    if (this.adminControls?.schedulingControls) {
+      const controls = this.adminControls.schedulingControls;
+      console.log(`Admin controls applied:`);
+      console.log(
+        `  - Excluded days: ${controls.excludedDays?.map((d: number) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join(", ") || "None"}`,
+      );
+      console.log(
+        `  - Excluded dates: ${controls.excludedDates?.length || 0} specific dates`,
+      );
+      console.log(
+        `  - Allow weekends: ${controls.allowWeekends ? "Yes" : "No"}`,
+      );
+      console.log(
+        `  - Optimization date range: ${controls.startDate || "No start"} to ${controls.endDate || "No end"}`,
+      );
+    }
+
+    // Use dateRange from admin controls if not provided as parameter
+    const effectiveDateRange =
+      dateRange ||
+      (this.adminControls?.schedulingControls?.startDate &&
+      this.adminControls?.schedulingControls?.endDate
+        ? {
+            start: new Date(this.adminControls.schedulingControls.startDate),
+            end: new Date(this.adminControls.schedulingControls.endDate),
+          }
+        : undefined);
+
+    // Load distance matrix for the optimization date range month
+    if (effectiveDateRange) {
+      const optimizationMonth = new Date(effectiveDateRange.start)
+        .toISOString()
+        .slice(0, 7); // YYYY-MM format
+      this.distanceMatrix = await getMonthlyDistanceMatrix(optimizationMonth);
+    }
+
+    // Fetch unscheduled jobs
+    const unscheduledJobs =
+      await fetchUnscheduledJobsForOptimization(effectiveDateRange);
+    console.log(`Found ${unscheduledJobs.length} unscheduled jobs`);
+
+    if (unscheduledJobs.length === 0) {
+      return {
+        strategy,
+        totalJobs: 0,
+        scheduledGroups: [],
+        unscheduledJobs: [],
+        metrics: {
+          totalDriveTime: 0,
+          averageJobsPerDay: 0,
+          utilizationRate: 0,
+          conflictsResolved: 0,
+        },
+        generatedAt: new Date(),
+      };
+    }
+
+    // Analyze historical patterns
+    const historicalPatterns = await analyzeHistoricalPatterns(unscheduledJobs);
+
+    // Step 1: Geographic Clustering
+    const clusteredJobs = await this.clusterJobsByLocation(unscheduledJobs);
+
+    // Step 2: Apply hybrid strategy (historical patterns + drive time minimization)
+    const optimizedGroups = await this.applyHybridOptimization(
+      clusteredJobs,
+      historicalPatterns,
+    );
+
+    // Step 3: Route optimization within clusters
+    const routeOptimizedGroups = await this.optimizeRoutes(optimizedGroups);
+
+    // Step 4: Resolve conflicts with existing schedules
+    const { finalGroups, conflictsResolved } =
+      await this.resolveScheduleConflicts(routeOptimizedGroups);
+
+    // Calculate metrics
+    const metrics = this.calculateOptimizationMetrics(
+      finalGroups,
+      unscheduledJobs.length,
+      conflictsResolved,
+    );
+
+    // Find unscheduled jobs
+    const scheduledJobIds = new Set(
+      finalGroups.flatMap((group) => group.jobs.map((job) => job.jobId)),
+    );
+    const unscheduledRemaining = unscheduledJobs.filter(
+      (job) => !scheduledJobIds.has(job.jobId),
+    );
+
+    return {
+      strategy,
+      totalJobs: unscheduledJobs.length,
+      scheduledGroups: finalGroups,
+      unscheduledJobs: unscheduledRemaining,
+      metrics,
+      generatedAt: new Date(),
+    };
+  }
+
+  /**
+   * Step 1: Cluster jobs by geographic location
+   */
+  private async clusterJobsByLocation(
+    jobs: JobOptimizationData[],
+  ): Promise<Map<string, JobOptimizationData[]>> {
+    const clusteredJobs = new Map<string, JobOptimizationData[]>();
+
+    // Initialize all clusters
+    this.clusters.forEach((cluster) => {
+      clusteredJobs.set(cluster._id as string, []);
+    });
+
+    // Add "unassigned" cluster for jobs that don't fit anywhere
+    clusteredJobs.set("unassigned", []);
+
+    for (const job of jobs) {
+      let assigned = false;
+
+      // Try to assign to best matching cluster
+      for (const cluster of this.clusters) {
+        if (this.isJobInCluster(job, cluster)) {
+          clusteredJobs.get(cluster._id as string)!.push(job);
+          assigned = true;
+          break;
+        }
+      }
+
+      // If no cluster matches, add to unassigned
+      if (!assigned) {
+        clusteredJobs.get("unassigned")!.push(job);
+      }
+    }
+
+    // Log cluster assignments
+    clusteredJobs.forEach((jobs, clusterId) => {
+      if (jobs.length > 0) {
+        const clusterName =
+          this.clusters.find((c) => c._id === clusterId)?.clusterName ||
+          "Unassigned";
+        console.log(`Cluster "${clusterName}": ${jobs.length} jobs`);
+      }
+    });
+
+    return clusteredJobs;
+  }
+
+  /**
+   * Check if a job belongs to a specific cluster based on location
+   */
+  private isJobInCluster(
+    job: JobOptimizationData,
+    cluster: LocationClusterType,
+  ): boolean {
+    const jobLocation = job.location.toLowerCase();
+    const clusterName = cluster.clusterName.toLowerCase();
+
+    // Enhanced location matching for expanded clusters
+    if (
+      clusterName.includes("vancouver core") ||
+      clusterName.includes("vancouver")
+    ) {
+      return (
+        (jobLocation.includes("vancouver") &&
+          !jobLocation.includes("north vancouver")) ||
+        jobLocation.includes("downtown") ||
+        jobLocation.includes("gastown") ||
+        jobLocation.includes("yaletown") ||
+        jobLocation.includes("mount pleasant") ||
+        jobLocation.includes("kitsilano") ||
+        jobLocation.includes("fairview") ||
+        jobLocation.includes("west end")
+      );
+    }
+
+    if (clusterName.includes("surrey") || clusterName.includes("langley")) {
+      return (
+        jobLocation.includes("surrey") ||
+        jobLocation.includes("langley") ||
+        jobLocation.includes("white rock") ||
+        jobLocation.includes("cloverdale")
+      );
+    }
+
+    if (clusterName.includes("richmond")) {
+      return (
+        jobLocation.includes("richmond") ||
+        jobLocation.includes("steveston") ||
+        jobLocation.includes("brighouse")
+      );
+    }
+
+    if (
+      clusterName.includes("burnaby") ||
+      clusterName.includes("new westminster")
+    ) {
+      return (
+        jobLocation.includes("burnaby") ||
+        jobLocation.includes("new westminster") ||
+        jobLocation.includes("coquitlam") ||
+        jobLocation.includes("port coquitlam") ||
+        jobLocation.includes("port moody")
+      );
+    }
+
+    if (clusterName.includes("north vancouver")) {
+      return (
+        jobLocation.includes("north vancouver") ||
+        jobLocation.includes("west vancouver") ||
+        jobLocation.includes("deep cove") ||
+        jobLocation.includes("lynn valley")
+      );
+    }
+
+    if (clusterName.includes("whistler")) {
+      return (
+        jobLocation.includes("whistler") ||
+        jobLocation.includes("squamish") ||
+        jobLocation.includes("pemberton")
+      );
+    }
+
+    if (clusterName.includes("fraser valley")) {
+      return (
+        jobLocation.includes("abbotsford") ||
+        jobLocation.includes("chilliwack") ||
+        jobLocation.includes("mission") ||
+        jobLocation.includes("maple ridge") ||
+        jobLocation.includes("pitt meadows")
+      );
+    }
+
+    if (clusterName.includes("bowen island")) {
+      return jobLocation.includes("bowen island");
+    }
+
+    return false;
+  }
+
+  /**
+   * Step 2: Apply hybrid strategy (historical patterns + drive time minimization)
+   */
+  private async applyHybridOptimization(
+    clusteredJobs: Map<string, JobOptimizationData[]>,
+    historicalPatterns: HistoricalSchedulePatternType[],
+  ): Promise<OptimizedScheduleGroup[]> {
+    const groups: OptimizedScheduleGroup[] = [];
+
+    for (const [clusterId, jobs] of Array.from(clusteredJobs.entries())) {
+      if (jobs.length === 0) continue;
+
+      const cluster = this.clusters.find((c) => c._id === clusterId);
+      const clusterName = cluster?.clusterName || "Unassigned";
+      const maxJobsPerDay =
+        cluster?.constraints.maxJobsPerDay ||
+        this.preferences!.globalSettings.maxJobsPerDay;
+
+      console.log(`\n🎯 ${clusterName}: ${jobs.length} jobs`);
+
+      // Group jobs by their historical patterns
+      const jobsWithPatterns = jobs.map((job) => {
+        const jobIdentifier = generateJobIdentifier(job.jobTitle, job.location);
+        const pattern = historicalPatterns.find(
+          (p) => p.jobIdentifier === jobIdentifier,
+        );
+
+        return { job, pattern };
+      });
+
+      // Sort by pattern confidence and historical preference
+      jobsWithPatterns.sort((a, b) => {
+        const aConfidence = a.pattern?.patterns.hourConfidence || 0;
+        const bConfidence = b.pattern?.patterns.hourConfidence || 0;
+        if (aConfidence !== bConfidence) return bConfidence - aConfidence;
+        return a.job.dateDue.getTime() - b.job.dateDue.getTime();
+      });
+
+      // Group by preferred day of week
+      const dayGroups = new Map<
+        number,
+        { job: JobOptimizationData; pattern?: HistoricalSchedulePatternType }[]
+      >();
+
+      jobsWithPatterns.forEach(({ job, pattern }, index) => {
+        const preferredDay =
+          pattern?.patterns.preferredDayOfWeek || 1 + (index % 5); // Cycle through Mon-Fri
+        if (!dayGroups.has(preferredDay)) {
+          dayGroups.set(preferredDay, []);
+        }
+        dayGroups.get(preferredDay)!.push({ job, pattern });
+      });
+
+      // Schedule each day group
+      for (const [dayOfWeek, dayJobs] of Array.from(dayGroups.entries())) {
+        for (let i = 0; i < dayJobs.length; i += maxJobsPerDay) {
+          const batch = dayJobs.slice(i, i + maxJobsPerDay);
+          const weeksOffset = Math.floor(i / maxJobsPerDay);
+          const scheduleDate = this.getNextDateForDayOfWeek(
+            dayOfWeek,
+            weeksOffset,
+          );
+
+          // Skip this batch if no valid date found within range
+          if (!scheduleDate) {
+            console.log(
+              `   ❌ Skipping ${batch.length} jobs for ${this.getDayName(dayOfWeek)} - no dates available within range`,
+            );
+            continue;
+          }
+
+          console.log(
+            `   📅 ${this.getDayName(dayOfWeek)} ${format(scheduleDate, "MMM dd")}: ${batch.length} jobs`,
+          );
+
+          const optimizedJobs = batch.map(({ job, pattern }) => {
+            const scheduledTime = this.calculateHistoricalTime(
+              scheduleDate,
+              pattern,
+            );
+
+            // Show what time each job is scheduled
+            const hourStr = pattern?.patterns.preferredHour
+              ? `${pattern.patterns.preferredHour}:00`
+              : "9:00 (default)";
+            console.log(`      ${job.jobTitle} → ${hourStr} UTC`);
+
+            return {
+              jobId: job.jobId,
+              originalJob: job,
+              scheduledTime,
+              estimatedDuration:
+                pattern?.patterns.averageDuration || job.estimatedDuration,
+              driveTimeToPrevious: 0,
+              driveTimeToNext: 0,
+              orderInRoute: 0,
+              confidence: pattern?.patterns.hourConfidence || 0.5,
+              historicalPattern: pattern,
+            };
+          });
+
+          groups.push({
+            clusterId,
+            clusterName,
+            date: scheduleDate,
+            jobs: optimizedJobs,
+            totalDriveTime: 0,
+            totalWorkTime: optimizedJobs.reduce(
+              (sum, job) => sum + job.estimatedDuration,
+              0,
+            ),
+            estimatedStartTime: scheduleDate,
+            estimatedEndTime: scheduleDate,
+            assignedTechnicians: [],
+            routeOptimized: false,
+          });
+        }
+      }
+    }
+
+    return groups;
+  }
+
+  /**
+   * Step 3: Optimize routes within each cluster group
+   */
+  private async optimizeRoutes(
+    groups: OptimizedScheduleGroup[],
+  ): Promise<OptimizedScheduleGroup[]> {
+    const optimizedGroups: OptimizedScheduleGroup[] = [];
+
+    // Get starting point coordinates for depot calculations
+    const startingPointAddress =
+      this.preferences?.globalSettings.startingPointAddress;
+    let startingPointCoords: LocationCoordinates | null = null;
+
+    if (startingPointAddress) {
+      startingPointCoords =
+        await openRouteService.addressToCoordinates(startingPointAddress);
+      if (startingPointCoords) {
+        console.log(`🏢 Using starting point: ${startingPointAddress}`);
+      }
+    }
+
+    for (const group of groups) {
+      if (group.jobs.length <= 1) {
+        // For single jobs, calculate depot travel time
+        const job = group.jobs[0];
+        let driveTimeFromDepot = 0;
+
+        if (job && startingPointCoords) {
+          const jobCoords = await this.getJobCoordinates(job.originalJob);
+          if (jobCoords) {
+            // Depot to job
+            const depotToJobResult =
+              await openRouteService.getDistanceBetweenPoints(
+                startingPointCoords,
+                jobCoords,
+              );
+            driveTimeFromDepot = Math.round(depotToJobResult.duration);
+            console.log(
+              `   🚗 Depot → ${job.originalJob.jobTitle}: ${driveTimeFromDepot} min`,
+            );
+
+            // Job back to depot (mandatory)
+            const jobToDepotResult =
+              await openRouteService.getDistanceBetweenPoints(
+                jobCoords,
+                startingPointCoords,
+              );
+            const jobToDepotTime = Math.round(jobToDepotResult.duration);
+            driveTimeFromDepot += jobToDepotTime;
+            console.log(
+              `   🚗 ${job.originalJob.jobTitle} → Depot: ${jobToDepotTime} min`,
+            );
+          }
+        }
+
+        const estimatedStartTime = job?.scheduledTime || group.date;
+        const estimatedEndTime = job
+          ? new Date(
+              job.scheduledTime.getTime() + job.estimatedDuration * 60000,
+            )
+          : group.date;
+
+        optimizedGroups.push({
+          ...group,
+          estimatedStartTime,
+          estimatedEndTime,
+          totalDriveTime: driveTimeFromDepot,
+          routeOptimized: true,
+        });
+        continue;
+      }
+
+      // Apply nearest neighbor TSP optimization to minimize drive time
+      const sortedJobs = await this.optimizeJobSequenceNearestNeighbor(
+        group.jobs,
+        startingPointCoords,
+      );
+
+      // Calculate drive times including depot travel
+      let totalDriveTime = 0;
+
+      // Add drive time from depot to first job
+      if (sortedJobs.length > 0 && startingPointCoords) {
+        const firstJobCoords = await this.getJobCoordinates(
+          sortedJobs[0]!.originalJob,
+        );
+        if (firstJobCoords) {
+          const depotToFirstResult =
+            await openRouteService.getDistanceBetweenPoints(
+              startingPointCoords,
+              firstJobCoords,
+            );
+          const depotToFirstTime = Math.round(depotToFirstResult.duration);
+          sortedJobs[0]!.driveTimeToPrevious = depotToFirstTime;
+          totalDriveTime += depotToFirstTime;
+          console.log(
+            `   🚗 Depot → ${sortedJobs[0]!.originalJob.jobTitle}: ${depotToFirstTime} min`,
+          );
+        }
+      }
+
+      // Calculate drive times between jobs using OpenRouteService
+      for (let i = 0; i < sortedJobs.length; i++) {
+        sortedJobs[i]!.orderInRoute = i + 1;
+
+        if (i > 0) {
+          const driveTime = await this.calculateDriveTime(
+            sortedJobs[i - 1]!,
+            sortedJobs[i]!,
+          );
+          sortedJobs[i]!.driveTimeToPrevious = driveTime;
+          sortedJobs[i - 1]!.driveTimeToNext = driveTime;
+          totalDriveTime += driveTime;
+        }
+      }
+
+      // Add mandatory return-to-depot calculation
+      if (sortedJobs.length > 0 && startingPointCoords) {
+        const lastJobCoords = await this.getJobCoordinates(
+          sortedJobs[sortedJobs.length - 1]!.originalJob,
+        );
+        if (lastJobCoords) {
+          const lastToDepotResult =
+            await openRouteService.getDistanceBetweenPoints(
+              lastJobCoords,
+              startingPointCoords,
+            );
+          const lastToDepotTime = Math.round(lastToDepotResult.duration);
+          sortedJobs[sortedJobs.length - 1]!.driveTimeToNext = lastToDepotTime;
+          totalDriveTime += lastToDepotTime;
+          console.log(
+            `   🚗 ${sortedJobs[sortedJobs.length - 1]!.originalJob.jobTitle} → Depot: ${lastToDepotTime} min`,
+          );
+        }
+      }
+
+      // Keep the historical scheduled times - don't override with work day start
+      const estimatedStartTime = sortedJobs[0]?.scheduledTime || group.date;
+      const lastJob = sortedJobs[sortedJobs.length - 1];
+      const estimatedEndTime = lastJob
+        ? new Date(
+            lastJob.scheduledTime.getTime() + lastJob.estimatedDuration * 60000,
+          )
+        : group.date;
+
+      optimizedGroups.push({
+        ...group,
+        jobs: sortedJobs,
+        totalDriveTime,
+        estimatedStartTime,
+        estimatedEndTime,
+        routeOptimized: true,
+      });
+    }
+
+    return optimizedGroups;
+  }
+
+  /**
+   * Nearest neighbor TSP optimization for job sequencing
+   */
+  private async optimizeJobSequenceNearestNeighbor(
+    jobs: OptimizedJob[],
+    startingPointCoords: LocationCoordinates | null,
+  ): Promise<OptimizedJob[]> {
+    if (jobs.length <= 1) return jobs;
+
+    console.log(
+      `   🧭 Optimizing route for ${jobs.length} jobs using nearest neighbor TSP`,
+    );
+
+    const unvisited = [...jobs];
+    const optimizedSequence: OptimizedJob[] = [];
+
+    // Start with the job that has the highest historical confidence or earliest preferred time
+    let currentJob = unvisited.reduce((best, job) => {
+      const bestConfidence =
+        best.historicalPattern?.patterns.hourConfidence || 0;
+      const jobConfidence = job.historicalPattern?.patterns.hourConfidence || 0;
+
+      if (jobConfidence > bestConfidence) return job;
+      if (jobConfidence === bestConfidence) {
+        // If same confidence, prefer earlier scheduled time
+        return job.scheduledTime < best.scheduledTime ? job : best;
+      }
+      return best;
+    });
+
+    // Remove starting job from unvisited and add to sequence
+    unvisited.splice(unvisited.indexOf(currentJob), 1);
+    optimizedSequence.push(currentJob);
+
+    // Apply nearest neighbor algorithm
+    while (unvisited.length > 0) {
+      let nearestJob = unvisited[0]!;
+      let shortestDistance = Infinity;
+
+      const currentCoords = await this.getJobCoordinates(
+        currentJob.originalJob,
+      );
+
+      for (const candidateJob of unvisited) {
+        const candidateCoords = await this.getJobCoordinates(
+          candidateJob.originalJob,
+        );
+
+        if (currentCoords && candidateCoords) {
+          const distanceResult =
+            await openRouteService.getDistanceBetweenPoints(
+              currentCoords,
+              candidateCoords,
+            );
+
+          if (distanceResult.duration < shortestDistance) {
+            shortestDistance = distanceResult.duration;
+            nearestJob = candidateJob;
+          }
+        } else {
+          // Fallback to string-based distance if geocoding fails
+          const textDistance = this.calculateTextualDistance(
+            currentJob.originalJob.location,
+            candidateJob.originalJob.location,
+          );
+          if (textDistance < shortestDistance) {
+            shortestDistance = textDistance;
+            nearestJob = candidateJob;
+          }
+        }
+      }
+
+      // Move nearest job to optimized sequence
+      unvisited.splice(unvisited.indexOf(nearestJob), 1);
+      optimizedSequence.push(nearestJob);
+      currentJob = nearestJob;
+    }
+
+    console.log(`   ✅ TSP optimization complete - route order:`);
+    optimizedSequence.forEach((job, index) => {
+      console.log(`      ${index + 1}. ${job.originalJob.jobTitle}`);
+    });
+
+    return optimizedSequence;
+  }
+
+  /**
+   * Fallback textual distance calculation for locations without coordinates
+   */
+  private calculateTextualDistance(
+    location1: string,
+    location2: string,
+  ): number {
+    return OpenRouteService.estimateDriveTimeFallback(location1, location2);
+  }
+
+  /**
+   * Calculate real drive time between two jobs using Mapbox API
+   */
+  private async calculateDriveTime(
+    job1: OptimizedJob,
+    job2: OptimizedJob,
+  ): Promise<number> {
+    try {
+      // Get coordinates for both locations
+      const coords1 = await this.getJobCoordinates(job1.originalJob);
+      const coords2 = await this.getJobCoordinates(job2.originalJob);
+
+      if (!coords1 || !coords2) {
+        // Fallback to estimate based on location similarity
+        return this.estimateDriveTimeFallback(job1, job2);
+      }
+
+      // Get real distance and duration from OpenRouteService
+      const result = await openRouteService.getDistanceBetweenPoints(
+        coords1,
+        coords2,
+      );
+
+      if (result.error) {
+        console.warn(
+          `OpenRouteService error for ${job1.originalJob.location} to ${job2.originalJob.location}: ${result.error}`,
+        );
+        return this.estimateDriveTimeFallback(job1, job2);
+      }
+
+      // Duration is already in minutes from OpenRouteService
+      return Math.round(result.duration);
+    } catch (error) {
+      console.error("Drive time calculation error:", error);
+      return this.estimateDriveTimeFallback(job1, job2);
+    }
+  }
+
+  /**
+   * Fallback drive time estimation when OpenRouteService is unavailable
+   */
+  private estimateDriveTimeFallback(
+    job1: OptimizedJob,
+    job2: OptimizedJob,
+  ): number {
+    // Use OpenRouteService fallback estimation
+    return OpenRouteService.estimateDriveTimeFallback(
+      job1.originalJob.location,
+      job2.originalJob.location,
+    );
+  }
+
+  /**
+   * Get coordinates for a job location (with caching)
+   */
+  private locationCache = new Map<string, LocationCoordinates | null>();
+
+  private async getJobCoordinates(
+    job: JobOptimizationData,
+  ): Promise<LocationCoordinates | null> {
+    const cacheKey = job.location;
+
+    // Check cache first
+    if (this.locationCache.has(cacheKey)) {
+      return this.locationCache.get(cacheKey) || null;
+    }
+
+    try {
+      // Try geocoding the address
+      const coordinates = await openRouteService.addressToCoordinates(
+        job.location,
+      );
+
+      // Cache the result (even if null to avoid repeated failures)
+      this.locationCache.set(cacheKey, coordinates);
+
+      return coordinates;
+    } catch (error) {
+      console.error(`Geocoding error for ${job.location}:`, error);
+      this.locationCache.set(cacheKey, null);
+      return null;
+    }
+  }
+
+  /**
+   * Step 4: Resolve conflicts with existing schedules
+   */
+  private async resolveScheduleConflicts(
+    groups: OptimizedScheduleGroup[],
+  ): Promise<{
+    finalGroups: OptimizedScheduleGroup[];
+    conflictsResolved: number;
+  }> {
+    let conflictsResolved = 0;
+    const finalGroups: OptimizedScheduleGroup[] = [];
+
+    for (const group of groups) {
+      // Check for conflicts with existing schedules
+      const hasConflict = this.existingSchedules.some((existingSchedule) => {
+        const existingDate = new Date(existingSchedule.startDateTime);
+        return this.isSameDay(existingDate, group.date);
+      });
+
+      if (hasConflict) {
+        // Try to reschedule to next available day
+        const newDate = this.getNextAvailableDate(group.date);
+        if (newDate) {
+          // Update all job times for new date
+          const updatedJobs = group.jobs.map((job) => ({
+            ...job,
+            scheduledTime: this.adjustTimeForNewDate(
+              job.scheduledTime,
+              newDate,
+            ),
+          }));
+
+          finalGroups.push({
+            ...group,
+            date: newDate,
+            jobs: updatedJobs,
+            estimatedStartTime: this.adjustTimeForNewDate(
+              group.estimatedStartTime,
+              newDate,
+            ),
+            estimatedEndTime: this.adjustTimeForNewDate(
+              group.estimatedEndTime,
+              newDate,
+            ),
+          });
+          conflictsResolved++;
+        } else {
+          // Could not reschedule - keep original
+          finalGroups.push(group);
+        }
+      } else {
+        finalGroups.push(group);
+      }
+    }
+
+    return { finalGroups, conflictsResolved };
+  }
+
+  /**
+   * Helper methods
+   */
+  private isDateAvailableForScheduling(date: Date): boolean {
+    if (!this.adminControls?.schedulingControls) return true;
+
+    const controls = this.adminControls.schedulingControls;
+
+    // Check if day of week is excluded (use UTC day)
+    const dayOfWeek = date.getUTCDay();
+    if (controls.excludedDays?.includes(dayOfWeek)) {
+      return false;
+    }
+
+    // Check if specific date is excluded (compare ISO date strings in UTC)
+    const dateString = format(date, "yyyy-MM-dd");
+    if (controls.excludedDates && controls.excludedDates.includes(dateString)) {
+      return false;
+    }
+
+    // Check weekend policy (use UTC day)
+    if (!controls.allowWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
+      return false;
+    }
+
+    // Check if date is within optimization range
+    if (controls.startDate) {
+      const startDate = new Date(controls.startDate + "T00:00:00.000Z"); // Ensure UTC
+      if (date < startDate) {
+        return false;
+      }
+    }
+
+    if (controls.endDate) {
+      const endDate = new Date(controls.endDate + "T23:59:59.999Z"); // Ensure UTC
+      if (date > endDate) {
+        return false;
+      }
+    }
+
+    return true;
+  }
+
+  private getNextAvailableDate(fromDate?: Date, daysOffset: number = 0): Date {
+    const startDate = fromDate ? new Date(fromDate) : new Date();
+
+    // Use date-fns for reliable date arithmetic
+    let candidateDate = addDays(startDate, daysOffset + 1);
+
+    // Find next available date according to admin controls
+    while (!this.isDateAvailableForScheduling(candidateDate)) {
+      candidateDate = addDays(candidateDate, 1);
+    }
+
+    return candidateDate;
+  }
+
+  private getNextDateForDayOfWeek(
+    dayOfWeek: number,
+    weeksOffset: number = 0,
+  ): Date {
+    const referenceDate = this.adminControls?.schedulingControls?.startDate
+      ? new Date(
+          this.adminControls.schedulingControls.startDate + "T00:00:00.000Z",
+        )
+      : new Date();
+
+    const today = referenceDate.getUTCDay();
+    const targetDay = dayOfWeek === 7 ? 0 : dayOfWeek;
+
+    let daysUntilTarget = (targetDay - today + 7) % 7;
+    if (daysUntilTarget === 0) daysUntilTarget = 7;
+
+    let targetDate = addDays(referenceDate, daysUntilTarget);
+    targetDate = addWeeks(targetDate, weeksOffset);
+
+    // Simplified bounds checking
+    let attempts = 0;
+    const maxAttempts = 52;
+    const endDateBoundary = this.adminControls?.schedulingControls?.endDate
+      ? new Date(
+          this.adminControls.schedulingControls.endDate + "T23:59:59.999Z",
+        )
+      : addWeeks(referenceDate, 52);
+
+    while (
+      !this.isDateAvailableForScheduling(targetDate) &&
+      attempts < maxAttempts
+    ) {
+      targetDate = addWeeks(targetDate, 1);
+      attempts++;
+
+      if (targetDate > endDateBoundary) {
+        // Try to find an earlier date within the range
+        console.log(
+          `   ⚠️ Date ${format(targetDate, "MMM dd")} outside range, trying earlier dates`,
+        );
+
+        // Search backwards from end boundary for an available date with same day of week
+        let fallbackDate = new Date(endDateBoundary);
+        for (let backDays = 0; backDays <= 30; backDays++) {
+          fallbackDate = addDays(endDateBoundary, -backDays);
+          if (
+            fallbackDate.getUTCDay() === targetDay &&
+            this.isDateAvailableForScheduling(fallbackDate)
+          ) {
+            console.log(
+              `   ✅ Found alternative date: ${format(fallbackDate, "MMM dd")}`,
+            );
+            return fallbackDate;
+          }
+        }
+
+        // If no alternative found, return null to indicate unschedulable
+        console.log(
+          `   ❌ No available dates found within range for day ${targetDay}`,
+        );
+        return null as any; // This will be handled by calling code
+      }
+    }
+
+    if (attempts >= maxAttempts) {
+      targetDate = addDays(referenceDate, daysUntilTarget);
+      targetDate = addWeeks(targetDate, weeksOffset);
+    }
+
+    return targetDate;
+  }
+
+  private calculateHistoricalTime(
+    date: Date,
+    pattern?: HistoricalSchedulePatternType,
+  ): Date {
+    const scheduledTime = new Date(date);
+    const preferredHour = pattern?.patterns.preferredHour || 9; // Default to 9 AM
+
+    // Set time in UTC to match our storage pattern
+    scheduledTime.setUTCHours(preferredHour, 0, 0, 0);
+
+    return scheduledTime;
+  }
+
+  private getDayName(dayNumber: number): string {
+    const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    if (dayNumber === 7) return "Sun"; // Handle Sunday as 7
+    return days[dayNumber] || "Unknown";
+  }
+
+  private parseTimeString(timeStr: string): { hours: number; minutes: number } {
+    const [hours, minutes] = timeStr.split(":").map(Number) as [number, number];
+    return { hours, minutes };
+  }
+
+  private isSameDay(date1: Date, date2: Date): boolean {
+    return (
+      date1.getUTCFullYear() === date2.getUTCFullYear() &&
+      date1.getUTCMonth() === date2.getUTCMonth() &&
+      date1.getUTCDate() === date2.getUTCDate()
+    );
+  }
+
+  private adjustTimeForNewDate(originalTime: Date, newDate: Date): Date {
+    const adjusted = new Date(newDate);
+    adjusted.setUTCHours(
+      originalTime.getUTCHours(),
+      originalTime.getUTCMinutes(),
+      originalTime.getUTCSeconds(),
+    );
+    return adjusted;
+  }
+
+  private calculateOptimizationMetrics(
+    groups: OptimizedScheduleGroup[],
+    totalJobsInput: number,
+    conflictsResolved: number,
+  ) {
+    const totalDriveTime = groups.reduce(
+      (sum, group) => sum + group.totalDriveTime,
+      0,
+    );
+    const totalDays = groups.length;
+    const totalScheduledJobs = groups.reduce(
+      (sum, group) => sum + group.jobs.length,
+      0,
+    );
+
+    return {
+      totalDriveTime,
+      averageJobsPerDay: totalDays > 0 ? totalScheduledJobs / totalDays : 0,
+      utilizationRate:
+        totalJobsInput > 0 ? totalScheduledJobs / totalJobsInput : 0,
+      conflictsResolved,
+    };
+  }
+}

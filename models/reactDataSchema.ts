@@ -16,7 +16,6 @@ import {
   MonthlyDistanceMatrixType,
   SchedulingPreferencesType,
   HistoricalSchedulePatternType,
-  OptimizationHistoryType,
 } from "../app/lib/typeDefinitions";
 
 const { Schema, model, models, Model } = mongoose;
@@ -244,8 +243,6 @@ const jobsDueSoonSchema = new Schema<DueInvoiceType>({
   },
 });
 
-PayrollPeriodSchema.index({ startDate: 1, endDate: 1 }, { unique: true });
-
 const Client =
   (models.Client as typeof Model<ClientType>) || model("Client", ClientSchema);
 const Invoice =
@@ -327,9 +324,9 @@ const LocationGeocodeSchema = new Schema<LocationGeocodeType>({
   lastGeocoded: { type: Date, required: true, default: Date.now },
   source: {
     type: String,
-    enum: ["mapbox", "manual"],
+    enum: ["openroute", "manual"],
     required: true,
-    default: "mapbox",
+    default: "openroute",
   },
 });
 
@@ -345,12 +342,6 @@ const LocationClusterSchema = new Schema<LocationClusterType>({
     preferredDays: [{ type: String }], // ["Monday", "Tuesday"]
     specialRequirements: { type: String },
     bufferTimeMinutes: { type: Number, default: 0 },
-  },
-  boundingBox: {
-    north: { type: Number },
-    south: { type: Number },
-    east: { type: Number },
-    west: { type: Number },
   },
   isActive: { type: Boolean, required: true, default: true },
   createdAt: { type: Date, required: true, default: Date.now },
@@ -391,39 +382,29 @@ const MonthlyDistanceMatrixSchema = new Schema<MonthlyDistanceMatrixType>({
   isActive: { type: Boolean, required: true, default: true },
 });
 
-const SchedulingPreferencesSchema = new Schema<SchedulingPreferencesType>({
-  globalSettings: {
-    defaultBufferMinutes: { type: Number, required: true, default: 30 },
-    workDayStart: { type: String, required: true, default: "08:00" },
-    workDayEnd: { type: String, required: true, default: "17:00" },
-    maxJobsPerDay: { type: Number, required: true, default: 4 },
-    maxDriveTimePerDay: { type: Number, required: true, default: 240 }, // 4 hours
-    lunchBreakDuration: { type: Number, required: true, default: 60 },
-    lunchBreakStart: { type: String, required: true, default: "12:00" },
+const SchedulingPreferencesSchema = new Schema(
+  {
+    globalSettings: {
+      maxJobsPerDay: { type: Number, required: true, default: 4 },
+      workDayStart: { type: String, required: true, default: "09:00" },
+      workDayEnd: { type: String, required: true, default: "17:00" },
+      preferredBreakDuration: { type: Number, required: true, default: 30 },
+      startingPointAddress: {
+        type: String,
+        required: true,
+        default: "11020 Williams Rd Richmond, BC V7A 1X8",
+      },
+    },
+    schedulingControls: {
+      excludedDays: [{ type: Number, min: 0, max: 6 }],
+      excludedDates: [{ type: String }], // ISO date strings
+      allowWeekends: { type: Boolean, default: false },
+      startDate: { type: String }, // ISO date string for optimization start
+      endDate: { type: String }, // ISO date string for optimization end
+    },
   },
-  jobTypePreferences: [
-    {
-      jobTitle: { type: String, required: true },
-      estimatedDuration: { type: Number, required: true }, // minutes
-      bufferAfter: { type: Number, required: true, default: 30 },
-      preferredTimeSlots: [{ type: String }], // ["09:00-12:00"]
-      difficultyScore: { type: Number, min: 1, max: 5, default: 3 },
-      requiresSpecialEquipment: { type: Boolean, default: false },
-    },
-  ],
-  locationPreferences: [
-    {
-      location: { type: String, required: true }, // normalized address
-      accessNotes: { type: String },
-      parkingDifficulty: { type: Number, min: 1, max: 5, default: 3 },
-      additionalSetupTime: { type: Number, default: 0 }, // extra minutes
-    },
-  ],
-  isDefault: { type: Boolean, required: true, default: false },
-  createdBy: { type: String, required: true }, // userId
-  createdAt: { type: Date, required: true, default: Date.now },
-  updatedAt: { type: Date, required: true, default: Date.now },
-});
+  { timestamps: true },
+);
 
 const HistoricalSchedulePatternSchema =
   new Schema<HistoricalSchedulePatternType>({
@@ -437,15 +418,7 @@ const HistoricalSchedulePatternSchema =
       hourConfidence: { type: Number, min: 0, max: 1, default: 0 },
       preferredDayOfWeek: { type: Number, min: 1, max: 7 },
       dayConfidence: { type: Number, min: 0, max: 1, default: 0 },
-      preferredTechnicians: [{ type: String }],
-      technicianConfidence: { type: Number, min: 0, max: 1, default: 0 },
       averageDuration: { type: Number, required: true },
-      seasonalPatterns: [
-        {
-          month: { type: Number, min: 1, max: 12 },
-          frequencyMultiplier: { type: Number, default: 1.0 },
-        },
-      ],
     },
     historicalData: [
       {
@@ -459,41 +432,6 @@ const HistoricalSchedulePatternSchema =
     lastAnalyzed: { type: Date, required: true, default: Date.now },
     totalOccurrences: { type: Number, required: true, default: 0 },
   });
-
-const OptimizationHistorySchema = new Schema<OptimizationHistoryType>({
-  runDate: { type: Date, required: true, default: Date.now },
-  periodStart: { type: Date, required: true },
-  periodEnd: { type: Date, required: true },
-  strategy: {
-    type: String,
-    enum: ["efficiency", "balanced", "spread", "historical"],
-    required: true,
-  },
-  inputJobs: [
-    {
-      jobId: { type: String, required: true },
-      location: { type: String, required: true },
-      dateDue: { type: Date, required: true },
-    },
-  ],
-  resultingMetrics: {
-    totalJobsOptimized: { type: Number, required: true },
-    totalDriveTimeMinutes: { type: Number, required: true },
-    totalDistanceKm: { type: Number, required: true },
-    averageJobsPerDay: { type: Number, required: true },
-    efficiencyScore: { type: Number, min: 0, max: 100, required: true },
-  },
-  userInteractions: [
-    {
-      jobId: { type: String, required: true },
-      suggestedDateTime: { type: Date, required: true },
-      userModifiedDateTime: { type: Date },
-      wasAccepted: { type: Boolean, required: true },
-      rejectionReason: { type: String },
-    },
-  ],
-  runBy: { type: String, required: true }, // userId
-});
 
 // Smart indexes for optimization performance
 // Core business queries
@@ -519,8 +457,6 @@ MonthlyDistanceMatrixSchema.index({ month: 1, isActive: 1 }); // Matrix cache lo
 SchedulingPreferencesSchema.index({ isDefault: 1 }); // Default preferences
 SchedulingPreferencesSchema.index({ createdBy: 1 }); // User preferences
 HistoricalSchedulePatternSchema.index({ lastAnalyzed: 1 }); // Pattern freshness
-OptimizationHistorySchema.index({ runDate: -1 }); // Recent optimizations
-OptimizationHistorySchema.index({ runBy: 1, runDate: -1 }); // User optimization history
 
 // Additional performance indexes
 ClientSchema.index({ clientName: 1 }); // Client searches
@@ -553,10 +489,6 @@ const HistoricalSchedulePattern =
   (models.HistoricalSchedulePattern as typeof Model<HistoricalSchedulePatternType>) ||
   model("HistoricalSchedulePattern", HistoricalSchedulePatternSchema);
 
-const OptimizationHistory =
-  (models.OptimizationHistory as typeof Model<OptimizationHistoryType>) ||
-  model("OptimizationHistory", OptimizationHistorySchema);
-
 export {
   Client,
   Invoice,
@@ -570,5 +502,4 @@ export {
   MonthlyDistanceMatrix,
   SchedulingPreferences,
   HistoricalSchedulePattern,
-  OptimizationHistory,
 };

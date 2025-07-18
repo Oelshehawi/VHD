@@ -8,6 +8,8 @@ const isPublicRoute = createRouteMatcher([
   "/images/(.*)",
   "/favicon.ico",
   "/client-portal/auth-error",
+  "/api/geocode",
+  "/api/distance-matrix",
 ]);
 
 // Define client portal routes
@@ -23,7 +25,6 @@ const isAdminRoute = createRouteMatcher([
   "/reports(.*)",
   "/payroll(.*)",
 ]);
-
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();

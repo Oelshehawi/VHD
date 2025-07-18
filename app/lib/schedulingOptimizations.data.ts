@@ -1,4 +1,3 @@
-
 import connectMongo from "./connect";
 import {
   Client,
@@ -10,7 +9,6 @@ import {
   MonthlyDistanceMatrix,
   SchedulingPreferences,
   HistoricalSchedulePattern,
-  OptimizationHistory,
 } from "../../models/reactDataSchema";
 import {
   JobOptimizationData,
@@ -19,10 +17,11 @@ import {
   MonthlyDistanceMatrixType,
   SchedulingPreferencesType,
   HistoricalSchedulePatternType,
-  OptimizationHistoryType,
   ScheduleType,
   ClientType,
 } from "./typeDefinitions";
+import { formatDateFns } from "./utils";
+import { format } from "date-fns";
 
 /**
  * Fetch unscheduled jobs for optimization
@@ -97,10 +96,12 @@ export async function fetchUnscheduledJobsForOptimization(dateRange?: {
         );
         const priority = Math.max(1, Math.min(10, 10 - daysUntilDue)); // 1-10 scale
 
-        // Estimate duration based on frequency (more frequent = longer jobs)
-        const estimatedDuration = invoice.frequency
-          ? Math.max(60, invoice.frequency * 30)
-          : 120;
+        // Calculate job duration based on invoice price (business rule)
+        const totalPrice = invoice.items.reduce(
+          (sum: number, item: any) => sum + item.price,
+          0,
+        );
+        const estimatedDuration = calculateJobDurationFromPrice(totalPrice);
 
         return {
           jobId: job._id.toString(),
@@ -139,8 +140,23 @@ export async function analyzeHistoricalPatterns(
   try {
     const patterns: HistoricalSchedulePatternType[] = [];
 
+    // Get scheduling preferences for business hours
+    const preferences = await getSchedulingPreferences();
+    const workDayStart = parseInt(
+      preferences.globalSettings.workDayStart.split(":")[0]!,
+    );
+    const workDayEnd = parseInt(
+      preferences.globalSettings.workDayEnd.split(":")[0]!,
+    );
+
+    console.log(
+      `📊 Using business hours: ${workDayStart}:00 - ${workDayEnd}:00 UTC`,
+    );
+
     for (const job of jobs) {
-      const jobIdentifier = `${job.jobTitle}|${job.normalizedLocation}`;
+      const jobIdentifier = generateJobIdentifier(job.jobTitle, job.location);
+
+      console.log(`🔍 Analyzing: "${job.jobTitle}"`);
 
       // Find existing pattern or create new one
       let existingPattern = await HistoricalSchedulePattern.findOne({
@@ -149,18 +165,39 @@ export async function analyzeHistoricalPatterns(
 
       if (!existingPattern) {
         // Create new pattern by analyzing historical schedules
+        // Use broader search criteria and LIMIT to 5 records
         const historicalSchedules = await Schedule.find({
-          jobTitle: job.jobTitle,
-          location: { $regex: job.location, $options: "i" }, // fuzzy match location
+          $or: [
+            { jobTitle: job.jobTitle },
+            {
+              jobTitle: {
+                $regex: job.jobTitle.trim().replace(/\s+/g, "\\s+"),
+                $options: "i",
+              },
+            },
+            {
+              location: {
+                $regex: job.location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+                $options: "i",
+              },
+            },
+          ],
         })
           .sort({ startDateTime: -1 })
-          .limit(20)
+          .limit(5) // LIMIT TO 5 RECORDS
           .lean();
 
-        if (historicalSchedules.length > 0) {
-          const analysisResult = analyzeSchedulePatterns(historicalSchedules);
+        console.log(
+          `   Found ${historicalSchedules.length} historical records`,
+        );
 
-          // Create proper type for new pattern without _id
+        if (historicalSchedules.length > 0) {
+          const analysisResult = analyzeSchedulePatterns(
+            historicalSchedules,
+            workDayStart,
+            workDayEnd,
+          );
+
           const newPatternData = {
             jobIdentifier,
             patterns: analysisResult.patterns,
@@ -169,17 +206,25 @@ export async function analyzeHistoricalPatterns(
             totalOccurrences: historicalSchedules.length,
           };
 
-          // Save the new pattern
+          console.log(
+            `   Pattern: ${analysisResult.patterns.preferredHour}:00 UTC (${(analysisResult.patterns.hourConfidence * 100).toFixed(0)}% confidence)`,
+          );
+
           const newPattern = new HistoricalSchedulePattern(
             newPatternData as any,
           );
           const savedPattern = await newPattern.save();
           existingPattern = savedPattern.toObject();
+        } else {
+          console.log(`   No historical data found`);
         }
+      } else {
+        console.log(
+          `   Using cached pattern: ${(existingPattern as any).patterns.preferredHour}:00 UTC (${((existingPattern as any).patterns.hourConfidence * 100).toFixed(0)}% confidence)`,
+        );
       }
 
       if (existingPattern) {
-        // Convert to proper type
         const typedPattern: HistoricalSchedulePatternType = {
           _id: (existingPattern as any)._id.toString(),
           jobIdentifier: (existingPattern as any).jobIdentifier,
@@ -200,63 +245,121 @@ export async function analyzeHistoricalPatterns(
 }
 
 /**
- * Helper function to analyze schedule patterns from historical data
+ * Calculate job duration based on invoice price (business rule)
  */
-function analyzeSchedulePatterns(schedules: any[]) {
+function calculateJobDurationFromPrice(totalPrice: number): number {
+  if (totalPrice < 600) return 150; // 2.5 hours
+  if (totalPrice < 900) return 180; // 3 hours
+  return 240; // 4 hours
+}
+
+/**
+ * Get the most common value in an array
+ */
+function getMostCommon(arr: number[]): number {
+  if (arr.length === 0) return 0; // Return 0 if array is empty
+
+  const counts: { [key: number]: number } = {};
+  arr.forEach((val) => {
+    counts[val] = (counts[val] || 0) + 1;
+  });
+
+  let maxCount = 0;
+  let mostCommon = arr[0]!; // Non-null assertion since we checked length above
+  Object.entries(counts).forEach(([val, count]) => {
+    if (count > maxCount) {
+      maxCount = count;
+      mostCommon = parseInt(val);
+    }
+  });
+
+  return mostCommon;
+}
+
+/**
+ * Calculate consistency (confidence) for a set of values
+ * Returns 0-1 where 1 is perfectly consistent (all same value)
+ */
+function calculateConsistency(values: number[]): number {
+  if (values.length <= 1) return 1; // Perfect consistency with 0 or 1 value
+
+  const mostCommon = getMostCommon(values);
+  const occurrences = values.filter((val) => val === mostCommon).length;
+  return occurrences / values.length;
+}
+
+/**
+ * Helper function to analyze schedule patterns from historical data
+ * Exported for testing purposes
+ */
+export function analyzeSchedulePatterns(
+  schedules: any[],
+  workDayStart: number = 9,
+  workDayEnd: number = 17,
+) {
   const hours: number[] = [];
   const daysOfWeek: number[] = [];
   const durations: number[] = [];
-  const technicianCounts: { [key: string]: number } = {};
+
+  console.log(
+    `   📊 Analyzing ${schedules.length} records (business hours: ${workDayStart}-${workDayEnd})`,
+  );
 
   const historicalData = schedules.map((schedule) => {
+    // Ensure we're working with UTC dates consistently
     const startDate = new Date(schedule.startDateTime);
-    const hour = startDate.getHours();
-    const dayOfWeek = startDate.getDay() === 0 ? 7 : startDate.getDay(); // Convert Sunday from 0 to 7
 
-    hours.push(hour);
+    // Use UTC methods to avoid timezone conversion
+    const hour = startDate.getUTCHours();
+    const dayOfWeek = startDate.getUTCDay() === 0 ? 7 : startDate.getUTCDay(); // Convert Sunday from 0 to 7
+
+    console.log(
+      `      ${format(startDate, "yyyy-MM-dd HH:mm")} UTC → Hour: ${hour}, Day: ${getDayName(dayOfWeek)}`,
+    );
+
+    // Use preferences for business hours instead of hardcoded 7-19
+    if (hour >= workDayStart && hour <= workDayEnd) {
+      hours.push(hour);
+      console.log(`      ✅ Including hour ${hour}`);
+    } else {
+      console.log(
+        `      ❌ Excluding hour ${hour} (outside ${workDayStart}-${workDayEnd})`,
+      );
+    }
     daysOfWeek.push(dayOfWeek);
-    durations.push(schedule.hours || 120);
 
-    // Count technician assignments
-    schedule.assignedTechnicians.forEach((techId: string) => {
-      technicianCounts[techId] = (technicianCounts[techId] || 0) + 1;
-    });
+    // Convert hours to minutes and validate reasonable duration
+    const durationMinutes = (schedule.hours || 2) * 60;
+    if (durationMinutes >= 60 && durationMinutes <= 480) {
+      durations.push(durationMinutes);
+    }
 
     return {
       scheduleId: schedule._id.toString(),
       startDateTime: startDate,
-      actualDuration: schedule.hours || 120,
+      actualDuration: durationMinutes,
       assignedTechnicians: schedule.assignedTechnicians,
       completionNotes: schedule.technicianNotes || "",
     };
   });
 
-  // Calculate preferred patterns
-  const preferredHour = Math.round(
-    hours.reduce((sum, h) => sum + h, 0) / hours.length,
-  );
-  const preferredDayOfWeek = Math.round(
-    daysOfWeek.reduce((sum, d) => sum + d, 0) / daysOfWeek.length,
-  );
-  const averageDuration = Math.round(
-    durations.reduce((sum, d) => sum + d, 0) / durations.length,
-  );
+  // Calculate preferred patterns (use most common values, not averages)
+  const preferredHour = hours.length > 0 ? getMostCommon(hours) : 9; // Default to 9am
+  const preferredDayOfWeek =
+    daysOfWeek.length > 0 ? getMostCommon(daysOfWeek) : 1; // Default to Monday
+  const averageDuration =
+    durations.length > 0
+      ? Math.round(durations.reduce((sum, d) => sum + d, 0) / durations.length)
+      : 180;
 
-  // Find most common technicians
-  const preferredTechnicians = Object.entries(technicianCounts)
-    .sort(([, a], [, b]) => b - a)
-    .slice(0, 3)
-    .map(([techId]) => techId);
+  // Calculate confidence based on consistency (higher is better)
+  const hourConfidence = hours.length > 0 ? calculateConsistency(hours) : 0;
+  const dayConfidence =
+    daysOfWeek.length > 0 ? calculateConsistency(daysOfWeek) : 0;
 
-  // Calculate confidence based on consistency
-  const hourVariance = calculateVariance(hours);
-  const dayVariance = calculateVariance(daysOfWeek);
-  const hourConfidence = Math.max(0, 1 - hourVariance / 12); // Normalize by max possible variance
-  const dayConfidence = Math.max(0, 1 - dayVariance / 3.5); // Normalize by max possible variance
-  const technicianConfidence =
-    preferredTechnicians.length > 0 && preferredTechnicians[0]
-      ? (technicianCounts[preferredTechnicians[0]] || 0) / schedules.length
-      : 0;
+  console.log(
+    `   → Most common: ${preferredHour}:00 UTC on ${getDayName(preferredDayOfWeek)} (${(hourConfidence * 100).toFixed(0)}% hour confidence)`,
+  );
 
   return {
     patterns: {
@@ -264,8 +367,6 @@ function analyzeSchedulePatterns(schedules: any[]) {
       hourConfidence,
       preferredDayOfWeek,
       dayConfidence,
-      preferredTechnicians,
-      technicianConfidence,
       averageDuration,
     },
     historicalData,
@@ -276,6 +377,8 @@ function analyzeSchedulePatterns(schedules: any[]) {
  * Calculate variance for confidence scoring
  */
 function calculateVariance(numbers: number[]): number {
+  if (numbers.length <= 1) return 0; // No variance with 0 or 1 element
+
   const mean = numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
   const squareDiffs = numbers.map((num) => Math.pow(num - mean, 2));
   return squareDiffs.reduce((sum, diff) => sum + diff, 0) / numbers.length;
@@ -300,38 +403,28 @@ export async function getSchedulingPreferences(
 
     // Fall back to default preferences
     if (!preferences) {
-      preferences = await SchedulingPreferences.findOne({
-        isDefault: true,
-      }).lean();
+      preferences = await SchedulingPreferences.findOne().lean();
     }
 
     // Create default if none exist
     if (!preferences) {
       const defaultPreferences = {
         globalSettings: {
-          defaultBufferMinutes: 30,
-          workDayStart: "08:00",
-          workDayEnd: "17:00",
           maxJobsPerDay: 4,
-          maxDriveTimePerDay: 240,
-          lunchBreakDuration: 60,
-          lunchBreakStart: "12:00",
+          workDayStart: "00:00",
+          workDayEnd: "24:00",
+          preferredBreakDuration: 30,
+          startingPointAddress: "11020 Williams Rd Richmond, BC V7A 1X8",
         },
-        jobTypePreferences: [
-          {
-            jobTitle: "Restaurant Hood Cleaning",
-            estimatedDuration: 120,
-            bufferAfter: 45,
-            preferredTimeSlots: ["09:00-12:00", "13:00-16:00"],
-            difficultyScore: 3,
-            requiresSpecialEquipment: false,
-          },
-        ],
-        locationPreferences: [],
-        isDefault: true,
-        createdBy: userId || "system",
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        schedulingControls: {
+          excludedDays: [],
+          excludedDates: [],
+          allowWeekends: false,
+          startDate: new Date().toISOString().split("T")[0], // Today's date
+          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+            .toISOString()
+            .split("T")[0], // 30 days from now
+        },
       };
 
       const newPreferences = new SchedulingPreferences(
@@ -345,10 +438,7 @@ export async function getSchedulingPreferences(
     const typedPreferences: SchedulingPreferencesType = {
       _id: preferences._id.toString(),
       globalSettings: preferences.globalSettings,
-      jobTypePreferences: preferences.jobTypePreferences,
-      locationPreferences: preferences.locationPreferences,
-      isDefault: preferences.isDefault,
-      createdBy: preferences.createdBy,
+      schedulingControls: preferences.schedulingControls,
       createdAt: preferences.createdAt,
       updatedAt: preferences.updatedAt,
     };
@@ -380,29 +470,7 @@ export async function getLocationClusters(): Promise<LocationClusterType[]> {
           radius: 15,
           constraints: {
             maxJobsPerDay: 4,
-            preferredDays: [
-              "Monday",
-              "Tuesday",
-              "Wednesday",
-              "Thursday",
-              "Friday",
-            ],
-            specialRequirements: "Urban area - parking restrictions",
             bufferTimeMinutes: 15,
-          },
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          clusterName: "Whistler Area",
-          centerCoordinates: { lat: 50.1163, lng: -122.9574 },
-          radius: 25,
-          constraints: {
-            maxJobsPerDay: 2,
-            preferredDays: ["Monday", "Tuesday"],
-            specialRequirements: "2+ hour drive - bundle trips",
-            bufferTimeMinutes: 60,
           },
           isActive: true,
           createdAt: new Date(),
@@ -414,9 +482,79 @@ export async function getLocationClusters(): Promise<LocationClusterType[]> {
           radius: 20,
           constraints: {
             maxJobsPerDay: 3,
-            preferredDays: ["Wednesday", "Thursday", "Friday"],
-            specialRequirements: "Suburban area",
             bufferTimeMinutes: 20,
+          },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          clusterName: "Richmond",
+          centerCoordinates: { lat: 49.1666, lng: -123.1336 },
+          radius: 15,
+          constraints: {
+            maxJobsPerDay: 3,
+            bufferTimeMinutes: 20,
+          },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          clusterName: "Burnaby/New Westminster",
+          centerCoordinates: { lat: 49.2488, lng: -122.9805 },
+          radius: 15,
+          constraints: {
+            maxJobsPerDay: 3,
+            bufferTimeMinutes: 20,
+          },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          clusterName: "North Vancouver",
+          centerCoordinates: { lat: 49.3163, lng: -123.0687 },
+          radius: 12,
+          constraints: {
+            maxJobsPerDay: 3,
+            bufferTimeMinutes: 25,
+          },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          clusterName: "Whistler Area",
+          centerCoordinates: { lat: 50.1163, lng: -122.9574 },
+          radius: 25,
+          constraints: {
+            maxJobsPerDay: 2,
+            bufferTimeMinutes: 60,
+          },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          clusterName: "Fraser Valley",
+          centerCoordinates: { lat: 49.0504, lng: -122.3045 },
+          radius: 30,
+          constraints: {
+            maxJobsPerDay: 2,
+            bufferTimeMinutes: 45,
+          },
+          isActive: true,
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        },
+        {
+          clusterName: "Bowen Island",
+          centerCoordinates: { lat: 49.3811, lng: -123.3482 },
+          radius: 10,
+          constraints: {
+            maxJobsPerDay: 1,
+            bufferTimeMinutes: 120,
           },
           isActive: true,
           createdAt: new Date(),
@@ -436,7 +574,6 @@ export async function getLocationClusters(): Promise<LocationClusterType[]> {
           centerCoordinates: savedCluster.centerCoordinates,
           radius: savedCluster.radius,
           constraints: savedCluster.constraints,
-          boundingBox: savedCluster.boundingBox,
           isActive: savedCluster.isActive,
           createdAt: savedCluster.createdAt,
           updatedAt: savedCluster.updatedAt,
@@ -454,7 +591,6 @@ export async function getLocationClusters(): Promise<LocationClusterType[]> {
         centerCoordinates: cluster.centerCoordinates,
         radius: cluster.radius,
         constraints: cluster.constraints,
-        boundingBox: cluster.boundingBox,
         isActive: cluster.isActive,
         createdAt: cluster.createdAt,
         updatedAt: cluster.updatedAt,
@@ -578,13 +714,31 @@ export function normalizeAddress(address: string): string {
 }
 
 /**
+ * Get day name from day number
+ */
+function getDayName(dayNumber: number): string {
+  const days = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return days[dayNumber] || "Unknown";
+}
+
+/**
  * Generate unique job identifier for historical analysis
+ * Normalizes job title and location to handle variations
  */
 export function generateJobIdentifier(
   jobTitle: string,
   location: string,
 ): string {
-  const normalizedTitle = jobTitle.trim().toLowerCase();
+  // Normalize job title: trim, lowercase, remove extra spaces, handle common variations
+  const normalizedTitle = jobTitle
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ") // Replace multiple spaces with single space
+    .replace(/[^\w\s]/g, "") // Remove special characters except spaces
+    .trim();
+
+  // Normalize location using existing function
   const normalizedLocation = normalizeAddress(location);
+
   return `${normalizedTitle}|${normalizedLocation}`;
 }

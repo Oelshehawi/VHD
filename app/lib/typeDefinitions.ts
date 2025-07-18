@@ -382,10 +382,10 @@ export interface LocationGeocodeType {
   _id: ObjectId | string;
   address: string; // raw address from invoice: "123 Main St, Vancouver, BC"
   normalizedAddress: string; // cleaned version: "123 Main Street, Vancouver, BC V6B 1A1"
-  coordinates: [number, number]; // [lng, lat] for Mapbox
+  coordinates: [number, number]; // [lng, lat] for OpenRouteService
   clusterId?: ObjectId | string; // which geographic cluster this belongs to
   lastGeocoded: Date;
-  source: "mapbox" | "manual"; // how coordinates were obtained
+  source: "openroute" | "manual"; // how coordinates were obtained
 }
 
 export interface LocationClusterType {
@@ -398,12 +398,6 @@ export interface LocationClusterType {
     preferredDays: string[]; // ["Monday", "Tuesday"] for Whistler bundling
     specialRequirements?: string; // "Ferry required", "Bundle trips", "Early access only"
     bufferTimeMinutes?: number; // extra time needed between jobs in this area
-  };
-  boundingBox?: {
-    north: number;
-    south: number;
-    east: number;
-    west: number;
   };
   isActive: boolean;
   createdAt: Date;
@@ -424,89 +418,44 @@ export interface MonthlyDistanceMatrixType {
 }
 
 export interface SchedulingPreferencesType {
-  _id: ObjectId | string;
+  _id?: string;
   globalSettings: {
-    defaultBufferMinutes: number; // 30 minutes between jobs
-    workDayStart: string; // "08:00"
+    maxJobsPerDay: number;
+    workDayStart: string; // "09:00"
     workDayEnd: string; // "17:00"
-    maxJobsPerDay: number; // 4
-    maxDriveTimePerDay: number; // 240 minutes (4 hours)
-    lunchBreakDuration: number; // 60 minutes
-    lunchBreakStart: string; // "12:00"
+    preferredBreakDuration: number; // minutes
+    startingPointAddress: string; // "123 Main St, Vancouver, BC" - technician depot/office
   };
-  jobTypePreferences: {
-    jobTitle: string; // "Restaurant Hood Cleaning"
-    estimatedDuration: number; // 120 minutes
-    bufferAfter: number; // 45 minutes (cleanup + travel buffer)
-    preferredTimeSlots: string[]; // ["09:00-12:00", "13:00-16:00"]
-    difficultyScore: number; // 1-5 scale (affects scheduling)
-    requiresSpecialEquipment?: boolean;
-  }[];
-  locationPreferences: {
-    location: string; // normalized address
-    accessNotes?: string; // "Loading dock access only 9-11am"
-    parkingDifficulty: number; // 1-5 scale
-    additionalSetupTime: number; // extra minutes for difficult locations
-  }[];
-  isDefault: boolean;
-  createdBy: string; // userId who created these preferences
-  createdAt: Date;
-  updatedAt: Date;
+  schedulingControls?: {
+    excludedDays: number[]; // [0=Sunday, 1=Monday, etc.]
+    excludedDates: string[]; // ["2025-12-25", "2025-01-01"] - ISO date strings
+    allowWeekends: boolean;
+    startDate: string; // "2025-08-01" - ISO date string for optimization start
+    endDate: string; // "2025-08-31" - ISO date string for optimization end
+  };
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export interface HistoricalSchedulePatternType {
-  _id: ObjectId | string;
-  jobIdentifier: string; // combination of jobTitle + normalizedLocation
+  _id?: string;
+  jobIdentifier: string; // "clientName|location" or similar unique identifier
   patterns: {
-    preferredHour: number; // 9 for 9am
-    hourConfidence: number; // 0-1 confidence score
-    preferredDayOfWeek: number; // 1-7 (Monday = 1)
-    dayConfidence: number; // 0-1 confidence score
-    preferredTechnicians: string[]; // technician IDs who usually do this job
-    technicianConfidence: number; // 0-1 confidence score
-    averageDuration: number; // actual time taken in minutes
-    seasonalPatterns?: {
-      month: number; // 1-12
-      frequencyMultiplier: number; // 1.2 for 20% more frequent in summer
-    }[];
+    preferredHour?: number; // 0-23
+    hourConfidence: number; // 0-1
+    preferredDayOfWeek?: number; // 1-7 (Monday=1, Sunday=7)
+    dayConfidence: number; // 0-1
+    averageDuration: number; // minutes
   };
-  historicalData: {
+  historicalData: Array<{
     scheduleId: string;
     startDateTime: Date;
-    actualDuration?: number;
+    actualDuration?: number; // minutes
     assignedTechnicians: string[];
     completionNotes?: string;
-  }[];
+  }>;
   lastAnalyzed: Date;
-  totalOccurrences: number; // how many times this job has been scheduled
-}
-
-export interface OptimizationHistoryType {
-  _id: ObjectId | string;
-  runDate: Date;
-  periodStart: Date; // optimization period start
-  periodEnd: Date; // optimization period end
-  strategy: "efficiency" | "balanced" | "spread" | "historical";
-  inputJobs: {
-    jobId: string;
-    location: string;
-    dateDue: Date;
-  }[];
-  resultingMetrics: {
-    totalJobsOptimized: number;
-    totalDriveTimeMinutes: number;
-    totalDistanceKm: number;
-    averageJobsPerDay: number;
-    efficiencyScore: number; // 0-100
-  };
-  userInteractions: {
-    jobId: string;
-    suggestedDateTime: Date;
-    userModifiedDateTime?: Date;
-    wasAccepted: boolean;
-    rejectionReason?: string;
-  }[];
-  runBy: string; // userId
+  totalOccurrences: number;
 }
 
 // Optimization Result Types (not saved to DB, just for API responses)
