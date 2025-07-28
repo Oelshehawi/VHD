@@ -7,7 +7,6 @@ import {
   LocationGeocode,
   LocationCluster,
   OptimizationDistanceMatrix,
-  SchedulingPreferences,
   HistoricalSchedulePattern,
 } from "../../models/reactDataSchema";
 import {
@@ -15,7 +14,6 @@ import {
   LocationGeocodeType,
   LocationClusterType,
   OptimizationDistanceMatrixType,
-  SchedulingPreferencesType,
   HistoricalSchedulePatternType,
   ScheduleType,
   ClientType,
@@ -140,14 +138,9 @@ export async function analyzeHistoricalPatterns(
   try {
     const patterns: HistoricalSchedulePatternType[] = [];
 
-    // Get scheduling preferences for business hours
-    const preferences = await getSchedulingPreferences();
-    const workDayStart = parseInt(
-      preferences.globalSettings.workDayStart.split(":")[0]!,
-    );
-    const workDayEnd = parseInt(
-      preferences.globalSettings.workDayEnd.split(":")[0]!,
-    );
+    // Use default business hours
+    const workDayStart = 9; // 9 AM
+    const workDayEnd = 17; // 5 PM
 
     console.log(
       `📊 Using business hours: ${workDayStart}:00 - ${workDayEnd}:00 UTC`,
@@ -375,71 +368,7 @@ function calculateVariance(numbers: number[]): number {
   return squareDiffs.reduce((sum, diff) => sum + diff, 0) / numbers.length;
 }
 
-/**
- * Get or create default scheduling preferences
- */
-export async function getSchedulingPreferences(
-  userId?: string,
-): Promise<SchedulingPreferencesType> {
-  await connectMongo();
 
-  try {
-    // Try to find user-specific preferences first
-    let preferences = null;
-    if (userId) {
-      preferences = await SchedulingPreferences.findOne({
-        createdBy: userId,
-      }).lean();
-    }
-
-    // Fall back to default preferences
-    if (!preferences) {
-      preferences = await SchedulingPreferences.findOne().lean();
-    }
-
-    // Create default if none exist
-    if (!preferences) {
-      const defaultPreferences = {
-        globalSettings: {
-          maxJobsPerDay: 4,
-          workDayStart: "00:00",
-          workDayEnd: "24:00",
-          preferredBreakDuration: 30,
-          startingPointAddress: "11020 Williams Rd Richmond, BC V7A 1X8",
-        },
-        schedulingControls: {
-          excludedDays: [],
-          excludedDates: [],
-          allowWeekends: false,
-          startDate: new Date().toISOString().split("T")[0], // Today's date
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-            .toISOString()
-            .split("T")[0], // 30 days from now
-        },
-      };
-
-      const newPreferences = new SchedulingPreferences(
-        defaultPreferences as any,
-      );
-      const savedPreferences = await newPreferences.save();
-      preferences = savedPreferences.toObject();
-    }
-
-    // Convert to proper type
-    const typedPreferences: SchedulingPreferencesType = {
-      _id: preferences._id.toString(),
-      globalSettings: preferences.globalSettings,
-      schedulingControls: preferences.schedulingControls,
-      createdAt: preferences.createdAt,
-      updatedAt: preferences.updatedAt,
-    };
-
-    return typedPreferences;
-  } catch (error) {
-    console.error("Error getting scheduling preferences:", error);
-    throw new Error("Failed to get scheduling preferences");
-  }
-}
 
 /**
  * Get location clusters for geographic optimization
@@ -618,7 +547,7 @@ export async function getOptimizationDistanceMatrix(
       matrix: (matrix as any).matrix,
       calculatedAt: (matrix as any).calculatedAt,
       isActive: (matrix as any).isActive,
-      dateRange: (matrix as any).dateRange,
+      optimizationSettings: (matrix as any).optimizationSettings,
     };
 
     return typedMatrix;
@@ -637,6 +566,7 @@ export async function saveOptimizationDistanceMatrix(
   coordinates: Array<[number, number]>,
   matrix: { durations: number[][]; distances: number[][] },
   dateRange: { start: Date; end: Date },
+  startingPointAddress?: string,
 ): Promise<OptimizationDistanceMatrixType> {
   await connectMongo();
 
@@ -647,15 +577,25 @@ export async function saveOptimizationDistanceMatrix(
       { isActive: false }
     );
 
-    // Create new matrix
+    // Create new matrix with proper optimizationSettings structure
     const newMatrix = new OptimizationDistanceMatrix({
       optimizationId,
       locations,
       coordinates,
       matrix,
-      dateRange,
       calculatedAt: new Date(),
       isActive: true,
+      optimizationSettings: {
+        dateRange: {
+          start: dateRange.start,
+          end: dateRange.end,
+        },
+        maxJobsPerDay: 4,
+        workDayStart: "09:00",
+        workDayEnd: "17:00",
+        startingPointAddress: startingPointAddress || "11020 Williams Rd Richmond, BC V7A 1X8",
+        allowedDays: [1, 2, 3, 4, 5], // Monday to Friday
+      },
     } as any);
 
     const savedMatrix = await newMatrix.save();
@@ -668,7 +608,7 @@ export async function saveOptimizationDistanceMatrix(
       matrix: savedMatrix.matrix,
       calculatedAt: savedMatrix.calculatedAt,
       isActive: savedMatrix.isActive,
-      dateRange: savedMatrix.dateRange,
+      optimizationSettings: savedMatrix.optimizationSettings,
     };
   } catch (error) {
     console.error("Error saving optimization distance matrix:", error);
@@ -701,7 +641,6 @@ export async function batchGeocodeJobLocations(
     for (const geocode of existingGeocodes) {
       const [lng, lat] = geocode.coordinates;
       geocodeMap.set(geocode.address, { lat, lng });
-      console.log(`📍 Using cached coordinates for: ${geocode.address}`);
     }
 
     // Find locations that need geocoding
@@ -776,15 +715,41 @@ export async function calculateOptimizationDistanceMatrix(
   optimizationId: string,
   jobs: JobOptimizationData[],
   dateRange: { start: Date; end: Date },
+  startingPointAddress?: string,
 ): Promise<OptimizationDistanceMatrixType | null> {
   try {
     // First, batch geocode all locations
     const geocodeMap = await batchGeocodeJobLocations(jobs);
     
-    // Prepare coordinates array
+    // Prepare coordinates array starting with depot if provided
     const locations: string[] = [];
     const coordinates: Array<[number, number]> = [];
     
+    // Add starting point (depot) as first location if provided
+    if (startingPointAddress) {
+      try {
+        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+        const response = await fetch(`${baseUrl}/api/geocode`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ addresses: [startingPointAddress] }),
+        });
+
+        if (response.ok) {
+          const geocodeResult = await response.json();
+          if (geocodeResult.results && geocodeResult.results.length > 0) {
+            const depotCoords = geocodeResult.results[0].coordinates;
+            locations.push(startingPointAddress);
+            coordinates.push([depotCoords[0], depotCoords[1]]); // [lng, lat]
+            console.log(`🏢 Added depot to matrix: ${startingPointAddress}`);
+          }
+        }
+      } catch (error) {
+        console.warn("Failed to geocode starting point for matrix:", error);
+      }
+    }
+    
+    // Add job locations
     for (const job of jobs) {
       const coords = geocodeMap.get(job.location);
       if (coords) {
@@ -803,49 +768,84 @@ export async function calculateOptimizationDistanceMatrix(
     
     console.log(`🗺️ Checking for existing distance matrix with ${sortedLocations.length} locations...`);
 
-    // Check if we already have a matrix with the same set of locations
+    // Check if we already have a matrix with the same set of locations OR a superset
     await connectMongo();
     
     try {
+      // SMART CACHING: Look for matrices that contain ALL our required locations
+      // This includes exact matches and supersets
       const existingMatrices = await OptimizationDistanceMatrix.find({
         isActive: true,
-        locations: { $size: sortedLocations.length },
+        // Get all active matrices - we'll filter for supersets in memory
       }).lean();
 
-      // Find a matrix with exactly the same locations
-      const existingMatrix = existingMatrices.find((matrix: any) => {
+      console.log(`🔍 Found ${existingMatrices.length} potential matrices to check...`);
+
+      // Find a matrix that contains all our required locations
+      let bestMatrix = null;
+      let isExactMatch = false;
+
+      for (const matrix of existingMatrices) {
         const matrixLocations = [...matrix.locations].sort();
-        return JSON.stringify(matrixLocations) === JSON.stringify(sortedLocations);
-      });
-
-      if (existingMatrix) {
-        const calculatedDate = new Date((existingMatrix as any).calculatedAt);
-        console.log(`✅ Found existing distance matrix from ${calculatedDate.toISOString().replace('T', ' ').substring(0, 19)} UTC`);
-        console.log(`🔄 Reusing matrix for optimization: ${optimizationId}`);
         
-        // Create a new matrix entry for this optimization that references the same data
-        const newMatrix = new OptimizationDistanceMatrix({
-          optimizationId,
-          locations: (existingMatrix as any).locations,
-          coordinates: (existingMatrix as any).coordinates,
-          matrix: (existingMatrix as any).matrix,
-          dateRange,
-          calculatedAt: new Date(),
-          isActive: true,
-        } as any);
+        // Check if this matrix contains ALL our required locations
+        const containsAllLocations = sortedLocations.every(location => 
+          matrixLocations.includes(location)
+        );
 
-        const savedMatrix = await newMatrix.save();
+        if (containsAllLocations) {
+          const isExact = matrixLocations.length === sortedLocations.length && 
+                         JSON.stringify(matrixLocations) === JSON.stringify(sortedLocations);
+          
+          if (isExact) {
+            // Exact match is always preferred
+            bestMatrix = matrix;
+            isExactMatch = true;
+            console.log(`✅ Found EXACT matrix match with ${matrixLocations.length} locations`);
+            break;
+          } else if (!bestMatrix) {
+            // First superset we find
+            bestMatrix = matrix;
+            console.log(`✅ Found SUPERSET matrix with ${matrixLocations.length} locations (need ${sortedLocations.length})`);
+          }
+        }
+      }
 
-        return {
-          _id: savedMatrix._id.toString(),
-          optimizationId: savedMatrix.optimizationId,
-          locations: savedMatrix.locations,
-          coordinates: savedMatrix.coordinates,
-          matrix: savedMatrix.matrix,
-          calculatedAt: savedMatrix.calculatedAt,
-          isActive: savedMatrix.isActive,
-          dateRange: savedMatrix.dateRange,
-        };
+      if (bestMatrix) {
+        const calculatedDate = new Date(bestMatrix.calculatedAt);
+        console.log(`🔄 Reusing ${isExactMatch ? 'exact' : 'superset'} matrix from ${calculatedDate.toISOString().replace('T', ' ').substring(0, 19)} UTC`);
+        
+        if (isExactMatch) {
+          // Exact match - return as-is (NO new database entry)
+          return {
+            _id: (bestMatrix as any)._id.toString(),
+            optimizationId: (bestMatrix as any).optimizationId,
+            locations: (bestMatrix as any).locations,
+            coordinates: (bestMatrix as any).coordinates,
+            matrix: (bestMatrix as any).matrix,
+            calculatedAt: (bestMatrix as any).calculatedAt,
+            isActive: (bestMatrix as any).isActive,
+            optimizationSettings: (bestMatrix as any).optimizationSettings,
+          };
+        } else {
+          // Superset match - extract subset data (NO new database entry)
+          const subsetData = extractMatrixSubset(bestMatrix, sortedLocations);
+          console.log(`📊 Extracted subset matrix: ${subsetData.locations.length} locations from ${(bestMatrix as any).locations.length}`);
+          
+          return {
+            _id: (bestMatrix as any)._id.toString(), // Keep original ID
+            optimizationId: optimizationId, // Update for current optimization
+            locations: subsetData.locations,
+            coordinates: subsetData.coordinates,
+            matrix: subsetData.matrix,
+            calculatedAt: (bestMatrix as any).calculatedAt,
+            isActive: (bestMatrix as any).isActive,
+            optimizationSettings: {
+              ...(bestMatrix as any).optimizationSettings,
+              dateRange: dateRange, // Update for current date range
+            },
+          };
+        }
       }
     } catch (error) {
       console.warn("Error checking for existing matrix, proceeding with new calculation:", error);
@@ -876,7 +876,8 @@ export async function calculateOptimizationDistanceMatrix(
         durations: matrixResult.durations, // Already in minutes
         distances: matrixResult.distances, // Already in kilometers
       },
-      dateRange
+      dateRange,
+      startingPointAddress
     );
 
     console.log(`✅ Distance matrix calculated and saved for optimization: ${optimizationId}`);
@@ -992,4 +993,41 @@ export function generateJobIdentifier(
   const normalizedLocation = normalizeAddress(location);
 
   return `${normalizedTitle}|${normalizedLocation}`;
+}
+
+/**
+ * Extract subset of distance matrix for specific locations
+ */
+function extractMatrixSubset(fullMatrix: any, requiredLocations: string[]) {
+  const fullLocations = fullMatrix.locations;
+  const fullCoordinates = fullMatrix.coordinates;
+  const fullDistanceMatrix = fullMatrix.matrix;
+
+  // Find indices of required locations in the full matrix
+  const requiredIndices = requiredLocations.map(location => {
+    const index = fullLocations.indexOf(location);
+    if (index === -1) {
+      throw new Error(`Location "${location}" not found in matrix`);
+    }
+    return index;
+  });
+
+  // Extract coordinates for required locations
+  const subsetCoordinates = requiredIndices.map(index => fullCoordinates[index]);
+
+  // Extract subset of distance matrix
+  const subsetMatrix = {
+    durations: requiredIndices.map(i => 
+      requiredIndices.map(j => fullDistanceMatrix.durations[i][j])
+    ),
+    distances: requiredIndices.map(i => 
+      requiredIndices.map(j => fullDistanceMatrix.distances[i][j])
+    ),
+  };
+
+  return {
+    locations: requiredLocations,
+    coordinates: subsetCoordinates,
+    matrix: subsetMatrix,
+  };
 }

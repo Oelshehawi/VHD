@@ -5,7 +5,7 @@ import { Holiday, ScheduleType, InvoiceType } from "../../app/lib/typeDefinition
 import { SerializedOptimizedJob } from "../../app/lib/schedulingOptimizations.types";
 import JobItem from "./JobItem";
 import JobDetailsModal from "./JobDetailsModal";
-import OptimizedJobPreview from "./OptimizedJobPreview";
+import OptimizedJobPreview from "../optimization/OptimizedJobPreview";
 import { calculateJobDurationFromPrice, convertMinutesToHours } from "../../app/lib/utils";
 
 const parseDate = (dateString: string): Date => {

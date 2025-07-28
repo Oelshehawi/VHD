@@ -14,7 +14,7 @@ import {
   LocationGeocodeType,
   LocationClusterType,
   OptimizationDistanceMatrixType,
-  SchedulingPreferencesType,
+
   HistoricalSchedulePatternType,
 } from "../app/lib/typeDefinitions";
 
@@ -379,35 +379,30 @@ const OptimizationDistanceMatrixSchema = new Schema<OptimizationDistanceMatrixTy
   },
   calculatedAt: { type: Date, required: true, default: Date.now },
   isActive: { type: Boolean, required: true, default: true },
-  dateRange: {
-    start: { type: Date, required: true },
-    end: { type: Date, required: true },
+  optimizationSettings: {
+    dateRange: {
+      start: { type: Date, required: true },
+      end: { type: Date, required: true },
+    },
+    maxJobsPerDay: { type: Number, required: true, default: 4 },
+    workDayStart: { type: String, required: true, default: "09:00" },
+    workDayEnd: { type: String, required: true, default: "17:00" },
+    startingPointAddress: { type: String, required: true },
+    allowedDays: {
+      type: [Number],
+      required: true,
+      default: [1, 2, 3, 4, 5], // Monday to Friday
+      validate: {
+        validator: function (v: number[]) {
+          return v.every(day => day >= 1 && day <= 7);
+        },
+        message: "Allowed days must be numbers between 1 (Monday) and 7 (Sunday)",
+      },
+    },
   },
 });
 
-const SchedulingPreferencesSchema = new Schema(
-  {
-    globalSettings: {
-      maxJobsPerDay: { type: Number, required: true, default: 4 },
-      workDayStart: { type: String, required: true, default: "09:00" },
-      workDayEnd: { type: String, required: true, default: "17:00" },
-      preferredBreakDuration: { type: Number, required: true, default: 30 },
-      startingPointAddress: {
-        type: String,
-        required: true,
-        default: "11020 Williams Rd Richmond, BC V7A 1X8",
-      },
-    },
-    schedulingControls: {
-      excludedDays: [{ type: Number, min: 0, max: 6 }],
-      excludedDates: [{ type: String }], // ISO date strings
-      allowWeekends: { type: Boolean, default: false },
-      startDate: { type: String }, // ISO date string for optimization start
-      endDate: { type: String }, // ISO date string for optimization end
-    },
-  },
-  { timestamps: true },
-);
+
 
 const HistoricalSchedulePatternSchema =
   new Schema<HistoricalSchedulePatternType>({
@@ -457,8 +452,6 @@ LocationClusterSchema.index({
   "centerCoordinates.lng": 1,
 }); // Geospatial queries
 OptimizationDistanceMatrixSchema.index({ optimizationId: 1, isActive: 1 }); // Matrix cache lookups
-SchedulingPreferencesSchema.index({ isDefault: 1 }); // Default preferences
-SchedulingPreferencesSchema.index({ createdBy: 1 }); // User preferences
 HistoricalSchedulePatternSchema.index({ lastAnalyzed: 1 }); // Pattern freshness
 
 // Additional performance indexes
@@ -484,9 +477,7 @@ const OptimizationDistanceMatrix =
   (models.OptimizationDistanceMatrix as typeof Model<OptimizationDistanceMatrixType>) ||
   model("OptimizationDistanceMatrix", OptimizationDistanceMatrixSchema);
 
-const SchedulingPreferences =
-  (models.SchedulingPreferences as typeof Model<SchedulingPreferencesType>) ||
-  model("SchedulingPreferences", SchedulingPreferencesSchema);
+
 
 const HistoricalSchedulePattern =
   (models.HistoricalSchedulePattern as typeof Model<HistoricalSchedulePatternType>) ||
@@ -503,6 +494,5 @@ export {
   LocationGeocode,
   LocationCluster,
   OptimizationDistanceMatrix,
-  SchedulingPreferences,
   HistoricalSchedulePattern,
 };

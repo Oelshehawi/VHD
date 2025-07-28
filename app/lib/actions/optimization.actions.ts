@@ -5,7 +5,6 @@ import {
   SchedulingStrategy,
 } from "../schedulingOptimizations.algorithms";
 import {
-  getSchedulingPreferences,
   fetchUnscheduledJobsForOptimization,
 } from "../schedulingOptimizations.data";
 import {
@@ -105,19 +104,11 @@ export async function runOptimization(
     const optimizer = new SchedulingOptimizer();
 
     // Get effective date range
-    const preferences = await getSchedulingPreferences();
     const effectiveDateRange =
-      dateRange ||
-      (preferences.schedulingControls?.startDate &&
-      preferences.schedulingControls?.endDate
-        ? {
-            start: new Date(preferences.schedulingControls.startDate),
-            end: new Date(preferences.schedulingControls.endDate),
-          }
-        : {
-            start: new Date(),
-            end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          });
+      dateRange || {
+        start: new Date(),
+        end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      };
 
     // Initialize with date range
     await optimizer.initialize(effectiveDateRange);
@@ -142,43 +133,16 @@ export async function runOptimization(
   }
 }
 
-export async function updateSchedulingPreferences(preferences: any) {
-  try {
-    // This would update the scheduling preferences
-    // For now, just return success - you can implement the actual update logic
-    return {
-      success: true,
-      message: "Preferences updated successfully",
-    };
-  } catch (error) {
-    console.error("Update preferences error:", error);
-    return {
-      success: false,
-      error:
-        error instanceof Error ? error.message : "Failed to update preferences",
-    };
-  }
-}
-
 export async function getOptimizationData(dateRange?: {
   start: Date;
   end: Date;
 }) {
   try {
-    const preferences = await getSchedulingPreferences();
-
     const effectiveDateRange =
-      dateRange ||
-      (preferences.schedulingControls?.startDate &&
-      preferences.schedulingControls?.endDate
-        ? {
-            start: new Date(preferences.schedulingControls.startDate),
-            end: new Date(preferences.schedulingControls.endDate),
-          }
-        : {
-            start: new Date(),
-            end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-          });
+      dateRange || {
+        start: new Date(),
+        end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      };
 
     const unscheduledJobs =
       await fetchUnscheduledJobsForOptimization(effectiveDateRange);
@@ -186,7 +150,6 @@ export async function getOptimizationData(dateRange?: {
     return {
       success: true,
       data: {
-        preferences,
         unscheduledJobs,
         dateRange: effectiveDateRange,
       },
@@ -364,3 +327,45 @@ export async function acceptOptimizedJob(optimizedJob: SerializedOptimizedJob) {
     };
   }
 }
+
+export async function getOptimizationSetupData(dateRange?: {
+  start: Date;
+  end: Date;
+}) {
+  try {
+    await connectMongo();
+    
+    // Use provided date range or default
+    const effectiveDateRange = dateRange || {
+      start: new Date(),
+      end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+    };
+
+    // Get unscheduled jobs for this date range
+    const unscheduledJobs = await fetchUnscheduledJobsForOptimization(effectiveDateRange);
+
+    // Get technician count (mock for now - you can implement actual technician fetching)
+    const technicianCount = 5; // This should come from your technician management system
+
+    return {
+      success: true,
+      data: {
+        unscheduledJobsCount: unscheduledJobs.length,
+        technicianCount,
+        dateRange: {
+          start: effectiveDateRange.start.toISOString().split('T')[0],
+          end: effectiveDateRange.end.toISOString().split('T')[0],
+        },
+      },
+    };
+  } catch (error) {
+    console.error("Get optimization setup data error:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Failed to fetch optimization setup data",
+    };
+  }
+}
+
+// Note: Optimization preferences are now stored per-run in the OptimizationDistanceMatrix
+// This function is no longer needed as each optimization run has unique settings

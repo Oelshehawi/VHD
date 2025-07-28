@@ -1,7 +1,8 @@
 import {
   JobOptimizationData,
-  SchedulingPreferencesType,
   HistoricalSchedulePatternType,
+  OptimizationDistanceMatrixType,
+  LocationClusterType,
 } from "./typeDefinitions";
 
 // Serialized types for client components (dates as ISO strings)
@@ -13,11 +14,6 @@ export interface SerializedJobOptimizationData extends Omit<JobOptimizationData,
     bufferAfter: number;
     requiredTechnicians?: string[];
   };
-}
-
-export interface SerializedSchedulingPreferencesType extends Omit<SchedulingPreferencesType, 'createdAt' | 'updatedAt'> {
-  createdAt?: string;
-  updatedAt?: string;
 }
 
 export interface SerializedDateRange {

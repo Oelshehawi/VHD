@@ -415,31 +415,20 @@ export interface OptimizationDistanceMatrixType {
   };
   calculatedAt: Date;
   isActive: boolean;
-  dateRange: {
-    start: Date;
-    end: Date;
+  optimizationSettings: {
+    dateRange: {
+      start: Date;
+      end: Date;
+    };
+    maxJobsPerDay: number;
+    workDayStart: string; // "HH:mm" format
+    workDayEnd: string; // "HH:mm" format
+    startingPointAddress: string;
+    allowedDays: number[]; // [1,2,3,4,5] for Monday-Friday
   };
 }
 
-export interface SchedulingPreferencesType {
-  _id?: string;
-  globalSettings: {
-    maxJobsPerDay: number;
-    workDayStart: string; // "09:00"
-    workDayEnd: string; // "17:00"
-    preferredBreakDuration: number; // minutes
-    startingPointAddress: string; // "123 Main St, Vancouver, BC" - technician depot/office
-  };
-  schedulingControls?: {
-    excludedDays: number[]; // [0=Sunday, 1=Monday, etc.]
-    excludedDates: string[]; // ["2025-12-25", "2025-01-01"] - ISO date strings
-    allowWeekends: boolean;
-    startDate: string; // "2025-08-01" - ISO date string for optimization start
-    endDate: string; // "2025-08-31" - ISO date string for optimization end
-  };
-  createdAt?: Date;
-  updatedAt?: Date;
-}
+
 
 export interface HistoricalSchedulePatternType {
   _id?: string;
@@ -491,7 +480,13 @@ export interface OptimizationConstraints {
     start: Date;
     end: Date;
   };
-  globalSettings: SchedulingPreferencesType["globalSettings"];
+  globalSettings: {
+    maxJobsPerDay: number;
+    workDayStart: string; // "HH:mm" format
+    workDayEnd: string; // "HH:mm" format
+    startingPointAddress: string;
+    allowedDays: number[]; // [1,2,3,4,5] for Monday-Friday
+  };
   techniciansAvailable: string[];
   existingSchedules: ScheduleType[]; // to avoid conflicts
   priorityWeights: {

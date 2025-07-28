@@ -6,7 +6,6 @@ import {
   SchedulingStrategy,
   SerializedOptimizationResult,
   SerializedJobOptimizationData,
-  SerializedSchedulingPreferencesType,
   SerializedDateRange,
 } from "../../app/lib/schedulingOptimizations.types";
 import OptimizationMetrics from "./OptimizationMetrics";
@@ -17,13 +16,11 @@ import { format } from "date-fns";
 import { toZonedTime } from "date-fns-tz";
 
 interface OptimizationDashboardProps {
-  initialPreferences: SerializedSchedulingPreferencesType;
   initialUnscheduledJobs: SerializedJobOptimizationData[];
   initialDateRange: SerializedDateRange;
 }
 
 export default function OptimizationDashboard({
-  initialPreferences,
   initialUnscheduledJobs,
   initialDateRange,
 }: OptimizationDashboardProps) {
@@ -115,12 +112,12 @@ export default function OptimizationDashboard({
                     {format(toZonedTime(new Date(initialDateRange.end), "UTC"), "MMMM do, yyyy")}
                   </span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Depot:</span>
-                  <span className="text-sm font-medium text-green-600">
-                    {initialPreferences.globalSettings.startingPointAddress}
-                  </span>
-                </div>
+                                 <div className="flex justify-between">
+                   <span className="text-sm text-gray-600">Depot:</span>
+                   <span className="text-sm font-medium text-green-600">
+                     11020 Williams Rd Richmond, BC V7A 1X8
+                   </span>
+                 </div>
               </div>
             </div>
           </div>

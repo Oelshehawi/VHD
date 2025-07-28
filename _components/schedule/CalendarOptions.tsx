@@ -2,7 +2,8 @@
 import MiniCalendar from "./MiniCalendar";
 import FullCalendar from "./FullCalendar";
 import SearchSelect from "./JobSearchSelect";
-import OptimizationControls from "./OptimizationControls";
+import OptimizationControls from "../optimization/OptimizationControls";
+import OptimizationModal from "../optimization/OptimizationModal";
 import { useState, useEffect } from "react";
 import { InvoiceType, ScheduleType } from "../../app/lib/typeDefinitions";
 import { SerializedOptimizationResult } from "../../app/lib/schedulingOptimizations.types";
@@ -34,6 +35,7 @@ const CalendarOptions = ({
   const [calendarOption, setCalendarOption] = useState<boolean>(false);
   const [optimizationResult, setOptimizationResult] = useState<SerializedOptimizationResult | null>(null);
   const [showOptimization, setShowOptimization] = useState<boolean>(false);
+  const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState<boolean>(false);
   const [currentWeek, setCurrentWeek] = useState<Date[]>(() => {
     const today = new Date();
     const weekStart = startOfWeek(today, { weekStartsOn: 0 });
@@ -75,6 +77,16 @@ const CalendarOptions = ({
         setShowOptimization={setShowOptimization}
         optimizationResult={optimizationResult}
         setOptimizationResult={setOptimizationResult}
+        isOptimizationModalOpen={isOptimizationModalOpen}
+        setIsOptimizationModalOpen={setIsOptimizationModalOpen}
+      />
+
+      <OptimizationModal
+        isOpen={isOptimizationModalOpen}
+        onClose={() => setIsOptimizationModalOpen(false)}
+        onOptimizationResult={setOptimizationResult}
+        onPreviewToggle={setShowOptimization}
+        canManage={canManage}
       />
 
       <main className="flex-1 overflow-y-auto">
@@ -125,6 +137,8 @@ const Header = ({
   setShowOptimization,
   optimizationResult,
   setOptimizationResult,
+  isOptimizationModalOpen,
+  setIsOptimizationModalOpen,
 }: {
   setCalendarOption: () => void;
   calendarOption: boolean;
@@ -140,6 +154,8 @@ const Header = ({
   setShowOptimization: (show: boolean) => void;
   optimizationResult: SerializedOptimizationResult | null;
   setOptimizationResult: (result: SerializedOptimizationResult | null) => void;
+  isOptimizationModalOpen: boolean;
+  setIsOptimizationModalOpen: (open: boolean) => void;
 }) => {
   const [open, setOpen] = useState(false);
   
@@ -212,6 +228,7 @@ const Header = ({
               optimizationResult={optimizationResult}
               setOptimizationResult={setOptimizationResult}
               canManage={canManage}
+              onOpenOptimizationModal={() => setIsOptimizationModalOpen(true)}
             />
 
             {/* View Toggle */}
@@ -246,6 +263,15 @@ const Header = ({
           />
         )}
       </AnimatePresence>
+
+      {/* Optimization Modal */}
+      <OptimizationModal
+        isOpen={isOptimizationModalOpen}
+        onClose={() => setIsOptimizationModalOpen(false)}
+        onOptimizationResult={setOptimizationResult}
+        onPreviewToggle={setShowOptimization}
+        canManage={canManage}
+      />
     </div>
   );
 };

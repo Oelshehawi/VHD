@@ -1,17 +1,14 @@
 import {
   JobOptimizationData,
-  LocationClusterType,
-  SchedulingPreferencesType,
   HistoricalSchedulePatternType,
-  ScheduleType,
   OptimizationDistanceMatrixType,
+  LocationClusterType,
+  ScheduleType,
 } from "./typeDefinitions";
 import {
   fetchUnscheduledJobsForOptimization,
   analyzeHistoricalPatterns,
-  getSchedulingPreferences,
   getLocationClusters,
-  getOptimizationDistanceMatrix,
   calculateOptimizationDistanceMatrix,
   getExistingSchedules,
   generateJobIdentifier,
@@ -41,11 +38,10 @@ export { SchedulingStrategy } from "./schedulingOptimizations.types";
  * Main optimization engine - orchestrates the entire optimization process
  */
 export class SchedulingOptimizer {
-  private preferences: SchedulingPreferencesType | null = null;
   private clusters: LocationClusterType[] = [];
   private distanceMatrix: OptimizationDistanceMatrixType | null = null;
   private existingSchedules: ScheduleType[] = [];
-  private adminControls: SchedulingPreferencesType | null = null;
+  private optimizationSettings: any = null;
 
   constructor() {}
 
@@ -55,16 +51,13 @@ export class SchedulingOptimizer {
   async initialize(dateRange: { start: Date; end: Date }): Promise<void> {
     try {
       // Load all required data in parallel
-      const [preferences, clusters, existingSchedules] = await Promise.all([
-        getSchedulingPreferences(),
+      const [clusters, existingSchedules] = await Promise.all([
         getLocationClusters(),
         getExistingSchedules(dateRange),
       ]);
 
-      this.preferences = preferences;
       this.clusters = clusters;
       this.existingSchedules = existingSchedules;
-      this.adminControls = preferences; // Use preferences for admin controls
 
       console.log(
         `Optimizer initialized with ${clusters.length} clusters and ${existingSchedules.length} existing schedules`,
@@ -81,47 +74,12 @@ export class SchedulingOptimizer {
   async optimize(
     strategy: SchedulingStrategy = SchedulingStrategy.HYBRID_HISTORICAL_EFFICIENCY,
     dateRange?: { start: Date; end: Date },
-    adminControls?: SchedulingPreferencesType,
   ): Promise<OptimizationResult> {
-    if (!this.preferences) {
-      throw new Error("Optimizer not initialized. Call initialize() first.");
-    }
-
-    // Set admin controls if provided
-    this.adminControls = adminControls || this.preferences;
 
     console.log(`Starting optimization with strategy: ${strategy}`);
-    if (this.adminControls?.schedulingControls) {
-      const controls = this.adminControls.schedulingControls;
-      console.log(`Admin controls applied:`);
-      console.log(
-        `  - Excluded days: ${controls.excludedDays?.map((d: number) => ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][d]).join(", ") || "None"}`,
-      );
-      console.log(
-        `  - Excluded dates: ${controls.excludedDates?.length || 0} specific dates`,
-      );
-      console.log(
-        `  - Allow weekends: ${controls.allowWeekends ? "Yes" : "No"}`,
-      );
-      console.log(
-        `  - Optimization date range: ${controls.startDate || "No start"} to ${controls.endDate || "No end"}`,
-      );
-    }
-
-    // Use dateRange from admin controls if not provided as parameter
-    const effectiveDateRange =
-      dateRange ||
-      (this.adminControls?.schedulingControls?.startDate &&
-      this.adminControls?.schedulingControls?.endDate
-        ? {
-            start: new Date(this.adminControls.schedulingControls.startDate),
-            end: new Date(this.adminControls.schedulingControls.endDate),
-          }
-        : undefined);
 
     // Fetch unscheduled jobs
-    const unscheduledJobs =
-      await fetchUnscheduledJobsForOptimization(effectiveDateRange);
+    const unscheduledJobs = await fetchUnscheduledJobsForOptimization(dateRange);
     console.log(`Found ${unscheduledJobs.length} unscheduled jobs`);
 
     // Generate unique optimization ID
@@ -129,14 +87,17 @@ export class SchedulingOptimizer {
 
     // Try to load existing distance matrix or calculate new one
     if (unscheduledJobs.length > 0) {
-      this.distanceMatrix = await getOptimizationDistanceMatrix(optimizationId);
+      // Use default starting point address - this will be configurable per optimization run
+      const startingPointAddress = "11020 Williams Rd Richmond, BC V7A 1X8";
+      this.distanceMatrix = await calculateOptimizationDistanceMatrix(optimizationId, unscheduledJobs, dateRange!, startingPointAddress);
       
       if (!this.distanceMatrix) {
         console.log("🗺️ Calculating new distance matrix for optimization...");
         this.distanceMatrix = await calculateOptimizationDistanceMatrix(
           optimizationId,
           unscheduledJobs,
-          effectiveDateRange!
+          dateRange!,
+          startingPointAddress
         );
       } else {
         console.log("📋 Using cached distance matrix for optimization");
@@ -357,8 +318,7 @@ export class SchedulingOptimizer {
       const cluster = this.clusters.find((c) => c._id === clusterId);
       const clusterName = cluster?.clusterName || "Unassigned";
       const maxJobsPerDay =
-        cluster?.constraints.maxJobsPerDay ||
-        this.preferences!.globalSettings.maxJobsPerDay;
+        cluster?.constraints.maxJobsPerDay || 4; // Default to 4 jobs per day
 
       console.log(`\n🎯 ${clusterName}: ${jobs.length} jobs`);
 
@@ -423,11 +383,7 @@ export class SchedulingOptimizer {
               pattern,
             );
 
-            // Show what time each job is scheduled
-            const hourStr = pattern?.patterns.preferredHour
-              ? `${pattern.patterns.preferredHour}:00`
-              : "9:00 (default)";
-            console.log(`      ${job.jobTitle} → ${hourStr} UTC`);
+            // Job scheduled with historical pattern
 
             return {
               jobId: job.jobId,
@@ -474,8 +430,7 @@ export class SchedulingOptimizer {
     const optimizedGroups: OptimizedScheduleGroup[] = [];
 
     // Get starting point coordinates for depot calculations
-    const startingPointAddress =
-      this.preferences?.globalSettings.startingPointAddress;
+    const startingPointAddress = "11020 Williams Rd Richmond, BC V7A 1X8"; // Default depot address
     let startingPointCoords: LocationCoordinates | null = null;
 
     if (startingPointAddress) {
@@ -493,31 +448,21 @@ export class SchedulingOptimizer {
         let driveTimeFromDepot = 0;
 
         if (job && startingPointCoords) {
-          const jobCoords = await this.getJobCoordinates(job.originalJob);
-          if (jobCoords) {
-            // Depot to job
-            const depotToJobResult =
-              await openRouteService.getDistanceBetweenPoints(
-                startingPointCoords,
-                jobCoords,
-              );
-            driveTimeFromDepot = Math.round(depotToJobResult.duration);
-            console.log(
-              `   🚗 Depot → ${job.originalJob.jobTitle}: ${driveTimeFromDepot} min`,
-            );
+          // Depot to job
+          const depotToJobTime = await this.calculateDepotToJobTime(
+            job.originalJob.location,
+            startingPointCoords,
+            false
+          );
+          driveTimeFromDepot += depotToJobTime;
 
-            // Job back to depot (mandatory)
-            const jobToDepotResult =
-              await openRouteService.getDistanceBetweenPoints(
-                jobCoords,
-                startingPointCoords,
-              );
-            const jobToDepotTime = Math.round(jobToDepotResult.duration);
-            driveTimeFromDepot += jobToDepotTime;
-            console.log(
-              `   🚗 ${job.originalJob.jobTitle} → Depot: ${jobToDepotTime} min`,
-            );
-          }
+          // Job back to depot (mandatory)
+          const jobToDepotTime = await this.calculateDepotToJobTime(
+            job.originalJob.location,
+            startingPointCoords,
+            true
+          );
+          driveTimeFromDepot += jobToDepotTime;
         }
 
         const estimatedStartTime = job?.scheduledTime || group.date;
@@ -548,22 +493,13 @@ export class SchedulingOptimizer {
 
       // Add drive time from depot to first job
       if (sortedJobs.length > 0 && startingPointCoords) {
-        const firstJobCoords = await this.getJobCoordinates(
-          sortedJobs[0]!.originalJob,
+        const depotToFirstTime = await this.calculateDepotToJobTime(
+          sortedJobs[0]!.originalJob.location,
+          startingPointCoords,
+          false
         );
-        if (firstJobCoords) {
-          const depotToFirstResult =
-            await openRouteService.getDistanceBetweenPoints(
-              startingPointCoords,
-              firstJobCoords,
-            );
-          const depotToFirstTime = Math.round(depotToFirstResult.duration);
-          sortedJobs[0]!.driveTimeToPrevious = depotToFirstTime;
-          totalDriveTime += depotToFirstTime;
-          console.log(
-            `   🚗 Depot → ${sortedJobs[0]!.originalJob.jobTitle}: ${depotToFirstTime} min`,
-          );
-        }
+        sortedJobs[0]!.driveTimeToPrevious = depotToFirstTime;
+        totalDriveTime += depotToFirstTime;
       }
 
       // Calculate drive times between jobs using OpenRouteService
@@ -583,22 +519,13 @@ export class SchedulingOptimizer {
 
       // Add mandatory return-to-depot calculation
       if (sortedJobs.length > 0 && startingPointCoords) {
-        const lastJobCoords = await this.getJobCoordinates(
-          sortedJobs[sortedJobs.length - 1]!.originalJob,
+        const lastToDepotTime = await this.calculateDepotToJobTime(
+          sortedJobs[sortedJobs.length - 1]!.originalJob.location,
+          startingPointCoords,
+          true
         );
-        if (lastJobCoords) {
-          const lastToDepotResult =
-            await openRouteService.getDistanceBetweenPoints(
-              lastJobCoords,
-              startingPointCoords,
-            );
-          const lastToDepotTime = Math.round(lastToDepotResult.duration);
-          sortedJobs[sortedJobs.length - 1]!.driveTimeToNext = lastToDepotTime;
-          totalDriveTime += lastToDepotTime;
-          console.log(
-            `   🚗 ${sortedJobs[sortedJobs.length - 1]!.originalJob.jobTitle} → Depot: ${lastToDepotTime} min`,
-          );
-        }
+        sortedJobs[sortedJobs.length - 1]!.driveTimeToNext = lastToDepotTime;
+        totalDriveTime += lastToDepotTime;
       }
 
       // Keep the historical scheduled times - don't override with work day start
@@ -632,9 +559,7 @@ export class SchedulingOptimizer {
   ): Promise<OptimizedJob[]> {
     if (jobs.length <= 1) return jobs;
 
-    console.log(
-      `   🧭 Optimizing route for ${jobs.length} jobs using nearest neighbor TSP`,
-    );
+    console.log(`🧭 Optimizing route for ${jobs.length} jobs`);
 
     // EFFICIENCY FIX: Batch calculate all coordinates and distance matrix once
     const jobCoords: (LocationCoordinates | null)[] = [];
@@ -670,23 +595,16 @@ export class SchedulingOptimizer {
     let distanceMatrix: number[][] = [];
     if (!allJobsInOptimizationMatrix && validCoords.length > 1) {
       try {
-        console.log(
-          `   📊 Calculating distance matrix for ${validCoords.length} locations (batch)`,
-        );
+        console.log(`📊 Calculating TSP matrix for ${validCoords.length} locations`);
         const matrixResult =
           await openRouteService.calculateDistanceMatrix(validCoords);
         distanceMatrix = matrixResult.durations;
-        console.log(
-          `   ✅ Distance matrix calculated - reduced from ${jobs.length * jobs.length} to 1 API call!`,
-        );
       } catch (error) {
-        console.warn(
-          `   ⚠️ Distance matrix failed, falling back to individual calculations`,
-        );
+        console.warn(`⚠️ TSP matrix failed, using fallback calculations`);
       }
-    } else if (allJobsInOptimizationMatrix) {
-      console.log(`   🗂️ Using optimization distance matrix for all ${jobs.length} jobs - skipping TSP matrix calculation`);
-    }
+          } else if (allJobsInOptimizationMatrix) {
+        console.log(`🗂️ Using cached matrix for ${jobs.length} jobs`);
+      }
 
     // Helper function to get distance between two jobs using cached optimization matrix or local matrix
     const getJobDistance = (jobIndex1: number, jobIndex2: number): number => {
@@ -700,7 +618,6 @@ export class SchedulingOptimizer {
         
         if (optIndex1 >= 0 && optIndex2 >= 0 && this.distanceMatrix.matrix.durations[optIndex1]?.[optIndex2] !== undefined) {
           const cachedDuration = this.distanceMatrix.matrix.durations[optIndex1]![optIndex2]!;
-          console.log(`🗂️ Using cached duration: ${job1Location} → ${job2Location} = ${cachedDuration} min`);
           return cachedDuration;
         }
       }
@@ -724,7 +641,6 @@ export class SchedulingOptimizer {
 
       if (matrixIndex1 >= 0 && matrixIndex2 >= 0) {
         const localDuration = distanceMatrix[matrixIndex1]?.[matrixIndex2] || Infinity;
-        console.log(`📊 Using local TSP matrix: ${job1Location} → ${job2Location} = ${localDuration} min`);
         return localDuration;
       }
 
@@ -777,10 +693,7 @@ export class SchedulingOptimizer {
       currentJobIndex = nearestJobIndex;
     }
 
-    console.log(`   ✅ TSP optimization complete - route order:`);
-    optimizedSequence.forEach((job, index) => {
-      console.log(`      ${index + 1}. ${job.originalJob.jobTitle}`);
-    });
+    console.log(`✅ Route optimized: ${optimizedSequence.length} jobs`);
 
     return optimizedSequence;
   }
@@ -793,6 +706,50 @@ export class SchedulingOptimizer {
     location2: string,
   ): number {
     return OpenRouteService.estimateDriveTimeFallback(location1, location2);
+  }
+
+  /**
+   * Calculate depot to job drive time using cached matrix or API
+   */
+  private async calculateDepotToJobTime(
+    jobLocation: string,
+    startingPointCoords: LocationCoordinates,
+    isReturnTrip: boolean = false,
+  ): Promise<number> {
+    try {
+      // Try to use cached distance matrix first (depot should be at index 0)
+      if (this.distanceMatrix && this.distanceMatrix.locations.length > 0) {
+        const depotIndex = 0; // Depot is always first in the matrix
+        const jobIndex = this.distanceMatrix.locations.indexOf(jobLocation);
+        
+        if (jobIndex > 0) { // Job found in matrix (and depot exists at index 0)
+          const fromIndex = isReturnTrip ? jobIndex : depotIndex;
+          const toIndex = isReturnTrip ? depotIndex : jobIndex;
+          
+          if (this.distanceMatrix.matrix.durations[fromIndex]?.[toIndex] !== undefined) {
+            const cachedDuration = this.distanceMatrix.matrix.durations[fromIndex]![toIndex]!;
+            console.log(`🏢 Using cached depot time: ${isReturnTrip ? jobLocation + ' → Depot' : 'Depot → ' + jobLocation} = ${cachedDuration} min`);
+            return cachedDuration;
+          }
+        }
+      }
+
+      // Fall back to API call if not in matrix
+      const jobCoords = await this.getJobCoordinates({ location: jobLocation } as JobOptimizationData);
+      
+      if (!jobCoords) {
+        return 30; // Default fallback for depot travel
+      }
+
+      const fromCoords = isReturnTrip ? jobCoords : startingPointCoords;
+      const toCoords = isReturnTrip ? startingPointCoords : jobCoords;
+
+      const result = await openRouteService.getDistanceBetweenPoints(fromCoords, toCoords);
+      return Math.round(result.duration);
+    } catch (error) {
+      console.error("Depot drive time calculation error:", error);
+      return 30; // Default fallback
+    }
   }
 
   /**
@@ -810,7 +767,6 @@ export class SchedulingOptimizer {
         
         if (index1 >= 0 && index2 >= 0 && this.distanceMatrix.matrix.durations[index1]?.[index2] !== undefined) {
           const cachedDuration = this.distanceMatrix.matrix.durations[index1]![index2]!;
-          console.log(`🗂️ Using cached duration: ${job1.originalJob.location} → ${job2.originalJob.location} = ${cachedDuration} min`);
           return cachedDuration;
         }
       }
@@ -966,42 +922,8 @@ export class SchedulingOptimizer {
    * Helper methods
    */
   private isDateAvailableForScheduling(date: Date): boolean {
-    if (!this.adminControls?.schedulingControls) return true;
-
-    const controls = this.adminControls.schedulingControls;
-
-    // Check if day of week is excluded (use UTC day)
-    const dayOfWeek = date.getUTCDay();
-    if (controls.excludedDays?.includes(dayOfWeek)) {
-      return false;
-    }
-
-    // Check if specific date is excluded (compare ISO date strings in UTC)
-    const dateString = format(date, "yyyy-MM-dd");
-    if (controls.excludedDates && controls.excludedDates.includes(dateString)) {
-      return false;
-    }
-
-    // Check weekend policy (use UTC day)
-    if (!controls.allowWeekends && (dayOfWeek === 0 || dayOfWeek === 6)) {
-      return false;
-    }
-
-    // Check if date is within optimization range
-    if (controls.startDate) {
-      const startDate = new Date(controls.startDate + "T00:00:00.000Z"); // Ensure UTC
-      if (date < startDate) {
-        return false;
-      }
-    }
-
-    if (controls.endDate) {
-      const endDate = new Date(controls.endDate + "T23:59:59.999Z"); // Ensure UTC
-      if (date > endDate) {
-        return false;
-      }
-    }
-
+    // Simplified date availability - always return true for now
+    // In the future, this will use settings from the optimization matrix
     return true;
   }
 
@@ -1023,11 +945,7 @@ export class SchedulingOptimizer {
     dayOfWeek: number,
     weeksOffset: number = 0,
   ): Date {
-    const referenceDate = this.adminControls?.schedulingControls?.startDate
-      ? new Date(
-          this.adminControls.schedulingControls.startDate + "T00:00:00.000Z",
-        )
-      : new Date();
+    const referenceDate = new Date();
 
     const today = referenceDate.getUTCDay();
     const targetDay = dayOfWeek === 7 ? 0 : dayOfWeek;
@@ -1041,11 +959,7 @@ export class SchedulingOptimizer {
     // Simplified bounds checking
     let attempts = 0;
     const maxAttempts = 52;
-    const endDateBoundary = this.adminControls?.schedulingControls?.endDate
-      ? new Date(
-          this.adminControls.schedulingControls.endDate + "T23:59:59.999Z",
-        )
-      : addWeeks(referenceDate, 52);
+    const endDateBoundary = addWeeks(referenceDate, 52); // Default to 52 weeks from now
 
     while (
       !this.isDateAvailableForScheduling(targetDate) &&
