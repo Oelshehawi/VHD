@@ -59,10 +59,21 @@ export interface PayrollPeriodType {
 export interface ClientType {
   _id: ObjectId | string;
   clientName: string;
-  email: string;
+  email: string; // Keep for backward compatibility
+  emails?: {
+    primary: string;
+    scheduling?: string;
+    accounting?: string;
+  };
   phoneNumber: string;
   prefix: string;
   notes: string;
+}
+
+export interface PaymentInfo {
+  method: "eft" | "e-transfer" | "cheque" | "credit-card" | "other";
+  datePaid: Date;
+  notes?: string;
 }
 
 export interface InvoiceType {
@@ -78,6 +89,7 @@ export interface InvoiceType {
   status: "pending" | "overdue" | "paid";
   clientId: ObjectId | string;
   paymentEmailSent?: boolean;
+  paymentInfo?: PaymentInfo;
   photos?: PhotoType[];
   signature?: SignatureType;
 }

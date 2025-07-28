@@ -26,8 +26,18 @@ const Invoice = async ({
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
   if (!canManage)
     return (
-      <div className="flex min-h-[100vh] items-center justify-center text-3xl font-bold">
-        You don't have correct permissions to access this page!
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="rounded-xl bg-white p-8 shadow-xl border border-gray-200 max-w-md mx-4">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-red-100 flex items-center justify-center border border-red-200">
+              <svg className="h-8 w-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600">You don't have the required permissions to access this page.</p>
+          </div>
+        </div>
       </div>
     );
 
@@ -40,20 +50,22 @@ const Invoice = async ({
   const totalPages = await fetchInvoicesPages(query, filter, sort);
   return (
     <Suspense fallback={<TableContainerSkeleton />}>
-      <div className="flex min-h-full items-center justify-center">
-        <div className="my-5 flex min-h-[90vh] w-[90%] flex-col gap-4 rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-4/5">
+      <div className="min-h-screen bg-gray-50 p-6">
+        <div className="w-full flex flex-col gap-8 min-h-[95vh] rounded-2xl bg-white p-8 shadow-xl border border-gray-200">
           <AddInvoice clients={clients} />
-          <div className="">
-            <div className="flex flex-col justify-between md:flex-row lg:gap-4 ">
+          <div className="flex-1 space-y-8">
+            <div className="flex flex-col justify-between gap-6 md:flex-row lg:gap-8">
               <Search placeholder="Search For Invoice..." />
               <InvoiceSorting />
             </div>
-            <InvoiceTable
-              query={query}
-              currentPage={currentPage}
-              filter={filter}
-              sort={sort}
-            />
+            <div className="flex-1">
+              <InvoiceTable
+                query={query}
+                currentPage={currentPage}
+                filter={filter}
+                sort={sort}
+              />
+            </div>
           </div>
           <Pagination totalPages={totalPages} />
         </div>

@@ -3,7 +3,7 @@ import { useRouter } from "next/navigation";
 import { SendReminder } from "../Email/SendEmail";
 import { toast } from "react-hot-toast";
 import { updateInvoiceScheduleStatus } from "../../app/lib/actions/actions";
-import { formatDate } from "../../app/lib/utils";
+import { formatDateStringUTC } from "../../app/lib/utils";
 import { DueInvoiceType } from "../../app/lib/typeDefinitions";
 
 const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
@@ -23,22 +23,26 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
 
   return (
     <>
-      <tr className="hover:bg-gray-100">
+      <tr className="group transition-all duration-200 hover:bg-gray-50">
         <td
-          className=" cursor-pointer border-b border-gray-200 px-3 py-4 hover:bg-darkGreen hover:text-white"
+          className="cursor-pointer px-4 py-4 transition-all duration-200 hover:bg-darkGreen hover:text-white group-hover:shadow-sm"
           onClick={() => router.push(`/invoices/${invoiceData.invoiceId}`)}
         >
-          {invoiceData.notesExists ? (
-            <div className="relative left-0 top-0 size-3 animate-pulse rounded-full bg-blue-400 "></div>
-          ) : (
-            ""
-          )}
-          {invoiceData.jobTitle}
+          <div className="flex items-center gap-2">
+            {invoiceData.notesExists && (
+              <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500 shadow-sm"></div>
+            )}
+            <span className="font-medium truncate">{invoiceData.jobTitle}</span>
+          </div>
         </td>
-        <td className="border-b border-gray-200 px-3 py-4">
-          {formatDate(invoiceData.dateDue.toString().split("T")[0])}
+        <td className="px-4 py-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium text-gray-700">
+              {formatDateStringUTC(invoiceData.dateDue)}
+            </span>
+          </div>
         </td>
-        <td className="hidden border-b border-gray-200 px-3 py-4 text-center md:table-cell">
+        <td className="hidden px-4 py-4 text-center md:table-cell">
           <form
             action={updateInvoiceScheduleStatus.bind(
               null,
@@ -49,11 +53,11 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
               type="checkbox"
               name="isScheduled"
               onChange={handleCheckInvoice}
-              className="h-6 w-6 hover:cursor-pointer"
+              className="h-5 w-5 rounded border-gray-300 text-darkGreen transition-colors duration-200 hover:cursor-pointer focus:ring-2 focus:ring-darkGreen focus:ring-offset-2"
             />
           </form>
         </td>
-        <td className="border-b border-gray-200 px-3 py-4 text-center align-middle">
+        <td className="px-4 py-4 text-center align-middle">
           <SendReminder
             emailRecipient={invoiceData.jobTitle}
             emailSent={invoiceData.emailSent}

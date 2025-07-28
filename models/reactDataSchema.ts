@@ -23,7 +23,12 @@ const { ObjectId } = mongoose.Schema.Types;
 
 const ClientSchema = new Schema<ClientType>({
   clientName: { type: String },
-  email: { type: String },
+  email: { type: String }, // Keep for backward compatibility
+  emails: {
+    primary: { type: String },
+    scheduling: { type: String },
+    accounting: { type: String },
+  },
   phoneNumber: { type: String },
   prefix: { type: String },
   notes: { type: String },
@@ -68,6 +73,14 @@ const invoiceSchema = new Schema<InvoiceType>({
     required: true,
   },
   paymentEmailSent: { type: Boolean, default: false },
+  paymentInfo: {
+    method: {
+      type: String,
+      enum: ["eft", "e-transfer", "cheque", "credit-card", "other"],
+    },
+    datePaid: { type: Date },
+    notes: { type: String },
+  },
 });
 
 const ShiftSchema = new Schema<ShiftType>({

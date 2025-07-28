@@ -32,6 +32,7 @@ export const fetchClientById = async (clientId: string): Promise<ClientType> => 
       _id: typeof client._id === "string" ? client._id : client._id.toString(),
       clientName: client.clientName,
       email: client.email,
+      emails: client.emails,
       phoneNumber: formatPhoneNumber(client.phoneNumber),
       prefix: client.prefix,
       notes: client.notes,
@@ -121,7 +122,7 @@ export const fetchInvoiceById = async (invoiceId: string) => {
   }
 };
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 7;
 
 export async function fetchFilteredClients(
   query: string,

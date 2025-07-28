@@ -1,5 +1,5 @@
 "use client";
-import { FaMoneyBill } from "react-icons/fa";
+import { FaDollarSign, FaClock, FaExclamationTriangle } from "react-icons/fa";
 import { PendingInvoiceType } from "../../app/lib/typeDefinitions";
 import { useState } from "react";
 import PendingJobsModal from "./PendingJobsModal";
@@ -8,25 +8,47 @@ interface PendingAmountContainerProps {
   amount: number;
   pendingInvoices: PendingInvoiceType[];
 }
+
 const PendingAmountContainer = ({
   amount,
   pendingInvoices,
 }: PendingAmountContainerProps) => {
   const [open, setOpen] = useState(false);
+  
+  const formatAmount = (amount: number) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  };
+
   return (
     <>
       <div
-        className="h-full space-y-2 rounded-lg bg-darkGreen p-4 text-white shadow-lg transition-all hover:scale-[1.02]"
+        className="rounded-xl bg-darkBlue p-4 text-white shadow-lg border border-borderGreen transition-all hover:scale-[1.02] hover:shadow-xl cursor-pointer"
         onClick={() => setOpen(true)}
       >
-        <div className="flex items-center gap-3">
-          <FaMoneyBill className="h-8 w-8 lg:h-10 lg:w-10" />
-          <div className="text-lg font-bold sm:text-xl lg:text-2xl">
-            Pending Amount
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg bg-darkGreen/50 p-2 border border-borderGreen">
+              <FaDollarSign className="h-6 w-6" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold">Pending Amount</h2>
+              <p className="text-lightGray text-sm">Outstanding invoices</p>
+            </div>
           </div>
-        </div>
-        <div className="rounded-lg bg-darkGray p-3 text-center text-2xl font-bold sm:text-3xl lg:text-4xl">
-          ${amount}
+          <div className="text-right">
+            <div className="rounded-lg bg-darkGray p-3 text-center border border-borderGreen">
+              <div className="text-2xl font-bold">{formatAmount(amount)}</div>
+            </div>
+            <div className="flex items-center justify-end gap-2 mt-2">
+              <FaClock className="h-3 w-3 text-lightGray" />
+              <span className="text-sm text-lightGray">{pendingInvoices.length} invoices</span>
+            </div>
+          </div>
         </div>
       </div>
 

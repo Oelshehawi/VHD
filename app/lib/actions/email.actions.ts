@@ -4,10 +4,9 @@ import { revalidatePath } from "next/cache";
 import connectMongo from "../connect";
 import { Invoice, Client, JobsDueSoon } from "../../../models/reactDataSchema";
 import { DueInvoiceType } from "../typeDefinitions";
-import { formatAmount } from "../utils";
-import { auth } from "@clerk/nextjs/server";
-import React from "react";
-import { renderToBuffer, renderToString } from "@react-pdf/renderer";
+import { formatAmount, formatDateStringUTC, getEmailForPurpose } from "../utils";
+import {createElement} from "react";
+import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
   type InvoiceData,
 } from "../../../_components/pdf/InvoicePdfDocument";
@@ -35,11 +34,15 @@ export async function sendCleaningReminderEmail(
 
     // Find client details
     const clientDetails = await Client.findOne({ _id: clientId });
-    if (!clientDetails || !clientDetails.email) {
-      return { success: false, error: "Client email not found" };
+    if (!clientDetails) {
+      return { success: false, error: "Client not found" };
     }
 
-    const clientEmail = clientDetails.email;
+    // Get appropriate email for scheduling purposes
+    const clientEmail = getEmailForPurpose(clientDetails, "scheduling");
+    if (!clientEmail) {
+      return { success: false, error: "Client email not found" };
+    }
 
     // Format the due date
     let utcDate: Date;
@@ -112,22 +115,21 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
 
     // Find client details
     const clientDetails = await Client.findOne({ _id: invoice.clientId });
-    if (!clientDetails || !clientDetails.email) {
+    if (!clientDetails) {
+      return { success: false, error: "Client not found" };
+    }
+
+    // Get appropriate email for accounting purposes
+    const clientEmail = getEmailForPurpose(clientDetails, "accounting");
+    if (!clientEmail) {
       return { success: false, error: "Client email not found" };
     }
 
     // Format dates and amounts
-    const issueDateFormatted = new Date(invoice.dateIssued).toLocaleDateString(
-      "en-US",
-      {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      },
-    );
+    const issueDateFormatted = formatDateStringUTC(invoice.dateIssued);
 
     // Calculate total amount with tax
-    const total = invoice.items.reduce((sum, item) => sum + item.price, 0);
+    const total = invoice.items.reduce((sum: number, item: { price: number }) => sum + item.price, 0);
     const totalWithTax = total * 1.05; // Adding 5% tax
     const formattedAmount = formatAmount(totalWithTax).replace("$", "");
 
@@ -138,7 +140,7 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
       jobTitle: invoice.jobTitle,
       location: invoice.location,
       clientName: clientDetails.clientName,
-      email: clientDetails.email,
+      email: clientEmail,
       phoneNumber: clientDetails.phoneNumber,
       items: invoice.items.map((item: { description: any; price: any }) => ({
         description: item.description,
@@ -156,8 +158,8 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
 
     // Generate PDF using the PDF document component
     const MyDocument = () =>
-      React.createElement(InvoicePdfDocument, { invoiceData });
-    const pdfBuffer = await renderToBuffer(React.createElement(MyDocument));
+      createElement(InvoicePdfDocument, { invoiceData });
+    const pdfBuffer = await renderToBuffer(createElement(MyDocument));
     const pdfBase64 = pdfBuffer.toString("base64");
 
     // Send email using Postmark
@@ -165,7 +167,7 @@ export async function sendPaymentReminderEmail(invoiceId: string) {
 
     await client.sendEmailWithTemplate({
       From: "adam@vancouverventcleaning.ca",
-      To: clientDetails.email,
+      To: clientEmail,
       TemplateAlias: "payment-reminder",
       TemplateModel: {
         client_name: clientDetails.clientName,

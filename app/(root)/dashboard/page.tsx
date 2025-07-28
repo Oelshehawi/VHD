@@ -38,55 +38,70 @@ const DashboardPage = async ({
 
   if (!canManage)
     return (
-      <div className="flex min-h-[100vh] items-center justify-center text-3xl font-bold">
-        You don't have correct permissions to access this page!
+      <div className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="rounded-xl bg-white p-8 shadow-xl border border-gray-200 max-w-md mx-4">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-red-100 flex items-center justify-center border border-red-200">
+              <svg className="h-8 w-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
+            <p className="text-gray-600">You don't have the required permissions to access this page.</p>
+          </div>
+        </div>
       </div>
     );
 
   return (
-    <>
-      <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
-        <div className="w-full">
-          <Suspense fallback={<InfoBoxSkeleton />}>
-            <ClientCount />
-          </Suspense>
-        </div>
-        <div className="w-full">
-          <Suspense fallback={<InfoBoxSkeleton />}>
-            <PendingAmountContainer
-              amount={amount}
-              pendingInvoices={pendingInvoices}
-            />
-          </Suspense>
-        </div>
+    <div className="min-h-screen bg-gray-50 p-8">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 gap-8 mb-12 sm:grid-cols-2">
+        <Suspense fallback={<InfoBoxSkeleton />}>
+          <ClientCount />
+        </Suspense>
+        <Suspense fallback={<InfoBoxSkeleton />}>
+          <PendingAmountContainer
+            amount={amount}
+            pendingInvoices={pendingInvoices}
+          />
+        </Suspense>
       </div>
 
-      <div className="flex flex-col justify-between gap-2 px-4 lg:flex-row">
+      {/* Charts and Analytics - Larger Height */}
+      <div className="flex flex-col gap-8 lg:flex-row h-[700px] lg:h-[680px]">
         <Suspense fallback={<YearlySalesSkeleton />}>
-          <YearlySales salesData={salesData} currentYear={currentYear} />
+          <div className="flex-1 h-full">
+            <YearlySales salesData={salesData} currentYear={currentYear} />
+          </div>
         </Suspense>
         <Suspense fallback={<JobsDueContainerSkeleton />}>
-          <JobsDueContainer searchParams={resolvedSearchParams} />
+          <div className="flex-1 h-full">
+            <JobsDueContainer searchParams={resolvedSearchParams} />
+          </div>
         </Suspense>
       </div>
-    </>
+    </div>
   );
 };
 
 const ClientCount = async () => {
   const count = await getClientCount();
   return (
-    <div className="h-full space-y-2 rounded-lg bg-darkGreen p-4 text-white shadow-lg transition-all hover:scale-[1.02]">
+    <div className="rounded-xl bg-white p-8 shadow-lg border border-gray-200 transition-all hover:scale-[1.02] hover:shadow-xl">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <FaPeopleGroup className="h-8 w-8 lg:h-10 lg:w-10" />
-          <h2 className="text-lg font-bold sm:text-xl lg:text-2xl">
-            Total Clients
-          </h2>
+        <div className="flex items-center gap-6">
+          <div className="rounded-xl bg-gradient-to-r from-darkGreen to-green-600 p-4 shadow-lg">
+            <FaPeopleGroup className="h-8 w-8 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">Total Clients</h2>
+            <p className="text-gray-600 text-base">Active customer base</p>
+          </div>
         </div>
-      </div>
-      <div className="rounded-lg bg-darkGray p-3 text-center text-2xl font-bold sm:text-3xl lg:text-4xl">
-        {count}
+        <div className="rounded-xl bg-gray-50 p-6 text-center border border-gray-200">
+          <div className="text-4xl font-bold text-gray-900">{count}</div>
+        </div>
       </div>
     </div>
   );

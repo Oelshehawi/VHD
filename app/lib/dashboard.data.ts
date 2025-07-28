@@ -2,6 +2,7 @@
 
 import connectMongo from "./connect";
 import { Client, Invoice, JobsDueSoon } from "../../models/reactDataSchema";
+import { formatDateUTC } from "./utils";
 import {
   DueInvoiceType,
   InvoiceType,
@@ -170,12 +171,12 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
         new Date(job.dateDue).getUTCDate(),
       ),
     ),
-  })) as JobsDueType[];
+  })) as any[];
 };
 
 const processJobsDue = (jobsDue: JobsDueType[]): EmailAndNotesCheck[] => {
   return jobsDue.map((job) => ({
-    clientId: job.clientId.toString(),
+    clientId: job.clientId?.toString() as string,
     invoiceId: job.invoiceId,
     jobTitle: job.jobTitle,
     dateDue: job.dateDue.toISOString(),
@@ -220,7 +221,7 @@ export const checkEmailAndNotesPresence = async (
 
     return dueInvoices.map((invoice) => ({
       ...invoice,
-      emailExists: clientEmailMap[invoice.clientId] || false,
+      emailExists: clientEmailMap[invoice.clientId?.toString() as string] || false,
       notesExists: invoiceNotesMap[invoice.invoiceId] || false,
     }));
   } catch (error) {
@@ -356,11 +357,7 @@ const formatPendingInvoices = (invoices: any[]) => {
     status: invoice.status,
     paymentEmailSent: invoice.paymentEmailSent,
     emailExists: invoice.emailExists,
-    dateIssued: invoice.dateIssued.toLocaleString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    }),
+    dateIssued: invoice.dateIssued.toISOString().split("T")[0],
     amount: invoice.items.reduce(
       (acc: number, item: { price: number }) => acc + item.price,
       0,
