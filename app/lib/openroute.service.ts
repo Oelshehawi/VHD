@@ -1,17 +1,7 @@
 import { GeocodeResult } from "../../pages/api/geocode";
 import { DistanceMatrixResult } from "../../pages/api/distance-matrix";
 
-export interface LocationCoordinates {
-  longitude: number;
-  latitude: number;
-  address?: string;
-}
 
-export interface DistanceResult {
-  distance: number; // in kilometers
-  duration: number; // in minutes
-  error?: string;
-}
 
 class OpenRouteService {
   private readonly baseURL: string;
@@ -95,59 +85,7 @@ class OpenRouteService {
     }
   }
 
-  /**
-   * Get distance between two specific coordinates
-   */
-  async getDistanceBetweenPoints(
-    coord1: LocationCoordinates,
-    coord2: LocationCoordinates,
-  ): Promise<DistanceResult> {
-    try {
-      const coordinates: Array<[number, number]> = [
-        [coord1.longitude, coord1.latitude],
-        [coord2.longitude, coord2.latitude],
-      ];
 
-      const matrix = await this.calculateDistanceMatrix(coordinates);
-
-      return {
-        distance: matrix.distances[0]?.[1] || 0, // km
-        duration: matrix.durations[0]?.[1] || 0, // minutes
-      };
-    } catch (error) {
-      console.error("❌ Point-to-point distance error:", error);
-      return {
-        distance: 0,
-        duration: 0,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
-  }
-
-  /**
-   * Convert an address to coordinates using geocoding
-   */
-  async addressToCoordinates(
-    address: string,
-  ): Promise<LocationCoordinates | null> {
-    try {
-      const results = await this.geocodeAddresses([address]);
-
-      if (results.length > 0) {
-        const [lng, lat] = results[0]?.coordinates || [0, 0];
-        return {
-          longitude: lng,
-          latitude: lat,
-          address,
-        };
-      }
-
-      return null;
-    } catch (error) {
-      console.error(`❌ Address geocoding failed for: ${address}`, error);
-      return null;
-    }
-  }
 
   /**
    * Utility: Convert minutes to hours and minutes string
@@ -172,30 +110,9 @@ class OpenRouteService {
     return `${kilometers.toFixed(1)}km`;
   }
 
-  /**
-   * Estimate drive time fallback when API fails
-   */
-  static estimateDriveTimeFallback(
-    location1: string,
-    location2: string,
-  ): number {
-    // Simple heuristic based on location similarity
-    const location1Lower = location1.toLowerCase();
-    const location2Lower = location2.toLowerCase();
 
-    console.log("we are estimating drive time fallback");
-    // Same city/area - shorter drive
-    const sameCity = ["vancouver", "burnaby", "richmond", "surrey"].some(
-      (city) => location1Lower.includes(city) && location2Lower.includes(city),
-    );
 
-    if (sameCity) {
-      return Math.floor(Math.random() * 20) + 15; // 15-35 minutes
-    }
 
-    // Different areas - longer drive
-    return Math.floor(Math.random() * 30) + 30; // 30-60 minutes
-  }
 }
 
 // Export singleton instance

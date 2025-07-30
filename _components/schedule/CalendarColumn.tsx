@@ -2,10 +2,8 @@
 import { useState } from "react";
 import { format, isSameDay } from "date-fns";
 import { Holiday, ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
-import { SerializedOptimizedJob } from "../../app/lib/schedulingOptimizations.types";
 import JobItem from "./JobItem";
 import JobDetailsModal from "./JobDetailsModal";
-import OptimizedJobPreview from "../optimization/OptimizedJobPreview";
 import { calculateJobDurationFromPrice, convertMinutesToHours } from "../../app/lib/utils";
 
 const parseDate = (dateString: string): Date => {
@@ -39,17 +37,14 @@ const CalendarColumn = ({
   invoices,
   day,
   jobs,
-  optimizedJobs = [],
   isToday,
   canManage,
   holidays,
   technicians,
-  showOptimization = false,
 }: {
   invoices: InvoiceType[];
   day: Date;
   jobs: ScheduleType[];
-  optimizedJobs?: SerializedOptimizedJob[];
   isToday: boolean;
   canManage: boolean;
   holidays: Holiday[];
@@ -79,15 +74,6 @@ const CalendarColumn = ({
     };
   };
 
-  // Get hour and minutes from optimized job's scheduled time
-  const getOptimizedJobTime = (optimizedJob: SerializedOptimizedJob) => {
-    const date = new Date(optimizedJob.scheduledTime);
-    return {
-      hour: date.getHours(),
-      minutes: date.getMinutes(),
-    };
-  };
-
   // Handle job click to open modal
   const handleJobClick = (job: ScheduleType) => {
     setSelectedJob(job);
@@ -98,12 +84,6 @@ const CalendarColumn = ({
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedJob(null);
-  };
-
-  // Handle accepting an optimized job
-  const handleAcceptOptimizedJob = (optimizedJob: SerializedOptimizedJob) => {
-    // TODO: Implement job acceptance logic
-    console.log("Accepting optimized job:", optimizedJob);
   };
 
   return (
@@ -195,37 +175,6 @@ const CalendarColumn = ({
                       canManage={canManage}
                       technicians={technicians}
                       onJobClick={handleJobClick}
-                    />
-                  </div>
-                );
-              })}
-
-            {/* Optimized jobs that start at this hour */}
-            {showOptimization && optimizedJobs
-              .filter((optimizedJob) => getOptimizedJobTime(optimizedJob).hour === hour)
-              .map((optimizedJob, index) => {
-                const { minutes } = getOptimizedJobTime(optimizedJob);
-                const topOffset = (minutes / 60) * 100;
-                
-                // Calculate height for optimized jobs
-                const jobDuration = optimizedJob.estimatedDuration / 60; // Convert minutes to hours
-                const heightInPixels = Math.max(80, jobDuration * 60); // 60px per hour, minimum 80px for UI elements
-
-                return (
-                  <div
-                    key={`opt-${optimizedJob.jobId}-${index}`}
-                    className="absolute inset-x-1 z-20"
-                    style={{ 
-                      top: `${topOffset}%`,
-                      marginLeft: '25%', // Offset to show alongside regular jobs
-                      width: '70%', // Slightly smaller width
-                      height: `${heightInPixels}px`
-                    }}
-                  >
-                    <OptimizedJobPreview
-                      optimizedJob={optimizedJob}
-                      technicians={technicians}
-                      onAccept={handleAcceptOptimizedJob}
                     />
                   </div>
                 );

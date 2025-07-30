@@ -1,7 +1,6 @@
 import { format, isToday } from "date-fns";
 import CalendarColumn from "./CalendarColumn";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
-import { SerializedOptimizationResult, SerializedOptimizedJob } from "../../app/lib/schedulingOptimizations.types";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -12,8 +11,6 @@ const CalendarGrid = ({
   canManage,
   holidays,
   technicians,
-  optimizationResult,
-  showOptimization,
 }: {
   invoices: InvoiceType[];
   week: Date[];
@@ -21,7 +18,6 @@ const CalendarGrid = ({
   canManage: boolean;
   holidays: any;
   technicians: { id: string; name: string }[];
-  optimizationResult?: SerializedOptimizationResult | null;
   showOptimization?: boolean;
 }) => {
   const firstDay = week[0] as Date;
@@ -32,17 +28,6 @@ const CalendarGrid = ({
       ? `${format(firstDay, "MMM yyyy")} – ${format(lastDay, "MMM yyyy")}`
       : format(firstDay, "MMMM yyyy");
 
-  // Extract optimization jobs for each day
-  const selectedDayOptimizedJobs = (day: Date): SerializedOptimizedJob[] => {
-    if (!optimizationResult || !showOptimization) return [];
-    
-    const dayKey = format(day, "yyyy-MM-dd");
-    const dayGroups = optimizationResult.scheduledGroups.filter(group => 
-      format(new Date(group.date), "yyyy-MM-dd") === dayKey
-    );
-    
-    return dayGroups.flatMap(group => group.jobs);
-  };
 
   return (
     <div className="flex h-full flex-col bg-white">
@@ -98,14 +83,6 @@ const CalendarGrid = ({
                 </div>
               )}
 
-              {/* Optimization indicator */}
-              {showOptimization && selectedDayOptimizedJobs(day).length > 0 && (
-                <div className="absolute top-2 left-2">
-                  <span className="inline-flex items-center justify-center h-5 w-5 text-xs font-medium bg-blue-500 text-white rounded-full animate-pulse">
-                    {selectedDayOptimizedJobs(day).length}
-                  </span>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -149,12 +126,10 @@ const CalendarGrid = ({
                   invoices={invoices}
                   day={day}
                   jobs={selectedDayJobs(day)}
-                  optimizedJobs={selectedDayOptimizedJobs(day)}
                   isToday={isToday(day)}
                   canManage={canManage}
                   holidays={holidays}
                   technicians={technicians}
-                  showOptimization={showOptimization}
                 />
               </div>
             ))}

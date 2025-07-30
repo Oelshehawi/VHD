@@ -2,7 +2,6 @@
 import { useMemo } from "react";
 import { format } from "date-fns-tz";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
-import { SerializedOptimizationResult } from "../../app/lib/schedulingOptimizations.types";
 import CalendarGrid from "./CalendarGrid";
 
 const FullCalendar = ({
@@ -12,7 +11,6 @@ const FullCalendar = ({
   currentWeek,
   holidays,
   technicians,
-  optimizationResult,
   showOptimization,
 }: {
   invoices: InvoiceType[];
@@ -21,7 +19,6 @@ const FullCalendar = ({
   currentWeek: Date[];
   holidays: any;
   technicians: { id: string; name: string }[];
-  optimizationResult?: SerializedOptimizationResult | null;
   showOptimization?: boolean;
 }) => {
   // Group jobs by date with optimized performance
@@ -58,22 +55,6 @@ const FullCalendar = ({
 
   return (
     <div className="h-full bg-gradient-to-br from-gray-50 to-white">
-      {/* Optimization Status Banner */}
-      {showOptimization && optimizationResult && (
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 border-b border-blue-700/20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-3">
-              <div className="h-2 w-2 rounded-full bg-white animate-pulse"></div>
-              <span className="text-sm font-medium">
-                Optimization Active • {optimizationResult.totalJobs} suggested jobs
-              </span>
-            </div>
-            <div className="text-xs opacity-90">
-              {Math.round(optimizationResult.metrics.utilizationRate * 100)}% efficiency
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Modern Calendar Container */}
       <div className="h-full bg-white rounded-t-2xl shadow-xl border border-gray-200/50">
@@ -84,8 +65,6 @@ const FullCalendar = ({
           canManage={canManage}
           holidays={holidays}
           technicians={technicians}
-          optimizationResult={optimizationResult}
-          showOptimization={showOptimization}
         />
       </div>
     </div>

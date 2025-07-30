@@ -2,11 +2,9 @@
 import MiniCalendar from "./MiniCalendar";
 import FullCalendar from "./FullCalendar";
 import SearchSelect from "./JobSearchSelect";
-import OptimizationControls from "../optimization/OptimizationControls";
 import OptimizationModal from "../optimization/OptimizationModal";
 import { useState, useEffect } from "react";
 import { InvoiceType, ScheduleType } from "../../app/lib/typeDefinitions";
-import { SerializedOptimizationResult } from "../../app/lib/schedulingOptimizations.types";
 import { add, startOfWeek, eachDayOfInterval, format } from "date-fns";
 import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/24/solid";
 import { AnimatePresence } from "framer-motion";
@@ -33,8 +31,6 @@ const CalendarOptions = ({
   technicians: { id: string; name: string }[];
 }) => {
   const [calendarOption, setCalendarOption] = useState<boolean>(false);
-  const [optimizationResult, setOptimizationResult] = useState<SerializedOptimizationResult | null>(null);
-  const [showOptimization, setShowOptimization] = useState<boolean>(false);
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState<boolean>(false);
   const [currentWeek, setCurrentWeek] = useState<Date[]>(() => {
     const today = new Date();
@@ -73,10 +69,6 @@ const CalendarOptions = ({
         canManage={canManage}
         isMobile={isMobileDevice()}
         technicians={technicians}
-        showOptimization={showOptimization}
-        setShowOptimization={setShowOptimization}
-        optimizationResult={optimizationResult}
-        setOptimizationResult={setOptimizationResult}
         isOptimizationModalOpen={isOptimizationModalOpen}
         setIsOptimizationModalOpen={setIsOptimizationModalOpen}
       />
@@ -84,8 +76,6 @@ const CalendarOptions = ({
       <OptimizationModal
         isOpen={isOptimizationModalOpen}
         onClose={() => setIsOptimizationModalOpen(false)}
-        onOptimizationResult={setOptimizationResult}
-        onPreviewToggle={setShowOptimization}
         canManage={canManage}
       />
 
@@ -110,8 +100,6 @@ const CalendarOptions = ({
               currentWeek={currentWeek}
               holidays={holidays}
               technicians={technicians}
-              optimizationResult={optimizationResult}
-              showOptimization={showOptimization}
             />
           </div>
         )}
@@ -133,10 +121,6 @@ const Header = ({
   canManage,
   isMobile,
   technicians,
-  showOptimization,
-  setShowOptimization,
-  optimizationResult,
-  setOptimizationResult,
   isOptimizationModalOpen,
   setIsOptimizationModalOpen,
 }: {
@@ -150,10 +134,6 @@ const Header = ({
   canManage: boolean;
   isMobile: boolean;
   technicians: { id: string; name: string }[];
-  showOptimization: boolean;
-  setShowOptimization: (show: boolean) => void;
-  optimizationResult: SerializedOptimizationResult | null;
-  setOptimizationResult: (result: SerializedOptimizationResult | null) => void;
   isOptimizationModalOpen: boolean;
   setIsOptimizationModalOpen: (open: boolean) => void;
 }) => {
@@ -221,15 +201,18 @@ const Header = ({
 
           {/* Right Section - View Toggle and Optimization */}
           <div className="flex items-center space-x-4">
-            {/* Optimization Controls */}
-            <OptimizationControls
-              showOptimization={showOptimization}
-              setShowOptimization={setShowOptimization}
-              optimizationResult={optimizationResult}
-              setOptimizationResult={setOptimizationResult}
-              canManage={canManage}
-              onOpenOptimizationModal={() => setIsOptimizationModalOpen(true)}
-            />
+            {/* Optimization Button */}
+            {canManage && (
+              <button
+                onClick={() => setIsOptimizationModalOpen(true)}
+                className="flex items-center px-4 py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-xl font-medium text-sm hover:from-blue-600 hover:to-blue-700 shadow-sm hover:shadow-md transition-all duration-200"
+              >
+                <svg className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+                Optimize Schedule
+              </button>
+            )}
 
             {/* View Toggle */}
             {!isMobile && (
@@ -263,15 +246,6 @@ const Header = ({
           />
         )}
       </AnimatePresence>
-
-      {/* Optimization Modal */}
-      <OptimizationModal
-        isOpen={isOptimizationModalOpen}
-        onClose={() => setIsOptimizationModalOpen(false)}
-        onOptimizationResult={setOptimizationResult}
-        onPreviewToggle={setShowOptimization}
-        canManage={canManage}
-      />
     </div>
   );
 };

@@ -1,7 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { LocationGeocode } from "../../../models/reactDataSchema";
 import dbConnect from "../../../app/lib/connect";
-import { normalizeAddress } from "../../../app/lib/schedulingOptimizations.data";
+// Simple address normalization function
+function normalizeAddress(address: string): string {
+  return address.toLowerCase().trim().replace(/\s+/g, ' ');
+}
 
 interface OpenRouteGeocodeResponse {
   features: Array<{

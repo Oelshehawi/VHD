@@ -12,10 +12,7 @@ import {
   ReportType,
   EstimateType,
   LocationGeocodeType,
-  LocationClusterType,
-  OptimizationDistanceMatrixType,
-
-  HistoricalSchedulePatternType,
+  DistanceMatrixCacheType,
 } from "../app/lib/typeDefinitions";
 
 const { Schema, model, models, Model } = mongoose;
@@ -315,7 +312,6 @@ const EstimateSchema = new Schema<EstimateType>({
   },
 });
 
-// Scheduling Optimization Schemas
 const LocationGeocodeSchema = new Schema<LocationGeocodeType>({
   address: { type: String, required: true },
   normalizedAddress: { type: String, required: true },
@@ -329,11 +325,6 @@ const LocationGeocodeSchema = new Schema<LocationGeocodeType>({
       message: "Coordinates must be [lng, lat] pair",
     },
   },
-  clusterId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "LocationCluster",
-    required: false,
-  },
   lastGeocoded: { type: Date, required: true, default: Date.now },
   source: {
     type: String,
@@ -343,30 +334,9 @@ const LocationGeocodeSchema = new Schema<LocationGeocodeType>({
   },
 });
 
-const LocationClusterSchema = new Schema<LocationClusterType>({
-  clusterName: { type: String, required: true, unique: true },
-  centerCoordinates: {
-    lat: { type: Number, required: true },
-    lng: { type: Number, required: true },
-  },
-  radius: { type: Number, required: true }, // km
-  constraints: {
-    maxJobsPerDay: { type: Number, required: true, default: 4 },
-    preferredDays: [{ type: String }], // ["Monday", "Tuesday"]
-    specialRequirements: { type: String },
-    bufferTimeMinutes: { type: Number, default: 0 },
-  },
-  isActive: { type: Boolean, required: true, default: true },
-  createdAt: { type: Date, required: true, default: Date.now },
-  updatedAt: { type: Date, required: true, default: Date.now },
-});
-
-const OptimizationDistanceMatrixSchema = new Schema<OptimizationDistanceMatrixType>({
-  optimizationId: {
-    type: String,
-    required: true,
-    unique: true,
-  },
+// Simple distance matrix cache for OR Tools VRP
+const DistanceMatrixCacheSchema = new Schema<DistanceMatrixCacheType>({
+  locationHash: { type: String, required: true, unique: true },
   locations: [{ type: String, required: true }],
   coordinates: [
     {
@@ -391,58 +361,8 @@ const OptimizationDistanceMatrixSchema = new Schema<OptimizationDistanceMatrixTy
     },
   },
   calculatedAt: { type: Date, required: true, default: Date.now },
-  isActive: { type: Boolean, required: true, default: true },
-  optimizationSettings: {
-    dateRange: {
-      start: { type: Date, required: true },
-      end: { type: Date, required: true },
-    },
-    maxJobsPerDay: { type: Number, required: true, default: 4 },
-    workDayStart: { type: String, required: true, default: "09:00" },
-    workDayEnd: { type: String, required: true, default: "17:00" },
-    startingPointAddress: { type: String, required: true },
-    allowedDays: {
-      type: [Number],
-      required: true,
-      default: [1, 2, 3, 4, 5], // Monday to Friday
-      validate: {
-        validator: function (v: number[]) {
-          return v.every(day => day >= 1 && day <= 7);
-        },
-        message: "Allowed days must be numbers between 1 (Monday) and 7 (Sunday)",
-      },
-    },
-  },
+  expiresAt: { type: Date, required: true },
 });
-
-
-
-const HistoricalSchedulePatternSchema =
-  new Schema<HistoricalSchedulePatternType>({
-    jobIdentifier: {
-      type: String,
-      required: true,
-      unique: true,
-    },
-    patterns: {
-      preferredHour: { type: Number, min: 0, max: 23 },
-      hourConfidence: { type: Number, min: 0, max: 1, default: 0 },
-      preferredDayOfWeek: { type: Number, min: 1, max: 7 },
-      dayConfidence: { type: Number, min: 0, max: 1, default: 0 },
-      averageDuration: { type: Number, required: true },
-    },
-    historicalData: [
-      {
-        scheduleId: { type: String, required: true },
-        startDateTime: { type: Date, required: true },
-        actualDuration: { type: Number }, // minutes
-        assignedTechnicians: [{ type: String, required: true }],
-        completionNotes: { type: String },
-      },
-    ],
-    lastAnalyzed: { type: Date, required: true, default: Date.now },
-    totalOccurrences: { type: Number, required: true, default: 0 },
-  });
 
 // Smart indexes for optimization performance
 // Core business queries
@@ -455,17 +375,10 @@ scheduleSchema.index({ startDateTime: 1, assignedTechnicians: 1 }); // Schedule 
 scheduleSchema.index({ assignedTechnicians: 1, startDateTime: 1 }); // Technician schedules
 scheduleSchema.index({ location: 1, startDateTime: 1 }); // Location-based queries
 
-// Scheduling optimization indexes
+// Simplified geocoding and distance matrix indexes
 LocationGeocodeSchema.index({ address: 1 }); // Geocoding lookups
 LocationGeocodeSchema.index({ normalizedAddress: 1 }); // Normalized address queries
-LocationGeocodeSchema.index({ clusterId: 1 }); // Cluster assignments
-LocationClusterSchema.index({ isActive: 1 }); // Active clusters only
-LocationClusterSchema.index({
-  "centerCoordinates.lat": 1,
-  "centerCoordinates.lng": 1,
-}); // Geospatial queries
-OptimizationDistanceMatrixSchema.index({ optimizationId: 1, isActive: 1 }); // Matrix cache lookups
-HistoricalSchedulePatternSchema.index({ lastAnalyzed: 1 }); // Pattern freshness
+DistanceMatrixCacheSchema.index({ expiresAt: 1 }); // TTL cleanup
 
 // Additional performance indexes
 ClientSchema.index({ clientName: 1 }); // Client searches
@@ -477,24 +390,13 @@ const Estimate =
   (models.Estimate as typeof Model<EstimateType>) ||
   model("Estimate", EstimateSchema);
 
-// Scheduling Optimization Models
+const DistanceMatrixCache =
+  (models.DistanceMatrixCache as typeof Model<DistanceMatrixCacheType>) ||
+  model("DistanceMatrixCache", DistanceMatrixCacheSchema);
+
 const LocationGeocode =
   (models.LocationGeocode as typeof Model<LocationGeocodeType>) ||
   model("LocationGeocode", LocationGeocodeSchema);
-
-const LocationCluster =
-  (models.LocationCluster as typeof Model<LocationClusterType>) ||
-  model("LocationCluster", LocationClusterSchema);
-
-const OptimizationDistanceMatrix =
-  (models.OptimizationDistanceMatrix as typeof Model<OptimizationDistanceMatrixType>) ||
-  model("OptimizationDistanceMatrix", OptimizationDistanceMatrixSchema);
-
-
-
-const HistoricalSchedulePattern =
-  (models.HistoricalSchedulePattern as typeof Model<HistoricalSchedulePatternType>) ||
-  model("HistoricalSchedulePattern", HistoricalSchedulePatternSchema);
 
 export {
   Client,
@@ -505,7 +407,5 @@ export {
   Report,
   Estimate,
   LocationGeocode,
-  LocationCluster,
-  OptimizationDistanceMatrix,
-  HistoricalSchedulePattern,
+  DistanceMatrixCache,
 };

@@ -7,7 +7,7 @@ import {
   Invoice,
   Schedule,
 } from "../../../models/reactDataSchema";
-import { ClientType } from "../typeDefinitions";
+import { ClientType, InvoiceType } from "../typeDefinitions";
 import { calculateDueDate } from "../utils";
 
 
@@ -182,7 +182,7 @@ export async function getMostRecentInvoice(clientId: string) {
   try {
     const mostRecentInvoice = await Invoice.findOne({ clientId })
       .sort({ dateIssued: -1 })
-      .lean();
+      .lean<InvoiceType>();
 
     if (!mostRecentInvoice) {
       return null;

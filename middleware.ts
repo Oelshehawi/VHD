@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   "/favicon.ico",
   "/client-portal/auth-error",
   "/api/geocode",
+  "/api/optimization",
   "/api/distance-matrix",
 ]);
 

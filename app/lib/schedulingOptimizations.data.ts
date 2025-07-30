@@ -3,23 +3,166 @@ import {
   Client,
   Invoice,
   JobsDueSoon,
-  Schedule,
   LocationGeocode,
-  LocationCluster,
-  OptimizationDistanceMatrix,
-  HistoricalSchedulePattern,
+  DistanceMatrixCache,
+  Schedule,
 } from "../../models/reactDataSchema";
 import {
   JobOptimizationData,
-  LocationGeocodeType,
-  LocationClusterType,
-  OptimizationDistanceMatrixType,
-  HistoricalSchedulePatternType,
-  ScheduleType,
   ClientType,
+  DistanceMatrixCacheType,
 } from "./typeDefinitions";
-import { formatDateFns, calculateJobDurationFromPrice } from "./utils";
-import { format } from "date-fns";
+import { calculateJobDurationFromPrice, formatDateUTC } from "./utils";
+
+/**
+ * Get historical scheduling times for similar jobs
+ * Returns the most common time from historical data
+ */
+async function getHistoricalSchedulingTime(
+  clientName: string,
+  jobTitle: string,
+  location: string
+): Promise<{ hour: number; minute: number } | null> {
+  try {
+    
+    // First try exact job title match
+    let historicalSchedules = await Schedule.find({
+      jobTitle: { $regex: new RegExp(jobTitle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+      startDateTime: { 
+        $lt: new Date(), // Only past schedules
+        $gte: new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000) // Within last 2 years
+      }
+    })
+    .sort({ startDateTime: -1 })
+    .limit(50) // Get more data for better analysis
+    .lean();
+
+    // If no exact job title match, try location match
+    if (historicalSchedules.length === 0) {
+      console.log(`🔄 No job title match, trying location match for: "${location}"`);
+      historicalSchedules = await Schedule.find({
+        location: { $regex: new RegExp(location.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i') },
+        startDateTime: { 
+          $lt: new Date(),
+          $gte: new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000)
+        }
+      })
+      .sort({ startDateTime: -1 })
+      .limit(50)
+      .lean();
+    }
+
+    // If still no match, try broader search with partial matches
+    if (historicalSchedules.length === 0) {
+      console.log(`🔄 No location match, trying broader search...`);
+      const locationParts = location.split(/[\s\-(),]+/).filter(part => part.length > 3);
+      const jobTitleParts = jobTitle.split(/[\s\-(),]+/).filter(part => part.length > 3);
+      
+      if (locationParts.length > 0 || jobTitleParts.length > 0) {
+        const searchTerms = [...locationParts, ...jobTitleParts];
+        const regexPattern = searchTerms.map(term => `(?=.*${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`).join('');
+        
+        historicalSchedules = await Schedule.find({
+          $or: [
+            { jobTitle: { $regex: regexPattern, $options: 'i' } },
+            { location: { $regex: regexPattern, $options: 'i' } }
+          ],
+          startDateTime: { 
+            $lt: new Date(),
+            $gte: new Date(Date.now() - 2 * 365 * 24 * 60 * 60 * 1000)
+          }
+        })
+        .sort({ startDateTime: -1 })
+        .limit(50)
+        .lean();
+      }
+    }
+
+    if (historicalSchedules.length === 0) {
+      console.error(`❌ ERROR: No historical data found for "${jobTitle}" at "${location}" - this shouldn't happen!`);
+      return null;
+    }
+
+
+    // Count frequency of each time slot (hour:minute)
+    const timeFrequency = new Map<string, { count: number; hour: number; minute: number }>();
+
+    for (const schedule of historicalSchedules) {
+      // Use UTC time as stored in MongoDB
+      const scheduleDate = new Date(schedule.startDateTime);
+      const hour = scheduleDate.getUTCHours();
+      const minute = scheduleDate.getUTCMinutes();
+      const timeKey = `${hour}:${minute.toString().padStart(2, '0')}`;
+
+      if (timeFrequency.has(timeKey)) {
+        timeFrequency.get(timeKey)!.count++;
+      } else {
+        timeFrequency.set(timeKey, { count: 1, hour, minute });
+      }
+    }
+
+    // Find the most common time
+    let mostCommonTime = { count: 0, hour: 0, minute: 0 };
+    let mostCommonTimeKey = '';
+
+    for (const [timeKey, timeData] of timeFrequency.entries()) {
+      if (timeData.count > mostCommonTime.count) {
+        mostCommonTime = timeData;
+        mostCommonTimeKey = timeKey;
+      }
+    }
+
+    return {
+      hour: mostCommonTime.hour,
+      minute: mostCommonTime.minute,
+    };
+  } catch (error) {
+    console.error("Error fetching historical scheduling time:", error);
+    return null;
+  }
+}
+
+/**
+ * Enrich jobs with historical scheduling data and update constraints
+ */
+async function enrichJobsWithHistoricalData(
+  jobs: JobOptimizationData[]
+): Promise<JobOptimizationData[]> {
+  
+  return Promise.all(
+    jobs.map(async (job) => {
+      const historicalTime = await getHistoricalSchedulingTime(
+        job.clientName,
+        job.jobTitle,
+        job.location
+      );
+
+      if (historicalTime) {
+        // Set time window to exact historical time using UTC
+        const targetDate = new Date(job.dateDue);
+        
+        // Set the UTC time to match the historical pattern
+        const historicalDateTime = new Date(targetDate);
+        historicalDateTime.setUTCHours(historicalTime.hour, historicalTime.minute, 0, 0);
+      
+        
+        return {
+          ...job,
+          historicalTime,
+          constraints: {
+            ...job.constraints,
+            earliestStart: new Date(historicalDateTime),
+            latestStart: new Date(historicalDateTime), // Exact time window (same start and end)
+          },
+        };
+      } else {
+        console.error(`❌ CRITICAL ERROR: No historical data found for "${job.jobTitle}" - this indicates a data issue!`);
+        // This should never happen - return job with default constraints but log error
+        return job; 
+      }
+    })
+  );
+}
 
 /**
  * Fetch unscheduled jobs for optimization
@@ -53,22 +196,11 @@ export async function fetchUnscheduledJobsForOptimization(dateRange?: {
       _id: { $in: invoiceIds },
     }).lean();
 
-    // Get geocoded locations for these jobs
-    const locations = Array.from(
-      new Set(invoices.map((inv: any) => inv.location)),
-    );
-    const geocodedLocations = await LocationGeocode.find({
-      address: { $in: locations },
-    }).lean();
-
     // Combine data into optimization format
-    const optimizationJobs: JobOptimizationData[] = unscheduledJobs
+    const preliminaryJobs: JobOptimizationData[] = unscheduledJobs
       .map((job: any) => {
         const invoice = invoices.find(
           (inv: any) => inv._id.toString() === job.invoiceId,
-        );
-        const geocoded = geocodedLocations.find(
-          (geo: any) => geo.address === invoice?.location,
         );
 
         // Handle populated clientId (could be ObjectId or populated Client object)
@@ -87,13 +219,6 @@ export async function fetchUnscheduledJobsForOptimization(dateRange?: {
           return null;
         }
 
-        // Calculate priority based on due date
-        const daysUntilDue = Math.ceil(
-          (new Date(job.dateDue).getTime() - new Date().getTime()) /
-            (1000 * 60 * 60 * 24),
-        );
-        const priority = Math.max(1, Math.min(10, 10 - daysUntilDue)); // 1-10 scale
-
         // Calculate job duration based on invoice price (business rule)
         const totalPrice = invoice.items.reduce(
           (sum: number, item: any) => sum + item.price,
@@ -106,19 +231,22 @@ export async function fetchUnscheduledJobsForOptimization(dateRange?: {
           invoiceId: job.invoiceId,
           jobTitle: job.jobTitle,
           location: invoice.location,
-          normalizedLocation: geocoded?.normalizedAddress || invoice.location,
+          normalizedLocation: invoice.location, 
           clientName: client.clientName || "Unknown Client",
           dateDue: new Date(job.dateDue),
           estimatedDuration,
-          priority,
           constraints: {
-            earliestStart: new Date(new Date().setHours(8, 0, 0, 0)), // 8 AM
-            latestStart: new Date(new Date().setHours(15, 0, 0, 0)), // 3 PM (for 4-hour jobs)
-            bufferAfter: 30, // 30 minute default buffer
+            earliestStart: new Date(new Date().setHours(8, 0, 0, 0)), // Will be updated with historical data
+            latestStart: new Date(new Date().setHours(15, 0, 0, 0)), // Will be updated with historical data
           },
+          // Placeholder for historical scheduling data
+          historicalTime: null,
         };
       })
       .filter(Boolean) as JobOptimizationData[];
+
+    // Enrich jobs with historical scheduling data
+    const optimizationJobs = await enrichJobsWithHistoricalData(preliminaryJobs);
 
     return optimizationJobs;
   } catch (error) {
@@ -127,497 +255,10 @@ export async function fetchUnscheduledJobsForOptimization(dateRange?: {
   }
 }
 
-/**
- * Analyze historical scheduling patterns for jobs
- */
-export async function analyzeHistoricalPatterns(
-  jobs: JobOptimizationData[],
-): Promise<HistoricalSchedulePatternType[]> {
-  await connectMongo();
-
-  try {
-    const patterns: HistoricalSchedulePatternType[] = [];
-
-    // Use default business hours
-    const workDayStart = 9; // 9 AM
-    const workDayEnd = 17; // 5 PM
-
-    console.log(
-      `📊 Using business hours: ${workDayStart}:00 - ${workDayEnd}:00 UTC`,
-    );
-
-    for (const job of jobs) {
-      const jobIdentifier = generateJobIdentifier(job.jobTitle, job.location);
-
-      console.log(`🔍 Analyzing: "${job.jobTitle}"`);
-
-      // Find existing pattern or create new one
-      let existingPattern = await HistoricalSchedulePattern.findOne({
-        jobIdentifier,
-      }).lean();
-
-      if (!existingPattern) {
-        // Create new pattern by analyzing historical schedules
-        // Use broader search criteria and LIMIT to 5 records
-        const historicalSchedules = await Schedule.find({
-          $or: [
-            { jobTitle: job.jobTitle },
-            {
-              jobTitle: {
-                $regex: job.jobTitle.trim().replace(/\s+/g, "\\s+"),
-                $options: "i",
-              },
-            },
-            {
-              location: {
-                $regex: job.location.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
-                $options: "i",
-              },
-            },
-          ],
-        })
-          .sort({ startDateTime: -1 })
-          .limit(5) // LIMIT TO 5 RECORDS
-          .lean();
-
-        console.log(
-          `   Found ${historicalSchedules.length} historical records`,
-        );
-
-        if (historicalSchedules.length > 0) {
-          const analysisResult = analyzeSchedulePatterns(
-            historicalSchedules,
-            workDayStart,
-            workDayEnd,
-          );
-
-          const newPatternData = {
-            jobIdentifier,
-            patterns: analysisResult.patterns,
-            historicalData: analysisResult.historicalData,
-            lastAnalyzed: new Date(),
-            totalOccurrences: historicalSchedules.length,
-          };
-
-          console.log(
-            `   Pattern: ${analysisResult.patterns.preferredHour}:00 UTC (${(analysisResult.patterns.hourConfidence * 100).toFixed(0)}% confidence)`,
-          );
-
-          const newPattern = new HistoricalSchedulePattern(
-            newPatternData as any,
-          );
-          const savedPattern = await newPattern.save();
-          existingPattern = savedPattern.toObject();
-        } else {
-          console.log(`   No historical data found`);
-        }
-      } else {
-        console.log(
-          `   Using cached pattern: ${(existingPattern as any).patterns.preferredHour}:00 UTC (${((existingPattern as any).patterns.hourConfidence * 100).toFixed(0)}% confidence)`,
-        );
-      }
-
-      if (existingPattern) {
-        const typedPattern: HistoricalSchedulePatternType = {
-          _id: (existingPattern as any)._id.toString(),
-          jobIdentifier: (existingPattern as any).jobIdentifier,
-          patterns: (existingPattern as any).patterns,
-          historicalData: (existingPattern as any).historicalData,
-          lastAnalyzed: (existingPattern as any).lastAnalyzed,
-          totalOccurrences: (existingPattern as any).totalOccurrences,
-        };
-        patterns.push(typedPattern);
-      }
-    }
-
-    return patterns;
-  } catch (error) {
-    console.error("Error analyzing historical patterns:", error);
-    throw new Error("Failed to analyze historical patterns");
-  }
-}
-
-/**
- * Get the most common value in an array
- */
-function getMostCommon(arr: number[]): number {
-  if (arr.length === 0) return 0; // Return 0 if array is empty
-
-  const counts: { [key: number]: number } = {};
-  arr.forEach((val) => {
-    counts[val] = (counts[val] || 0) + 1;
-  });
-
-  let maxCount = 0;
-  let mostCommon = arr[0]!; // Non-null assertion since we checked length above
-  Object.entries(counts).forEach(([val, count]) => {
-    if (count > maxCount) {
-      maxCount = count;
-      mostCommon = parseInt(val);
-    }
-  });
-
-  return mostCommon;
-}
-
-/**
- * Calculate consistency (confidence) for a set of values
- * Returns 0-1 where 1 is perfectly consistent (all same value)
- */
-function calculateConsistency(values: number[]): number {
-  if (values.length <= 1) return 1; // Perfect consistency with 0 or 1 value
-
-  const mostCommon = getMostCommon(values);
-  const occurrences = values.filter((val) => val === mostCommon).length;
-  return occurrences / values.length;
-}
-
-/**
- * Helper function to analyze schedule patterns from historical data
- * Exported for testing purposes
- */
-export function analyzeSchedulePatterns(
-  schedules: any[],
-  workDayStart: number = 9,
-  workDayEnd: number = 17,
-) {
-  const hours: number[] = [];
-  const daysOfWeek: number[] = [];
-  const durations: number[] = [];
-
-  console.log(
-    `   📊 Analyzing ${schedules.length} records (business hours: ${workDayStart}-${workDayEnd})`,
-  );
-
-  const historicalData = schedules.map((schedule) => {
-    // Ensure we're working with UTC dates consistently
-    const startDate = new Date(schedule.startDateTime);
-
-    // Use UTC methods to avoid timezone conversion
-    const hour = startDate.getUTCHours();
-    const dayOfWeek = startDate.getUTCDay() === 0 ? 7 : startDate.getUTCDay(); // Convert Sunday from 0 to 7
-
-    console.log(
-      `      ${format(startDate, "yyyy-MM-dd HH:mm")} UTC → Hour: ${hour}, Day: ${getDayName(dayOfWeek)}`,
-    );
-
-    // Use preferences for business hours instead of hardcoded 7-19
-    if (hour >= workDayStart && hour <= workDayEnd) {
-      hours.push(hour);
-      console.log(`      ✅ Including hour ${hour}`);
-    } else {
-      console.log(
-        `      ❌ Excluding hour ${hour} (outside ${workDayStart}-${workDayEnd})`,
-      );
-    }
-    daysOfWeek.push(dayOfWeek);
-
-    // Convert hours to minutes and validate reasonable duration
-    const durationMinutes = (schedule.hours || 2) * 60;
-    if (durationMinutes >= 60 && durationMinutes <= 480) {
-      durations.push(durationMinutes);
-    }
-
-    return {
-      scheduleId: schedule._id.toString(),
-      startDateTime: startDate,
-      actualDuration: durationMinutes,
-      assignedTechnicians: schedule.assignedTechnicians,
-      completionNotes: schedule.technicianNotes || "",
-    };
-  });
-
-  // Calculate preferred patterns (use most common values, not averages)
-  const preferredHour = hours.length > 0 ? getMostCommon(hours) : 9; // Default to 9am
-  const preferredDayOfWeek =
-    daysOfWeek.length > 0 ? getMostCommon(daysOfWeek) : 1; // Default to Monday
-  const averageDuration =
-    durations.length > 0
-      ? Math.round(durations.reduce((sum, d) => sum + d, 0) / durations.length)
-      : 180;
-
-  // Calculate confidence based on consistency (higher is better)
-  const hourConfidence = hours.length > 0 ? calculateConsistency(hours) : 0;
-  const dayConfidence =
-    daysOfWeek.length > 0 ? calculateConsistency(daysOfWeek) : 0;
-
-  console.log(
-    `   → Most common: ${preferredHour}:00 UTC on ${getDayName(preferredDayOfWeek)} (${(hourConfidence * 100).toFixed(0)}% hour confidence)`,
-  );
-
-  return {
-    patterns: {
-      preferredHour,
-      hourConfidence,
-      preferredDayOfWeek,
-      dayConfidence,
-      averageDuration,
-    },
-    historicalData,
-  };
-}
-
-/**
- * Calculate variance for confidence scoring
- */
-function calculateVariance(numbers: number[]): number {
-  if (numbers.length <= 1) return 0; // No variance with 0 or 1 element
-
-  const mean = numbers.reduce((sum, num) => sum + num, 0) / numbers.length;
-  const squareDiffs = numbers.map((num) => Math.pow(num - mean, 2));
-  return squareDiffs.reduce((sum, diff) => sum + diff, 0) / numbers.length;
-}
-
 
 
 /**
- * Get location clusters for geographic optimization
- */
-export async function getLocationClusters(): Promise<LocationClusterType[]> {
-  await connectMongo();
-
-  try {
-    const clusters = await LocationCluster.find({ isActive: true })
-      .sort({ clusterName: 1 })
-      .lean();
-
-    // Create default clusters if none exist
-    if (clusters.length === 0) {
-      const defaultClusters = [
-        {
-          clusterName: "Vancouver Core",
-          centerCoordinates: { lat: 49.2827, lng: -123.1207 },
-          radius: 15,
-          constraints: {
-            maxJobsPerDay: 4,
-            bufferTimeMinutes: 15,
-          },
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          clusterName: "Surrey/Langley",
-          centerCoordinates: { lat: 49.1913, lng: -122.849 },
-          radius: 20,
-          constraints: {
-            maxJobsPerDay: 3,
-            bufferTimeMinutes: 20,
-          },
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          clusterName: "Richmond",
-          centerCoordinates: { lat: 49.1666, lng: -123.1336 },
-          radius: 15,
-          constraints: {
-            maxJobsPerDay: 3,
-            bufferTimeMinutes: 20,
-          },
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          clusterName: "Burnaby/New Westminster",
-          centerCoordinates: { lat: 49.2488, lng: -122.9805 },
-          radius: 15,
-          constraints: {
-            maxJobsPerDay: 3,
-            bufferTimeMinutes: 20,
-          },
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          clusterName: "North Vancouver",
-          centerCoordinates: { lat: 49.3163, lng: -123.0687 },
-          radius: 12,
-          constraints: {
-            maxJobsPerDay: 3,
-            bufferTimeMinutes: 25,
-          },
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          clusterName: "Whistler Area",
-          centerCoordinates: { lat: 50.1163, lng: -122.9574 },
-          radius: 25,
-          constraints: {
-            maxJobsPerDay: 2,
-            bufferTimeMinutes: 60,
-          },
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          clusterName: "Fraser Valley",
-          centerCoordinates: { lat: 49.0504, lng: -122.3045 },
-          radius: 30,
-          constraints: {
-            maxJobsPerDay: 2,
-            bufferTimeMinutes: 45,
-          },
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          clusterName: "Bowen Island",
-          centerCoordinates: { lat: 49.3811, lng: -123.3482 },
-          radius: 10,
-          constraints: {
-            maxJobsPerDay: 1,
-            bufferTimeMinutes: 120,
-          },
-          isActive: true,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ];
-
-      // Create and return clusters with proper typing
-      const createdClusters: LocationClusterType[] = [];
-      for (const clusterData of defaultClusters) {
-        const cluster = new LocationCluster(clusterData as any);
-        const savedCluster = await cluster.save();
-        // Convert to proper type
-        const typedCluster: LocationClusterType = {
-          _id: savedCluster._id.toString(),
-          clusterName: savedCluster.clusterName,
-          centerCoordinates: savedCluster.centerCoordinates,
-          radius: savedCluster.radius,
-          constraints: savedCluster.constraints,
-          isActive: savedCluster.isActive,
-          createdAt: savedCluster.createdAt,
-          updatedAt: savedCluster.updatedAt,
-        };
-        createdClusters.push(typedCluster);
-      }
-      return createdClusters;
-    }
-
-    // Convert existing clusters to proper type
-    return clusters.map(
-      (cluster: any): LocationClusterType => ({
-        _id: cluster._id.toString(),
-        clusterName: cluster.clusterName,
-        centerCoordinates: cluster.centerCoordinates,
-        radius: cluster.radius,
-        constraints: cluster.constraints,
-        isActive: cluster.isActive,
-        createdAt: cluster.createdAt,
-        updatedAt: cluster.updatedAt,
-      }),
-    );
-  } catch (error) {
-    console.error("Error getting location clusters:", error);
-    throw new Error("Failed to get location clusters");
-  }
-}
-
-/**
- * Get optimization distance matrix (cache)
- */
-export async function getOptimizationDistanceMatrix(
-  optimizationId: string,
-): Promise<OptimizationDistanceMatrixType | null> {
-  await connectMongo();
-
-  try {
-    const matrix = await OptimizationDistanceMatrix.findOne({
-      optimizationId,
-      isActive: true,
-    }).lean();
-
-    if (!matrix) return null;
-
-    // Convert to proper type
-    const typedMatrix: OptimizationDistanceMatrixType = {
-      _id: (matrix as any)._id.toString(),
-      optimizationId: (matrix as any).optimizationId,
-      locations: (matrix as any).locations,
-      coordinates: (matrix as any).coordinates,
-      matrix: (matrix as any).matrix,
-      calculatedAt: (matrix as any).calculatedAt,
-      isActive: (matrix as any).isActive,
-      optimizationSettings: (matrix as any).optimizationSettings,
-    };
-
-    return typedMatrix;
-  } catch (error) {
-    console.error("Error getting optimization distance matrix:", error);
-    return null;
-  }
-}
-
-/**
- * Save optimization distance matrix to cache
- */
-export async function saveOptimizationDistanceMatrix(
-  optimizationId: string,
-  locations: string[],
-  coordinates: Array<[number, number]>,
-  matrix: { durations: number[][]; distances: number[][] },
-  dateRange: { start: Date; end: Date },
-  startingPointAddress?: string,
-): Promise<OptimizationDistanceMatrixType> {
-  await connectMongo();
-
-  try {
-    // Deactivate any existing matrix for this optimization
-    await OptimizationDistanceMatrix.updateMany(
-      { optimizationId },
-      { isActive: false }
-    );
-
-    // Create new matrix with proper optimizationSettings structure
-    const newMatrix = new OptimizationDistanceMatrix({
-      optimizationId,
-      locations,
-      coordinates,
-      matrix,
-      calculatedAt: new Date(),
-      isActive: true,
-      optimizationSettings: {
-        dateRange: {
-          start: dateRange.start,
-          end: dateRange.end,
-        },
-        maxJobsPerDay: 4,
-        workDayStart: "09:00",
-        workDayEnd: "17:00",
-        startingPointAddress: startingPointAddress || "11020 Williams Rd Richmond, BC V7A 1X8",
-        allowedDays: [1, 2, 3, 4, 5], // Monday to Friday
-      },
-    } as any);
-
-    const savedMatrix = await newMatrix.save();
-
-    return {
-      _id: savedMatrix._id.toString(),
-      optimizationId: savedMatrix.optimizationId,
-      locations: savedMatrix.locations,
-      coordinates: savedMatrix.coordinates,
-      matrix: savedMatrix.matrix,
-      calculatedAt: savedMatrix.calculatedAt,
-      isActive: savedMatrix.isActive,
-      optimizationSettings: savedMatrix.optimizationSettings,
-    };
-  } catch (error) {
-    console.error("Error saving optimization distance matrix:", error);
-    throw new Error("Failed to save optimization distance matrix");
-  }
-}
-
-/**
- * Batch geocode all unique locations for unscheduled jobs
+ * Batch geocode locations using existing API
  */
 export async function batchGeocodeJobLocations(
   jobs: JobOptimizationData[],
@@ -627,7 +268,6 @@ export async function batchGeocodeJobLocations(
   try {
     // Get unique locations
     const uniqueLocations = Array.from(new Set(jobs.map(job => job.location)));
-    console.log(`🗺️ Batch geocoding ${uniqueLocations.length} unique locations...`);
 
     // Check which locations we already have geocoded
     const existingGeocodes = await LocationGeocode.find({
@@ -651,7 +291,6 @@ export async function batchGeocodeJobLocations(
     }
 
     if (locationsToGeocode.length > 0) {
-      console.log(`🌐 Geocoding ${locationsToGeocode.length} new locations...`);
       
       // Use the existing geocoding API endpoint
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -668,18 +307,17 @@ export async function batchGeocodeJobLocations(
       const geocodeResults = await response.json();
       
       // Add new geocodes to map and save to database
-      // Note: geocodeResults.results only contains successful results
       for (const result of geocodeResults.results || []) {
         if (result && result.coordinates) {
           const [lng, lat] = result.coordinates;
           geocodeMap.set(result.address, { lat, lng });
           
-          // Save to database (already done by the API, but this ensures consistency)
+          // Save to database
           await LocationGeocode.findOneAndUpdate(
             { address: result.address },
             {
               address: result.address,
-              normalizedAddress: normalizeAddress(result.address),
+              normalizedAddress: result.address.toLowerCase().trim(),
               coordinates: [lng, lat],
               lastGeocoded: new Date(),
               source: 'openroute',
@@ -687,20 +325,10 @@ export async function batchGeocodeJobLocations(
             { upsert: true }
           );
           
-          console.log(`✅ Geocoded and cached: ${result.address} → [${lat}, ${lng}]`);
-        }
-      }
-
-      // Log any locations that weren't geocoded
-      const geocodedAddresses = new Set((geocodeResults.results || []).map((r: any) => r.address));
-      for (const location of locationsToGeocode) {
-        if (!geocodedAddresses.has(location)) {
-          console.warn(`❌ Failed to geocode: ${location}`);
         }
       }
     }
 
-    console.log(`📍 Geocoding complete: ${existingGeocodes.length} cached, ${locationsToGeocode.length} new`);
     return geocodeMap;
   } catch (error) {
     console.error("Error batch geocoding locations:", error);
@@ -709,21 +337,25 @@ export async function batchGeocodeJobLocations(
 }
 
 /**
- * Calculate and save distance matrix for optimization
+ * Calculate distance matrix for Cloud Run OR Tools service
  */
-export async function calculateOptimizationDistanceMatrix(
-  optimizationId: string,
+export async function calculateDistanceMatrixForCloudRun(
   jobs: JobOptimizationData[],
-  dateRange: { start: Date; end: Date },
   startingPointAddress?: string,
-): Promise<OptimizationDistanceMatrixType | null> {
+  geocodeMap?: Map<string, { lat: number; lng: number }>
+): Promise<{
+  locations: string[];
+  coordinates: [number, number][];
+  distanceMatrix: number[][];
+  durationMatrix: number[][];
+} | null> {
   try {
-    // First, batch geocode all locations
-    const geocodeMap = await batchGeocodeJobLocations(jobs);
+    // Use provided geocode map or get one
+    const effectiveGeocodeMap = geocodeMap || await batchGeocodeJobLocations(jobs);
     
-    // Prepare coordinates array starting with depot if provided
+    // Prepare locations array starting with depot if provided
     const locations: string[] = [];
-    const coordinates: Array<[number, number]> = [];
+    const coordinates: [number, number][] = [];
     
     // Add starting point (depot) as first location if provided
     if (startingPointAddress) {
@@ -740,21 +372,20 @@ export async function calculateOptimizationDistanceMatrix(
           if (geocodeResult.results && geocodeResult.results.length > 0) {
             const depotCoords = geocodeResult.results[0].coordinates;
             locations.push(startingPointAddress);
-            coordinates.push([depotCoords[0], depotCoords[1]]); // [lng, lat]
-            console.log(`🏢 Added depot to matrix: ${startingPointAddress}`);
+            coordinates.push([depotCoords[0], depotCoords[1]] as [number, number]); // [lng, lat]
           }
         }
       } catch (error) {
-        console.warn("Failed to geocode starting point for matrix:", error);
+        console.warn("Failed to geocode starting point:", error);
       }
     }
     
     // Add job locations
     for (const job of jobs) {
-      const coords = geocodeMap.get(job.location);
+      const coords = effectiveGeocodeMap.get(job.location);
       if (coords) {
         locations.push(job.location);
-        coordinates.push([coords.lng, coords.lat]);
+        coordinates.push([coords.lng, coords.lat] as [number, number]);
       }
     }
 
@@ -763,95 +394,26 @@ export async function calculateOptimizationDistanceMatrix(
       return null;
     }
 
-    // Sort locations for consistent comparison
-    const sortedLocations = [...locations].sort();
+    // Create a hash for caching
+    const locationHash = locations.sort().join('|');
     
-    console.log(`🗺️ Checking for existing distance matrix with ${sortedLocations.length} locations...`);
+    // Check if we have a cached matrix
+    const cachedMatrix = await DistanceMatrixCache.findOne({
+      locationHash,
+      expiresAt: { $gt: new Date() }
+    });
 
-    // Check if we already have a matrix with the same set of locations OR a superset
-    await connectMongo();
-    
-    try {
-      // SMART CACHING: Look for matrices that contain ALL our required locations
-      // This includes exact matches and supersets
-      const existingMatrices = await OptimizationDistanceMatrix.find({
-        isActive: true,
-        // Get all active matrices - we'll filter for supersets in memory
-      }).lean();
-
-      console.log(`🔍 Found ${existingMatrices.length} potential matrices to check...`);
-
-      // Find a matrix that contains all our required locations
-      let bestMatrix = null;
-      let isExactMatch = false;
-
-      for (const matrix of existingMatrices) {
-        const matrixLocations = [...matrix.locations].sort();
-        
-        // Check if this matrix contains ALL our required locations
-        const containsAllLocations = sortedLocations.every(location => 
-          matrixLocations.includes(location)
-        );
-
-        if (containsAllLocations) {
-          const isExact = matrixLocations.length === sortedLocations.length && 
-                         JSON.stringify(matrixLocations) === JSON.stringify(sortedLocations);
-          
-          if (isExact) {
-            // Exact match is always preferred
-            bestMatrix = matrix;
-            isExactMatch = true;
-            console.log(`✅ Found EXACT matrix match with ${matrixLocations.length} locations`);
-            break;
-          } else if (!bestMatrix) {
-            // First superset we find
-            bestMatrix = matrix;
-            console.log(`✅ Found SUPERSET matrix with ${matrixLocations.length} locations (need ${sortedLocations.length})`);
-          }
-        }
-      }
-
-      if (bestMatrix) {
-        const calculatedDate = new Date(bestMatrix.calculatedAt);
-        console.log(`🔄 Reusing ${isExactMatch ? 'exact' : 'superset'} matrix from ${calculatedDate.toISOString().replace('T', ' ').substring(0, 19)} UTC`);
-        
-        if (isExactMatch) {
-          // Exact match - return as-is (NO new database entry)
-          return {
-            _id: (bestMatrix as any)._id.toString(),
-            optimizationId: (bestMatrix as any).optimizationId,
-            locations: (bestMatrix as any).locations,
-            coordinates: (bestMatrix as any).coordinates,
-            matrix: (bestMatrix as any).matrix,
-            calculatedAt: (bestMatrix as any).calculatedAt,
-            isActive: (bestMatrix as any).isActive,
-            optimizationSettings: (bestMatrix as any).optimizationSettings,
-          };
-        } else {
-          // Superset match - extract subset data (NO new database entry)
-          const subsetData = extractMatrixSubset(bestMatrix, sortedLocations);
-          console.log(`📊 Extracted subset matrix: ${subsetData.locations.length} locations from ${(bestMatrix as any).locations.length}`);
-          
-          return {
-            _id: (bestMatrix as any)._id.toString(), // Keep original ID
-            optimizationId: optimizationId, // Update for current optimization
-            locations: subsetData.locations,
-            coordinates: subsetData.coordinates,
-            matrix: subsetData.matrix,
-            calculatedAt: (bestMatrix as any).calculatedAt,
-            isActive: (bestMatrix as any).isActive,
-            optimizationSettings: {
-              ...(bestMatrix as any).optimizationSettings,
-              dateRange: dateRange, // Update for current date range
-            },
-          };
-        }
-      }
-    } catch (error) {
-      console.warn("Error checking for existing matrix, proceeding with new calculation:", error);
+    if (cachedMatrix) {
+      console.log(`📊 Using cached distance matrix for ${coordinates.length} locations`);
+      return {
+        locations: cachedMatrix.locations,
+        coordinates: cachedMatrix.coordinates as [number, number][],
+        distanceMatrix: cachedMatrix.matrix.distances,
+        durationMatrix: cachedMatrix.matrix.durations,
+      };
     }
 
-    console.log(`🗺️ No existing matrix found. Calculating new distance matrix for ${coordinates.length} locations...`);
+    console.log(`🗺️ Calculating distance matrix for ${coordinates.length} locations...`);
 
     // Calculate distance matrix using the API
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
@@ -867,167 +429,36 @@ export async function calculateOptimizationDistanceMatrix(
 
     const matrixResult = await response.json();
     
-    // Save to database
-    const savedMatrix = await saveOptimizationDistanceMatrix(
-      optimizationId,
+    // Cache the matrix for 1 hour (for real-time accuracy)
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 1);
+    
+    await DistanceMatrixCache.findOneAndUpdate(
+      { locationHash },
+      {
+        locationHash,
+        locations,
+        coordinates,
+        matrix: {
+          distances: matrixResult.distances,
+          durations: matrixResult.durations,
+        },
+        calculatedAt: new Date(),
+        expiresAt,
+      },
+      { upsert: true }
+    );
+    
+    console.log(`✅ Distance matrix calculated and cached for 1 hour (Cloud Run OR Tools)`);
+    
+    return {
       locations,
       coordinates,
-      {
-        durations: matrixResult.durations, // Already in minutes
-        distances: matrixResult.distances, // Already in kilometers
-      },
-      dateRange,
-      startingPointAddress
-    );
-
-    console.log(`✅ Distance matrix calculated and saved for optimization: ${optimizationId}`);
-    return savedMatrix;
+      distanceMatrix: matrixResult.distances, // km
+      durationMatrix: matrixResult.durations,  // minutes
+    };
   } catch (error) {
-    console.error("Error calculating optimization distance matrix:", error);
+    console.error("Error calculating distance matrix for Cloud Run:", error);
     return null;
   }
-}
-
-/**
- * Get existing schedules for conflict checking
- */
-export async function getExistingSchedules(dateRange: {
-  start: Date;
-  end: Date;
-}): Promise<ScheduleType[]> {
-  await connectMongo();
-
-  try {
-    const schedules = await Schedule.find({
-      startDateTime: {
-        $gte: dateRange.start,
-        $lte: dateRange.end,
-      },
-    }).lean();
-
-    return schedules.map((schedule: any) => {
-      // Ensure proper date handling for both Date and string types
-      let startDateTimeString: string;
-      if (schedule.startDateTime instanceof Date) {
-        startDateTimeString = schedule.startDateTime.toISOString();
-      } else if (typeof schedule.startDateTime === "string") {
-        startDateTimeString = new Date(schedule.startDateTime).toISOString();
-      } else {
-        // Handle any other case by converting to Date first
-        startDateTimeString = new Date(
-          schedule.startDateTime as any,
-        ).toISOString();
-      }
-
-      return {
-        _id: schedule._id.toString(),
-        invoiceRef: schedule.invoiceRef.toString(),
-        jobTitle: schedule.jobTitle || "",
-        location: schedule.location,
-        startDateTime: startDateTimeString,
-        assignedTechnicians: schedule.assignedTechnicians,
-        confirmed: schedule.confirmed,
-        hours: schedule.hours,
-        payrollPeriod: schedule.payrollPeriod
-          ? schedule.payrollPeriod.toString()
-          : "",
-        deadRun: schedule.deadRun,
-        technicianNotes: schedule.technicianNotes || "",
-      };
-    }) as ScheduleType[];
-  } catch (error) {
-    console.error("Error getting existing schedules:", error);
-    throw new Error("Failed to get existing schedules");
-  }
-}
-
-/**
- * Normalize address for consistent geocoding
- */
-export function normalizeAddress(address: string): string {
-  return address
-    .trim()
-    .toLowerCase()
-    .replace(
-      /\b(street|st|avenue|ave|road|rd|drive|dr|boulevard|blvd)\b/g,
-      (match) => {
-        const abbrevs: { [key: string]: string } = {
-          street: "st",
-          avenue: "ave",
-          road: "rd",
-          drive: "dr",
-          boulevard: "blvd",
-        };
-        return abbrevs[match] || match;
-      },
-    )
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-/**
- * Get day name from day number
- */
-function getDayName(dayNumber: number): string {
-  const days = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  return days[dayNumber] || "Unknown";
-}
-
-/**
- * Generate unique job identifier for historical analysis
- * Normalizes job title and location to handle variations
- */
-export function generateJobIdentifier(
-  jobTitle: string,
-  location: string,
-): string {
-  // Normalize job title: trim, lowercase, remove extra spaces, handle common variations
-  const normalizedTitle = jobTitle
-    .trim()
-    .toLowerCase()
-    .replace(/\s+/g, " ") // Replace multiple spaces with single space
-    .replace(/[^\w\s]/g, "") // Remove special characters except spaces
-    .trim();
-
-  // Normalize location using existing function
-  const normalizedLocation = normalizeAddress(location);
-
-  return `${normalizedTitle}|${normalizedLocation}`;
-}
-
-/**
- * Extract subset of distance matrix for specific locations
- */
-function extractMatrixSubset(fullMatrix: any, requiredLocations: string[]) {
-  const fullLocations = fullMatrix.locations;
-  const fullCoordinates = fullMatrix.coordinates;
-  const fullDistanceMatrix = fullMatrix.matrix;
-
-  // Find indices of required locations in the full matrix
-  const requiredIndices = requiredLocations.map(location => {
-    const index = fullLocations.indexOf(location);
-    if (index === -1) {
-      throw new Error(`Location "${location}" not found in matrix`);
-    }
-    return index;
-  });
-
-  // Extract coordinates for required locations
-  const subsetCoordinates = requiredIndices.map(index => fullCoordinates[index]);
-
-  // Extract subset of distance matrix
-  const subsetMatrix = {
-    durations: requiredIndices.map(i => 
-      requiredIndices.map(j => fullDistanceMatrix.durations[i][j])
-    ),
-    distances: requiredIndices.map(i => 
-      requiredIndices.map(j => fullDistanceMatrix.distances[i][j])
-    ),
-  };
-
-  return {
-    locations: requiredLocations,
-    coordinates: subsetCoordinates,
-    matrix: subsetMatrix,
-  };
 }

@@ -389,81 +389,31 @@ export interface EstimateType {
   convertedToInvoice?: ObjectId | string;
 }
 
-// Scheduling Optimization Types
+// Simplified Scheduling Optimization Types - for Cloud Run
 export interface LocationGeocodeType {
   _id: ObjectId | string;
   address: string; // raw address from invoice: "123 Main St, Vancouver, BC"
   normalizedAddress: string; // cleaned version: "123 Main Street, Vancouver, BC V6B 1A1"
   coordinates: [number, number]; // [lng, lat] for OpenRouteService
-  clusterId?: ObjectId | string; // which geographic cluster this belongs to
   lastGeocoded: Date;
   source: "openroute" | "manual"; // how coordinates were obtained
 }
 
-export interface LocationClusterType {
+// Simple distance matrix cache for OR Tools VRP
+export interface DistanceMatrixCacheType {
   _id: ObjectId | string;
-  clusterName: string; // "Vancouver Core", "Whistler Area", "Surrey/Langley"
-  centerCoordinates: { lat: number; lng: number };
-  radius: number; // radius in kilometers
-  constraints: {
-    maxJobsPerDay: number; // 4 for Vancouver, 2 for Whistler
-    preferredDays: string[]; // ["Monday", "Tuesday"] for Whistler bundling
-    specialRequirements?: string; // "Ferry required", "Bundle trips", "Early access only"
-    bufferTimeMinutes?: number; // extra time needed between jobs in this area
-  };
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface OptimizationDistanceMatrixType {
-  _id: ObjectId | string;
-  optimizationId: string; // unique identifier for this optimization run
-  locations: string[]; // ordered array of normalized addresses
+  locationHash: string; // unique hash of sorted locations for cache key
+  locations: string[]; // ordered array of addresses
   coordinates: [number, number][]; // corresponding [lng, lat] pairs
   matrix: {
     durations: number[][]; // travel times in minutes
     distances: number[][]; // distances in kilometers
   };
   calculatedAt: Date;
-  isActive: boolean;
-  optimizationSettings: {
-    dateRange: {
-      start: Date;
-      end: Date;
-    };
-    maxJobsPerDay: number;
-    workDayStart: string; // "HH:mm" format
-    workDayEnd: string; // "HH:mm" format
-    startingPointAddress: string;
-    allowedDays: number[]; // [1,2,3,4,5] for Monday-Friday
-  };
+  expiresAt: Date; // cache expiration (e.g., 30 days)
 }
 
-
-
-export interface HistoricalSchedulePatternType {
-  _id?: string;
-  jobIdentifier: string; // "clientName|location" or similar unique identifier
-  patterns: {
-    preferredHour?: number; // 0-23
-    hourConfidence: number; // 0-1
-    preferredDayOfWeek?: number; // 1-7 (Monday=1, Sunday=7)
-    dayConfidence: number; // 0-1
-    averageDuration: number; // minutes
-  };
-  historicalData: Array<{
-    scheduleId: string;
-    startDateTime: Date;
-    actualDuration?: number; // minutes
-    assignedTechnicians: string[];
-    completionNotes?: string;
-  }>;
-  lastAnalyzed: Date;
-  totalOccurrences: number;
-}
-
-// Optimization Result Types (not saved to DB, just for API responses)
+// Job data for sending to Cloud Run optimization service
 export interface JobOptimizationData {
   jobId: string;
   invoiceId: string;
@@ -473,83 +423,15 @@ export interface JobOptimizationData {
   clientName: string;
   dateDue: Date;
   estimatedDuration: number; // minutes
-  priority: number; // 1-10 scale
-  historicalPattern?: {
-    preferredHour: number;
-    confidence: number;
-    preferredTechnicians: string[];
-  };
   constraints: {
     earliestStart: Date;
     latestStart: Date;
-    bufferAfter: number;
-    requiredTechnicians?: string[];
   };
-}
-
-export interface OptimizationConstraints {
-  dateRange: {
-    start: Date;
-    end: Date;
+  // Optional fixed scheduling for jobs that must be at specific times
+  fixedSchedule?: {
+    scheduledDateTime: Date;
+    isFixed: boolean; // true if this job cannot be moved during optimization
   };
-  globalSettings: {
-    maxJobsPerDay: number;
-    workDayStart: string; // "HH:mm" format
-    workDayEnd: string; // "HH:mm" format
-    startingPointAddress: string;
-    allowedDays: number[]; // [1,2,3,4,5] for Monday-Friday
-  };
-  techniciansAvailable: string[];
-  existingSchedules: ScheduleType[]; // to avoid conflicts
-  priorityWeights: {
-    efficiency: number; // 0-1 weight for travel time minimization
-    historical: number; // 0-1 weight for following historical patterns
-    balance: number; // 0-1 weight for workload distribution
-    urgency: number; // 0-1 weight for overdue jobs
-  };
-}
-
-export interface ScheduleSuggestion {
-  jobId: string;
-  suggestedDateTime: Date;
-  assignedTechnicians: string[];
-  estimatedEndTime: Date;
-  drivingTimeToNext?: number; // minutes to next job
-  drivingTimeToPrevious?: number; // minutes from previous job
-  confidence: number; // 0-1 how confident we are in this suggestion
-  reasoning: string[]; // ["Matches historical pattern", "Minimizes travel time"]
-  clusterId?: string;
-  clusterName?: string;
-}
-
-export interface OptimizedDaySchedule {
-  date: Date;
-  clusterId?: string;
-  clusterName?: string;
-  suggestions: ScheduleSuggestion[];
-  metrics: {
-    totalJobs: number;
-    totalWorkTime: number; // minutes
-    totalDriveTime: number; // minutes
-    efficiencyRatio: number; // work time / (work time + drive time)
-    workloadBalance: number; // 0-1 how balanced technician workload is
-  };
-  assignedTechnicians: string[];
-}
-
-export interface OptimizationResult {
-  strategy: "efficiency" | "balanced" | "spread" | "historical";
-  totalJobs: number;
-  optimizedDays: OptimizedDaySchedule[];
-  overallMetrics: {
-    totalDriveTime: number; // minutes
-    totalWorkTime: number; // minutes
-    totalDistance: number; // km
-    efficiencyScore: number; // 0-100
-    historicalAlignment: number; // 0-100 how well it matches historical patterns
-    workloadBalance: number; // 0-100 how evenly distributed workload is
-    averageJobsPerDay: number;
-  };
-  unscheduledJobs: JobOptimizationData[]; // jobs that couldn't be optimally placed
-  generatedAt: Date;
+  // Temporary field for historical time data
+  historicalTime?: { hour: number; minute: number } | null;
 }
