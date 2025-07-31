@@ -4,7 +4,7 @@ import { LocationGeocode } from "../../models/reactDataSchema";
 // Rate limiting configuration
 const RATE_LIMIT_CONFIG = {
   geocoding: {
-    delayBetweenRequests: 500, // 500ms between geocoding requests
+    delayBetweenRequests: 200, // 500ms between geocoding requests
     maxRetries: 3,
     backoffMultiplier: 2, // Exponential backoff multiplier
   },
