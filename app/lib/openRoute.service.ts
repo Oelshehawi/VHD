@@ -1,6 +1,18 @@
 import connectMongo from "./connect";
 import { LocationGeocode } from "../../models/reactDataSchema";
 
+// Rate limiting configuration
+const RATE_LIMIT_CONFIG = {
+  geocoding: {
+    delayBetweenRequests: 500, // 500ms between geocoding requests
+    maxRetries: 3,
+    backoffMultiplier: 2, // Exponential backoff multiplier
+  },
+  matrix: {
+    delayAfterRequest: 1000, // 1 second after matrix requests
+  },
+};
+
 // Types from the API routes
 interface OpenRouteGeocodeResponse {
   features: Array<{
@@ -44,6 +56,12 @@ export interface DistanceMatrixResult {
 function normalizeAddress(address: string): string {
   return address.toLowerCase().trim().replace(/\s+/g, ' ');
 }
+
+// Utility function for delays
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
 class OpenRouteService {
 
   /**
@@ -55,8 +73,9 @@ class OpenRouteService {
 
     const results: GeocodeResult[] = [];
 
-    for (const address of addresses) {
-      const normalizedAddress = normalizeAddress(address);
+    for (let i = 0; i < addresses.length; i++) {
+      const address = addresses[i];
+      const normalizedAddress = normalizeAddress(address || "");
 
       // Check cache first
       const cached = await LocationGeocode.findOne({
@@ -66,68 +85,105 @@ class OpenRouteService {
       if (cached) {
         console.log(`📍 Using cached coordinates for: ${address}`);
         results.push({
-          address,
+          address: address || "",
           coordinates: cached.coordinates as [number, number],
           cached: true,
         });
         continue;
       }
 
-      // Make OpenRouteService API call
-      console.log(`🌐 Geocoding new address: ${address}`);
+      // Make OpenRouteService API call with retry logic
+      console.log(`🌐 Geocoding new address: ${address} (${i + 1}/${addresses.length})`);
 
-      try {
-        const openRouteResponse = await fetch(
-          `https://api.openrouteservice.org/geocode/search?api_key=${process.env.OPENROUTE_API_KEY}&text=${encodeURIComponent(address)}&boundary.country=CA&size=1`,
-          {
-            method: "GET",
-            headers: {
-              "Content-Type": "application/json",
+      let retryCount = 0;
+      let success = false;
+
+      while (retryCount < RATE_LIMIT_CONFIG.geocoding.maxRetries && !success) {
+        try {
+          // Add delay before request (except for first request)
+          if (i > 0 || retryCount > 0) {
+            const delayMs = RATE_LIMIT_CONFIG.geocoding.delayBetweenRequests * Math.pow(RATE_LIMIT_CONFIG.geocoding.backoffMultiplier, retryCount);
+            console.log(`⏳ Waiting ${delayMs}ms before geocoding request...`);
+            await delay(delayMs);
+          }
+
+          const openRouteResponse = await fetch(
+            `https://api.openrouteservice.org/geocode/search?api_key=${process.env.OPENROUTE_API_KEY}&text=${encodeURIComponent(address || "")}&boundary.country=CA&size=1`,
+            {
+              method: "GET",
+              headers: {
+                "Content-Type": "application/json",
+              },
             },
-          },
-        );
-
-        if (!openRouteResponse.ok) {
-          console.error(`❌ OpenRouteService geocoding failed for: ${address}`);
-          continue;
-        }
-
-        const data: OpenRouteGeocodeResponse = await openRouteResponse.json();
-
-        if (data.features && data.features.length > 0) {
-          const feature = data.features[0];
-          if (!feature) continue;
-
-          const coordinates = feature.geometry.coordinates as [number, number];
-          const confidence = feature.properties.confidence;
-
-          // Save to cache
-          await LocationGeocode.create({
-            address,
-            normalizedAddress,
-            coordinates,
-            lastGeocoded: new Date(),
-            source: "openroute",
-          });
-
-          results.push({
-            address,
-            coordinates,
-            cached: false,
-            confidence,
-          });
-
-          console.log(
-            `✅ Geocoded and cached: ${address} → [${coordinates[1]}, ${coordinates[0]}]`,
           );
-        } else {
-          console.error(`❌ No geocoding results for: ${address}`);
-        }
 
-        // Rate limiting: small delay between requests
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      } catch (error) {
-        console.error(`❌ Error geocoding ${address}:`, error);
+          if (!openRouteResponse.ok) {
+            const errorText = await openRouteResponse.text();
+            console.error(`❌ OpenRouteService geocoding failed for: ${address} (attempt ${retryCount + 1}) - Status: ${openRouteResponse.status}`);
+            
+            if (openRouteResponse.status === 429 || openRouteResponse.status === 504) {
+              // Rate limit or timeout - wait longer before retry
+              const backoffDelay = RATE_LIMIT_CONFIG.geocoding.delayBetweenRequests * Math.pow(RATE_LIMIT_CONFIG.geocoding.backoffMultiplier, retryCount + 1);
+              console.log(`🔄 Rate limited/timeout, waiting ${backoffDelay}ms before retry...`);
+              await delay(backoffDelay);
+              retryCount++;
+              continue;
+            } else {
+              console.error(`❌ Permanent error for ${address}: ${errorText}`);
+              break;
+            }
+          }
+
+          const data: OpenRouteGeocodeResponse = await openRouteResponse.json();
+
+          if (data.features && data.features.length > 0) {
+            const feature = data.features[0];
+            if (!feature) {
+              console.error(`❌ No geocoding results for: ${address}`);
+              break;
+            }
+
+            const coordinates = feature.geometry.coordinates as [number, number];
+            const confidence = feature.properties.confidence;
+
+            // Save to cache
+            await LocationGeocode.create({
+              address,
+              normalizedAddress,
+              coordinates,
+              lastGeocoded: new Date(),
+              source: "openroute",
+            });
+
+            results.push({
+              address: address || "",
+              coordinates,
+              cached: false,
+              confidence,
+            });
+
+            console.log(
+              `✅ Geocoded and cached: ${address} → [${coordinates[1]}, ${coordinates[0]}]`,
+            );
+            success = true;
+          } else {
+            console.error(`❌ No geocoding results for: ${address}`);
+            break;
+          }
+        } catch (error) {
+          console.error(`❌ Error geocoding ${address} (attempt ${retryCount + 1}):`, error);
+          retryCount++;
+          
+          if (retryCount < RATE_LIMIT_CONFIG.geocoding.maxRetries) {
+            const backoffDelay = RATE_LIMIT_CONFIG.geocoding.delayBetweenRequests * Math.pow(RATE_LIMIT_CONFIG.geocoding.backoffMultiplier, retryCount);
+            console.log(`🔄 Network error, waiting ${backoffDelay}ms before retry...`);
+            await delay(backoffDelay);
+          }
+        }
+      }
+
+      if (!success) {
+        console.error(`❌ Failed to geocode ${address} after ${RATE_LIMIT_CONFIG.geocoding.maxRetries} attempts`);
       }
     }
 
@@ -185,34 +241,71 @@ class OpenRouteService {
       if (!openRouteResponse.ok) {
         const errorText = await openRouteResponse.text();
         console.error("❌ OpenRouteService matrix API error:", errorText);
+        
+        if (openRouteResponse.status === 429 || openRouteResponse.status === 504) {
+          console.log(`🔄 Rate limited/timeout, waiting ${RATE_LIMIT_CONFIG.matrix.delayAfterRequest * 2}ms before retry...`);
+          await delay(RATE_LIMIT_CONFIG.matrix.delayAfterRequest * 2);
+          
+          // Retry once for rate limiting
+          const retryResponse = await fetch(
+            `https://api.openrouteservice.org/v2/matrix/driving-car`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: process.env.OPENROUTE_API_KEY!,
+              },
+              body: JSON.stringify(payload),
+            },
+          );
+          
+          if (!retryResponse.ok) {
+            const retryErrorText = await retryResponse.text();
+            throw new Error(`Distance matrix calculation failed after retry: ${retryErrorText}`);
+          }
+          
+          const retryData: OpenRouteMatrixResponse = await retryResponse.json();
+          return this.processMatrixResponse(retryData, coordinates);
+        }
+        
         throw new Error(`Distance matrix calculation failed: ${errorText}`);
       }
 
       const data: OpenRouteMatrixResponse = await openRouteResponse.json();
+      const result = this.processMatrixResponse(data, coordinates);
 
-      // Convert to more user-friendly units
-      const result: DistanceMatrixResult = {
-        durations: data.durations.map(
-          (row) => row.map((seconds) => Math.round(seconds / 60)), // Convert to minutes
-        ),
-        distances: data.distances.map(
-          (row) => row.map((meters) => Math.round((meters / 1000) * 100) / 100), // Convert to km, round to 2 decimals
-        ),
-        sources: coordinates,
-        destinations: coordinates,
-      };
-
-      console.log(`✅ Distance matrix calculated successfully`);
-      console.log(
-        `   Max duration: ${Math.max(...result.durations.flat())} minutes`,
-      );
-      console.log(`   Max distance: ${Math.max(...result.distances.flat())} km`);
+      // Add delay after successful matrix request
+      await delay(RATE_LIMIT_CONFIG.matrix.delayAfterRequest);
 
       return result;
     } catch (error) {
       console.error("❌ Distance matrix error:", error);
       throw error;
     }
+  }
+
+  /**
+   * Process matrix response and convert to user-friendly units
+   */
+  private processMatrixResponse(data: OpenRouteMatrixResponse, coordinates: Array<[number, number]>): DistanceMatrixResult {
+    const result: DistanceMatrixResult = {
+      durations: data.durations.map(
+        (row) => row.map((seconds) => Math.round(seconds / 60)), // Convert to minutes
+      ),
+      distances: data.distances.map(
+        (row) => row.map((meters) => Math.round((meters / 1000) * 100) / 100), // Convert to km, round to 2 decimals
+      ),
+      sources: coordinates,
+      destinations: coordinates,
+    };
+
+    console.log(`✅ Distance matrix calculated successfully`);
+    console.log(
+      `   Max duration: ${Math.max(...result.durations.flat())} minutes`,
+    );
+    console.log(`   Max distance: ${Math.max(...result.distances.flat())} km`);
+
+    return result;
   }
 
 
