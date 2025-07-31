@@ -28,10 +28,16 @@ const DashboardPage = async ({
     ? parseInt(resolvedSearchParams.salesYear)
     : new Date().getFullYear();
 
-  const salesData = await fetchYearlySalesData(currentYear);
-  const amount = await getPendingInvoiceAmount();
-  const pendingInvoices = (await getPendingInvoices()) || [];
-  const { sessionClaims } = await auth();
+  console.time('Dashboard Page Total');
+  
+  console.time('Parallel Data Fetch');
+  const [{ sessionClaims }, salesData, amount, pendingInvoices] = await Promise.all([
+    auth(),
+    fetchYearlySalesData(currentYear),
+    getPendingInvoiceAmount(),
+    getPendingInvoices()
+  ]);
+  console.timeEnd('Parallel Data Fetch');
 
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
@@ -53,6 +59,8 @@ const DashboardPage = async ({
       </div>
     );
 
+  console.timeEnd('Dashboard Page Total');
+  
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       {/* Stats Cards */}

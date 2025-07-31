@@ -110,6 +110,11 @@ export async function deleteInvoice(invoiceId: string) {
 export async function createInvoice(invoiceData: any) {
   await connectMongo();
   try {
+    // Trim jobTitle to remove leading/trailing spaces
+    if (invoiceData.jobTitle) {
+      invoiceData.jobTitle = invoiceData.jobTitle.trim();
+    }
+
     // Find the invoice with the highest invoiceId for the client
     const latestInvoice = await Invoice.findOne({
       clientId: invoiceData.clientId,
@@ -142,6 +147,12 @@ export async function createInvoice(invoiceData: any) {
 export async function updateInvoice(invoiceId: any, formData: any) {
   await connectMongo();
   try {
+    // Trim jobTitle to remove leading/trailing spaces
+    console.log(formData.jobTitle);
+    if (formData.jobTitle) {
+      formData.jobTitle = formData.jobTitle.trim();
+    }
+
     const currentInvoice = await Invoice.findById(invoiceId);
 
     await Invoice.findByIdAndUpdate(invoiceId, formData);

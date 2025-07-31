@@ -367,12 +367,15 @@ const DistanceMatrixCacheSchema = new Schema<DistanceMatrixCacheType>({
 // Smart indexes for optimization performance
 // Core business queries
 invoiceSchema.index({ status: 1, dateDue: 1 }); // Pending/overdue invoices by due date
+invoiceSchema.index({ status: 1, dateIssued: 1, dateDue: 1 }); // Enhanced pending invoices query
+invoiceSchema.index({ dateIssued: 1, status: 1 }); // For sales aggregation
+scheduleSchema.index({ startDateTime: 1, confirmed: 1 }); // For schedule queries
+scheduleSchema.index({ assignedTechnicians: 1, startDateTime: 1 }); // For technician filtering
 invoiceSchema.index({ clientId: 1, dateIssued: -1 }); // Client invoice history
 invoiceSchema.index({ location: 1, status: 1 }); // Location-based scheduling
 jobsDueSoonSchema.index({ isScheduled: 1, dateDue: 1 }); // Unscheduled jobs by due date
 jobsDueSoonSchema.index({ clientId: 1, dateDue: 1 }); // Client jobs by due date
 scheduleSchema.index({ startDateTime: 1, assignedTechnicians: 1 }); // Schedule conflicts
-scheduleSchema.index({ assignedTechnicians: 1, startDateTime: 1 }); // Technician schedules
 scheduleSchema.index({ location: 1, startDateTime: 1 }); // Location-based queries
 
 // Simplified geocoding and distance matrix indexes

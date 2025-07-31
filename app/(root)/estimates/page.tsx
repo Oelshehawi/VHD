@@ -58,7 +58,7 @@ export default async function Estimates({
   return (
     <Suspense fallback={<TableContainerSkeleton />}>
       <div className="flex min-h-full items-center justify-center">
-        <div className="my-5 flex min-h-[90vh] w-[95%] flex-col gap-4 overflow-visible rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-4/5">
+        <div className="my-5 flex min-h-[90vh] w-[95%] flex-col gap-4 overflow-visible rounded-lg bg-white p-4 shadow-lg lg:my-0 lg:w-[95%]">
           <EstimatesPage
             query={query}
             status={status}

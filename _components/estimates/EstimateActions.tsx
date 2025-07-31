@@ -14,36 +14,55 @@ import {
   FaEye,
   FaEllipsisV,
   FaSpinner,
+  FaSearch,
 } from "react-icons/fa";
 import DeleteModal from "../DeleteModal";
+import Link from "next/link";
 
 interface EstimateActionsProps {
   estimate: EstimateType;
   onEdit: (estimate: EstimateType) => void;
-  onRefresh: () => void;
 }
 
 export default function EstimateActions({
   estimate,
   onEdit,
-  onRefresh,
 }: EstimateActionsProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [loading, setLoading] = useState<string | null>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [dropdownPosition, setDropdownPosition] = useState({
     top: 0,
     right: 0,
+    direction: 'down' as 'up' | 'down',
   });
 
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node) &&
+        buttonRef.current &&
+        !buttonRef.current.contains(event.target as Node)
+      ) {
+        setShowDropdown(false);
+      }
+    };
+
+    if (showDropdown) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showDropdown]);
 
   const handleStatusChange = async (newStatus: EstimateType["status"]) => {
     setLoading("status");
     try {
       await updateEstimateStatus(estimate._id.toString(), newStatus);
       toast.success("Status updated successfully");
-      onRefresh();
     } catch (error) {
       toast.error("Failed to update status");
     } finally {
@@ -75,13 +94,40 @@ export default function EstimateActions({
     }
   };
 
+  const calculateDropdownPosition = () => {
+    if (!buttonRef.current) return;
+
+    const rect = buttonRef.current.getBoundingClientRect();
+    const dropdownHeight = 280; // Approximate height of dropdown with all items
+    const dropdownWidth = 224; // 56 * 4 = 224px for md:w-56
+    const spaceBelow = window.innerHeight - rect.bottom - 20; // 20px buffer
+    const spaceAbove = rect.top - 20; // 20px buffer
+    const spaceRight = window.innerWidth - rect.right;
+    
+    // Determine vertical direction
+    const shouldGoUp = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+    
+    // Calculate position
+    const top = shouldGoUp 
+      ? rect.top - 8 + window.scrollY // Position just above the button with small gap
+      : rect.bottom + 8 + window.scrollY;
+    
+    // Ensure dropdown stays within viewport horizontally
+    let right = window.innerWidth - rect.right;
+    if (spaceRight < dropdownWidth) {
+      right = window.innerWidth - rect.left - rect.width;
+    }
+    
+    setDropdownPosition({
+      top,
+      right,
+      direction: shouldGoUp ? 'up' : 'down',
+    });
+  };
+
   const handleDropdownToggle = () => {
-    if (!showDropdown && buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + window.scrollY,
-        right: window.innerWidth - rect.right,
-      });
+    if (!showDropdown) {
+      calculateDropdownPosition();
     }
     setShowDropdown(!showDropdown);
   };
@@ -93,11 +139,10 @@ export default function EstimateActions({
 
   const handleDeleteModalClose = () => {
     setShowDeleteModal(false);
-    onRefresh();
   };
 
   return (
-    <div className="relative overflow-visible">
+    <div className="relative">
       <button
         ref={buttonRef}
         onClick={handleDropdownToggle}
@@ -113,26 +158,32 @@ export default function EstimateActions({
 
       {showDropdown && (
         <>
-          {/* Backdrop */}
+          {/* Dropdown Menu - positioned absolutely to body */}
           <div
-            className="fixed inset-0 z-10"
-            onClick={() => setShowDropdown(false)}
-          />
-
-          {/* Dropdown Menu */}
-          <div
-            className="ring-black fixed z-[9999] w-48 origin-top-right transform rounded-md bg-white py-1 shadow-lg ring-1 ring-opacity-5 focus:outline-none md:w-56"
+            ref={dropdownRef}
+            className={`fixed z-[9999] w-48 rounded-md bg-white py-1 shadow-xl ring-1 ring-black ring-opacity-5 focus:outline-none md:w-56 ${
+              dropdownPosition.direction === 'up' ? 'transform -translate-y-full' : ''
+            }`}
             style={{
               top: `${dropdownPosition.top}px`,
               right: `${dropdownPosition.right}px`,
             }}
           >
+            <Link
+              href={`/estimates/${estimate._id}`}
+              onClick={() => setShowDropdown(false)}
+              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <FaSearch className="mr-3 h-4 w-4" />
+              View Details
+            </Link>
+
             <button
               onClick={() => {
                 onEdit(estimate);
                 setShowDropdown(false);
               }}
-              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
             >
               <FaEdit className="mr-3 h-4 w-4" />
               Edit
@@ -141,19 +192,17 @@ export default function EstimateActions({
             <button
               onClick={generatePDF}
               disabled={loading === "pdf"}
-              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+              className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition-colors"
             >
               <FaEye className="mr-3 h-4 w-4" />
               Generate PDF
             </button>
 
-
-
             {estimate.status === "draft" && (
               <button
                 onClick={() => handleStatusChange("sent")}
                 disabled={loading === "status"}
-                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50"
+                className="flex w-full items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 disabled:opacity-50 transition-colors"
               >
                 <FaEye className="mr-3 h-4 w-4" />
                 Mark as Sent
@@ -165,7 +214,7 @@ export default function EstimateActions({
                 <button
                   onClick={() => handleStatusChange("approved")}
                   disabled={loading === "status"}
-                  className="flex w-full items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 disabled:opacity-50"
+                  className="flex w-full items-center px-4 py-2 text-sm text-green-700 hover:bg-green-50 disabled:opacity-50 transition-colors"
                 >
                   <FaFileInvoiceDollar className="mr-3 h-4 w-4" />
                   Mark as Approved
@@ -173,7 +222,7 @@ export default function EstimateActions({
                 <button
                   onClick={() => handleStatusChange("rejected")}
                   disabled={loading === "status"}
-                  className="flex w-full items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  className="flex w-full items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 disabled:opacity-50 transition-colors"
                 >
                   <FaTrash className="mr-3 h-4 w-4" />
                   Mark as Rejected
@@ -181,13 +230,11 @@ export default function EstimateActions({
               </>
             )}
 
-                
-
-            <div className="border-t border-gray-100" />
+            <div className="border-t border-gray-100 my-1" />
 
             <button
               onClick={handleDeleteClick}
-              className="flex w-full items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50"
+              className="flex w-full items-center px-4 py-2 text-sm text-red-700 hover:bg-red-50 transition-colors"
             >
               <FaTrash className="mr-3 h-4 w-4" />
               Delete

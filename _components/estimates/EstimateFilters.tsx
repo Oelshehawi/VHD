@@ -81,7 +81,7 @@ export default function EstimateFilters({
   const clearAllFilters = () => {
     setDateFrom("");
     setDateTo("");
-    replace(pathname);
+    replace(pathname || "/estimates");
   };
 
   const statusOptions = [
@@ -112,95 +112,96 @@ export default function EstimateFilters({
   ];
 
   return (
-    <div className="rounded-lg border bg-white p-4 shadow-sm">
+    <div className="rounded-lg border bg-white p-3 shadow-sm">
       {/* Search Bar */}
-      <div className="mb-4">
-        <div className="flex flex-col gap-3 md:flex-row">
-          <div className="flex flex-1">
-            <div className="relative flex-1">
-              <FaSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search estimates by number, business name, or contact..."
-                onChange={(e) => handleSearch(e.target.value)}
-                defaultValue={currentQuery}
-                className="h-10 w-full rounded-l-md border border-darkGreen px-3 pl-10 ring-2 ring-darkGreen focus:outline-none"
-              />
-            </div>
-            <div className="flex items-center justify-center rounded-r-md border-darkGreen bg-darkGreen px-2 py-0 text-white ring-2 ring-darkGreen md:px-3 md:py-1">
-              <FaSearch className="h-5 w-5" />
-            </div>
+      <div className="mb-3">
+        <div className="flex flex-1">
+          <div className="relative flex-1">
+            <FaSearch className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search estimates by number, business name, or contact..."
+              onChange={(e) => handleSearch(e.target.value)}
+              defaultValue={currentQuery}
+              className="h-9 w-full rounded-l-md border border-darkGreen px-3 pl-10 ring-2 ring-darkGreen focus:outline-none text-sm"
+            />
+          </div>
+          <div className="flex items-center justify-center rounded-r-md border-darkGreen bg-darkGreen px-2 py-0 text-white ring-2 ring-darkGreen">
+            <FaSearch className="h-4 w-4" />
           </div>
         </div>
       </div>
 
-      {/* Status Filters */}
-      <div className="mb-4">
-        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-gray-700">
-          <FaFilter className="h-3 w-3" />
-          Filter by status:
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {statusOptions.map((status) => (
+      {/* Filters Row */}
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+        {/* Date Range Filter */}
+        <div className="flex-1">
+          <div className="mb-2 text-sm font-medium text-gray-700">
+            Date range:
+          </div>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <input
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+              className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-darkGreen focus:outline-none focus:ring-1 focus:ring-darkGreen"
+              placeholder="From date"
+            />
+            <span className="hidden text-gray-500 sm:block">to</span>
+            <input
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+              className="rounded-md border border-gray-300 px-2 py-1.5 text-sm focus:border-darkGreen focus:outline-none focus:ring-1 focus:ring-darkGreen"
+              placeholder="To date"
+            />
             <button
-              key={status.key}
-              onClick={() => handleStatusFilter(status.key)}
-              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-                currentStatus === status.key
-                  ? "bg-darkGreen text-white"
-                  : status.color
-              }`}
+              onClick={handleDateFilter}
+              className="rounded-md bg-darkGreen px-3 py-1.5 text-sm text-white hover:bg-darkGreen/90"
             >
-              {status.label} ({status.count})
+              Apply
             </button>
-          ))}
+            {(dateFrom || dateTo) && (
+              <button
+                onClick={clearDateFilter}
+                className="text-xs text-gray-500 hover:text-gray-700"
+              >
+                Clear
+              </button>
+            )}
+          </div>
         </div>
-      </div>
 
-      {/* Date Range Filter */}
-      <div className="mb-4">
-        <div className="mb-3 text-sm font-medium text-gray-700">
-          Filter by date range:
-        </div>
-        <div className="flex flex-col gap-2 md:flex-row md:items-center">
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-darkGreen focus:outline-none focus:ring-1 focus:ring-darkGreen"
-            placeholder="From date"
-          />
-          <span className="hidden text-gray-500 md:block">to</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-darkGreen focus:outline-none focus:ring-1 focus:ring-darkGreen"
-            placeholder="To date"
-          />
-          <button
-            onClick={handleDateFilter}
-            className="rounded-md bg-darkGreen px-3 py-2 text-sm text-white hover:bg-darkGreen/90"
-          >
-            Apply Dates
-          </button>
-          {(dateFrom || dateTo) && (
-            <button
-              onClick={clearDateFilter}
-              className="text-sm text-gray-500 hover:text-gray-700"
-            >
-              Clear dates
-            </button>
-          )}
+        {/* Status Filters */}
+        <div className="flex-1">
+          <div className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700">
+            <FaFilter className="h-3 w-3" />
+            Status:
+          </div>
+          <div className="flex flex-wrap gap-1.5">
+            {statusOptions.map((status) => (
+              <button
+                key={status.key}
+                onClick={() => handleStatusFilter(status.key)}
+                className={`rounded-full px-2.5 py-1 text-xs font-medium transition-colors ${
+                  currentStatus === status.key
+                    ? "bg-darkGreen text-white"
+                    : status.color
+                }`}
+              >
+                {status.label} ({status.count})
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
       {/* Clear All Filters */}
       {(currentQuery || currentStatus || currentDateFrom || currentDateTo) && (
-        <div className="border-t pt-3">
+        <div className="border-t pt-2 mt-3">
           <button
             onClick={clearAllFilters}
-            className="text-sm text-gray-500 hover:text-gray-700"
+            className="text-xs text-gray-500 hover:text-gray-700"
           >
             Clear all filters
           </button>

@@ -108,6 +108,11 @@ export async function createSchedule(scheduleData: ScheduleType) {
   try {
     await connectMongo();
 
+    // Trim jobTitle to remove leading/trailing spaces
+    if (scheduleData.jobTitle) {
+      scheduleData.jobTitle = scheduleData.jobTitle.trim();
+    }
+
     if (typeof scheduleData.startDateTime === "string") {
       scheduleData.startDateTime = new Date(
         scheduleData.startDateTime,
@@ -202,6 +207,8 @@ export const updateJob = async ({
 }) => {
   await connectMongo();
   try {
+    // Trim jobTitle to remove leading/trailing spaces
+    const trimmedJobTitle = jobTitle.trim();
     const updatedStartDate = new Date(startDateTime);
 
     // Find or create the appropriate payroll period
@@ -211,7 +218,7 @@ export const updateJob = async ({
     await Schedule.findByIdAndUpdate(
       scheduleId,
       {
-        jobTitle,
+        jobTitle: trimmedJobTitle,
         location,
         startDateTime: updatedStartDate,
         assignedTechnicians,
