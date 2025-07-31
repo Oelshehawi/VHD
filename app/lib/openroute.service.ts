@@ -1,82 +1,212 @@
-import { GeocodeResult } from "../../pages/api/geocode";
-import { DistanceMatrixResult } from "../../pages/api/distance-matrix";
+import connectMongo from "./connect";
+import { LocationGeocode } from "../../models/reactDataSchema";
 
+// Types from the API routes
+interface OpenRouteGeocodeResponse {
+  features: Array<{
+    geometry: {
+      coordinates: [number, number]; // [lng, lat]
+    };
+    properties: {
+      label: string;
+      confidence: number;
+      accuracy: string;
+    };
+  }>;
+}
 
+interface OpenRouteMatrixResponse {
+  durations: number[][]; // seconds
+  distances: number[][]; // meters
+  sources: Array<{
+    location: [number, number];
+  }>;
+  destinations: Array<{
+    location: [number, number];
+  }>;
+}
 
+export interface GeocodeResult {
+  address: string;
+  coordinates: [number, number]; // [lng, lat]
+  cached: boolean;
+  confidence?: number;
+}
+
+export interface DistanceMatrixResult {
+  durations: number[][]; // Matrix of durations in minutes
+  distances: number[][]; // Matrix of distances in kilometers
+  sources: Array<[number, number]>; // [lng, lat] pairs
+  destinations: Array<[number, number]>; // [lng, lat] pairs
+}
+
+// Simple address normalization function
+function normalizeAddress(address: string): string {
+  return address.toLowerCase().trim().replace(/\s+/g, ' ');
+}
 class OpenRouteService {
-  private readonly baseURL: string;
-
-  constructor() {
-    // Use relative URLs for API calls within the same app
-    this.baseURL =
-      process.env.NODE_ENV === "production"
-        ? "https://vhd-psi.vercel.app" // Replace with your actual domain
-        : "http://localhost:3000";
-  }
 
   /**
    * Geocode multiple addresses to GPS coordinates
-   * Uses caching via our API endpoint
+   * Direct implementation without HTTP requests to own API
    */
   async geocodeAddresses(addresses: string[]): Promise<GeocodeResult[]> {
-    try {
-      console.log(`🗺️ Geocoding ${addresses.length} addresses...`);
+    await connectMongo();
 
-      console.log(addresses);
-      const response = await fetch(`${this.baseURL}/api/geocode`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ addresses }),
+    const results: GeocodeResult[] = [];
+
+    for (const address of addresses) {
+      const normalizedAddress = normalizeAddress(address);
+
+      // Check cache first
+      const cached = await LocationGeocode.findOne({
+        normalizedAddress,
       });
 
-      if (!response.ok) {
-        throw new Error(`Geocoding failed: ${response.statusText}`);
+      if (cached) {
+        console.log(`📍 Using cached coordinates for: ${address}`);
+        results.push({
+          address,
+          coordinates: cached.coordinates as [number, number],
+          cached: true,
+        });
+        continue;
       }
 
-      const { results }: { results: GeocodeResult[] } = await response.json();
+      // Make OpenRouteService API call
+      console.log(`🌐 Geocoding new address: ${address}`);
 
-      const cachedCount = results.filter((r) => r.cached).length;
-      const newCount = results.length - cachedCount;
+      try {
+        const openRouteResponse = await fetch(
+          `https://api.openrouteservice.org/geocode/search?api_key=${process.env.OPENROUTE_API_KEY}&text=${encodeURIComponent(address)}&boundary.country=CA&size=1`,
+          {
+            method: "GET",
+            headers: {
+              "Content-Type": "application/json",
+            },
+          },
+        );
 
-      console.log(
-        `📍 Geocoding complete: ${cachedCount} cached, ${newCount} new`,
-      );
+        if (!openRouteResponse.ok) {
+          console.error(`❌ OpenRouteService geocoding failed for: ${address}`);
+          continue;
+        }
 
-      return results;
-    } catch (error) {
-      console.error("❌ Geocoding error:", error);
-      throw error;
+        const data: OpenRouteGeocodeResponse = await openRouteResponse.json();
+
+        if (data.features && data.features.length > 0) {
+          const feature = data.features[0];
+          if (!feature) continue;
+
+          const coordinates = feature.geometry.coordinates as [number, number];
+          const confidence = feature.properties.confidence;
+
+          // Save to cache
+          await LocationGeocode.create({
+            address,
+            normalizedAddress,
+            coordinates,
+            lastGeocoded: new Date(),
+            source: "openroute",
+          });
+
+          results.push({
+            address,
+            coordinates,
+            cached: false,
+            confidence,
+          });
+
+          console.log(
+            `✅ Geocoded and cached: ${address} → [${coordinates[1]}, ${coordinates[0]}]`,
+          );
+        } else {
+          console.error(`❌ No geocoding results for: ${address}`);
+        }
+
+        // Rate limiting: small delay between requests
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      } catch (error) {
+        console.error(`❌ Error geocoding ${address}:`, error);
+      }
     }
+
+    const cachedCount = results.filter((r) => r.cached).length;
+    const newCount = results.length - cachedCount;
+
+    console.log(
+      `📍 Geocoding complete: ${cachedCount} cached, ${newCount} new`,
+    );
+
+    return results;
   }
 
   /**
    * Calculate distance matrix between coordinates
+   * Direct implementation without HTTP requests to own API
    */
   async calculateDistanceMatrix(
     coordinates: Array<[number, number]>,
   ): Promise<DistanceMatrixResult> {
     try {
-      console.log(
-        `🗺️ Calculating distance matrix for ${coordinates.length} locations...`,
-      );
-
-      const response = await fetch(`${this.baseURL}/api/distance-matrix`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ coordinates }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Distance matrix failed: ${response.statusText}`);
+      if (!coordinates || !Array.isArray(coordinates)) {
+        throw new Error("Coordinates array required");
       }
 
-      const result: DistanceMatrixResult = await response.json();
+      if (coordinates.length > 50) {
+        throw new Error("Maximum 50 coordinates allowed per request");
+      }
+
+      console.log(
+        `🗺️ Calculating distance matrix for ${coordinates.length} locations`,
+      );
+
+      // OpenRouteService Matrix API payload
+      const payload = {
+        locations: coordinates, // [lng, lat] format
+        sources: coordinates.map((_, index) => index),
+        destinations: coordinates.map((_, index) => index),
+        metrics: ["duration", "distance"],
+        units: "m", // meters for distance
+      };
+
+      const openRouteResponse = await fetch(
+        `https://api.openrouteservice.org/v2/matrix/driving-car`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: process.env.OPENROUTE_API_KEY!,
+          },
+          body: JSON.stringify(payload),
+        },
+      );
+
+      if (!openRouteResponse.ok) {
+        const errorText = await openRouteResponse.text();
+        console.error("❌ OpenRouteService matrix API error:", errorText);
+        throw new Error(`Distance matrix calculation failed: ${errorText}`);
+      }
+
+      const data: OpenRouteMatrixResponse = await openRouteResponse.json();
+
+      // Convert to more user-friendly units
+      const result: DistanceMatrixResult = {
+        durations: data.durations.map(
+          (row) => row.map((seconds) => Math.round(seconds / 60)), // Convert to minutes
+        ),
+        distances: data.distances.map(
+          (row) => row.map((meters) => Math.round((meters / 1000) * 100) / 100), // Convert to km, round to 2 decimals
+        ),
+        sources: coordinates,
+        destinations: coordinates,
+      };
 
       console.log(`✅ Distance matrix calculated successfully`);
+      console.log(
+        `   Max duration: ${Math.max(...result.durations.flat())} minutes`,
+      );
+      console.log(`   Max distance: ${Math.max(...result.distances.flat())} km`);
 
       return result;
     } catch (error) {

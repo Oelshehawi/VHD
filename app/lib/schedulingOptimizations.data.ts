@@ -13,6 +13,7 @@ import {
   DistanceMatrixCacheType,
 } from "./typeDefinitions";
 import { calculateJobDurationFromPrice, formatDateUTC } from "./utils";
+import openRouteService from "./openRoute.service";
 
 /**
  * Get historical scheduling times for similar jobs
@@ -292,39 +293,14 @@ export async function batchGeocodeJobLocations(
 
     if (locationsToGeocode.length > 0) {
       
-      // Use the existing geocoding API endpoint
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-      const response = await fetch(`${baseUrl}/api/geocode`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ addresses: locationsToGeocode }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Geocoding API error: ${response.status}`);
-      }
-
-      const geocodeResults = await response.json();
+      // Use the direct geocoding service
+      const geocodeResults = await openRouteService.geocodeAddresses(locationsToGeocode);
       
-      // Add new geocodes to map and save to database
-      for (const result of geocodeResults.results || []) {
+      // Add new geocodes to map
+      for (const result of geocodeResults) {
         if (result && result.coordinates) {
           const [lng, lat] = result.coordinates;
           geocodeMap.set(result.address, { lat, lng });
-          
-          // Save to database
-          await LocationGeocode.findOneAndUpdate(
-            { address: result.address },
-            {
-              address: result.address,
-              normalizedAddress: result.address.toLowerCase().trim(),
-              coordinates: [lng, lat],
-              lastGeocoded: new Date(),
-              source: 'openroute',
-            },
-            { upsert: true }
-          );
-          
         }
       }
     }
@@ -360,20 +336,11 @@ export async function calculateDistanceMatrixForCloudRun(
     // Add starting point (depot) as first location if provided
     if (startingPointAddress) {
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-        const response = await fetch(`${baseUrl}/api/geocode`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ addresses: [startingPointAddress] }),
-        });
-
-        if (response.ok) {
-          const geocodeResult = await response.json();
-          if (geocodeResult.results && geocodeResult.results.length > 0) {
-            const depotCoords = geocodeResult.results[0].coordinates;
-            locations.push(startingPointAddress);
-            coordinates.push([depotCoords[0], depotCoords[1]] as [number, number]); // [lng, lat]
-          }
+        const geocodeResults = await openRouteService.geocodeAddresses([startingPointAddress]);
+        if (geocodeResults.length > 0 && geocodeResults[0]?.coordinates) {
+          const depotCoords = geocodeResults[0].coordinates;
+          locations.push(startingPointAddress);
+          coordinates.push([depotCoords[0], depotCoords[1]] as [number, number]); // [lng, lat]
         }
       } catch (error) {
         console.warn("Failed to geocode starting point:", error);
@@ -415,19 +382,8 @@ export async function calculateDistanceMatrixForCloudRun(
 
     console.log(`🗺️ Calculating distance matrix for ${coordinates.length} locations...`);
 
-    // Calculate distance matrix using the API
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
-    const response = await fetch(`${baseUrl}/api/distance-matrix`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ coordinates }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Distance matrix API error: ${response.status}`);
-    }
-
-    const matrixResult = await response.json();
+    // Calculate distance matrix using the direct service
+    const matrixResult = await openRouteService.calculateDistanceMatrix(coordinates);
     
     // Cache the matrix for 1 hour (for real-time accuracy)
     const expiresAt = new Date();
