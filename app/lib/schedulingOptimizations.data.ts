@@ -10,9 +10,8 @@ import {
 import {
   JobOptimizationData,
   ClientType,
-  DistanceMatrixCacheType,
 } from "./typeDefinitions";
-import { calculateJobDurationFromPrice, formatDateUTC } from "./utils";
+import { calculateJobDurationFromPrice } from "./utils";
 import openRouteService from "./openRoute.service";
 
 /**
