@@ -13,6 +13,11 @@ export async function GET(
       return new Response("Estimate not found", { status: 404 });
     }
 
+    // Calculate totals from items
+    const subtotal = estimate.items.reduce((sum, item) => sum + item.price, 0);
+    const gst = subtotal * 0.05; // 5% GST
+    const total = subtotal + gst;
+
     // Get client name
     const clientName =
       estimate.clientId && (estimate as any).clientId?.clientName
@@ -490,24 +495,24 @@ export async function GET(
 
         <div class="totals-row">
           <div class="totals-label">Subtotal:</div>
-          <div class="totals-value" id="subtotal-display">$${estimate.subtotal.toFixed(2)}</div>
+          <div class="totals-value" id="subtotal-display">$${subtotal.toFixed(2)}</div>
         </div>
 
         <div class="totals-row gst-row">
           <div class="gst-number">GST# 814301065</div>
           <div class="gst-rate">GST (5%):</div>
-          <div class="gst-amount" id="gst-display">$${estimate.gst.toFixed(2)}</div>
+          <div class="gst-amount" id="gst-display">$${gst.toFixed(2)}</div>
         </div>
 
         <div class="totals-row final">
           <div class="totals-label">Total Estimate:</div>
-          <div class="totals-value" id="total-display">$${estimate.total.toFixed(2)}</div>
+          <div class="totals-value" id="total-display">$${total.toFixed(2)}</div>
         </div>
     </div>
 
-      <input type="hidden" id="subtotal" value="$${estimate.subtotal.toFixed(2)}" />
-      <input type="hidden" id="gst" value="$${estimate.gst.toFixed(2)}" />
-      <input type="hidden" id="totalEstimate" value="$${estimate.total.toFixed(2)}" />
+      <input type="hidden" id="subtotal" value="$${subtotal.toFixed(2)}" />
+      <input type="hidden" id="gst" value="$${gst.toFixed(2)}" />
+      <input type="hidden" id="totalEstimate" value="$${total.toFixed(2)}" />
 
       <div class="services-section">
         <div class="services-title">Our vent cleaning service includes:</div>
