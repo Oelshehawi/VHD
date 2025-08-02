@@ -96,19 +96,19 @@ const DashboardPage = async ({
 const ClientCount = async () => {
   const count = await getClientCount();
   return (
-    <div className="rounded-xl bg-white p-8 shadow-lg border border-gray-200 transition-all hover:scale-[1.02] hover:shadow-xl">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <div className="rounded-xl bg-gradient-to-r from-darkGreen to-green-600 p-4 shadow-lg">
-            <FaPeopleGroup className="h-8 w-8 text-white" />
+    <div className="rounded-xl bg-white p-4 sm:p-8 shadow-lg border border-gray-200 transition-all hover:scale-[1.02] hover:shadow-xl">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="rounded-xl bg-gradient-to-r from-darkGreen to-green-600 p-3 sm:p-4 shadow-lg">
+            <FaPeopleGroup className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Total Clients</h2>
-            <p className="text-gray-600 text-base">Active customer base</p>
+            <h2 className="text-lg font-bold text-gray-900 sm:text-2xl">Total Clients</h2>
+            <p className="text-gray-600 text-sm sm:text-base">Active customer base</p>
           </div>
         </div>
-        <div className="rounded-xl bg-gray-50 p-6 text-center border border-gray-200">
-          <div className="text-4xl font-bold text-gray-900">{count}</div>
+        <div className="rounded-xl bg-gray-50 p-4 sm:p-6 text-center border border-gray-200">
+          <div className="text-2xl font-bold text-gray-900 sm:text-4xl">{count}</div>
         </div>
       </div>
     </div>

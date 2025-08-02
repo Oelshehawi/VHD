@@ -2,15 +2,16 @@
 
 import { EstimateType } from "../../app/lib/typeDefinitions";
 import EstimateStatusBadge from "./EstimateStatusBadge";
-import EstimateActions from "./EstimateActions";
-import Pagination from "../database/Pagination";
 import Link from "next/link";
+import { FaPenSquare, FaTrash } from "react-icons/fa";
+import { formatDateStringUTC } from "../../app/lib/utils";
 
 interface EstimatesListProps {
   estimates: EstimateType[];
   currentPage: number;
   totalPages: number;
   onEdit: (estimate: EstimateType) => void;
+  onDelete: (estimate: EstimateType) => void;
 }
 
 export default function EstimatesList({
@@ -18,11 +19,8 @@ export default function EstimatesList({
   currentPage,
   totalPages,
   onEdit,
+  onDelete,
 }: EstimatesListProps) {
-  const formatDate = (date: string | Date) => {
-    return new Date(date).toLocaleDateString("en-CA");
-  };
-
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-CA", {
       style: "currency",
@@ -46,8 +44,16 @@ export default function EstimatesList({
 
   if (!estimates.length) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center rounded bg-darkGreen/90">
-        <p className="text-xl font-semibold text-white">No estimates found</p>
+      <div className="flex min-h-[70vh] items-center justify-center rounded-xl bg-darkGray border border-borderGreen">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-darkGreen flex items-center justify-center border border-borderGreen">
+            <svg className="h-8 w-8 text-lightGray" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <p className="text-xl font-semibold text-white mb-2">No estimates found</p>
+          <p className="text-lightGray">Try adjusting your search or filters</p>
+        </div>
       </div>
     );
   }
@@ -100,7 +106,7 @@ export default function EstimatesList({
                     </div>
                     <div className="md:hidden space-y-2">
                       <div className="text-sm text-lightGray">
-                        {formatDate(estimate.createdDate)}
+                        {formatDateStringUTC(estimate.createdDate)}
                       </div>
                       <div className="flex items-center gap-3">
                         <EstimateStatusBadge status={estimate.status} />
@@ -124,7 +130,7 @@ export default function EstimatesList({
                   </div>
                 </td>
                 <td className="hidden px-6 py-4 text-sm text-lightGray md:table-cell">
-                  {formatDate(estimate.createdDate)}
+                  {formatDateStringUTC(estimate.createdDate)}
                 </td>
                 <td className="hidden px-6 py-4 md:table-cell">
                   <EstimateStatusBadge status={estimate.status} />
@@ -146,10 +152,20 @@ export default function EstimatesList({
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-center gap-3">
-                    <EstimateActions
-                      estimate={estimate}
-                      onEdit={onEdit}
-                    />
+                    <Link
+                      href={`/estimates/${estimate._id}`}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-darkBlue border border-borderGreen text-lightGray transition-all duration-200 hover:bg-darkGreen hover:scale-110"
+                      title="Edit Estimate"
+                    >
+                      <FaPenSquare className="h-4 w-4" />
+                    </Link>
+                    <button
+                      onClick={() => onDelete(estimate)}
+                      className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-600 border border-red-500 text-white transition-all duration-200 hover:bg-red-700 hover:scale-110"
+                      title="Delete Estimate"
+                    >
+                      <FaTrash className="h-4 w-4" />
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -157,13 +173,6 @@ export default function EstimatesList({
           </tbody>
         </table>
       </div>
-
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex justify-center">
-          <Pagination totalPages={totalPages} />
-        </div>
-      )}
     </div>
   );
 }

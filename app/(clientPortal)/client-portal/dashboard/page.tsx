@@ -53,6 +53,7 @@ export default async function ClientDashboardPage({
   const recentInvoices = await fetchClientInvoices(clientId);
   const recentReports = await fetchClientReports(clientId);
 
+
   // Fetch technician data for reports
   const technicianDataMap: Record<string, any> = {};
   const uniqueTechnicianIds = [
@@ -74,10 +75,10 @@ export default async function ClientDashboardPage({
   const isAdminView = isAdmin && resolvedSearchParams.clientId;
 
   return (
-    <div className="mx-auto max-w-7xl">
+    <div className="mx-auto max-w-7xl h-full flex flex-col">
       {/* Admin Viewing Banner */}
       {isAdminView && (
-        <div className="mb-4 rounded-md bg-amber-100 p-4">
+        <div className="mb-4 rounded-md bg-amber-100 p-4 flex-shrink-0">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg
@@ -106,10 +107,12 @@ export default async function ClientDashboardPage({
       )}
 
       {/* Welcome Banner */}
-      <WelcomeBanner clientName={client.clientName} />
+      <div className="flex-shrink-0">
+        <WelcomeBanner clientName={client.clientName} />
+      </div>
 
       {/* Main Content Grid */}
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3">
+      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-3 flex-1 min-h-0">
         {/* Left Column - Client Info and Google Review */}
         <div className="flex flex-col md:col-span-1">
           {/* Client Info Card */}
@@ -124,7 +127,7 @@ export default async function ClientDashboardPage({
         </div>
 
         {/* Tab Panel for Services, Invoices, Reports */}
-        <div className="md:col-span-2">
+        <div className="md:col-span-2 min-h-0">
           <TabPanel
             upcomingServices={upcomingServices}
             recentServices={recentServices}

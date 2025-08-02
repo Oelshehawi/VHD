@@ -171,6 +171,7 @@ export async function fetchClientPastSchedules(
     throw new Error("Not authenticated");
   }
 
+
   await connectMongo();
   try {
     const today = new Date();
@@ -192,51 +193,62 @@ export async function fetchClientPastSchedules(
       .limit(limit)
       .lean();
 
-    return schedules.map((schedule: any) => ({
-      _id: schedule._id.toString(),
-      invoiceRef: schedule.invoiceRef ? schedule.invoiceRef.toString() : "",
-      jobTitle: schedule.jobTitle || "",
-      location: schedule.location || "",
-      startDateTime: schedule.startDateTime.toLocaleString("en-US", {
-        timeZone: "UTC",
-      }),
-      assignedTechnicians: schedule.assignedTechnicians || [],
-      confirmed: schedule.confirmed || false,
-      hours: schedule.hours || 0,
-      payrollPeriod: schedule.payrollPeriod
-        ? schedule.payrollPeriod.toString()
-        : "",
-      deadRun: schedule.deadRun || false,
-      technicianNotes: schedule.technicianNotes || "",
-      shifts: Array.isArray(schedule.shifts)
-        ? schedule.shifts.map((shift: any) => ({
-            _id: shift._id.toString(),
-            technicianId: shift.technicianId || "",
-            clockIn: shift.clockIn || new Date(),
-            clockOut: shift.clockOut || new Date(),
-            jobDetails: shift.jobDetails || "",
-            hoursWorked: shift.hoursWorked || 0,
-          }))
-        : [],
-      photos: Array.isArray(schedule.photos)
-        ? schedule.photos.map((photo: any) => ({
-            _id: photo._id.toString(),
-            url: photo.url || "",
-            timestamp: photo.timestamp || new Date(),
-            technicianId: photo.technicianId || "",
-            type: photo.type || "before",
-          }))
-        : undefined,
-      signature: schedule.signature
-        ? {
-            _id: schedule.signature._id.toString(),
-            url: schedule.signature.url || "",
-            timestamp: schedule.signature.timestamp || new Date(),
-            signerName: schedule.signature.signerName || "",
-            technicianId: schedule.signature.technicianId || "",
-          }
-        : undefined,
-    }));
+    return schedules.map((schedule: any) => {
+      // Find the corresponding invoice to get the dateDue
+      const correspondingInvoice = clientInvoices.find((inv: any) => 
+        inv._id.toString() === schedule.invoiceRef?.toString()
+      );
+      
+      const dateDue = correspondingInvoice?.dateDue || null;
+      return {
+        _id: schedule._id.toString(),
+        invoiceRef: schedule.invoiceRef ? schedule.invoiceRef.toString() : "",
+        jobTitle: schedule.jobTitle || "",
+        location: schedule.location || "",
+        startDateTime: schedule.startDateTime.toLocaleString("en-US", {
+          timeZone: "UTC",
+        }),
+        dateDue: dateDue ? dateDue.toLocaleString("en-US", {
+          timeZone: "UTC",
+        }) : null,
+        assignedTechnicians: schedule.assignedTechnicians || [],
+        confirmed: schedule.confirmed || false,
+        hours: schedule.hours || 0,
+        payrollPeriod: schedule.payrollPeriod
+          ? schedule.payrollPeriod.toString()
+          : "",
+        deadRun: schedule.deadRun || false,
+        technicianNotes: schedule.technicianNotes || "",
+        shifts: Array.isArray(schedule.shifts)
+          ? schedule.shifts.map((shift: any) => ({
+              _id: shift._id.toString(),
+              technicianId: shift.technicianId || "",
+              clockIn: shift.clockIn || new Date(),
+              clockOut: shift.clockOut || new Date(),
+              jobDetails: shift.jobDetails || "",
+              hoursWorked: shift.hoursWorked || 0,
+            }))
+          : [],
+        photos: Array.isArray(schedule.photos)
+          ? schedule.photos.map((photo: any) => ({
+              _id: photo._id.toString(),
+              url: photo.url || "",
+              timestamp: photo.timestamp || new Date(),
+              technicianId: photo.technicianId || "",
+              type: photo.type || "before",
+            }))
+          : undefined,
+        signature: schedule.signature
+          ? {
+              _id: schedule.signature._id.toString(),
+              url: schedule.signature.url || "",
+              timestamp: schedule.signature.timestamp || new Date(),
+              signerName: schedule.signature.signerName || "",
+              technicianId: schedule.signature.technicianId || "",
+            }
+          : undefined,
+      };
+    });
   } catch (error) {
     console.error("Error fetching past schedules:", error);
     throw new Error("Failed to fetch past schedules");

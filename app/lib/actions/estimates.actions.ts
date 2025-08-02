@@ -7,19 +7,35 @@ import { EstimateType } from "../typeDefinitions";
 import { generateEstimateNumber } from "../estimates.data";
 import { createInvoice } from "./actions";
 
-export async function createEstimate(
-  estimateData: Omit<EstimateType, "_id" | "estimateNumber" | "createdDate">,
-) {
+// Type for creating new estimates (without _id)
+type CreateEstimateData = Omit<EstimateType, "_id" | "estimateNumber" | "createdDate">;
+
+export async function createEstimate(estimateData: CreateEstimateData) {
   await connectMongo();
   try {
     const estimateNumber = await generateEstimateNumber();
 
-    const newEstimate = new Estimate({
+    // Ensure all required fields are present and properly typed
+    const estimateToSave = {
       ...estimateData,
       estimateNumber,
       createdDate: new Date(),
-    });
+      // Ensure items array is properly structured
+      items: estimateData.items?.map(item => ({
+        description: item.description,
+        price: Number(item.price)
+      })) || [],
+      // Calculate totals from items
+      subtotal: estimateData.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0,
+      gst: (estimateData.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0) * 0.05,
+      total: (estimateData.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0) * 1.05,
+      // Ensure services array is properly structured
+      services: estimateData.services || [],
+      // Ensure status is valid
+      status: estimateData.status || "draft"
+    };
 
+    const newEstimate = new Estimate(estimateToSave as any);
     await newEstimate.save();
   } catch (error) {
     console.error("Database Error:", error);
@@ -35,7 +51,37 @@ export async function updateEstimate(
 ) {
   await connectMongo();
   try {
-    await Estimate.findByIdAndUpdate(estimateId, estimateData);
+    // Clean and validate the update data
+    const updateData: any = { ...estimateData };
+    
+    // Handle clientId - if empty string, set to null/undefined
+    if (updateData.clientId === "" || updateData.clientId === null) {
+      updateData.clientId = undefined;
+    }
+    
+    // Ensure items array is properly structured if provided
+    if (updateData.items) {
+      updateData.items = updateData.items.map((item: any) => ({
+        description: item.description,
+        price: Number(item.price)
+      }));
+      
+      // Calculate totals from items
+      const subtotal = updateData.items.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0);
+      const gst = subtotal * 0.05; // 5% GST
+      const total = subtotal + gst;
+      
+      updateData.subtotal = subtotal;
+      updateData.gst = gst;
+      updateData.total = total;
+    }
+    
+    // Ensure services array is properly structured if provided
+    if (updateData.services && !Array.isArray(updateData.services)) {
+      updateData.services = [];
+    }
+    
+    await Estimate.findByIdAndUpdate(estimateId, updateData);
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to update estimate");

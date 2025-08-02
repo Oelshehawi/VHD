@@ -4,7 +4,7 @@ import connectMongo from "./connect";
 import { Estimate } from "../../models/reactDataSchema";
 import { EstimateType } from "./typeDefinitions";
 
-const ITEMS_PER_PAGE = 10;
+const ITEMS_PER_PAGE = 5;
 
 export async function fetchAllEstimates() {
   await connectMongo();
@@ -89,17 +89,30 @@ export async function fetchFilteredEstimates(
       }
     }
 
-    const estimates = await Estimate.find(matchQuery)
-      .populate("clientId", "clientName email phoneNumber")
-      .sort({ createdDate: -1 })
-      .skip(offset)
-      .limit(ITEMS_PER_PAGE)
-      .lean<EstimateType[]>();
+    const estimates = await Estimate.aggregate([
+      { $match: matchQuery },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "clientData"
+        }
+      },
+      {
+        $addFields: {
+          clientId: { $arrayElemAt: ["$clientData", 0] }
+        }
+      },
+      { $sort: { createdDate: -1 } },
+      { $skip: offset },
+      { $limit: ITEMS_PER_PAGE },
+    ]);
 
     return estimates.map((estimate) => ({
       ...estimate,
       _id: estimate._id.toString(),
-      clientId: estimate.clientId?.toString(),
+      clientId: estimate.clientId?._id?.toString(),
       convertedToInvoice: estimate.convertedToInvoice?.toString(),
     }));
   } catch (error) {

@@ -7,9 +7,10 @@ import {
   MapPinIcon,
   CheckCircleIcon,
   PhotoIcon,
+  ClockIcon,
 } from "@heroicons/react/24/outline";
 import { ObjectId } from "mongodb";
-import { formatDateFns } from "../../../app/lib/utils";
+import { formatDateStringUTC } from "../../../app/lib/utils";
 import MediaDisplay from "../../invoices/MediaDisplay";
 import { createPortal } from "react-dom";
 
@@ -29,6 +30,7 @@ export interface ScheduleType {
   location?: string;
   confirmed?: boolean;
   photos?: PhotoType[];
+  dateDue?: string | Date; // Add due date field
 }
 
 export interface ServiceCardProps {
@@ -39,8 +41,31 @@ export interface ServiceCardProps {
 const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
 
-  // Format date if it's a Date object
-  const dateString = formatDateFns(service.startDateTime);
+  // Format date and time for display
+  const formatDateTime = (dateInput: string | Date) => {
+    if (typeof dateInput === 'string') {
+      const date = new Date(dateInput);
+      return date.toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    } else {
+      return dateInput.toLocaleString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZoneName: 'short'
+      });
+    }
+  };
 
   const hasPhotos = service.photos && service.photos.length > 0;
   const photos = service.photos || [];
@@ -48,6 +73,9 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
   // Count before and after photos
   const beforePhotos = photos.filter((photo) => photo.type === "before").length;
   const afterPhotos = photos.filter((photo) => photo.type === "after").length;
+
+  const nextDueDate = service.dateDue ? formatDateStringUTC(service.dateDue) : null;
+  console.log(nextDueDate);
 
   return (
     <>
@@ -86,8 +114,26 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
         <div className="space-y-2">
           <div className="flex items-center text-gray-600">
             <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
-            <span className="text-sm">{dateString}</span>
+            <span className="text-sm">{formatDateTime(service.startDateTime)}</span>
           </div>
+
+          {upcoming && service.dateDue && (
+            <div className="flex items-center text-orange-600">
+              <ClockIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+              <span className="text-sm font-medium">
+                Due: {formatDateStringUTC(service.dateDue)}
+              </span>
+            </div>
+          )}
+
+          { service.dateDue && (
+            <div className="flex items-center text-blue-600">
+              <ClockIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+              <span className="text-sm font-medium">
+                Next Due: {formatDateStringUTC(service.dateDue)}
+              </span>
+            </div>
+          )}
 
           {service.location && (
             <div className="flex items-center text-gray-600">

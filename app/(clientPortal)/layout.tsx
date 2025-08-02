@@ -25,9 +25,9 @@ export default async function ClientPortalLayout({
         </head>
         <body className={inter.className}>
           <Toaster position="top-center" />
-          <div className="flex min-h-screen flex-col bg-sky-1">
+          <div className="flex min-h-screen flex-col">
             {/* Main content */}
-            <main className="flex-1 px-4 py-8 md:px-8 lg:px-12">
+            <main className="flex-1 px-4 py-8 md:px-8 lg:px-12 overflow-hidden">
               {children}
             </main>
 

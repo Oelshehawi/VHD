@@ -27,26 +27,26 @@ const PendingAmountContainer = ({
   return (
     <>
       <div
-        className="rounded-xl bg-darkBlue p-4 text-white shadow-lg border border-borderGreen transition-all hover:scale-[1.02] hover:shadow-xl cursor-pointer"
+        className="rounded-xl bg-darkBlue p-3 sm:p-4 text-white shadow-lg border border-borderGreen transition-all hover:scale-[1.02] hover:shadow-xl cursor-pointer"
         onClick={() => setOpen(true)}
       >
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-darkGreen/50 p-2 border border-borderGreen">
-              <FaDollarSign className="h-6 w-6" />
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="rounded-lg bg-darkGreen/50 p-1.5 sm:p-2 border border-borderGreen">
+              <FaDollarSign className="h-4 w-4 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h2 className="text-lg font-bold">Pending Amount</h2>
-              <p className="text-lightGray text-sm">Outstanding invoices</p>
+              <h2 className="text-base font-bold sm:text-lg">Pending Amount</h2>
+              <p className="text-lightGray text-xs sm:text-sm">Outstanding invoices</p>
             </div>
           </div>
-          <div className="text-right">
-            <div className="rounded-lg bg-darkGray p-3 text-center border border-borderGreen">
-              <div className="text-2xl font-bold">{formatAmount(amount)}</div>
+          <div className="text-center sm:text-right">
+            <div className="rounded-lg bg-darkGray p-2 sm:p-3 text-center border border-borderGreen">
+              <div className="text-xl font-bold sm:text-2xl">{formatAmount(amount)}</div>
             </div>
-            <div className="flex items-center justify-end gap-2 mt-2">
+            <div className="flex items-center justify-center sm:justify-end gap-1 sm:gap-2 mt-1 sm:mt-2">
               <FaClock className="h-3 w-3 text-lightGray" />
-              <span className="text-sm text-lightGray">{pendingInvoices.length} invoices</span>
+              <span className="text-xs sm:text-sm text-lightGray">{pendingInvoices.length} invoices</span>
             </div>
           </div>
         </div>

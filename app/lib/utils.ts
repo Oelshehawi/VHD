@@ -52,13 +52,36 @@ export const formatDateStringUTC = (dateInput: string | Date): string => {
     const day = String(dateInput.getUTCDate()).padStart(2, '0');
     dateString = `${year}-${month}-${day}`;
   } else if (typeof dateInput === 'string') {
-    dateString = dateInput.includes('T') ? dateInput.split('T')[0] : dateInput;
+    // Handle datetime strings like '3/5/2025, 12:00:00 AM'
+    if (dateInput.includes(',')) {
+      // Split by comma and take the date part
+      const datePart = dateInput.split(',')[0];
+      // Parse the date part (e.g., '3/5/2025')
+      const date = new Date(datePart);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        dateString = `${year}-${month}-${day}`;
+      }
+    } else if (dateInput.includes('T')) {
+      // Handle ISO format with T
+      dateString = dateInput.split('T')[0];
+    } else {
+      // Handle other date formats
+      dateString = dateInput;
+    }
   } else {
     console.warn('formatDateStringUTC received invalid input:', dateInput);
     return 'Invalid Date';
   }
   
-  const dateParts = dateString!.split("-");
+  if (!dateString) {
+    console.warn('formatDateStringUTC could not parse date:', dateInput);
+    return 'Invalid Date';
+  }
+  
+  const dateParts = dateString.split("-");
   if (dateParts.length !== 3) {
     console.warn('formatDateStringUTC received invalid date format:', dateString);
     return 'Invalid Date';

@@ -80,17 +80,18 @@ const TabPanel = ({
 
   // Convert AppScheduleType to ServiceCardScheduleType
   const convertToServiceCardSchedule = (
-    service: AppScheduleType,
-  ): ServiceCardScheduleType => {
+    service: any,
+  ): any => {
     return {
       _id:
         typeof service._id === "string" ? service._id : service._id.toString(),
       jobTitle: service.jobTitle,
       startDateTime: service.startDateTime,
+      dateDue: service.dateDue,
       location: service.location,
       confirmed: service.confirmed,
       photos: service.photos
-        ? service.photos.map((photo) => ({
+        ? service.photos.map((photo: any) => ({
             _id:
               typeof photo._id === "string" ? photo._id : photo._id.toString(),
             url: photo.url,
