@@ -25,10 +25,10 @@ export async function createEstimate(estimateData: CreateEstimateData) {
         description: item.description,
         price: Number(item.price)
       })) || [],
-      // Calculate totals from items
-      subtotal: estimateData.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0,
-      gst: (estimateData.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0) * 0.05,
-      total: (estimateData.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0) * 1.05,
+      // Calculate totals from items with proper rounding
+      subtotal: Math.round((estimateData.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0) * 100) / 100,
+      gst: Math.round((estimateData.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0) * 0.05 * 100) / 100,
+      total: Math.round((estimateData.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0) * 1.05 * 100) / 100,
       // Ensure services array is properly structured
       services: estimateData.services || [],
       // Ensure status is valid
@@ -66,10 +66,10 @@ export async function updateEstimate(
         price: Number(item.price)
       }));
       
-      // Calculate totals from items
-      const subtotal = updateData.items.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0);
-      const gst = subtotal * 0.05; // 5% GST
-      const total = subtotal + gst;
+      // Calculate totals from items with proper rounding
+      const subtotal = Math.round(updateData.items.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) * 100) / 100;
+      const gst = Math.round(subtotal * 0.05 * 100) / 100; // 5% GST
+      const total = Math.round((subtotal + gst) * 100) / 100;
       
       updateData.subtotal = subtotal;
       updateData.gst = gst;

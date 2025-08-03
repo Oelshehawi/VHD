@@ -5,11 +5,11 @@ import { EstimateType, ClientType } from "../../app/lib/typeDefinitions";
 import EstimatesList from "./EstimatesList";
 import EstimateFilters from "./EstimateFilters";
 import Pagination from "../database/Pagination";
-import { FaPlus, FaTimes, FaEdit, FaTrash } from "react-icons/fa";
+import { FaTimes, FaEdit, FaTrash } from "react-icons/fa";
 import DeleteModal from "../DeleteModal";
 import { toast } from "react-hot-toast";
 import { updateEstimateStatus } from "../../app/lib/actions/estimates.actions";
-import Link from "next/link";
+import AddEstimate from "./AddEstimate";
 
 interface EstimatesPageProps {
   query: string;
@@ -75,13 +75,7 @@ export function EstimatesPage({
         <h1 className="text-xl font-bold text-gray-900 md:text-2xl">
           Estimates
         </h1>
-        <Link
-          href="/estimates/new"
-          className="flex items-center justify-center gap-2 rounded-lg bg-darkGreen px-3 py-2 text-sm text-white transition-colors hover:bg-darkGreen/90 sm:w-auto"
-        >
-          <FaPlus className="h-4 w-4" />
-          New Estimate
-        </Link>
+        <AddEstimate clients={clients} />
       </div>
 
       {/* Status Overview */}

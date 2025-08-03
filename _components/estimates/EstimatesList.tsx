@@ -28,6 +28,13 @@ export default function EstimatesList({
     }).format(amount);
   };
 
+  const calculateTotals = (estimate: EstimateType) => {
+    const subtotal = Math.round((estimate.items?.reduce((sum, item) => sum + (Number(item.price) || 0), 0) || 0) * 100) / 100;
+    const gst = Math.round(subtotal * 0.05 * 100) / 100; // 5% GST
+    const total = Math.round((subtotal + gst) * 100) / 100;
+    return { subtotal, gst, total };
+  };
+
   const getClientName = (estimate: EstimateType) => {
     if (estimate.clientId && (estimate as any).clientId?.clientName) {
       return (estimate as any).clientId.clientName;
@@ -111,7 +118,7 @@ export default function EstimatesList({
                       <div className="flex items-center gap-3">
                         <EstimateStatusBadge status={estimate.status} />
                         <span className="text-sm font-medium text-white">
-                          {formatCurrency(estimate.total)}
+                          {formatCurrency(calculateTotals(estimate).total)}
                         </span>
                       </div>
                       {estimate.convertedToInvoice && (
@@ -144,10 +151,10 @@ export default function EstimatesList({
                 </td>
                 <td className="hidden px-6 py-4 text-sm font-semibold text-white md:table-cell">
                   <div className="font-medium">
-                    {formatCurrency(estimate.total)}
+                    {formatCurrency(calculateTotals(estimate).total)}
                   </div>
                   <div className="text-sm text-lightGray">
-                    +{formatCurrency(estimate.gst)} GST
+                    +{formatCurrency(calculateTotals(estimate).gst)} GST
                   </div>
                 </td>
                 <td className="px-6 py-4">

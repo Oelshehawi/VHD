@@ -13,10 +13,10 @@ export async function GET(
       return new Response("Estimate not found", { status: 404 });
     }
 
-    // Calculate totals from items
-    const subtotal = estimate.items.reduce((sum, item) => sum + item.price, 0);
-    const gst = subtotal * 0.05; // 5% GST
-    const total = subtotal + gst;
+    // Calculate totals from items with proper rounding
+    const subtotal = Math.round(estimate.items.reduce((sum, item) => sum + item.price, 0) * 100) / 100;
+    const gst = Math.round(subtotal * 0.05 * 100) / 100; // 5% GST
+    const total = Math.round((subtotal + gst) * 100) / 100;
 
     // Get client name
     const clientName =
@@ -749,10 +749,10 @@ ${estimate.terms || "Payment is due upon completion of service. Prices subject t
                 yPos += 5;
               }
 
-              // Add estimate details - move below the company and client info
-            yPos += 15;
-              doc.setDrawColor(0, 62, 41);
-              doc.line(15, yPos - 5, 195, yPos - 5);
+                             // Add estimate details - move below the company and client info
+             yPos += 8;
+               doc.setDrawColor(0, 62, 41);
+               doc.line(15, yPos - 5, 195, yPos - 5);
 
               doc.setFont('helvetica', 'bold');
               doc.text('Estimate No:', 15, yPos);
@@ -782,40 +782,97 @@ ${estimate.terms || "Payment is due upon completion of service. Prices subject t
                 yPos
               );
 
-              // Add table header
-              yPos += 15;
-              doc.setFillColor(0, 62, 41); // #003e29
-              doc.setDrawColor(0, 62, 41);
-              doc.setTextColor(255, 255, 255);
-              doc.rect(15, yPos, 180, 10, 'F');
+                             // Add table header
+               yPos += 8;
+               doc.setFillColor(0, 62, 41); // #003e29
+               doc.setDrawColor(0, 62, 41);
+               doc.setTextColor(255, 255, 255);
+               doc.rect(15, yPos, 180, 10, 'F');
               doc.text('#', 20, yPos + 7);
               doc.text('Item Description', 40, yPos + 7);
               doc.text('Price', 140, yPos + 7);
               doc.text('Total', 170, yPos + 7);
 
-              // Add items
+              // Add items with pagination
               doc.setTextColor(0, 0, 0);
               yPos += 10;
 
               // Add table grid
               doc.setDrawColor(200, 200, 200);
 
+                             const pageHeight = doc.internal.pageSize.getHeight();
+               const marginBottom = 5; // Space needed for totals and footer
+               const maxY = pageHeight - marginBottom;
+
               items.forEach((item, index) => {
+                // Calculate row height before drawing
+                const descriptionLines = doc.splitTextToSize(item.description, 90);
+                const rowHeight = Math.max(10, descriptionLines.length * 5);
+
+                // Check if we need a new page
+                if (yPos + rowHeight > maxY) {
+                  // Add page break
+                  doc.addPage();
+                  
+                  // Add watermark to new page if logo is available
+                  if (logoImage && logoImage.complete) {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+
+                    // Set canvas dimensions to match the image
+                    canvas.width = logoImage.width;
+                    canvas.height = logoImage.height;
+
+                    // Draw the image with transparency
+                    ctx.globalAlpha = 0.1; // 10% opacity
+                    ctx.drawImage(logoImage, 0, 0);
+
+                    // Get the transparent image data
+                    const transparentLogoData = canvas.toDataURL('image/png');
+
+                    // Calculate position to center the logo
+                    const logoWidth = 120;
+                    const logoX = (doc.internal.pageSize.getWidth() - logoWidth) / 2;
+
+                    // Add as background watermark
+                    doc.addImage(
+                      transparentLogoData,
+                      'PNG',
+                      logoX,
+                      70,
+                      logoWidth,
+                      logoWidth * (logoImage.height / logoImage.width)
+                    );
+                  }
+                  
+                  // Reset position for new page
+                  yPos = 20;
+                  
+                  // Redraw table header on new page
+                  doc.setFillColor(0, 62, 41); // #003e29
+                  doc.setDrawColor(0, 62, 41);
+                  doc.setTextColor(255, 255, 255);
+                  doc.rect(15, yPos, 180, 10, 'F');
+                  doc.text('#', 20, yPos + 7);
+                  doc.text('Item Description', 40, yPos + 7);
+                  doc.text('Price', 140, yPos + 7);
+                  doc.text('Total', 170, yPos + 7);
+                  
+                  doc.setTextColor(0, 0, 0);
+                  yPos += 10;
+                }
+
                 const startY = yPos;
 
                 // Draw item number
                 doc.text((index + 1).toString(), 20, yPos + 5);
 
                 // Word wrap for description
-                const descriptionLines = doc.splitTextToSize(item.description, 90);
                 doc.text(descriptionLines, 40, yPos + 5);
 
                 // Draw price and total
                 doc.text(item.price, 140, yPos + 5);
                 doc.text(item.total, 170, yPos + 5);
-
-                // Calculate row height based on description lines
-                const rowHeight = Math.max(10, descriptionLines.length * 5);
 
                 // Draw horizontal line for the bottom of the row
                 yPos += rowHeight;
@@ -829,7 +886,47 @@ ${estimate.terms || "Payment is due upon completion of service. Prices subject t
                 doc.line(195, startY, 195, yPos); // Right border
               });
 
-              // Add totals
+              // Add totals - check if we need a new page
+              const totalSectionHeight = 26; // Height for all three total rows
+              
+              if (yPos + totalSectionHeight > maxY) {
+                // Add page break for totals
+                doc.addPage();
+                
+                // Add watermark to new page if logo is available
+                if (logoImage && logoImage.complete) {
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d');
+
+                  // Set canvas dimensions to match the image
+                  canvas.width = logoImage.width;
+                  canvas.height = logoImage.height;
+
+                  // Draw the image with transparency
+                  ctx.globalAlpha = 0.1; // 10% opacity
+                  ctx.drawImage(logoImage, 0, 0);
+
+                  // Get the transparent image data
+                  const transparentLogoData = canvas.toDataURL('image/png');
+
+                  // Calculate position to center the logo
+                  const logoWidth = 120;
+                  const logoX = (doc.internal.pageSize.getWidth() - logoWidth) / 2;
+
+                  // Add as background watermark
+                  doc.addImage(
+                    transparentLogoData,
+                    'PNG',
+                    logoX,
+                    70,
+                    logoWidth,
+                    logoWidth * (logoImage.height / logoImage.width)
+                  );
+                }
+                
+                yPos = 20;
+              }
+
               let totalRowHeight = 8;
 
               // Subtotal row
@@ -857,16 +954,55 @@ ${estimate.terms || "Payment is due upon completion of service. Prices subject t
               doc.setFont('helvetica', 'normal');
               yPos += totalRowHeight + 2;
 
-              // Add services section
-              yPos += 15;
+              // Create two-column layout for services
+              const leftColumnServices = services.slice(0, Math.ceil(services.length / 2));
+              const rightColumnServices = services.slice(Math.ceil(services.length / 2));
+
+              // Add services section - check if we need a new page
+              const servicesHeight = 8 + 8 + Math.max(leftColumnServices.length, rightColumnServices.length) * 8;
+              
+              if (yPos + servicesHeight > maxY) {
+                doc.addPage();
+                
+                // Add watermark to new page if logo is available
+                if (logoImage && logoImage.complete) {
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d');
+
+                  // Set canvas dimensions to match the image
+                  canvas.width = logoImage.width;
+                  canvas.height = logoImage.height;
+
+                  // Draw the image with transparency
+                  ctx.globalAlpha = 0.1; // 10% opacity
+                  ctx.drawImage(logoImage, 0, 0);
+
+                  // Get the transparent image data
+                  const transparentLogoData = canvas.toDataURL('image/png');
+
+                  // Calculate position to center the logo
+                  const logoWidth = 120;
+                  const logoX = (doc.internal.pageSize.getWidth() - logoWidth) / 2;
+
+                  // Add as background watermark
+                  doc.addImage(
+                    transparentLogoData,
+                    'PNG',
+                    logoX,
+                    70,
+                    logoWidth,
+                    logoWidth * (logoImage.height / logoImage.width)
+                  );
+                }
+                
+                yPos = 20;
+              }
+
+              yPos += 8;
               doc.setFont('helvetica', 'bold');
               doc.text('Our vent cleaning service includes:', 15, yPos);
               doc.setFont('helvetica', 'normal');
               yPos += 8;
-
-              // Create two-column layout for services
-              const leftColumnServices = services.slice(0, Math.ceil(services.length / 2));
-              const rightColumnServices = services.slice(Math.ceil(services.length / 2));
 
               let serviceY = yPos;
               leftColumnServices.forEach((service, index) => {
@@ -886,15 +1022,55 @@ ${estimate.terms || "Payment is due upon completion of service. Prices subject t
               );
 
               // Add thank you note
-              yPos += 15;
+              yPos += 8;
               doc.setFont('helvetica', 'bold');
               doc.text('THANK YOU FOR YOUR INQUIRY', 105, yPos, {
                 align: 'center',
               });
               doc.setFont('helvetica', 'normal');
 
-              // Add terms
-              yPos += 15;
+              // Add terms - check if we need a new page
+              const termsLines = doc.splitTextToSize(terms, 180);
+              const termsHeight = 8 + 7 + termsLines.length * 5;
+              
+              if (yPos + termsHeight > maxY) {
+                doc.addPage();
+                
+                // Add watermark to new page if logo is available
+                if (logoImage && logoImage.complete) {
+                  const canvas = document.createElement('canvas');
+                  const ctx = canvas.getContext('2d');
+
+                  // Set canvas dimensions to match the image
+                  canvas.width = logoImage.width;
+                  canvas.height = logoImage.height;
+
+                  // Draw the image with transparency
+                  ctx.globalAlpha = 0.1; // 10% opacity
+                  ctx.drawImage(logoImage, 0, 0);
+
+                  // Get the transparent image data
+                  const transparentLogoData = canvas.toDataURL('image/png');
+
+                  // Calculate position to center the logo
+                  const logoWidth = 120;
+                  const logoX = (doc.internal.pageSize.getWidth() - logoWidth) / 2;
+
+                  // Add as background watermark
+                  doc.addImage(
+                    transparentLogoData,
+                    'PNG',
+                    logoX,
+                    70,
+                    logoWidth,
+                    logoWidth * (logoImage.height / logoImage.width)
+                  );
+                }
+                
+                yPos = 20;
+              }
+
+              yPos += 8;
               doc.setTextColor(0, 62, 41);
               doc.setFont('helvetica', 'bold');
               doc.text('TERMS & CONDITIONS', 15, yPos);
@@ -902,7 +1078,6 @@ ${estimate.terms || "Payment is due upon completion of service. Prices subject t
               doc.setTextColor(0, 0, 0);
 
               // Split terms into lines
-              const termsLines = doc.splitTextToSize(terms, 180);
               yPos += 7;
               doc.text(termsLines, 15, yPos);
 
@@ -921,11 +1096,6 @@ ${estimate.terms || "Payment is due upon completion of service. Prices subject t
               // Save the PDF with dynamic filename
               doc.save(fileName);
               document.getElementById('loading').style.display = 'none';
-              
-              // Close the window after a brief delay
-              setTimeout(function() {
-                window.close();
-              }, 1000);
               
             } catch (error) {
               console.error('Error generating PDF:', error);

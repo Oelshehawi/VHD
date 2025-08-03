@@ -80,10 +80,10 @@ const InlineEditEstimate = ({
           price: Number(item.price) || 0
         }));
         
-        // Calculate totals from items
-        const subtotal = processedData.items.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0);
-        const gst = subtotal * 0.05; // 5% GST
-        const total = subtotal + gst;
+        // Calculate totals from items with proper rounding
+        const subtotal = Math.round(processedData.items.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) * 100) / 100;
+        const gst = Math.round(subtotal * 0.05 * 100) / 100; // 5% GST
+        const total = Math.round((subtotal + gst) * 100) / 100;
         
         processedData.subtotal = subtotal;
         processedData.gst = gst;
@@ -457,19 +457,19 @@ const InlineEditEstimate = ({
              <div className="flex justify-between items-center">
                <span className="text-sm text-gray-600">Subtotal:</span>
                <span className="text-sm font-medium text-gray-900">
-                 ${estimate.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || '0.00'}
+                 ${(estimate.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0).toFixed(2)}
                </span>
              </div>
              <div className="flex justify-between items-center">
                <span className="text-sm text-gray-600">GST (5%):</span>
                <span className="text-sm font-medium text-gray-900">
-                 ${estimate.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) * 0.05 || '0.00'}
+                 ${((estimate.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0) * 0.05).toFixed(2)}
                </span>
              </div>
              <div className="flex justify-between items-center border-t border-gray-200 pt-2">
                <span className="text-sm font-medium text-gray-900">Total:</span>
                <span className="text-sm font-bold text-gray-900">
-                 ${estimate.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) * 1.05 || '0.00'}
+                 ${((estimate.items?.reduce((sum: number, item: any) => sum + (Number(item.price) || 0), 0) || 0) * 1.05).toFixed(2)}
                </span>
              </div>
            </div>
