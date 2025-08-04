@@ -16,7 +16,6 @@ const InlineEditClient = ({ client, isEditing, toggleEdit }: { client: ClientTyp
   const updateClientWithId = updateClient.bind(null, client._id as string);
   const { register, handleSubmit, formState: { errors } } = useForm();
 
-  console.log(client);
 
   // Get current email values for display and defaults - Fixed the bug here
   const primaryEmail = getEmailForPurpose(client, "primary") || client.email || "";

@@ -30,7 +30,6 @@ const InvoiceSelectionModal = ({
       }
     });
 
-    console.log(locationMap);
     // Convert map values back to array
     setUniqueInvoices(Array.from(locationMap.values()));
   }, [invoices]);

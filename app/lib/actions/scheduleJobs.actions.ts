@@ -237,7 +237,10 @@ export const updateJob = async ({
 
 export async function getTechnicians() {
   const users: any = await clerkClient();
-  const userList = await users.users.getUserList();
+  const userList = await users.users.getUserList({
+    limit: 100,
+  });
+
 
   const technicians = userList.data.filter((user: any) => user.publicMetadata.isTechnician === true);
   return technicians.map((user: any) => ({

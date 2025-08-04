@@ -25,7 +25,6 @@ const TokenVerifier: React.FC = () => {
         // Safely get the token from search params
         const token = searchParams?.get("client_token");
 
-        console.log("token", token);
 
         if (!token) {
           setError("Invalid or missing token");

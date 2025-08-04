@@ -75,7 +75,6 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
   const afterPhotos = photos.filter((photo) => photo.type === "after").length;
 
   const nextDueDate = service.dateDue ? formatDateStringUTC(service.dateDue) : null;
-  console.log(nextDueDate);
 
   return (
     <>
