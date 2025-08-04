@@ -4,6 +4,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useSignIn, useClerk } from "@clerk/nextjs";
 import Image from "next/image";
 import dynamic from "next/dynamic";
+import { generateFreshClientToken } from "../lib/clerkClientPortal";
 
 // Loading spinner component
 const LoadingSpinner = () => (
@@ -23,6 +24,7 @@ function AcceptTokenContent() {
   const [error, setError] = useState<string | null>(null);
 
   const token = searchParams?.get("client_token");
+  const clientId = searchParams?.get("clientId");
 
 
 
@@ -32,19 +34,28 @@ function AcceptTokenContent() {
       if (attemptRef.current) return;
       attemptRef.current = true;
 
-      if (!isLoaded || !token) {
-        setError("Invalid or missing access token");
+      if (!isLoaded || (!token && !clientId)) {
+        setError("Invalid or missing access information");
         setLoading(false);
         return;
       }
 
       // Check if user is already signed in as a client portal user
       if (user && (user as any)?.publicMetadata?.isClientPortalUser) {
-        // User is already authenticated as client portal user, redirect directly
-        setTimeout(() => {
-          router.push("/client-portal/dashboard");
-        }, 1000);
-        return;
+        // If clientId provided, verify it matches the logged-in user
+        if (clientId && (user as any)?.publicMetadata?.clientId === clientId) {
+          // User is already authenticated for this client, redirect directly
+          setTimeout(() => {
+            router.push("/client-portal/dashboard");
+          }, 1000);
+          return;
+        } else if (!clientId) {
+          // No clientId specified, just redirect
+          setTimeout(() => {
+            router.push("/client-portal/dashboard");
+          }, 1000);
+          return;
+        }
       }
 
       // If there's any existing session, sign out first
@@ -59,9 +70,35 @@ function AcceptTokenContent() {
       }
 
       try {
+        let authToken = token;
+        
+        // If we have clientId but no token, generate a fresh token
+        if (clientId && !token) {
+          try {
+            const result = await generateFreshClientToken(clientId);
+            
+            if (!result.success || !result.token) {
+              throw new Error("Invalid client or unauthorized access");
+            }
+            
+            authToken = result.token;
+          } catch (tokenError) {
+            console.error("Error generating token for clientId:", tokenError);
+            setError("Unable to access client portal. Please contact support or request a new access link.");
+            setLoading(false);
+            return;
+          }
+        }
+
+        if (!authToken) {
+          setError("Unable to generate access token");
+          setLoading(false);
+          return;
+        }
+
         const signInAttempt = await signIn.create({
           strategy: "ticket",
-          ticket: token,
+          ticket: authToken,
         });
 
         if (signInAttempt.status === "complete") {
@@ -95,13 +132,13 @@ function AcceptTokenContent() {
     }
 
     // Handle access when component is loaded and clerk is ready
-    if (isLoaded && token) {
+    if (isLoaded && (token || clientId)) {
       handleAccess();
-    } else if (isLoaded && !token) {
-      setError("No access token provided");
+    } else if (isLoaded && !token && !clientId) {
+      setError("No access information provided");
       setLoading(false);
     }
-  }, [isLoaded, router, setActive, signIn, token, user, signOut]);
+  }, [isLoaded, router, setActive, signIn, token, clientId, user, signOut]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">

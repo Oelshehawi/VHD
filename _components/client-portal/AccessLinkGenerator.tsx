@@ -105,7 +105,7 @@ export default function AccessLinkGenerator({
             </button>
           </div>
           <p className="mt-2 text-sm text-gray-600">
-            This link expires in 7 days. Share it with your client at{" "}
+            This link is reusable - clients can use it multiple times and bookmark it. Share it with your client at{" "}
             {clientEmail}.
           </p>
         </div>
