@@ -37,9 +37,21 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
     setIsLoading(true);
 
     try {
-      if (typeof data.startDateTime === "string") {
-        const localDate = new Date(data.startDateTime);
-        data.startDateTime = new Date(
+      // Trim all string fields to remove leading/trailing spaces
+      const trimmedData = { ...data };
+      if (trimmedData.jobTitle) {
+        trimmedData.jobTitle = trimmedData.jobTitle.trim();
+      }
+      if (trimmedData.location) {
+        trimmedData.location = trimmedData.location.trim();
+      }
+      if (trimmedData.technicianNotes) {
+        trimmedData.technicianNotes = trimmedData.technicianNotes.trim();
+      }
+
+      if (typeof trimmedData.startDateTime === "string") {
+        const localDate = new Date(trimmedData.startDateTime);
+        trimmedData.startDateTime = new Date(
           Date.UTC(
             localDate.getFullYear(),
             localDate.getMonth(),
@@ -53,11 +65,11 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
 
       await updateJob({
         scheduleId: job._id as string,
-        jobTitle: data.jobTitle,
-        location: data.location,
-        startDateTime: data.startDateTime,
-        assignedTechnicians: data.assignedTechnicians,
-        technicianNotes: data.technicianNotes,
+        jobTitle: trimmedData.jobTitle,
+        location: trimmedData.location,
+        startDateTime: trimmedData.startDateTime,
+        assignedTechnicians: trimmedData.assignedTechnicians,
+        technicianNotes: trimmedData.technicianNotes,
       });
 
       toast.success("Job updated successfully");

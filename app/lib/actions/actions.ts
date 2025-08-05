@@ -110,9 +110,23 @@ export async function deleteInvoice(invoiceId: string) {
 export async function createInvoice(invoiceData: any) {
   await connectMongo();
   try {
-    // Trim jobTitle to remove leading/trailing spaces
+    // Trim all string fields to remove leading/trailing spaces
     if (invoiceData.jobTitle) {
       invoiceData.jobTitle = invoiceData.jobTitle.trim();
+    }
+    if (invoiceData.location) {
+      invoiceData.location = invoiceData.location.trim();
+    }
+    if (invoiceData.notes) {
+      invoiceData.notes = invoiceData.notes.trim();
+    }
+    
+    // Also trim item descriptions if they exist
+    if (invoiceData.items && Array.isArray(invoiceData.items)) {
+      invoiceData.items = invoiceData.items.map((item: any) => ({
+        ...item,
+        description: item.description ? item.description.trim() : item.description
+      }));
     }
 
     // Find the invoice with the highest invoiceId for the client
@@ -147,11 +161,27 @@ export async function createInvoice(invoiceData: any) {
 export async function updateInvoice(invoiceId: any, formData: any) {
   await connectMongo();
   try {
-    // Trim jobTitle to remove leading/trailing spaces
-    console.log(formData.jobTitle);
+    // Trim all string fields to remove leading/trailing spaces
+    console.log("Before trimming - jobTitle:", formData.jobTitle);
     if (formData.jobTitle) {
       formData.jobTitle = formData.jobTitle.trim();
     }
+    if (formData.location) {
+      formData.location = formData.location.trim();
+    }
+    if (formData.notes) {
+      formData.notes = formData.notes.trim();
+    }
+    
+    // Also trim item descriptions if they exist
+    if (formData.items && Array.isArray(formData.items)) {
+      formData.items = formData.items.map((item: any) => ({
+        ...item,
+        description: item.description ? item.description.trim() : item.description
+      }));
+    }
+    
+    console.log("After trimming - jobTitle:", formData.jobTitle);
 
     const currentInvoice = await Invoice.findById(invoiceId);
 

@@ -73,6 +73,17 @@ const AddEvent = ({
   const handleSave: SubmitHandler<ScheduleType> = async (data) => {
     setIsLoading(true);
     try {
+      // Trim all string fields to remove leading/trailing spaces
+      if (data.jobTitle) {
+        data.jobTitle = data.jobTitle.trim();
+      }
+      if (data.location) {
+        data.location = data.location.trim();
+      }
+      if (data.technicianNotes) {
+        data.technicianNotes = data.technicianNotes.trim();
+      }
+
       if (typeof data.startDateTime === "string") {
         const localDate = new Date(data.startDateTime);
         data.startDateTime = new Date(

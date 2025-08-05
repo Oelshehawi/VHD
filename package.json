@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "test-optimization": "tsx scripts/test-august-optimization.ts",
-    "test-openroute": "tsx scripts/test-openroute-integration.ts"
+    "test-openroute": "tsx scripts/test-openroute-integration.ts",
+    "cleanup-spaces": "tsx scripts/cleanupLeadingSpaces.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.22.0",

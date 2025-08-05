@@ -43,9 +43,21 @@ const InlineEditInvoice = ({
 
   const onSubmit = async (formData: any) => {
     try {
-      await updateInvoiceWithId(formData);
+      // Trim all string fields to remove leading/trailing spaces
+      const trimmedFormData = { ...formData };
+      if (trimmedFormData.jobTitle) {
+        trimmedFormData.jobTitle = trimmedFormData.jobTitle.trim();
+      }
+      if (trimmedFormData.location) {
+        trimmedFormData.location = trimmedFormData.location.trim();
+      }
+      if (trimmedFormData.notes) {
+        trimmedFormData.notes = trimmedFormData.notes.trim();
+      }
+
+      await updateInvoiceWithId(trimmedFormData);
       toast.success("Invoice updated successfully");
-      if (!formData.status) {
+      if (!trimmedFormData.status) {
         toggleEdit();
       }
     } catch (error) {
