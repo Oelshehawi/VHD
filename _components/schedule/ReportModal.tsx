@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 
+
 type FormStep = "basic" | "equipment" | "inspection" | "recommendations";
 
 type InspectionItemType = {
@@ -30,16 +31,14 @@ interface FormData {
   _id?: string;
   scheduleId: string;
   invoiceId: string;
+  jobTitle?: string;
+  location?: string;
   dateCompleted: Date | string;
   technicianId: string;
   lastServiceDate?: Date | string;
   fuelType?: string;
   cookingVolume?: string;
-  cookingEquipment?: {
-    griddles?: boolean;
-    deepFatFryers?: boolean;
-    woks?: boolean;
-  };
+  cookingEquipment?: string[];
   inspectionItems: InspectionItemType[];
   equipmentDetails: {
     hoodType: string;
@@ -89,8 +88,11 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
       typeof schedule.invoiceRef === "string"
         ? schedule.invoiceRef
         : schedule.invoiceRef.toString(),
+    jobTitle: schedule.jobTitle,
+    location: schedule.location,
     dateCompleted: new Date(),
     technicianId: getDefaultTechnician(),
+    cookingEquipment: [],
     inspectionItems: [],
     equipmentDetails: {
       hoodType: "",
@@ -124,6 +126,14 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
     { name: "Entire system interior accessible for cleaning?" },
     { name: "Multi storey vertical requires cleaning (Spinjets)?" },
     { name: "Adequate number of access panels?" },
+  ];
+
+  const cookingEquipmentOptions = [
+    { value: "griddles", label: "Griddles" },
+    { value: "deepFatFryers", label: "Deep Fat Fryers" },
+    { value: "woks", label: "Woks" },
+    { value: "ovens", label: "Ovens" },
+    { value: "flattopGrills", label: "Flattop Grills" },
   ];
 
   // Fetch existing report data if available
@@ -172,6 +182,18 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
             });
           }
 
+          // Convert cooking equipment from old boolean format to new array format
+          const cookingEquipmentArray: string[] = [];
+          if (typeof report.cookingEquipment === 'object' && report.cookingEquipment) {
+            if ((report.cookingEquipment as any).griddles) cookingEquipmentArray.push("griddles");
+            if ((report.cookingEquipment as any).deepFatFryers) cookingEquipmentArray.push("deepFatFryers");
+            if ((report.cookingEquipment as any).woks) cookingEquipmentArray.push("woks");
+            if ((report.cookingEquipment as any).ovens) cookingEquipmentArray.push("ovens");
+            if ((report.cookingEquipment as any).flattopGrills) cookingEquipmentArray.push("flattopGrills");
+          } else if (Array.isArray(report.cookingEquipment)) {
+            cookingEquipmentArray.push(...report.cookingEquipment);
+          }
+
           // Update the form data with the report and mapped inspection items
           setFormData(prevData => ({
             ...report,
@@ -180,6 +202,9 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
               typeof schedule.invoiceRef === "string"
                 ? schedule.invoiceRef
                 : schedule.invoiceRef.toString(),
+            jobTitle: schedule.jobTitle,
+            location: schedule.location,
+            cookingEquipment: cookingEquipmentArray,
             inspectionItems: arrayInspectionItems,
             // Ensure technicianId is preserved from the report
             technicianId: report.technicianId || prevData.technicianId,
@@ -225,8 +250,6 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
             ductworkCleaned: false,
             fanCleaned: false,
           };
-        } else if (section === "cookingEquipment") {
-          result.cookingEquipment = {};
         }
       }
 
@@ -235,8 +258,6 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
         (result.equipmentDetails as any)[field] = value;
       } else if (section === "cleaningDetails" && result.cleaningDetails) {
         (result.cleaningDetails as any)[field] = value;
-      } else if (section === "cookingEquipment" && result.cookingEquipment) {
-        (result.cookingEquipment as any)[field] = value;
       }
 
       return result;
@@ -328,9 +349,18 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
         }
       });
 
+      // Convert cooking equipment array back to object format for API compatibility
+      const cookingEquipmentObject: Record<string, boolean> = {};
+      if (serializedData.cookingEquipment && Array.isArray(serializedData.cookingEquipment)) {
+        serializedData.cookingEquipment.forEach((item: string) => {
+          cookingEquipmentObject[item] = true;
+        });
+      }
+
       // Create the final data to send to the API with a more specific type cast
       const apiData = {
         ...serializedData,
+        cookingEquipment: cookingEquipmentObject,
         inspectionItems: inspectionItemsObject,
       };
 
@@ -469,6 +499,46 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
             {step === "basic" && (
               <div className="space-y-4">
                 <div>
+                  <h3 className="mb-2 font-semibold">Job Information</h3>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Job Title
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.jobTitle || ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            jobTitle: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 p-2"
+                        placeholder="Enter job title"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Restaurant Location
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.location || ""}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            location: e.target.value,
+                          }))
+                        }
+                        className="w-full rounded-md border border-gray-300 p-2"
+                        placeholder="Enter restaurant address"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
                   <h3 className="mb-2 font-semibold">Technician</h3>
                   {technicians.length === 1 ? (
                     <div className="flex items-center rounded-md border border-gray-300 bg-gray-50 p-2">
@@ -590,54 +660,35 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
 
                 <div>
                   <h3 className="mb-2 font-semibold">Cooking Equipment</h3>
-                  <div className="grid grid-cols-3 gap-4">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.cookingEquipment?.griddles || false}
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "cookingEquipment",
-                            "griddles",
-                            e.target.checked,
-                          )
-                        }
-                        className="h-4 w-4"
-                      />
-                      Griddles
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          formData.cookingEquipment?.deepFatFryers || false
-                        }
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "cookingEquipment",
-                            "deepFatFryers",
-                            e.target.checked,
-                          )
-                        }
-                        className="h-4 w-4"
-                      />
-                      Deep Fat Fryers
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.cookingEquipment?.woks || false}
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "cookingEquipment",
-                            "woks",
-                            e.target.checked,
-                          )
-                        }
-                        className="h-4 w-4"
-                      />
-                      Woks
-                    </label>
+                  <div className="space-y-2">
+                    <p className="text-sm text-gray-600">Select all cooking equipment present:</p>
+                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                      {cookingEquipmentOptions.map((option) => (
+                        <label key={option.value} className="flex items-center gap-2">
+                          <input
+                            type="checkbox"
+                            checked={formData.cookingEquipment?.includes(option.value) || false}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  cookingEquipment: [...(prev.cookingEquipment || []), option.value],
+                                }));
+                              } else {
+                                setFormData((prev) => ({
+                                  ...prev,
+                                  cookingEquipment: (prev.cookingEquipment || []).filter(
+                                    (item) => item !== option.value
+                                  ),
+                                }));
+                              }
+                            }}
+                            className="h-4 w-4"
+                          />
+                          <span className="text-sm">{option.label}</span>
+                        </label>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>

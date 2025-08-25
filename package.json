@@ -16,6 +16,8 @@
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@headlessui/react": "^2.0.4",
     "@heroicons/react": "^2.2.0",
+    "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-select": "^2.2.6",
     "@react-pdf/renderer": "^4.3.0",
     "@serwist/next": "^9.0.2",
     "@tanstack/react-table": "^8.15.0",

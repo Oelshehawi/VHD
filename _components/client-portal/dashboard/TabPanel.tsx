@@ -39,8 +39,8 @@ interface Invoice {
 interface TabPanelProps {
   upcomingServices: AppScheduleType[];
   recentServices: AppScheduleType[];
-  recentInvoices: Invoice[];
-  recentReports: ReportType[];
+  allInvoices: Invoice[];
+  allReports: ReportType[];
   clientData?: { clientName: string; email: string; phoneNumber: string };
   technicianDataMap: Record<string, any>;
 }
@@ -48,8 +48,8 @@ interface TabPanelProps {
 const TabPanel = ({
   upcomingServices,
   recentServices,
-  recentInvoices,
-  recentReports,
+  allInvoices,
+  allReports,
   clientData,
   technicianDataMap,
 }: TabPanelProps) => {
@@ -63,14 +63,14 @@ const TabPanel = ({
   // Create a map of invoice IDs to job titles for easy lookup
   const invoiceJobTitleMap = useMemo(() => {
     const map = new Map<string, string>();
-    recentInvoices.forEach((invoice) => {
+    allInvoices.forEach((invoice) => {
       map.set(invoice._id, invoice.jobTitle || "Service Report");
     });
     return map;
-  }, [recentInvoices]);
+  }, [allInvoices]);
 
   // Sort invoices by invoice number (assuming invoiceId is a string that can be parsed as a number)
-  const sortedInvoices = [...recentInvoices].sort((a, b) => {
+  const sortedInvoices = [...allInvoices].sort((a, b) => {
     // Extract numbers from invoice IDs (assuming format like "INV-123")
     const aNum = parseInt(a.invoiceId.replace(/\D/g, ""));
     const bNum = parseInt(b.invoiceId.replace(/\D/g, ""));
@@ -150,6 +150,11 @@ const TabPanel = ({
   // Helper function to create report PDF data
   const createReportPDFData = (report: ReportType): PDFData | undefined => {
     try {
+      // Find the related invoice to get jobTitle and location
+      const relatedInvoice = allInvoices.find(
+        (invoice) => invoice._id === (typeof report.invoiceId === "string" ? report.invoiceId : report.invoiceId.toString())
+      );
+
       const reportData = {
         _id:
           typeof report._id === "string"
@@ -159,6 +164,8 @@ const TabPanel = ({
           typeof report.scheduleId === "string"
             ? report.scheduleId
             : report.scheduleId.toString(),
+        jobTitle: relatedInvoice?.jobTitle || "Service Report",
+        location: relatedInvoice?.location || "",
         dateCompleted: report.dateCompleted,
         technicianId: report.technicianId,
         lastServiceDate: report.lastServiceDate,
@@ -247,7 +254,7 @@ const TabPanel = ({
       </div>
 
       {/* Tab Content */}
-      <div className="p-2 sm:p-4">
+      <div className="p-2 sm:p-4 h-[600px] overflow-hidden">
         <AnimatePresence mode="wait">
           {activeTab === "schedules" && (
             <motion.div
@@ -255,10 +262,10 @@ const TabPanel = ({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="space-y-4 p-2 sm:space-y-6 sm:p-4"
+              className="h-full flex flex-col space-y-4 p-2 sm:space-y-6 sm:p-4"
             >
               {/* Upcoming Services */}
-              <div>
+              <div className="flex-shrink-0">
                 <h3 className="mb-2 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
                   Upcoming Services
                 </h3>
@@ -284,28 +291,30 @@ const TabPanel = ({
               </div>
 
               {/* Recent Services */}
-              <div>
+              <div className="flex-1 min-h-0">
                 <h3 className="mb-2 mt-6 border-t border-gray-200 pt-4 text-base font-semibold text-gray-900 sm:mb-4 sm:mt-8 sm:pt-6 sm:text-lg">
                   Recent Services
                 </h3>
-                <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
-                  {recentServices.length > 0 ? (
-                    recentServices.map((service) => (
-                      <ServiceCard
-                        key={
-                          typeof service._id === "string"
-                            ? service._id
-                            : service._id.toString()
-                        }
-                        service={convertToServiceCardSchedule(service)}
-                        upcoming={false}
-                      />
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-gray-500">
-                      No recent services found.
-                    </div>
-                  )}
+                <div className="h-[280px] overflow-y-auto pr-2 custom-scrollbar">
+                  <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+                    {recentServices.length > 0 ? (
+                      recentServices.map((service) => (
+                        <ServiceCard
+                          key={
+                            typeof service._id === "string"
+                              ? service._id
+                              : service._id.toString()
+                          }
+                          service={convertToServiceCardSchedule(service)}
+                          upcoming={false}
+                        />
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500">
+                        No recent services found.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
@@ -318,15 +327,16 @@ const TabPanel = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="px-2 sm:px-0"
+              className="px-2 sm:px-0 h-full flex flex-col"
             >
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-3 flex items-center justify-between flex-shrink-0">
                 <h3 className="text-base font-medium text-gray-900 sm:text-lg">
-                  Recent Invoices
+                  All Invoices
                 </h3>
               </div>
               {sortedInvoices.length > 0 ? (
-                <div className="-mx-2 overflow-x-auto sm:mx-0">
+                <div className="flex-1 min-h-0 overflow-auto custom-scrollbar pr-2">
+                  <div className="-mx-2 overflow-x-auto sm:mx-0">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
@@ -393,6 +403,7 @@ const TabPanel = ({
                       ))}
                     </tbody>
                   </table>
+                  </div>
                 </div>
               ) : (
                 <p className="text-gray-500">No invoices available.</p>
@@ -407,15 +418,16 @@ const TabPanel = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="p-2 sm:p-4"
+                className="p-2 sm:p-4 h-full flex flex-col"
               >
-                <h3 className="mb-3 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
-                  Service Reports
+                <h3 className="mb-3 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg flex-shrink-0">
+                  All Service Reports
                 </h3>
 
-                <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
-                  {recentReports.length > 0 ? (
-                    recentReports.map((report) => (
+                <div className="flex-1 min-h-0 overflow-auto custom-scrollbar pr-2">
+                  <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+                  {allReports.length > 0 ? (
+                    allReports.map((report) => (
                       <div
                         key={report._id?.toString()}
                         className="flex flex-col p-3 hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between sm:p-4"
@@ -470,6 +482,7 @@ const TabPanel = ({
                       No service reports found.
                     </div>
                   )}
+                  </div>
                 </div>
               </motion.div>
             </AnimatePresence>

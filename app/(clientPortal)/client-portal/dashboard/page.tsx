@@ -50,14 +50,14 @@ export default async function ClientDashboardPage({
   const client = await fetchClientData(clientId);
   const upcomingServices = await fetchClientUpcomingSchedules(clientId);
   const recentServices = await fetchClientPastSchedules(clientId);
-  const recentInvoices = await fetchClientInvoices(clientId);
-  const recentReports = await fetchClientReports(clientId);
+  const allInvoices = await fetchClientInvoices(clientId, 1000); // Fetch all invoices
+  const allReports = await fetchClientReports(clientId, 1000); // Fetch all reports
 
 
   // Fetch technician data for reports
   const technicianDataMap: Record<string, any> = {};
   const uniqueTechnicianIds = [
-    ...new Set(recentReports.map((report) => report.technicianId)),
+    ...new Set(allReports.map((report) => report.technicianId)),
   ].filter(Boolean);
 
   for (const technicianId of uniqueTechnicianIds) {
@@ -131,8 +131,8 @@ export default async function ClientDashboardPage({
           <TabPanel
             upcomingServices={upcomingServices}
             recentServices={recentServices}
-            recentInvoices={recentInvoices}
-            recentReports={recentReports}
+            allInvoices={allInvoices}
+            allReports={allReports}
             clientData={{
               clientName: client.clientName,
               email: client.email,

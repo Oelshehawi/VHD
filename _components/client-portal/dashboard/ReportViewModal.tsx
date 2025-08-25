@@ -57,6 +57,8 @@ const ReportModal: React.FC<ReportModalProps> = ({
   if (report.cookingEquipment?.deepFatFryers)
     cookingItems.push("Deep Fat Fryers");
   if (report.cookingEquipment?.woks) cookingItems.push("Woks");
+  if (report.cookingEquipment?.ovens) cookingItems.push("Ovens");
+  if (report.cookingEquipment?.flattopGrills) cookingItems.push("Flattop Grills");
 
   const tabs = [
     { id: "overview", label: "Overview" },
@@ -121,6 +123,28 @@ const ReportModal: React.FC<ReportModalProps> = ({
             <div className="max-h-[70vh] overflow-y-auto p-4">
               {activeTab === "overview" && (
                 <div>
+                  {(report.jobTitle || report.location) && (
+                    <div className="mb-4 rounded-lg border border-gray-200 bg-blue-50 p-3">
+                      <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                        Job Information
+                      </h3>
+                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {report.jobTitle && (
+                          <p className="text-sm">
+                            <span className="font-medium">Job Title:</span>{" "}
+                            {report.jobTitle}
+                          </p>
+                        )}
+                        {report.location && (
+                          <p className="text-sm">
+                            <span className="font-medium">Location:</span>{" "}
+                            {report.location}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
                       <h3 className="mb-2 text-sm font-semibold text-gray-700">

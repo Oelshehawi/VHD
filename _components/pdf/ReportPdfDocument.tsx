@@ -118,6 +118,8 @@ const styles = StyleSheet.create({
 export interface ReportData {
   _id: string;
   scheduleId: string;
+  jobTitle?: string;
+  location?: string;
   dateCompleted: string | Date;
   technicianId: string;
   lastServiceDate?: string | Date;
@@ -139,6 +141,8 @@ export interface ReportData {
     griddles?: boolean;
     deepFatFryers?: boolean;
     woks?: boolean;
+    ovens?: boolean;
+    flattopGrills?: boolean;
   };
   recommendations?: string;
   comments?: string;
@@ -233,6 +237,22 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
               </Text>
             )}
           </View>
+          {(report.jobTitle || report.location) && (
+            <View style={styles.infoRow}>
+              {report.jobTitle && (
+                <Text style={styles.infoItem}>
+                  <Text style={styles.boldText}>Job Title:</Text>{" "}
+                  {report.jobTitle}
+                </Text>
+              )}
+              {report.location && (
+                <Text style={styles.infoItem}>
+                  <Text style={styles.boldText}>Location:</Text>{" "}
+                  {report.location}
+                </Text>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Service Details */}
@@ -319,6 +339,12 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
             </Text>
             <Text style={styles.infoItem}>
               Woks: {report.cookingEquipment?.woks ? "Yes" : "No"}
+            </Text>
+            <Text style={styles.infoItem}>
+              Ovens: {report.cookingEquipment?.ovens ? "Yes" : "No"}
+            </Text>
+            <Text style={styles.infoItem}>
+              Flattop Grills: {report.cookingEquipment?.flattopGrills ? "Yes" : "No"}
             </Text>
           </View>
         </View>

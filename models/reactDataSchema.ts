@@ -131,6 +131,8 @@ const ReportSchema = new Schema<ReportType>({
     griddles: Boolean,
     deepFatFryers: Boolean,
     woks: Boolean,
+    ovens: Boolean,
+    flattopGrills: Boolean,
   },
   inspectionItems: {
     filtersInPlace: {

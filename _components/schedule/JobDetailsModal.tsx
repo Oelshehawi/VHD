@@ -133,6 +133,8 @@ export default function JobDetailsModal({
       const reportData = {
         _id: typeof report._id === "string" ? report._id : report._id?.toString() || "",
         scheduleId: typeof report.scheduleId === "string" ? report.scheduleId : report.scheduleId.toString(),
+        jobTitle: job.jobTitle,
+        location: job.location,
         dateCompleted: report.dateCompleted,
         technicianId: report.technicianId,
         lastServiceDate: report.lastServiceDate,

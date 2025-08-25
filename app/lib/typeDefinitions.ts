@@ -112,6 +112,8 @@ export interface ReportType {
   _id?: ObjectId | string;
   scheduleId: ObjectId | string;
   invoiceId: ObjectId | string;
+  jobTitle?: string;
+  location?: string;
   dateCompleted: Date | string;
   technicianId: string;
   lastServiceDate?: Date | string;
@@ -121,6 +123,8 @@ export interface ReportType {
     griddles?: boolean;
     deepFatFryers?: boolean;
     woks?: boolean;
+    ovens?: boolean;
+    flattopGrills?: boolean;
   };
   inspectionItems?: {
     filtersInPlace?: "Yes" | "No" | "N/A";
