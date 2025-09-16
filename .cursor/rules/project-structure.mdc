@@ -1,0 +1,41 @@
+---
+alwaysApply: true
+description: Overall project structure and organization
+---
+
+# Project Structure Overview
+
+## Main Directories
+
+- `_components/` - Reusable React components
+- `app/` - Next.js App Router pages and layouts
+- `pages/api/` - API routes (Pages Router)
+- `lib/` - Utility functions and shared logic
+- `models/` - Data models and schemas
+- `types/` - TypeScript type definitions
+- `scripts/` - Maintenance and migration scripts
+
+## App Router Structure
+
+- `(clientPortal)` - Client portal route group
+- `(publicGroup)` - Public routes (sign-in, etc.)
+- `(root)` - Main application routes
+- `acceptToken` - Token acceptance flow
+
+## Component Categories
+
+- **Client Portal**: Client-facing access and dashboard
+- **Dashboard**: Main application dashboard components
+- **Database**: Client management and data display
+- **Estimates**: Estimate creation and management
+- **Invoices**: Invoice generation and management
+- **Payroll**: Employee payroll management
+- **Schedule**: Job scheduling and calendar
+- **PDF**: PDF generation utilities
+
+## File Organization Principles
+
+- Group related functionality together
+- Maintain clear separation of concerns
+- Use consistent naming patterns
+- Keep files focused on single responsibilities

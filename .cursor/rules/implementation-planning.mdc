@@ -1,0 +1,34 @@
+---
+alwaysApply: true
+description: Planning and implementation approach
+---
+
+# Implementation Planning and Execution
+
+## Planning Phase
+
+- Always provide a comprehensive plan before implementing changes
+- Break down complex tasks into manageable steps
+- Identify dependencies and potential challenges
+- Consider edge cases and error scenarios
+
+## Implementation Approach
+
+- Understand the current codebase thoroughly before making changes
+- Follow Single Responsibility Principle - each file handles one concern
+- Create new files when needed to maintain clean separation of concerns
+- Test changes incrementally to ensure stability
+
+## Code Review and Validation
+
+- Ask for confirmation when unsure about changes
+- Explain algorithms and implementation details clearly
+- Ensure backward compatibility when modifying existing code
+- Validate that changes align with overall project goals
+
+## Communication
+
+- Provide clear explanations of what has been implemented
+- Describe how algorithms work and their purpose
+- Outline goals for the next phase before proceeding
+- Maintain transparency about implementation decisions

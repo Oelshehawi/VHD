@@ -4,8 +4,12 @@ import { revalidatePath } from "next/cache";
 import connectMongo from "../connect";
 import { Invoice, Client, JobsDueSoon } from "../../../models/reactDataSchema";
 import { DueInvoiceType } from "../typeDefinitions";
-import { formatAmount, formatDateStringUTC, getEmailForPurpose } from "../utils";
-import {createElement} from "react";
+import {
+  formatAmount,
+  formatDateStringUTC,
+  getEmailForPurpose,
+} from "../utils";
+import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
   type InvoiceData,
@@ -98,114 +102,5 @@ export async function sendCleaningReminderEmail(
   }
 }
 
-/**
- * Send a payment reminder email using Postmark
- * @param invoice The invoice to send a payment reminder for
- * @returns Object with status and message
- */
-export async function sendPaymentReminderEmail(invoiceId: string) {
-  await connectMongo();
-
-  try {
-    // Find the invoice
-    const invoice = await Invoice.findById(invoiceId);
-    if (!invoice) {
-      return { success: false, error: "Invoice not found" };
-    }
-
-    // Find client details
-    const clientDetails = await Client.findOne({ _id: invoice.clientId });
-    if (!clientDetails) {
-      return { success: false, error: "Client not found" };
-    }
-
-    // Get appropriate email for accounting purposes
-    const clientEmail = getEmailForPurpose(clientDetails, "accounting");
-    if (!clientEmail) {
-      return { success: false, error: "Client email not found" };
-    }
-
-    // Format dates and amounts
-    const issueDateFormatted = formatDateStringUTC(invoice.dateIssued);
-
-    // Calculate total amount with tax
-    const total = invoice.items.reduce((sum: number, item: { price: number }) => sum + item.price, 0);
-    const totalWithTax = total * 1.05; // Adding 5% tax
-    const formattedAmount = formatAmount(totalWithTax).replace("$", "");
-
-    // Prepare invoice data for PDF generation
-    const invoiceData: InvoiceData = {
-      invoiceId: invoice.invoiceId,
-      dateIssued: issueDateFormatted,
-      jobTitle: invoice.jobTitle,
-      location: invoice.location,
-      clientName: clientDetails.clientName,
-      email: clientEmail,
-      phoneNumber: clientDetails.phoneNumber,
-      items: invoice.items.map((item: { description: any; price: any }) => ({
-        description: item.description,
-        price: item.price,
-        total: item.price,
-      })),
-      subtotal: total,
-      gst: total * 0.05, // 5% GST
-      totalAmount: totalWithTax,
-      cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
-      eTransfer: "adam@vancouverventcleaning.ca",
-      terms:
-        "Please report any and all cleaning inquiries within 5 business days.",
-    };
-
-    // Generate PDF using the PDF document component
-    const MyDocument = () =>
-      createElement(InvoicePdfDocument, { invoiceData });
-    const pdfBuffer = await renderToBuffer(createElement(MyDocument));
-    const pdfBase64 = pdfBuffer.toString("base64");
-
-    // Send email using Postmark
-    const client = new postmark.ServerClient(process.env.POSTMARK_CLIENT);
-
-    await client.sendEmailWithTemplate({
-      From: "adam@vancouverventcleaning.ca",
-      To: clientEmail,
-      TemplateAlias: "payment-reminder",
-      TemplateModel: {
-        client_name: clientDetails.clientName,
-        invoice_number: invoice.invoiceId,
-        jobTitle: invoice.jobTitle,
-        issue_date: issueDateFormatted,
-        amount_due: formattedAmount,
-        phone_number: "604-273-8717",
-        contact_email: "adam@vancouverventcleaning.ca",
-        header_title: "Payment for Vent Cleaning & Certification",
-        email_title: "Payment for Vent Cleaning & Certification",
-      },
-      Attachments: [
-        {
-          Name: `${invoice.jobTitle.trim()} - Invoice.pdf`,
-          Content: pdfBase64,
-          ContentType: "application/pdf",
-        },
-      ],
-      TrackOpens: true,
-      MessageStream: "payment-reminder",
-    });
-
-    // Update emailSent field in Invoice
-    await Invoice.findByIdAndUpdate(
-      invoiceId,
-      { $set: { paymentEmailSent: true } },
-      { new: true },
-    );
-
-    revalidatePath("/dashboard");
-    return { success: true, message: "Payment reminder sent successfully" };
-  } catch (error) {
-    console.error("Failed to send payment reminder:", error);
-    return {
-      success: false,
-      error: "Failed to send payment reminder",
-      details: error instanceof Error ? error.message : String(error),
-    };
-  }
-}
+// Note: sendPaymentReminderEmail has been moved to app/lib/actions/reminder.actions.ts
+// to integrate with the new automated reminder system

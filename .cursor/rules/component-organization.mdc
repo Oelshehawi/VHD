@@ -1,0 +1,35 @@
+---
+alwaysApply: true
+description: Component organization and naming conventions
+---
+
+# Component Organization
+
+## Directory Structure
+
+- Components are organized in `_components` directory
+- Group related components in subdirectories
+- Examples:
+  - `client-portal/` - Client portal related components
+  - `dashboard/` - Dashboard widgets and containers
+  - `estimates/` - Estimate management components
+  - `invoices/` - Invoice management components
+
+## Naming Conventions
+
+- Use PascalCase for component file names
+- Use descriptive names that indicate purpose
+- Examples: `InvoiceDetailsContainer.tsx`, `ClientSearchSelect.tsx`, `EstimateStatusBadge.tsx`
+
+## Component Types
+
+- **Containers**: Handle data fetching and state management (e.g., `ClientDetailedContainer.tsx`)
+- **Components**: Presentational components focused on UI (e.g., `InvoiceRow.tsx`)
+- **Modals**: Specialized components for modal dialogs (e.g., `EditClientModal.tsx`)
+- **Pages**: Top-level page components in `app/` directory
+
+## Single Responsibility Principle
+
+- Each component should have one clear responsibility
+- Break down complex components into smaller, focused components
+- Use composition to build complex UIs from simpler components

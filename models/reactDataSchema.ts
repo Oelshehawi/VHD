@@ -13,6 +13,7 @@ import {
   EstimateType,
   LocationGeocodeType,
   DistanceMatrixCacheType,
+  AuditLogEntry,
 } from "../app/lib/typeDefinitions";
 
 const { Schema, model, models, Model } = mongoose;
@@ -69,7 +70,25 @@ const invoiceSchema = new Schema<InvoiceType>({
     ref: "Client",
     required: true,
   },
-  paymentEmailSent: { type: Boolean, default: false },
+  paymentReminders: {
+    enabled: { type: Boolean, default: false },
+    frequency: {
+      type: String,
+      enum: ["none", "3days", "7days", "14days"],
+      default: "none",
+    },
+    nextReminderDate: { type: Date },
+    lastReminderSent: { type: Date },
+    reminderHistory: [
+      {
+        sentAt: { type: Date, required: true },
+        emailTemplate: { type: String, required: true },
+        success: { type: Boolean, default: true },
+        sequence: { type: Number, default: 1 },
+        errorMessage: { type: String },
+      },
+    ],
+  },
   paymentInfo: {
     method: {
       type: String,
@@ -400,6 +419,43 @@ const LocationGeocode =
   (models.LocationGeocode as typeof Model<LocationGeocodeType>) ||
   model("LocationGeocode", LocationGeocodeSchema);
 
+// Separate AuditLog collection
+const AuditLogSchema = new Schema<AuditLogEntry>({
+  invoiceId: { type: String, required: true, index: true },
+  action: {
+    type: String,
+    enum: [
+      "reminder_configured",
+      "reminder_sent_auto",
+      "reminder_sent_manual",
+      "reminder_failed",
+      "payment_status_changed",
+      "payment_info_updated",
+    ],
+    required: true,
+  },
+  timestamp: { type: Date, default: Date.now, required: true, index: true },
+  performedBy: { type: String, required: true },
+  details: {
+    oldValue: { type: mongoose.Schema.Types.Mixed },
+    newValue: { type: mongoose.Schema.Types.Mixed },
+    reason: { type: String },
+    metadata: { type: mongoose.Schema.Types.Mixed },
+  },
+  ipAddress: { type: String },
+  userAgent: { type: String },
+  success: { type: Boolean, default: true },
+  errorMessage: { type: String },
+});
+
+// Indexes for efficient querying
+AuditLogSchema.index({ invoiceId: 1, timestamp: -1 });
+AuditLogSchema.index({ action: 1, timestamp: -1 });
+
+const AuditLog =
+  (models.AuditLog as typeof Model<AuditLogEntry>) ||
+  model("AuditLog", AuditLogSchema);
+
 export {
   Client,
   Invoice,
@@ -410,4 +466,5 @@ export {
   Estimate,
   LocationGeocode,
   DistanceMatrixCache,
+  AuditLog,
 };

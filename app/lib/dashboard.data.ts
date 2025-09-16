@@ -221,7 +221,8 @@ export const checkEmailAndNotesPresence = async (
 
     return dueInvoices.map((invoice) => ({
       ...invoice,
-      emailExists: clientEmailMap[invoice.clientId?.toString() as string] || false,
+      emailExists:
+        clientEmailMap[invoice.clientId?.toString() as string] || false,
       notesExists: invoiceNotesMap[invoice.invoiceId] || false,
     }));
   } catch (error) {
@@ -355,7 +356,35 @@ const formatPendingInvoices = (invoices: any[]) => {
     invoiceId: invoice.invoiceId,
     jobTitle: invoice.jobTitle,
     status: invoice.status,
-    paymentEmailSent: invoice.paymentEmailSent,
+    paymentReminders: invoice.paymentReminders
+      ? {
+          enabled: invoice.paymentReminders.enabled,
+          frequency: invoice.paymentReminders.frequency,
+          nextReminderDate:
+            invoice.paymentReminders.nextReminderDate instanceof Date
+              ? invoice.paymentReminders.nextReminderDate.toISOString()
+              : invoice.paymentReminders.nextReminderDate,
+          lastReminderSent:
+            invoice.paymentReminders.lastReminderSent instanceof Date
+              ? invoice.paymentReminders.lastReminderSent.toISOString()
+              : invoice.paymentReminders.lastReminderSent,
+          reminderHistory:
+            invoice.paymentReminders.reminderHistory?.map((entry: any) => ({
+              sentAt:
+                entry.sentAt instanceof Date
+                  ? entry.sentAt.toISOString()
+                  : String(entry.sentAt),
+              emailTemplate: entry.emailTemplate,
+              success: entry.success,
+              sequence: entry.sequence,
+              errorMessage: entry.errorMessage,
+              // Explicitly exclude any MongoDB-specific properties
+            })) || [],
+        }
+      : {
+          enabled: false,
+          frequency: "none",
+        },
     emailExists: invoice.emailExists,
     dateIssued: invoice.dateIssued.toISOString().split("T")[0],
     amount: invoice.items.reduce(

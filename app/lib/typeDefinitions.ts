@@ -76,6 +76,44 @@ export interface PaymentInfo {
   notes?: string;
 }
 
+export interface PaymentReminderSettings {
+  enabled: boolean;
+  frequency: "none" | "3days" | "7days" | "14days";
+  nextReminderDate?: Date;
+  lastReminderSent?: Date;
+  reminderHistory?: {
+    sentAt: Date;
+    emailTemplate: string;
+    success: boolean;
+    sequence: number;
+    errorMessage?: string;
+  }[];
+}
+
+export interface AuditLogEntry {
+  _id?: ObjectId | string;
+  invoiceId?: string;
+  action:
+    | "reminder_configured"
+    | "reminder_sent_auto"
+    | "reminder_sent_manual"
+    | "reminder_failed"
+    | "payment_status_changed"
+    | "payment_info_updated";
+  timestamp: Date;
+  performedBy: string;
+  details: {
+    oldValue?: any;
+    newValue?: any;
+    reason?: string;
+    metadata?: any;
+  };
+  ipAddress?: string;
+  userAgent?: string;
+  success: boolean;
+  errorMessage?: string;
+}
+
 export interface InvoiceType {
   _id: ObjectId | string;
   invoiceId: string;
@@ -88,7 +126,7 @@ export interface InvoiceType {
   notes?: string;
   status: "pending" | "overdue" | "paid";
   clientId: ObjectId | string;
-  paymentEmailSent?: boolean;
+  paymentReminders?: PaymentReminderSettings;
   paymentInfo?: PaymentInfo;
   photos?: PhotoType[];
   signature?: SignatureType;
@@ -162,7 +200,6 @@ export interface ReportType {
     fanCleaned: boolean;
   };
   recommendations?: string;
-  jobTitle?: string;
 }
 
 export interface SignatureType {

@@ -1,0 +1,29 @@
+---
+alwaysApply: true
+description: Next.js API route organization and structure
+---
+
+# Next.js API Route Organization
+
+## API Route Structure
+
+- API routes are organized as folders with `index.ts` files
+- Example: `pages/api/updateTechnicianNotes/index.ts`
+- Use folder structure for complex endpoints with multiple operations
+
+## Route Naming
+
+- Use kebab-case for folder names
+- Keep route names descriptive and action-oriented
+- Examples: `update-technician-notes`, `generate-invoice`, `client-portal-access`
+
+## Response Format
+
+- Always return consistent JSON responses
+- Include proper HTTP status codes
+- Handle errors gracefully with appropriate error messages
+
+## Authentication
+
+- Check authentication at the beginning of API routes
+- Use middleware for common authentication logic when possible

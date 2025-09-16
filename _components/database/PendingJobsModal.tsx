@@ -2,20 +2,30 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { PendingInvoiceType, PaymentInfo } from "../../app/lib/typeDefinitions";
-import { FaTimes, FaPaperPlane, FaCheckCircle } from "react-icons/fa";
+import {
+  PendingInvoiceType,
+  PaymentInfo,
+  PaymentReminderSettings,
+} from "../../app/lib/typeDefinitions";
+import { FaTimes, FaPaperPlane, FaCheckCircle, FaCog } from "react-icons/fa";
 import { CgUnavailable } from "react-icons/cg";
 import { motion, AnimatePresence } from "framer-motion";
 import { updateInvoice } from "../../app/lib/actions/actions";
-import { sendPaymentReminderEmail } from "../../app/lib/actions/email.actions";
+import { sendPaymentReminderEmail } from "../../app/lib/actions/reminder.actions";
 import toast from "react-hot-toast";
 import { formatAmount, formatDateStringUTC } from "../../app/lib/utils";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
 import Link from "next/link";
 import PaymentModal from "../payments/PaymentModal";
+import ReminderConfigModal from "./ReminderConfigModal";
+
+interface ExtendedPendingInvoiceType extends PendingInvoiceType {
+  emailExists?: boolean;
+  paymentReminders?: PaymentReminderSettings;
+}
 
 interface PendingJobsModalProps {
-  pendingInvoices: (PendingInvoiceType & { emailExists?: boolean })[];
+  pendingInvoices: ExtendedPendingInvoiceType[];
   onClose: () => void;
 }
 
@@ -26,6 +36,9 @@ const PendingJobsModal = ({
   const [invoices, setInvoices] = useState(pendingInvoices);
   const [isPending, startTransition] = useTransition();
   const [showPaymentModal, setShowPaymentModal] = useState<string | null>(null);
+  const [showReminderModal, setShowReminderModal] = useState<string | null>(
+    null,
+  );
 
   const handleStatusChange = (invoiceId: string, newStatus: string) => {
     if (newStatus === "paid") {
@@ -37,11 +50,15 @@ const PendingJobsModal = ({
     }
   };
 
-  const updateStatus = (invoiceId: string, newStatus: string, paymentInfo?: PaymentInfo) => {
+  const updateStatus = (
+    invoiceId: string,
+    newStatus: string,
+    paymentInfo?: PaymentInfo,
+  ) => {
     startTransition(async () => {
       try {
         const updateData: any = { status: newStatus };
-        
+
         // Add payment info if provided
         if (paymentInfo && newStatus === "paid") {
           updateData.paymentInfo = {
@@ -86,6 +103,54 @@ const PendingJobsModal = ({
       default:
         return "bg-yellow-500 text-black hover:bg-yellow-600";
     }
+  };
+
+  const getReminderStatusBadge = (invoice: ExtendedPendingInvoiceType) => {
+    const reminders = invoice.paymentReminders;
+
+    if (!invoice.emailExists) {
+      return (
+        <div className="flex items-center justify-center space-x-1 rounded-lg bg-red-100 px-2 py-1 text-red-600">
+          <CgUnavailable className="h-3 w-3" />
+          <span className="text-xs font-medium">No Email</span>
+        </div>
+      );
+    }
+
+    if (!reminders || !reminders.enabled || reminders.frequency === "none") {
+      return (
+        <div className="flex items-center justify-center space-x-1 rounded-lg bg-gray-100 px-2 py-1 text-gray-600">
+          <span className="text-xs font-medium">No Auto Reminders</span>
+        </div>
+      );
+    }
+
+    const nextReminder = reminders.nextReminderDate
+      ? new Date(reminders.nextReminderDate)
+      : null;
+    const now = new Date();
+    const isOverdue = nextReminder && nextReminder < now;
+
+    let badgeColor = "bg-green-100 text-green-600";
+    let statusText = `Every ${reminders.frequency.replace("days", "")} days`;
+
+    if (isOverdue) {
+      badgeColor = "bg-orange-100 text-orange-600";
+      statusText = "Due for reminder";
+    }
+
+    return (
+      <div
+        className={`flex items-center justify-center space-x-1 rounded-lg px-2 py-1 ${badgeColor}`}
+      >
+        <span className="text-xs font-medium">{statusText}</span>
+        {nextReminder && !isOverdue && (
+          <span className="text-xs opacity-75">
+            ({formatDateStringUTC(nextReminder.toISOString())})
+          </span>
+        )}
+      </div>
+    );
   };
 
   const createEmailSender = (invoiceId: string) => {
@@ -175,7 +240,9 @@ const PendingJobsModal = ({
                               </div>
                               <p className="flex items-center space-x-2">
                                 <span className="font-medium">Date:</span>
-                                <span>{formatDateStringUTC(invoice.dateIssued)}</span>
+                                <span>
+                                  {formatDateStringUTC(invoice.dateIssued)}
+                                </span>
                               </p>
                               <p className="flex items-center space-x-2">
                                 <span className="font-medium">Amount:</span>
@@ -216,41 +283,25 @@ const PendingJobsModal = ({
                               </option>
                             </select>
 
-                            {/* Payment Reminder Button */}
+                            {/* Configure Reminders Button */}
                             <div className="mt-2 flex h-10 justify-center">
-                              {invoice.paymentEmailSent ? (
-                                <div className="flex h-full w-full items-center justify-center space-x-2 rounded-lg bg-green-100 text-green-600">
-                                  <FaCheckCircle className="h-5 w-5" />
-                                  <span className="text-sm font-medium">
-                                    Email Sent
-                                  </span>
-                                </div>
-                              ) : !invoice.emailExists ? (
-                                <div
-                                  className="flex h-full w-full items-center justify-center space-x-2 rounded-lg bg-gray-100 text-gray-500"
-                                  title="No email address available"
-                                >
-                                  <CgUnavailable className="h-5 w-5" />
-                                  <span className="text-sm font-medium">
-                                    No Email
-                                  </span>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => debouncedSubmit(null)}
-                                  disabled={isProcessing}
-                                  className="flex h-full w-full items-center justify-center space-x-2 rounded-lg bg-blue-500 px-4 text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-                                >
-                                  {isProcessing ? (
-                                    <FaPaperPlane className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <FaPaperPlane className="h-4 w-4" />
-                                  )}
-                                  <span className="whitespace-nowrap text-sm font-medium">
-                                    Send Payment Reminder
-                                  </span>
-                                </button>
-                              )}
+                              <button
+                                onClick={() =>
+                                  setShowReminderModal(invoice._id as string)
+                                }
+                                className="flex h-full w-full items-center justify-center space-x-2 rounded-lg bg-blue-500 px-4 text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
+                                title="Configure auto reminders"
+                              >
+                                <FaCog className="h-4 w-4" />
+                                <span className="whitespace-nowrap text-sm font-medium">
+                                  Configure Reminders
+                                </span>
+                              </button>
+                            </div>
+
+                            {/* Reminder Status Badge */}
+                            <div className="mt-2 flex justify-center">
+                              {getReminderStatusBadge(invoice)}
                             </div>
                           </div>
                         </div>
@@ -270,6 +321,23 @@ const PendingJobsModal = ({
         onClose={() => setShowPaymentModal(null)}
         onSubmit={handlePaymentSubmit}
         isLoading={isPending}
+      />
+
+      {/* Reminder Configuration Modal */}
+      <ReminderConfigModal
+        isOpen={!!showReminderModal}
+        onClose={() => setShowReminderModal(null)}
+        invoiceId={showReminderModal || ""}
+        onSettingsUpdate={(invoiceId, settings) => {
+          // Update the local state with new reminder settings
+          setInvoices((prevInvoices) =>
+            prevInvoices.map((invoice) =>
+              invoice._id === invoiceId
+                ? { ...invoice, paymentReminders: settings }
+                : invoice,
+            ),
+          );
+        }}
       />
     </>
   );
