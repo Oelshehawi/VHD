@@ -10,7 +10,8 @@ import InvoicePdfDocument, {
   type InvoiceData,
 } from "../../../_components/pdf/InvoicePdfDocument";
 import { revalidatePath } from "next/cache";
-import postmark from "postmark";
+
+const postmark = require("postmark");
 
 const postmarkClient = new postmark.ServerClient(
   process.env.POSTMARK_CLIENT || "",
