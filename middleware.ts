@@ -11,6 +11,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/geocode",
   "/api/optimization",
   "/api/distance-matrix",
+  "/api/cron/process-reminders",
+  "/api/cron/process-reminders(.*)",
 ]);
 
 // Define client portal routes
