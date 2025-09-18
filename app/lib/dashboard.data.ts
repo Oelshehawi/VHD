@@ -286,7 +286,8 @@ export const getOverDueInvoiceAmount = async () => {
 export const getPendingInvoiceAmount = async () => {
   await connectMongo();
   try {
-    const today = new Date();
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
     const result = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
       { $unwind: "$items" },
@@ -303,8 +304,8 @@ export const getPendingInvoiceAmount = async () => {
 export const getPendingInvoices = async () => {
   await connectMongo();
   try {
-    const today = new Date();
-    today.setUTCHours(0, 0, 0, 0);
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
 
     const pendingInvoices = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
