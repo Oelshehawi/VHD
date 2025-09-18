@@ -288,12 +288,25 @@ export const getPendingInvoiceAmount = async () => {
   try {
     const now = new Date();
     const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    console.log("=== getPendingInvoiceAmount Debug Info ===");
+    console.log("Server current time (now):", now.toISOString());
+    console.log("Calculated 'today' for comparison:", today.toISOString());
+
     const result = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
       { $unwind: "$items" },
       { $group: { _id: null, totalAmount: { $sum: "$items.price" } } },
     ]);
     const baseAmount = result.length > 0 ? result[0].totalAmount : 0;
+
+    console.log("Pending invoice amount query results:", {
+      matchedDocuments: result.length,
+      baseAmount: baseAmount,
+      finalAmount: baseAmount + baseAmount * 0.05
+    });
+    console.log("=== End Debug Info ===");
+
     return baseAmount + baseAmount * 0.05;
   } catch (error) {
     console.error("Database Error:", error);
@@ -306,6 +319,18 @@ export const getPendingInvoices = async () => {
   try {
     const now = new Date();
     const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    console.log("=== getPendingInvoices Debug Info ===");
+    console.log("Server current time (now):", now.toISOString());
+    console.log("Server timezone offset (minutes):", now.getTimezoneOffset());
+    console.log("Server local date string:", now.toLocaleDateString());
+    console.log("Server local time string:", now.toLocaleTimeString());
+    console.log("Calculated 'today' for comparison:", today.toISOString());
+    console.log("Today UTC components:", {
+      year: now.getUTCFullYear(),
+      month: now.getUTCMonth(),
+      date: now.getUTCDate()
+    });
 
     const pendingInvoices = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
@@ -343,6 +368,21 @@ export const getPendingInvoices = async () => {
       },
       { $sort: { dateIssued: 1 } },
     ]);
+
+    console.log("Query results count:", pendingInvoices.length);
+    if (pendingInvoices.length > 0) {
+      console.log("Sample invoice dates found:");
+      pendingInvoices.slice(0, 3).forEach((invoice, index) => {
+        console.log(`  Invoice ${index + 1}:`, {
+          invoiceId: invoice.invoiceId,
+          jobTitle: invoice.jobTitle,
+          dateIssued: invoice.dateIssued,
+          dateIssuedISO: invoice.dateIssued.toISOString(),
+          isBeforeToday: invoice.dateIssued <= today
+        });
+      });
+    }
+    console.log("=== End Debug Info ===");
 
     return formatPendingInvoices(pendingInvoices);
   } catch (error) {
