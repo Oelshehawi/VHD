@@ -90,7 +90,7 @@ export default async function RootLayout({
               canManage={canManage as boolean}
               user={serializedUser}
             />
-            <main>{children}</main>
+            <main className="flex-1 lg:ml-20">{children}</main>
           </div>
           <SpeedInsights />
           <Analytics />
