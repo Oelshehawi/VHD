@@ -57,7 +57,6 @@ const DashboardPage = async ({
       </div>
     );
 
-  console.timeEnd('Dashboard Page Total');
   
   return (
     <div className="min-h-screen bg-gray-50 p-8">

@@ -288,7 +288,7 @@ export const getPendingInvoiceAmount = async () => {
   try {
     const today = new Date();
     const result = await Invoice.aggregate([
-      { $match: { status: "pending", dateIssued: { $lt: today } } },
+      { $match: { status: "pending", dateIssued: { $lte: today } } },
       { $unwind: "$items" },
       { $group: { _id: null, totalAmount: { $sum: "$items.price" } } },
     ]);
@@ -304,7 +304,7 @@ export const getPendingInvoices = async () => {
   await connectMongo();
   try {
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    today.setUTCHours(0, 0, 0, 0);
 
     const pendingInvoices = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
