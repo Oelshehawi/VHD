@@ -307,7 +307,7 @@ export const getPendingInvoices = async () => {
     today.setHours(0, 0, 0, 0);
 
     const pendingInvoices = await Invoice.aggregate([
-      { $match: { status: "pending", dateIssued: { $lt: today } } },
+      { $match: { status: "pending", dateIssued: { $lte: today } } },
       {
         $lookup: {
           from: "clients",

@@ -98,6 +98,7 @@ export const fetchInvoiceById = async (invoiceId: string) => {
     const formattedItems = (items: any[]) =>
       items.map((item) => ({
         description: item.description,
+        details: item.details,
         price: parseFloat(item.price) || 0,
       }));
 

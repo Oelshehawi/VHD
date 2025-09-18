@@ -95,6 +95,24 @@ const InvoiceSelectionModal = ({
                   <div className="mt-1 text-xs text-gray-600">
                     Job: {invoice.jobTitle}
                   </div>
+                  {invoice.items && invoice.items.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <div className="text-xs font-medium text-gray-500">Services:</div>
+                      {invoice.items.slice(0, 2).map((item: any, index: number) => (
+                        <div key={index} className="text-xs text-gray-600">
+                          • {item.description}
+                          {item.details && (
+                            <span className="text-gray-500 italic"> ({item.details})</span>
+                          )}
+                        </div>
+                      ))}
+                      {invoice.items.length > 2 && (
+                        <div className="text-xs text-gray-500 italic">
+                          +{invoice.items.length - 2} more services...
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </li>
               ))}
             </ul>

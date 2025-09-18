@@ -9,10 +9,12 @@ import {
 import {
   createOrUpdateReport,
   getReportByScheduleId,
+  getReportsByJobNameAndLocation,
 } from "../../app/lib/actions/scheduleJobs.actions";
 import toast from "react-hot-toast";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
+import ReportSelectionModal from "./ReportSelectionModal";
 
 
 type FormStep = "basic" | "equipment" | "inspection" | "recommendations";
@@ -61,6 +63,10 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
   const [step, setStep] = useState<FormStep>("basic");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isAutoFilling, setIsAutoFilling] = useState(false);
+  const [autoFilledFields, setAutoFilledFields] = useState<string[]>([]);
+  const [clientReports, setClientReports] = useState<any[]>([]);
+  const [showReportSelector, setShowReportSelector] = useState(false);
 
   // Smart technician pre-selection
   const getDefaultTechnician = () => {
@@ -209,7 +215,30 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
             // Ensure technicianId is preserved from the report
             technicianId: report.technicianId || prevData.technicianId,
           }));
-          
+
+        }
+
+        // Always try to fetch previous reports for autofill (whether updating existing or creating new)
+        if (schedule.jobTitle && schedule.location) {
+          try {
+            setIsAutoFilling(true);
+            const reports = await getReportsByJobNameAndLocation(schedule.jobTitle, schedule.location);
+
+            // Filter out the current report if it exists to show only previous reports
+            const previousReports = reports.filter(r => r.scheduleId !== schedule._id.toString());
+
+            if (previousReports.length > 0) {
+              setClientReports(previousReports);
+              // Only show selector if no existing report was found
+              if (!report) {
+                setShowReportSelector(true);
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching reports by job name and location:", error);
+          } finally {
+            setIsAutoFilling(false);
+          }
         }
       } catch (error) {
         console.error("Error fetching report:", error);
@@ -290,6 +319,93 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
 
       return updatedFormData;
     });
+  };
+
+  const handleReportSelect = (report: any) => {
+    const fieldsToUpdate = [];
+
+    // Convert inspection items from object to array format for form
+    const arrayInspectionItems: InspectionItemType[] = [];
+    const keyMappings: { [key: string]: string } = {
+      "0": "filtersInPlace",
+      "1": "filtersListed",
+      "2": "filtersNeedCleaningMoreOften",
+      "3": "filtersNeedReplacement",
+      "4": "washCycleWorking",
+      "5": "fireSuppressionNozzlesClear",
+      "6": "fanTipAccessible",
+      "7": "safeAccessToFan",
+      "8": "exhaustFanOperational",
+      "9": "ecologyUnitRequiresCleaning",
+      "10": "ecologyUnitDeficiencies",
+      "11": "greaseBuildupOnRoof",
+      "12": "systemCleanedPerCode",
+      "13": "systemInteriorAccessible",
+      "14": "multiStoreyVerticalCleaning",
+      "15": "adequateAccessPanels",
+    };
+
+    if (report.inspectionItems) {
+      for (let i = 0; i < inspectionItems.length; i++) {
+        arrayInspectionItems[i] = {};
+      }
+
+      Object.entries(keyMappings).forEach(([indexStr, key]) => {
+        const index = parseInt(indexStr);
+        const status = (report.inspectionItems as any)[key];
+        if (status) {
+          arrayInspectionItems[index] = { status };
+        }
+      });
+    }
+
+    // Convert cooking equipment from old boolean format to new array format
+    const cookingEquipmentArray: string[] = [];
+    if (typeof report.cookingEquipment === 'object' && report.cookingEquipment) {
+      if ((report.cookingEquipment as any).griddles) cookingEquipmentArray.push("griddles");
+      if ((report.cookingEquipment as any).deepFatFryers) cookingEquipmentArray.push("deepFatFryers");
+      if ((report.cookingEquipment as any).woks) cookingEquipmentArray.push("woks");
+      if ((report.cookingEquipment as any).ovens) cookingEquipmentArray.push("ovens");
+      if ((report.cookingEquipment as any).flattopGrills) cookingEquipmentArray.push("flattopGrills");
+    } else if (Array.isArray(report.cookingEquipment)) {
+      cookingEquipmentArray.push(...report.cookingEquipment);
+    }
+
+    // Update form data with autofilled values
+    setFormData(prevData => ({
+      ...prevData,
+      fuelType: report.fuelType || prevData.fuelType,
+      cookingVolume: report.cookingVolume || prevData.cookingVolume,
+      cookingEquipment: cookingEquipmentArray.length > 0 ? cookingEquipmentArray : prevData.cookingEquipment,
+      equipmentDetails: {
+        ...prevData.equipmentDetails,
+        ...(report.equipmentDetails || {}),
+      },
+      cleaningDetails: {
+        ...prevData.cleaningDetails,
+        ...(report.cleaningDetails || {}),
+      },
+      inspectionItems: arrayInspectionItems.length > 0 ? arrayInspectionItems : prevData.inspectionItems,
+      recommendedCleaningFrequency: report.recommendedCleaningFrequency || prevData.recommendedCleaningFrequency,
+      comments: report.comments || prevData.comments,
+      recommendations: report.recommendations || prevData.recommendations,
+    }));
+
+    // Track which fields were auto-filled
+    const updatedFields = [];
+    if (report.fuelType) updatedFields.push("fuelType");
+    if (report.cookingVolume) updatedFields.push("cookingVolume");
+    if (cookingEquipmentArray.length > 0) updatedFields.push("cookingEquipment");
+    if (report.equipmentDetails) updatedFields.push("equipmentDetails");
+    if (report.cleaningDetails) updatedFields.push("cleaningDetails");
+    if (report.inspectionItems) updatedFields.push("inspectionItems");
+    if (report.recommendedCleaningFrequency) updatedFields.push("recommendedCleaningFrequency");
+    if (report.comments) updatedFields.push("comments");
+    if (report.recommendations) updatedFields.push("recommendations");
+
+    setAutoFilledFields(updatedFields);
+    setShowReportSelector(false);
+    toast.success(`Form auto-filled from previous report (${new Date(report.dateCompleted).toLocaleDateString()})`);
   };
 
   const handleSubmit = async () => {
@@ -488,6 +604,24 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[60vh]">
+          {/* Auto-fill Status */}
+          {isAutoFilling && (
+            <div className="flex items-center justify-center bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-400 border-t-transparent"></div>
+              <span className="ml-2 text-xs font-medium text-blue-700">
+                Loading previous reports for auto-fill...
+              </span>
+            </div>
+          )}
+
+          {/* Report Selection Modal */}
+          <ReportSelectionModal
+            reports={clientReports}
+            isOpen={showReportSelector}
+            onClose={() => setShowReportSelector(false)}
+            onSelect={handleReportSelect}
+          />
+
           <motion.div
             key={step}
             initial={{ opacity: 0, x: 20 }}
@@ -979,7 +1113,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
           </motion.div>
         </div>
 
-        <div className="mt-6 flex justify-between px-6 pb-6">
+        <div className="mt-6 flex justify-between items-center px-6 pb-6">
           {step !== "basic" ? (
             <button
               onClick={prevStep}
@@ -989,6 +1123,18 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
             </button>
           ) : (
             <div></div>
+          )}
+
+          {clientReports.length > 0 && !showReportSelector && (
+            <button
+              onClick={() => setShowReportSelector(true)}
+              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              Auto-fill from Previous
+            </button>
           )}
 
           {step !== "recommendations" ? (

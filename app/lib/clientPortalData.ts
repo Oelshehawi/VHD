@@ -302,6 +302,7 @@ export async function fetchClientInvoices(
       items:
         invoice.items?.map((item: any) => ({
           description: item.description || "",
+          details: item.details || "",
           price: parseFloat(item.price) || 0,
         })) || [],
       location: invoice.location || "",
@@ -418,7 +419,6 @@ export async function fetchInvoiceDetails(
         typeof invoiceDoc.clientId === "string"
           ? invoiceDoc.clientId
           : invoiceDoc.clientId.toString(),
-      paymentEmailSent: invoiceDoc.paymentEmailSent || false,
     };
 
     // Add photos if they exist

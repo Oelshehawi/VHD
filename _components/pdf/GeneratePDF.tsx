@@ -5,6 +5,7 @@ import { FaPrint } from "react-icons/fa";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import toast from "react-hot-toast";
 import InvoicePdfDocument, { type InvoiceData } from "./InvoicePdfDocument";
+import EstimatePdfDocument, { type EstimateData } from "./EstimatePdfDocument";
 import ReceiptPdfDocument, { type ReceiptData } from "./ReceiptPdfDocument";
 import ReportPdfDocument, {
   type ReportData,
@@ -15,6 +16,7 @@ import ReportPdfDocument, {
 type PDFData =
   | { type: "invoice"; data: InvoiceData }
   | { type: "clientInvoice"; data: InvoiceData }
+  | { type: "estimate"; data: EstimateData }
   | { type: "receipt"; data: ReceiptData }
   | {
       type: "report";
@@ -57,6 +59,8 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
         return <InvoicePdfDocument invoiceData={pdfData.data} />;
       case "clientInvoice":
         return <InvoicePdfDocument invoiceData={pdfData.data} />;
+      case "estimate":
+        return <EstimatePdfDocument estimateData={pdfData.data} />;
       case "receipt":
         return <ReceiptPdfDocument receiptData={pdfData.data} />;
       case "report":
@@ -80,6 +84,8 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
         return `Invoice - ${pdfData.data.jobTitle.trim()}.pdf`;
       case "clientInvoice":
         return `Invoice - ${pdfData.data.jobTitle.trim()}.pdf`;
+      case "estimate":
+        return `Estimate - ${pdfData.data.clientName.trim()}.pdf`;
       case "receipt":
         return `Receipt - ${pdfData.data.jobTitle.trim()}.pdf`;
       case "report":

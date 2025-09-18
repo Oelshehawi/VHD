@@ -13,6 +13,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/distance-matrix",
   "/api/cron/process-reminders",
   "/api/cron/process-reminders(.*)",
+  "/api/send-invoice(.*)",
 ]);
 
 // Define client portal routes

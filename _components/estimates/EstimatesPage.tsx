@@ -70,40 +70,32 @@ export function EstimatesPage({
 
   return (
     <>
-      {/* Header */}
+      {/* Header with Status Indicators */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h1 className="text-xl font-bold text-gray-900 md:text-2xl">
-          Estimates
-        </h1>
+        <div className="flex items-center gap-4">
+          <h1 className="text-xl font-bold text-gray-900 md:text-2xl">
+            Estimates
+          </h1>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded-md bg-gray-50 px-2 py-1">
+              <div className="text-sm font-semibold text-gray-600">{statusCounts.draft}</div>
+              <div className="text-xs text-gray-500">Draft</div>
+            </div>
+            <div className="flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1">
+              <div className="text-sm font-semibold text-blue-600">{statusCounts.sent}</div>
+              <div className="text-xs text-blue-500">Sent</div>
+            </div>
+            <div className="flex items-center gap-1 rounded-md bg-green-50 px-2 py-1">
+              <div className="text-sm font-semibold text-green-600">{statusCounts.approved}</div>
+              <div className="text-xs text-green-500">Approved</div>
+            </div>
+            <div className="flex items-center gap-1 rounded-md bg-red-50 px-2 py-1">
+              <div className="text-sm font-semibold text-red-600">{statusCounts.rejected}</div>
+              <div className="text-xs text-red-500">Rejected</div>
+            </div>
+          </div>
+        </div>
         <AddEstimate clients={clients} />
-      </div>
-
-      {/* Status Overview */}
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <div className="rounded-lg bg-gray-50 p-3 text-center">
-          <div className="text-lg font-bold text-gray-600 md:text-xl">
-            {statusCounts.draft}
-          </div>
-          <div className="text-xs text-gray-500">Draft</div>
-        </div>
-        <div className="rounded-lg bg-blue-50 p-3 text-center">
-          <div className="text-lg font-bold text-blue-600 md:text-xl">
-            {statusCounts.sent}
-          </div>
-          <div className="text-xs text-blue-500">Sent</div>
-        </div>
-        <div className="rounded-lg bg-green-50 p-3 text-center">
-          <div className="text-lg font-bold text-green-600 md:text-xl">
-            {statusCounts.approved}
-          </div>
-          <div className="text-xs text-green-500">Approved</div>
-        </div>
-        <div className="rounded-lg bg-red-50 p-3 text-center">
-          <div className="text-lg font-bold text-red-600 md:text-xl">
-            {statusCounts.rejected}
-          </div>
-          <div className="text-xs text-red-500">Rejected</div>
-        </div>
       </div>
 
       {/* Filters */}

@@ -3,6 +3,8 @@ import { useState } from "react";
 import { FaChevronRight, FaFileInvoice, FaUser, FaCalculator, FaPenSquare } from "react-icons/fa";
 import Link from "next/link";
 import InlineEditEstimate from "./InlineEditEstimate";
+import GeneratePDF from "../pdf/GeneratePDF";
+import { type EstimateData } from "../pdf/EstimatePdfDocument";
 import { EstimateType, ClientType } from "../../app/lib/typeDefinitions";
 import { formatDateStringUTC } from "../../app/lib/utils";
 
@@ -23,6 +25,47 @@ const EstimateDetailsContainer = ({
 
   const toggleEdit = () => {
     setIsEditing(!isEditing);
+  };
+
+  // Calculate totals from items with proper rounding
+  const subtotal = Math.round(estimate.items.reduce((sum, item) => sum + item.price, 0) * 100) / 100;
+  const gst = Math.round(subtotal * 0.05 * 100) / 100; // 5% GST
+  const total = Math.round((subtotal + gst) * 100) / 100;
+
+  // Get client name
+  const clientName = estimate.prospectInfo?.businessName || "Unknown Client";
+
+  // Prepare estimate data for PDF generation
+  const estimateData: EstimateData = {
+    estimateNumber: estimate.estimateNumber,
+    createdDate: new Date(estimate.createdDate).toLocaleDateString(),
+    clientName,
+    contactPerson: estimate.prospectInfo?.contactPerson,
+    email: estimate.prospectInfo?.email,
+    phone: estimate.prospectInfo?.phone,
+    address: estimate.prospectInfo?.address,
+    projectLocation: estimate.prospectInfo?.projectLocation,
+    items: estimate.items.map((item) => ({
+      description: item.description,
+      details: item.details || "",
+      price: item.price,
+    })),
+    subtotal,
+    gst,
+    total,
+    services: estimate.services && estimate.services.length > 0
+      ? estimate.services
+      : [
+          "Hood from inside and outside",
+          "All filters",
+          "Access panels to duct work (accessible area only)",
+          "Rooftop fan (If safe access)",
+          "Fire wall behind equipment",
+          "ASTTBC Sticker",
+          "Fire Dept Report",
+          "Before/After pictures",
+        ],
+    terms: estimate.terms,
   };
 
   // Status styling helper
@@ -118,9 +161,9 @@ const EstimateDetailsContainer = ({
                   </div>
                 </div>
                 
-                {/* Edit Button */}
+                {/* Action Buttons */}
                 {canManage && (
-                  <div className="mt-4 sm:mt-0">
+                  <div className="mt-4 sm:mt-0 flex gap-3">
                     <button
                       onClick={toggleEdit}
                       className="inline-flex items-center rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
@@ -128,6 +171,12 @@ const EstimateDetailsContainer = ({
                       <FaPenSquare className="mr-2 h-4 w-4" />
                       <span>{isEditing ? 'Cancel Edit' : 'Edit Estimate'}</span>
                     </button>
+                    <GeneratePDF
+                      pdfData={{ type: "estimate", data: estimateData }}
+                      fileName={`${estimateData.clientName} - Estimate.pdf`}
+                      buttonText="Download PDF"
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    />
                   </div>
                 )}
               </div>
@@ -149,25 +198,6 @@ const EstimateDetailsContainer = ({
               />
 
 
-              {/* Actions */}
-              {canManage && (
-                <div className="flex justify-end space-x-4">
-                  <button
-                    onClick={() => {
-                      const link = document.createElement('a');
-                      link.href = `/estimates/${estimateId}/pdf`;
-                      link.target = '_blank';
-                      document.body.appendChild(link);
-                      link.click();
-                      document.body.removeChild(link);
-                    }}
-                    className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                  >
-                    <FaFileInvoice className="mr-2 h-4 w-4" />
-                    Download PDF
-                  </button>
-                </div>
-              )}
             </div>
           </div>
         </div>

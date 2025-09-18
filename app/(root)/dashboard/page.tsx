@@ -28,17 +28,15 @@ const DashboardPage = async ({
     ? parseInt(resolvedSearchParams.salesYear)
     : new Date().getFullYear();
 
-  console.time('Dashboard Page Total');
   
-  console.time('Parallel Data Fetch');
   const [{ sessionClaims }, salesData, amount, pendingInvoices] = await Promise.all([
     auth(),
     fetchYearlySalesData(currentYear),
     getPendingInvoiceAmount(),
     getPendingInvoices()
   ]);
-  console.timeEnd('Parallel Data Fetch');
 
+  
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 

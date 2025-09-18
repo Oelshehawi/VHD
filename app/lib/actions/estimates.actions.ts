@@ -23,6 +23,7 @@ export async function createEstimate(estimateData: CreateEstimateData) {
       // Ensure items array is properly structured
       items: estimateData.items?.map(item => ({
         description: item.description,
+        details: item.details || "",
         price: Number(item.price)
       })) || [],
       // Calculate totals from items with proper rounding
@@ -63,6 +64,7 @@ export async function updateEstimate(
     if (updateData.items) {
       updateData.items = updateData.items.map((item: any) => ({
         description: item.description,
+        details: item.details || "",
         price: Number(item.price)
       }));
       

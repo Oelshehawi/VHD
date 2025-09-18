@@ -121,11 +121,12 @@ export async function createInvoice(invoiceData: any) {
       invoiceData.notes = invoiceData.notes.trim();
     }
     
-    // Also trim item descriptions if they exist
+    // Also trim item descriptions and details if they exist
     if (invoiceData.items && Array.isArray(invoiceData.items)) {
       invoiceData.items = invoiceData.items.map((item: any) => ({
         ...item,
-        description: item.description ? item.description.trim() : item.description
+        description: item.description ? item.description.trim() : item.description,
+        details: item.details ? item.details.trim() : item.details
       }));
     }
 
@@ -173,11 +174,12 @@ export async function updateInvoice(invoiceId: any, formData: any) {
       formData.notes = formData.notes.trim();
     }
     
-    // Also trim item descriptions if they exist
+    // Also trim item descriptions and details if they exist
     if (formData.items && Array.isArray(formData.items)) {
       formData.items = formData.items.map((item: any) => ({
         ...item,
-        description: item.description ? item.description.trim() : item.description
+        description: item.description ? item.description.trim() : item.description,
+        details: item.details ? item.details.trim() : item.details
       }));
     }
     
@@ -265,6 +267,7 @@ export async function getClientInvoicesForAutofill(clientId: string) {
       notes: invoice.notes,
       items: invoice.items.map((item: any) => ({
         description: item.description,
+        details: item.details || "",
         price: parseFloat(item.price) || 0,
       })),
       dateIssued:

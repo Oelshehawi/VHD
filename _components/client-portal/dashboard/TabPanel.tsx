@@ -32,7 +32,7 @@ interface Invoice {
   totalAmount: number;
   status: string;
   jobTitle: string;
-  items: { description: string; price: number }[];
+  items: { description: string; details?: string; price: number }[];
   location: string;
 }
 
@@ -124,8 +124,9 @@ const TabPanel = ({
         clientName: clientData?.clientName || "Client",
         email: clientData?.email || "client@email.com",
         phoneNumber: clientData?.phoneNumber || "Phone Number",
-        items: invoice.items.map((item: { description: any; price: any }) => ({
+        items: invoice.items.map((item: { description: any; details?: any; price: any }) => ({
           description: item.description,
+          details: item.details || "",
           price: item.price,
           total: item.price,
         })),

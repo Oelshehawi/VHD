@@ -77,6 +77,7 @@ const InlineEditEstimate = ({
       if (formData.items) {
         processedData.items = formData.items.map((item: any) => ({
           description: item.description || '',
+          details: item.details || '',
           price: Number(item.price) || 0
         }));
         
@@ -380,7 +381,7 @@ const InlineEditEstimate = ({
             {isEditing && (
               <button
                 type="button"
-                onClick={() => append({ description: '', price: 0 })}
+                onClick={() => append({ description: '', details: '', price: 0 })}
                 className="inline-flex items-center rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
               >
                 <FaPlus className="mr-2 h-3 w-3" />
@@ -392,37 +393,52 @@ const InlineEditEstimate = ({
           {isEditing ? (
             <div className="space-y-4">
               {fields.map((field, index) => (
-                <div key={field.id} className="flex items-center space-x-4 rounded-lg border border-gray-200 p-4">
-                  <div className="flex-1">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Description
-                    </label>
-                    <input
-                      {...register(`items.${index}.description` as const)}
-                      type="text"
-                      placeholder="Item description"
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                    />
+                <div key={field.id} className="rounded-lg border border-gray-200 p-4">
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-4">
+                      <div className="flex-1">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Description
+                        </label>
+                        <input
+                          {...register(`items.${index}.description` as const)}
+                          type="text"
+                          placeholder="Service description"
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                      <div className="w-32">
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Price
+                        </label>
+                        <input
+                          {...register(`items.${index}.price` as const)}
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => remove(index)}
+                        className="mt-6 inline-flex items-center rounded-md bg-red-100 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+                      >
+                        <FaTrash className="h-3 w-3" />
+                      </button>
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                        System Details
+                      </label>
+                      <input
+                        {...register(`items.${index}.details` as const)}
+                        type="text"
+                        placeholder="System specifications (e.g., 2 hoods 17 filters)"
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
+                      />
+                    </div>
                   </div>
-                  <div className="w-32">
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      Price
-                    </label>
-                    <input
-                      {...register(`items.${index}.price` as const)}
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
-                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    className="mt-6 inline-flex items-center rounded-md bg-red-100 px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                  >
-                    <FaTrash className="h-3 w-3" />
-                  </button>
                 </div>
               ))}
               {fields.length === 0 && (
@@ -436,9 +452,18 @@ const InlineEditEstimate = ({
             <div className="space-y-3">
               {estimate.items && estimate.items.length > 0 ? (
                 estimate.items.map((item, index) => (
-                  <div key={index} className="flex justify-between items-center rounded-lg bg-gray-50 px-4 py-3">
-                    <span className="text-sm text-gray-900">{item.description}</span>
-                    <span className="text-sm font-medium text-gray-900">${item.price.toFixed(2)}</span>
+                  <div key={index} className="rounded-lg bg-gray-50 px-4 py-3">
+                    <div className="flex justify-between items-center">
+                      <div className="flex-1">
+                        <span className="text-sm text-gray-900">{item.description}</span>
+                        {item.details && (
+                          <div className="text-xs text-gray-600 mt-1">
+                            {item.details}
+                          </div>
+                        )}
+                      </div>
+                      <span className="text-sm font-medium text-gray-900">${item.price.toFixed(2)}</span>
+                    </div>
                   </div>
                 ))
               ) : (

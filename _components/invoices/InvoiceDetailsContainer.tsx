@@ -50,8 +50,9 @@ const InvoiceDetailsContainer = ({
     clientName: client.clientName,
     email: clientEmail,
     phoneNumber: client.phoneNumber,
-    items: invoice.items.map((item: { description: any; price: any }) => ({
+    items: invoice.items.map((item: { description: any; details?: any; price: any }) => ({
       description: item.description,
+      details: item.details || "",
       price: item.price,
       total: item.price,
     })),
@@ -75,8 +76,9 @@ const InvoiceDetailsContainer = ({
     clientName: client.clientName,
     email: clientEmail,
     phoneNumber: client.phoneNumber,
-    items: invoice.items.map((item: { description: any; price: any }) => ({
+    items: invoice.items.map((item: { description: any; details?: any; price: any }) => ({
       description: item.description,
+      details: item.details || "",
       price: item.price,
       total: item.price,
     })),

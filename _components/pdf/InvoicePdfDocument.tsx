@@ -18,7 +18,7 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica",
     fontSize: 10,
     paddingTop: 20,
-    paddingBottom: 40,
+    paddingBottom: 60,
     paddingHorizontal: 25,
     color: "#000",
   },
@@ -71,11 +71,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   footerText: { fontSize: 10, color: "white", fontFamily: "Helvetica" },
-  section: { marginTop: 15 },
+  section: { marginTop: 5 },
   infoGroup: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 15,
+    marginBottom: 7,
   },
   infoBox: {
     backgroundColor: "#f8f9fa",
@@ -107,7 +107,7 @@ const styles = StyleSheet.create({
     border: "1px solid #dee2e6",
     borderRadius: 4,
     padding: 12,
-    marginTop: 12,
+    marginTop: 6,
   },
   sectionTitle: {
     fontSize: 12,
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
     border: "1px solid #dee2e6",
     borderRadius: 4,
-    marginTop: 12,
+    marginTop: 6,
     padding: 12,
   },
   tableRow: {
@@ -151,6 +151,14 @@ const styles = StyleSheet.create({
     borderBottom: "1px solid #f8f9fa",
   },
   serviceDescription: { fontSize: 11, color: "#495057", flex: 1 },
+  serviceDetails: {
+    fontSize: 10,
+    color: "#666",
+    marginTop: 13,
+    marginLeft: 10,
+    fontStyle: "italic",
+    lineHeight: 1.3,
+  },
   serviceAmount: {
     fontSize: 11,
     fontWeight: "bold",
@@ -189,10 +197,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: "#003e29",
   },
-  terms: { marginTop: 20 },
+  terms: { marginTop: 7, marginBottom: 7 },
   signature: { marginTop: 25, alignItems: "flex-end" },
   signatureLine: { width: "50%", borderTop: "1px solid black" },
-  signatureText: { marginTop: 5, fontFamily: "Helvetica" },
+  signatureText: { marginTop: 15, fontFamily: "Helvetica" },
   text: { fontFamily: "Helvetica" },
   boldText: { fontFamily: "Helvetica-Bold" },
   greenText: { color: "#003e29", fontFamily: "Helvetica-Bold" },
@@ -251,7 +259,7 @@ export interface InvoiceData {
   clientName: string;
   email: string;
   phoneNumber: string;
-  items: Array<{ description: string; price: number; total: number }>;
+  items: Array<{ description: string; details?: string; price: number; total: number }>;
   subtotal: number;
   gst: number;
   totalAmount: number;
@@ -344,7 +352,7 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
         style={{
           color: "red",
           textAlign: "center",
-          marginTop: 15,
+          marginTop: 7,
           marginBottom: 10,
           fontSize: 10,
         }}
@@ -358,10 +366,19 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
 
         {invoiceData.items.map((item, index) => (
           <View style={styles.serviceItem} key={index}>
-            <Text style={styles.serviceDescription}>
-              {index + 1}. {item.description}
-            </Text>
-            <Text style={styles.serviceAmount}>${item.total.toFixed(2)}</Text>
+            <View style={{ flex: 1, flexDirection: "column", justifyContent: "flex-start" }}>
+              <Text style={styles.serviceDescription}>
+                {index + 1}. {item.description}
+              </Text>
+              {item.details && (
+                <Text style={styles.serviceDetails}>
+                  {item.details}
+                </Text>
+              )}
+            </View>
+            <View style={{ justifyContent: "flex-start", alignItems: "flex-end" }}>
+              <Text style={styles.serviceAmount}>${item.total.toFixed(2)}</Text>
+            </View>
           </View>
         ))}
 

@@ -26,11 +26,11 @@ interface InvoiceFormValues {
   dateIssued: string;
   dateDue: string;
   notes?: string;
-  items: { description: string; price: number }[];
+  items: { description: string; details?: string; price: number }[];
 }
 
 const AddInvoice = ({ clients }: AddInvoiceProps) => {
-  const [items, setItems] = useState([{ description: "", price: 0 }]);
+  const [items, setItems] = useState([{ description: "", details: "", price: 0 }]);
   const [open, setOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
@@ -58,7 +58,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
   }, [dateIssued, frequency, setValue]);
 
   const addItem = () => {
-    setItems([...items, { description: "", price: 0 }]);
+    setItems([...items, { description: "", details: "", price: 0 }]);
   };
 
   const handleItemChange = (
@@ -143,7 +143,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
       await createInvoice(data);
       setOpen(false);
       setResetKey((prev) => prev + 1);
-      setItems([{ description: "", price: 0 }]);
+      setItems([{ description: "", details: "", price: 0 }]);
       reset();
     },
     successMessage: "Invoice has been successfully added",
@@ -402,7 +402,21 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                                 handleItemChange(index, "description", e.target.value),
                             })}
                             defaultValue={item.description}
-                            placeholder="Service description (e.g., Lawn maintenance, Tree trimming)"
+                            placeholder="Service description (e.g., Hood Cleaning, Vent Maintenance)"
+                            className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 outline-none focus:border-darkGreen focus:ring-1 focus:ring-green-100 text-sm"
+                          />
+                        </div>
+                        <div className="relative">
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <FaStickyNote className="h-3 w-3" />
+                          </div>
+                          <input
+                            {...register(`items[${index}].details` as any, {
+                              onChange: (e) =>
+                                handleItemChange(index, "details", e.target.value),
+                            })}
+                            defaultValue={item.details || ""}
+                            placeholder="System details (e.g., 2 hoods 17 filters)"
                             className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 outline-none focus:border-darkGreen focus:ring-1 focus:ring-green-100 text-sm"
                           />
                         </div>

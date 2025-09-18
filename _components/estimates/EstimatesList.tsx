@@ -116,7 +116,11 @@ export default function EstimatesList({
                         {formatDateStringUTC(estimate.createdDate)}
                       </div>
                       <div className="flex items-center gap-3">
-                        <EstimateStatusBadge status={estimate.status} />
+                        <EstimateStatusBadge
+                          status={estimate.status}
+                          estimateId={estimate._id as string}
+                          editable={true}
+                        />
                         <span className="text-sm font-medium text-white">
                           {formatCurrency(calculateTotals(estimate).total)}
                         </span>
@@ -140,7 +144,11 @@ export default function EstimatesList({
                   {formatDateStringUTC(estimate.createdDate)}
                 </td>
                 <td className="hidden px-6 py-4 md:table-cell">
-                  <EstimateStatusBadge status={estimate.status} />
+                  <EstimateStatusBadge
+                    status={estimate.status}
+                    estimateId={estimate._id as string}
+                    editable={true}
+                  />
                   {estimate.convertedToInvoice && (
                     <div className="mt-1">
                       <span className="inline-flex items-center rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-800">

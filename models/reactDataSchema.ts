@@ -54,6 +54,7 @@ const invoiceSchema = new Schema<InvoiceType>({
   items: [
     {
       description: { type: String, required: true },
+      details: { type: String },
       price: { type: Number, required: true },
     },
   ],
@@ -317,6 +318,7 @@ const EstimateSchema = new Schema<EstimateType>({
   items: [
     {
       description: { type: String, required: true },
+      details: { type: String },
       price: { type: Number, required: true },
     },
   ],

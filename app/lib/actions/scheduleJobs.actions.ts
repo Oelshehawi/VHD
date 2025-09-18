@@ -342,3 +342,76 @@ export const getReportByScheduleId = async (scheduleId: string) => {
     throw new Error("Failed to fetch report");
   }
 };
+
+export const getReportsByJobNameAndLocation = async (jobTitle: string, location: string) => {
+  await connectMongo();
+  try {
+    // First, find schedules with similar job titles and locations
+    const schedules = await Schedule.find({
+      $and: [
+        {
+          $or: [
+            { jobTitle: { $regex: jobTitle, $options: 'i' } }, // Case-insensitive match
+            { jobTitle: jobTitle }, // Exact match
+          ]
+        },
+        {
+          $or: [
+            { location: { $regex: location, $options: 'i' } }, // Case-insensitive match
+            { location: location }, // Exact match
+          ]
+        }
+      ]
+    })
+      .sort({ startDateTime: -1 })
+      .limit(10) // Get last 10 similar schedules
+      .lean();
+
+    if (!schedules || schedules.length === 0) {
+      return [];
+    }
+
+    // Get all reports for these schedules
+    const scheduleIds = schedules.map(schedule => schedule._id.toString());
+    const reports = await Report.find({ scheduleId: { $in: scheduleIds } })
+      .sort({ dateCompleted: -1 })
+      .lean();
+
+    if (!reports || reports.length === 0) {
+      return [];
+    }
+
+    // Map reports with schedule information for better context and ensure proper serialization
+    return reports.map((report: any) => {
+      const relatedSchedule = schedules.find(schedule =>
+        schedule._id.toString() === report.scheduleId.toString()
+      );
+
+      return {
+        _id: report._id.toString(),
+        scheduleId: report.scheduleId.toString(),
+        jobTitle: report.jobTitle || relatedSchedule?.jobTitle || "",
+        location: report.location || relatedSchedule?.location || "",
+        dateCompleted: report.dateCompleted instanceof Date
+          ? report.dateCompleted.toISOString()
+          : report.dateCompleted,
+        technicianId: report.technicianId || "",
+        fuelType: report.fuelType || "",
+        cookingVolume: report.cookingVolume || "",
+        cookingEquipment: report.cookingEquipment || [],
+        equipmentDetails: report.equipmentDetails || {},
+        cleaningDetails: report.cleaningDetails || {},
+        inspectionItems: report.inspectionItems || {},
+        recommendedCleaningFrequency: report.recommendedCleaningFrequency || 0,
+        comments: report.comments || "",
+        recommendations: report.recommendations || "",
+        lastServiceDate: report.lastServiceDate instanceof Date
+          ? report.lastServiceDate.toISOString()
+          : report.lastServiceDate,
+      };
+    });
+  } catch (error) {
+    console.error("Database Error:", error);
+    return [];
+  }
+};

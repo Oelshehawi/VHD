@@ -23,7 +23,7 @@ interface EstimateFormValues {
   };
   services: string[];
   notes?: string;
-  items: { description: string; price: number }[];
+  items: { description: string; details?: string; price: number }[];
 }
 
 const AddEstimate = ({ clients }: AddEstimateProps) => {
@@ -41,7 +41,7 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
     formState: { errors },
   } = useForm<EstimateFormValues>({
     defaultValues: {
-      items: [{ description: "", price: 0 }],
+      items: [{ description: "", details: "", price: 0 }],
       services: [
         "Hood from inside and outside",
         "All filters", 
@@ -113,6 +113,7 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
       if (data.items) {
         processedData.items = data.items.map((item: any) => ({
           description: item.description || '',
+          details: item.details || '',
           price: Number(item.price) || 0
         }));
         
@@ -411,6 +412,16 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
                             className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 outline-none focus:border-darkGreen focus:ring-1 focus:ring-green-100 text-sm"
                           />
                         </div>
+                        <div className="relative">
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                            <FaEdit className="h-3 w-3" />
+                          </div>
+                          <input
+                            {...register(`items.${index}.details` as const)}
+                            placeholder="System details (e.g., 2 hoods 17 filters)"
+                            className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 outline-none focus:border-darkGreen focus:ring-1 focus:ring-green-100 text-sm"
+                          />
+                        </div>
                         <div className="relative w-24">
                           <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                             <FaDollarSign className="h-3 w-3" />
@@ -442,7 +453,7 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
                 
                 <button
                   type="button"
-                  onClick={() => append({ description: "", price: 0 })}
+                  onClick={() => append({ description: "", details: "", price: 0 })}
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 border border-dashed border-gray-300 px-3 py-2 font-medium text-gray-600 transition-all duration-200 hover:bg-gray-200 hover:border-gray-400 text-sm"
                 >
                   <FaPlus className="h-3 w-3" />

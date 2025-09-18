@@ -120,7 +120,7 @@ export interface InvoiceType {
   jobTitle: string;
   dateIssued: Date | string | number;
   dateDue: Date | string;
-  items: { description: string; price: number }[];
+  items: { description: string; details?: string; price: number }[];
   frequency: number;
   location: string;
   notes?: string;
@@ -134,6 +134,7 @@ export interface InvoiceType {
 
 export interface InvoiceItem {
   description: string;
+  details?: string;
   price: number;
   total: number;
 }
@@ -420,7 +421,7 @@ export interface EstimateType {
   };
   status: "draft" | "sent" | "approved" | "rejected";
   createdDate: Date | string;
-  items: { description: string; price: number }[];
+  items: { description: string; details?: string; price: number }[];
   subtotal: number;
   gst: number;
   total: number;
