@@ -287,10 +287,18 @@ export const getPendingInvoiceAmount = async () => {
   await connectMongo();
   try {
     const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    // Use Eastern Time for business logic (adjust timezone as needed)
+    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Toronto"}));
+    const today = new Date(Date.UTC(easternTime.getFullYear(), easternTime.getMonth(), easternTime.getDate()));
 
     console.log("=== getPendingInvoiceAmount Debug Info ===");
     console.log("Server current time (now):", now.toISOString());
+    console.log("Eastern time:", easternTime.toISOString());
+    console.log("Eastern date components:", {
+      year: easternTime.getFullYear(),
+      month: easternTime.getMonth(),
+      date: easternTime.getDate()
+    });
     console.log("Calculated 'today' for comparison:", today.toISOString());
 
     const result = await Invoice.aggregate([
@@ -318,19 +326,22 @@ export const getPendingInvoices = async () => {
   await connectMongo();
   try {
     const now = new Date();
-    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    // Use Eastern Time for business logic (adjust timezone as needed)
+    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Toronto"}));
+    const today = new Date(Date.UTC(easternTime.getFullYear(), easternTime.getMonth(), easternTime.getDate()));
 
     console.log("=== getPendingInvoices Debug Info ===");
     console.log("Server current time (now):", now.toISOString());
     console.log("Server timezone offset (minutes):", now.getTimezoneOffset());
     console.log("Server local date string:", now.toLocaleDateString());
     console.log("Server local time string:", now.toLocaleTimeString());
-    console.log("Calculated 'today' for comparison:", today.toISOString());
-    console.log("Today UTC components:", {
-      year: now.getUTCFullYear(),
-      month: now.getUTCMonth(),
-      date: now.getUTCDate()
+    console.log("Eastern time:", easternTime.toISOString());
+    console.log("Eastern date components:", {
+      year: easternTime.getFullYear(),
+      month: easternTime.getMonth(),
+      date: easternTime.getDate()
     });
+    console.log("Calculated 'today' for comparison:", today.toISOString());
 
     const pendingInvoices = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
