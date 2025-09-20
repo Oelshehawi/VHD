@@ -45,7 +45,10 @@ export async function configurePaymentReminders(
           : settings.frequency === "7days"
             ? 7
             : 14;
-      nextReminderDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+
+      // Set reminder date to 9 AM PST (16:00 UTC) to match cron job schedule
+      const targetDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+      nextReminderDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 16, 0, 0, 0); // 16:00 UTC = 9 AM PST
     }
 
     // Get current reminder settings for audit log
@@ -124,9 +127,10 @@ export async function processAutoReminders(): Promise<ProcessResult> {
           if (frequency && frequency !== "none") {
             const days =
               frequency === "3days" ? 3 : frequency === "7days" ? 7 : 14;
-            nextReminderDate = new Date(
-              now.getTime() + days * 24 * 60 * 60 * 1000,
-            );
+
+            // Set reminder date to 9 AM PST (16:00 UTC) to match cron job schedule
+            const targetDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+            nextReminderDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 16, 0, 0, 0); // 16:00 UTC = 9 AM PST
           }
 
           // Update next reminder date
