@@ -312,7 +312,6 @@ export async function sendPaymentReminderEmail(
       success: true,
     });
 
-    revalidatePath("/database");
     return {
       success: true,
       message: `${sequenceText} payment reminder sent successfully`,
