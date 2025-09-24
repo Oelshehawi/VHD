@@ -116,6 +116,7 @@ export const fetchInvoiceById = async (invoiceId: string) => {
       dateIssued: invoice.dateIssued.toISOString().split("T")[0],
       clientId: invoice.clientId.toString(),
       items: formattedItems(invoice.items),
+      callHistory: invoice.callHistory,
     };
   } catch (error) {
     console.error("Database Error:", error);

@@ -9,7 +9,7 @@ import {
 } from "../../app/lib/dashboard.data";
 import { FaCalendarAlt, FaFilter, FaClock } from "react-icons/fa";
 import ScheduledJobsBox from "./ScheduledJobsBox";
-import { DueInvoiceType } from "../../app/lib/typeDefinitions";
+import { CallLogProvider } from "./CallLogManager";
 
 // Helper function to serialize objects (convert to plain objects)
 const serializeData = <T,>(data: T): T => {
@@ -88,9 +88,11 @@ const JobsDueContainer = async ({
 
   // Ensure we're passing serialized data to client components
   const serializedScheduledInvoices = serializeData(scheduledInvoices);
+  const serializedDisplayInvoices = serializeData(displayInvoices);
 
   return (
-    <div className="flex h-full w-full flex-col rounded-xl border border-gray-200 bg-white shadow-lg transition-all duration-300 hover:shadow-xl">
+    <CallLogProvider>
+      <div className="flex h-full w-full flex-col rounded-xl border border-gray-200 bg-white shadow-lg transition-all duration-300 hover:shadow-xl">
       {/* Header Section */}
       <div className="flex items-center justify-between border-b border-gray-200 p-6 pb-4">
         <div className="flex items-center gap-3">
@@ -145,7 +147,7 @@ const JobsDueContainer = async ({
                 <tr>
                   <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">
                     <div className="flex items-center gap-2">
-                      <span>Job</span>
+                      <span>Job & Contact</span>
                     </div>
                   </th>
                   <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">
@@ -154,18 +156,15 @@ const JobsDueContainer = async ({
                       <span>Due Date</span>
                     </div>
                   </th>
-                  <th className="hidden px-4 py-4 text-center text-sm font-semibold text-gray-700 md:table-cell">
-                    Status
-                  </th>
                   <th className="px-4 py-4 text-center text-sm font-semibold text-gray-700">
-                    Action
+                    Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {displayInvoices.length === 0 ? (
+                {serializedDisplayInvoices.length === 0 ? (
                   <tr>
-                    <td className="px-4 py-12 text-center" colSpan={4}>
+                    <td className="px-4 py-12 text-center" colSpan={3}>
                       <div className="flex flex-col items-center justify-center">
                         <FaClock className="mb-4 h-12 w-12 text-gray-300" />
                         <p className="text-lg font-medium text-gray-500">No jobs due this month</p>
@@ -174,7 +173,7 @@ const JobsDueContainer = async ({
                     </td>
                   </tr>
                 ) : (
-                  displayInvoices.map((invoice) => (
+                  serializedDisplayInvoices.map((invoice) => (
                     <InvoiceRow key={invoice.invoiceId} invoiceData={invoice} />
                   ))
                 )}
@@ -184,6 +183,7 @@ const JobsDueContainer = async ({
         </div>
       </div>
     </div>
+    </CallLogProvider>
   );
 };
 

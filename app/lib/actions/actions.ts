@@ -9,6 +9,7 @@ import {
 } from "../../../models/reactDataSchema";
 import { ClientType, InvoiceType } from "../typeDefinitions";
 import { calculateDueDate } from "../utils";
+import { CallLogEntry } from "../typeDefinitions";
 
 
 export async function updateInvoiceScheduleStatus(invoiceId: string) {
@@ -280,5 +281,38 @@ export async function getClientInvoicesForAutofill(clientId: string) {
   } catch (error) {
     console.error("Database Error:", error);
     return [];
+  }
+}
+
+// Call Logging Actions
+export async function logJobCall(invoiceId: string, callLog: CallLogEntry) {
+  await connectMongo();
+  try {
+    // Find the JobsDueSoon entry by invoiceId, not by _id
+    const updatedJob = await JobsDueSoon.findOneAndUpdate(
+      { invoiceId: invoiceId },
+      {
+        $push: {
+          callHistory: {
+            ...callLog,
+            timestamp: new Date(callLog.timestamp),
+            followUpDate: callLog.followUpDate ? new Date(callLog.followUpDate) : undefined,
+          }
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedJob) {
+      throw new Error("Job not found");
+    }
+
+    // Revalidate the dashboard to show updated call history
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to log job call");
   }
 }

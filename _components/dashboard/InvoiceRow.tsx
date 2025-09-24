@@ -1,72 +1,176 @@
 "use client";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { SendReminder } from "../Email/SendEmail";
 import { toast } from "react-hot-toast";
 import { updateInvoiceScheduleStatus } from "../../app/lib/actions/actions";
+import { sendCleaningReminderEmail } from "../../app/lib/actions/email.actions";
 import { formatDateStringUTC } from "../../app/lib/utils";
 import { DueInvoiceType } from "../../app/lib/typeDefinitions";
+import { FaPhone, FaEllipsisV, FaCheck, FaEnvelope, FaHistory, FaTimes } from "react-icons/fa";
+import {  CALL_OUTCOME_LABELS } from "../../app/lib/callLogConstants";
+import { useCallLog } from "./CallLogManager";
 
 const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
   const router = useRouter();
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const { openCallLog, openCallHistory } = useCallLog();
 
-  const handleCheckInvoice: React.ChangeEventHandler<HTMLInputElement> = async (
-    e,
-  ) => {
-    try {
-      e.currentTarget.form?.requestSubmit();
-      toast.success("Invoice Schedule Status updated successfully");
-    } catch (error) {
-      console.error("Error updating invoice:", error);
-      toast.error("Failed to update invoice status due to an error");
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
+  const getLastCallInfo = () => {
+    if (!invoiceData.callHistory || invoiceData.callHistory.length === 0) {
+      return null;
     }
+
+    const sortedCalls = [...invoiceData.callHistory].sort((a, b) =>
+      new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+    );
+
+    return sortedCalls[0];
   };
 
+  const lastCall = getLastCallInfo();
+  const needsFollowUp = lastCall?.followUpDate && new Date(lastCall.followUpDate) <= new Date();
+
   return (
-    <>
-      <tr className="group transition-all duration-200 hover:bg-gray-50">
-        <td
-          className="cursor-pointer px-4 py-4 transition-all duration-200 hover:bg-darkGreen hover:text-white group-hover:shadow-sm"
-          onClick={() => router.push(`/invoices/${invoiceData.invoiceId}`)}
-        >
+    <tr className="group transition-all duration-200 hover:bg-gray-50">
+      <td
+        className="cursor-pointer px-4 py-4 transition-all duration-200 hover:bg-darkGreen hover:text-white group-hover:shadow-sm"
+        onClick={() => router.push(`/invoices/${invoiceData.invoiceId}`)}
+      >
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
             {invoiceData.notesExists && (
               <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500 shadow-sm"></div>
             )}
             <span className="font-medium truncate">{invoiceData.jobTitle}</span>
           </div>
-        </td>
-        <td className="px-4 py-4">
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-gray-700">
-              {formatDateStringUTC(invoiceData.dateDue)}
-            </span>
-          </div>
-        </td>
-        <td className="hidden px-4 py-4 text-center md:table-cell">
-          <form
-            action={updateInvoiceScheduleStatus.bind(
-              null,
-              invoiceData.invoiceId,
-            )}
+          {lastCall && (
+            <div className="flex items-center gap-2 text-xs">
+              <FaPhone className="h-3 w-3 text-gray-400" />
+              <span className={`px-2 py-0.5 rounded-full text-xs font-medium border ${
+                needsFollowUp
+                  ? 'bg-red-50 text-red-600 border-red-200'
+                  : 'bg-blue-50 text-blue-600 border-blue-200'
+              }`}>
+                {CALL_OUTCOME_LABELS[lastCall.outcome as keyof typeof CALL_OUTCOME_LABELS]}
+              </span>
+              <span className="text-gray-500">
+                {formatDateStringUTC(lastCall.timestamp)}
+              </span>
+              {needsFollowUp && (
+                <span className="text-red-600 font-medium animate-pulse">
+                  Follow-up due
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+      </td>
+      <td className="px-4 py-4">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-700">
+            {formatDateStringUTC(invoiceData.dateDue)}
+          </span>
+        </div>
+      </td>
+      <td className="px-4 py-4 text-center align-middle">
+        <div className="relative" ref={dropdownRef}>
+          <button
+            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+            className={`flex items-center justify-center w-8 h-8 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all duration-200 ${
+              needsFollowUp ? 'text-red-600 hover:text-red-700' : ''
+            }`}
+            title="Actions"
           >
-            <input
-              type="checkbox"
-              name="isScheduled"
-              onChange={handleCheckInvoice}
-              className="h-5 w-5 rounded border-gray-300 text-darkGreen transition-colors duration-200 hover:cursor-pointer focus:ring-2 focus:ring-darkGreen focus:ring-offset-2"
-            />
-          </form>
-        </td>
-        <td className="px-4 py-4 text-center align-middle">
-          <SendReminder
-            emailRecipient={invoiceData.jobTitle}
-            emailSent={invoiceData.emailSent}
-            dueInvoiceData={invoiceData}
-            emailExists={invoiceData.emailExists || false}
-          />
-        </td>
-      </tr>
-    </>
+            <FaEllipsisV className="h-4 w-4" />
+          </button>
+
+          {isDropdownOpen && (
+            <div className="absolute right-0 top-full mt-1 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+              <button
+                onClick={() => {
+                  openCallLog({
+                    type: 'job',
+                    id: invoiceData.invoiceId,
+                    title: invoiceData.jobTitle,
+                    clientName: invoiceData.invoiceId,
+                  });
+                  setIsDropdownOpen(false);
+                }}
+                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <FaPhone className="h-4 w-4 text-blue-500" />
+                Log Call
+              </button>
+
+              <button
+                onClick={async (e) => {
+                  e.preventDefault();
+                  try {
+                    await updateInvoiceScheduleStatus(invoiceData.invoiceId);
+                    toast.success("Invoice marked as scheduled successfully");
+                    router.refresh();
+                  } catch (error) {
+                    console.error("Error marking invoice as scheduled:", error);
+                    toast.error("Failed to mark invoice as scheduled");
+                  }
+                  setIsDropdownOpen(false);
+                }}
+                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <FaCheck className="h-4 w-4 text-green-500" />
+                Mark Scheduled
+              </button>
+
+              {invoiceData.callHistory && invoiceData.callHistory.length > 0 && (
+                <button
+                  onClick={() => {
+                    openCallHistory(invoiceData.callHistory || [], invoiceData.jobTitle);
+                    setIsDropdownOpen(false);
+                  }}
+                  className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  <FaHistory className="h-4 w-4 text-purple-500" />
+                  View Call History ({invoiceData.callHistory.length})
+                </button>
+              )}
+
+              <button
+                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors border-t border-gray-100 mt-1 pt-3"
+                onClick={async () => {
+                  try {
+                    await sendCleaningReminderEmail(invoiceData);
+                    toast.success("Reminder email sent successfully");
+                  } catch (error) {
+                    console.error("Error sending email:", error);
+                    toast.error("Failed to send reminder email");
+                  }
+                  setIsDropdownOpen(false);
+                }}
+              >
+                <FaEnvelope className="h-4 w-4 text-orange-500" />
+                Send Email
+              </button>
+            </div>
+          )}
+
+        </div>
+      </td>
+
+    </tr>
   );
 };
 

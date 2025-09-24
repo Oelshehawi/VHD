@@ -14,10 +14,26 @@ import {
   LocationGeocodeType,
   DistanceMatrixCacheType,
   AuditLogEntry,
+  CallLogEntry,
 } from "../app/lib/typeDefinitions";
+import { CALL_OUTCOMES } from "../app/lib/callLogConstants";
 
 const { Schema, model, models, Model } = mongoose;
 const { ObjectId } = mongoose.Schema.Types;
+
+const CallLogEntrySchema = new Schema<CallLogEntry>({
+  callerId: { type: String, required: true },
+  callerName: { type: String, required: true },
+  timestamp: { type: Date, required: true, default: Date.now },
+  outcome: {
+    type: String,
+    required: true,
+    enum: Object.values(CALL_OUTCOMES)
+  },
+  notes: { type: String, required: true },
+  followUpDate: { type: Date },
+  duration: { type: Number }, // in minutes
+});
 
 const ClientSchema = new Schema<ClientType>({
   clientName: { type: String },
@@ -273,6 +289,7 @@ const jobsDueSoonSchema = new Schema<DueInvoiceType>({
     ref: "Client",
     required: true,
   },
+  callHistory: { type: [CallLogEntrySchema], default: [] },
 });
 
 const Client =

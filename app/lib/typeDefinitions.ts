@@ -1,4 +1,16 @@
 import { ObjectId } from "mongodb";
+import { CallOutcome } from "./callLogConstants";
+
+export interface CallLogEntry {
+  _id?: string;
+  callerId: string; // User ID from Clerk
+  callerName: string; // User display name
+  timestamp: Date;
+  outcome: CallOutcome;
+  notes: string;
+  followUpDate?: Date;
+  duration?: number; // in minutes, optional for manual entry
+}
 
 export type SearchParamProps = {
   params: { [key: string]: string };
@@ -130,6 +142,7 @@ export interface InvoiceType {
   paymentInfo?: PaymentInfo;
   photos?: PhotoType[];
   signature?: SignatureType;
+  callHistory?: CallLogEntry[];
 }
 
 export interface InvoiceItem {
@@ -239,6 +252,7 @@ export interface DueInvoiceType {
   emailSent: boolean;
   emailExists?: boolean;
   notesExists?: boolean;
+  callHistory?: CallLogEntry[];
 }
 
 export interface YearlySalesData {

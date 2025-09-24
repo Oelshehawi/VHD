@@ -105,7 +105,9 @@ export const checkScheduleStatus = async (
   }
 };
 
-interface EmailAndNotesCheck extends Omit<DueInvoiceType, "_id"> {}
+interface EmailAndNotesCheck extends Omit<DueInvoiceType, "_id"> {
+  callHistory?: any[];
+}
 
 export const fetchDueInvoices = async ({
   month,
@@ -171,6 +173,17 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
         new Date(job.dateDue).getUTCDate(),
       ),
     ),
+    // Properly serialize callHistory to avoid MongoDB ObjectId issues
+    callHistory: job.callHistory ? job.callHistory.map((call: any) => ({
+      _id: call._id?.toString() || null,
+      callerId: String(call.callerId || ''),
+      callerName: String(call.callerName || ''),
+      timestamp: call.timestamp instanceof Date ? call.timestamp.toISOString() : String(call.timestamp || ''),
+      outcome: String(call.outcome || ''),
+      notes: String(call.notes || ''),
+      followUpDate: call.followUpDate instanceof Date ? call.followUpDate.toISOString() : (call.followUpDate ? String(call.followUpDate) : null),
+      duration: call.duration ? Number(call.duration) : null,
+    })) : [],
   })) as any[];
 };
 
@@ -182,6 +195,7 @@ const processJobsDue = (jobsDue: JobsDueType[]): EmailAndNotesCheck[] => {
     dateDue: job.dateDue.toISOString(),
     isScheduled: job.isScheduled,
     emailSent: job.emailSent,
+    callHistory: (job as any).callHistory || [], // Include call history
   }));
 };
 
@@ -291,16 +305,6 @@ export const getPendingInvoiceAmount = async () => {
     const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Toronto"}));
     const today = new Date(Date.UTC(easternTime.getFullYear(), easternTime.getMonth(), easternTime.getDate()));
 
-    console.log("=== getPendingInvoiceAmount Debug Info ===");
-    console.log("Server current time (now):", now.toISOString());
-    console.log("Eastern time:", easternTime.toISOString());
-    console.log("Eastern date components:", {
-      year: easternTime.getFullYear(),
-      month: easternTime.getMonth(),
-      date: easternTime.getDate()
-    });
-    console.log("Calculated 'today' for comparison:", today.toISOString());
-
     const result = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
       { $unwind: "$items" },
@@ -308,12 +312,6 @@ export const getPendingInvoiceAmount = async () => {
     ]);
     const baseAmount = result.length > 0 ? result[0].totalAmount : 0;
 
-    console.log("Pending invoice amount query results:", {
-      matchedDocuments: result.length,
-      baseAmount: baseAmount,
-      finalAmount: baseAmount + baseAmount * 0.05
-    });
-    console.log("=== End Debug Info ===");
 
     return baseAmount + baseAmount * 0.05;
   } catch (error) {
@@ -330,18 +328,7 @@ export const getPendingInvoices = async () => {
     const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Toronto"}));
     const today = new Date(Date.UTC(easternTime.getFullYear(), easternTime.getMonth(), easternTime.getDate()));
 
-    console.log("=== getPendingInvoices Debug Info ===");
-    console.log("Server current time (now):", now.toISOString());
-    console.log("Server timezone offset (minutes):", now.getTimezoneOffset());
-    console.log("Server local date string:", now.toLocaleDateString());
-    console.log("Server local time string:", now.toLocaleTimeString());
-    console.log("Eastern time:", easternTime.toISOString());
-    console.log("Eastern date components:", {
-      year: easternTime.getFullYear(),
-      month: easternTime.getMonth(),
-      date: easternTime.getDate()
-    });
-    console.log("Calculated 'today' for comparison:", today.toISOString());
+
 
     const pendingInvoices = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
@@ -379,21 +366,6 @@ export const getPendingInvoices = async () => {
       },
       { $sort: { dateIssued: 1 } },
     ]);
-
-    console.log("Query results count:", pendingInvoices.length);
-    if (pendingInvoices.length > 0) {
-      console.log("Sample invoice dates found:");
-      pendingInvoices.slice(0, 3).forEach((invoice, index) => {
-        console.log(`  Invoice ${index + 1}:`, {
-          invoiceId: invoice.invoiceId,
-          jobTitle: invoice.jobTitle,
-          dateIssued: invoice.dateIssued,
-          dateIssuedISO: invoice.dateIssued.toISOString(),
-          isBeforeToday: invoice.dateIssued <= today
-        });
-      });
-    }
-    console.log("=== End Debug Info ===");
 
     return formatPendingInvoices(pendingInvoices);
   } catch (error) {

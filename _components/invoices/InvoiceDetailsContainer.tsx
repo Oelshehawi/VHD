@@ -26,6 +26,7 @@ const InvoiceDetailsContainer = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
+
   const toggleEdit = () => {
     setIsEditing(!isEditing);
   };
@@ -148,6 +149,7 @@ const InvoiceDetailsContainer = ({
           <ClientDetails client={client} canManage={canManage} />
         </div>
       </div>
+
 
       {/* Receipt Modal */}
       <ReceiptModal

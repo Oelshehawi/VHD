@@ -32,9 +32,9 @@ export const useDebounceSubmit = ({
     }
   }, delay);
 
-  const handleSubmit = (data: any) => {
+  const handleSubmit = async (data: any) => {
     setIsDebouncing(true);
-    debouncedSubmit(data);
+    return await debouncedSubmit(data);
   };
 
   return {
