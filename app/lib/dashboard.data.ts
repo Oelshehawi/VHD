@@ -174,16 +174,26 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
       ),
     ),
     // Properly serialize callHistory to avoid MongoDB ObjectId issues
-    callHistory: job.callHistory ? job.callHistory.map((call: any) => ({
-      _id: call._id?.toString() || null,
-      callerId: String(call.callerId || ''),
-      callerName: String(call.callerName || ''),
-      timestamp: call.timestamp instanceof Date ? call.timestamp.toISOString() : String(call.timestamp || ''),
-      outcome: String(call.outcome || ''),
-      notes: String(call.notes || ''),
-      followUpDate: call.followUpDate instanceof Date ? call.followUpDate.toISOString() : (call.followUpDate ? String(call.followUpDate) : null),
-      duration: call.duration ? Number(call.duration) : null,
-    })) : [],
+    callHistory: job.callHistory
+      ? job.callHistory.map((call: any) => ({
+          _id: call._id?.toString() || null,
+          callerId: String(call.callerId || ""),
+          callerName: String(call.callerName || ""),
+          timestamp:
+            call.timestamp instanceof Date
+              ? call.timestamp.toISOString()
+              : String(call.timestamp || ""),
+          outcome: String(call.outcome || ""),
+          notes: String(call.notes || ""),
+          followUpDate:
+            call.followUpDate instanceof Date
+              ? call.followUpDate.toISOString()
+              : call.followUpDate
+                ? String(call.followUpDate)
+                : null,
+          duration: call.duration ? Number(call.duration) : null,
+        }))
+      : [],
   })) as any[];
 };
 
@@ -229,15 +239,18 @@ export const checkEmailAndNotesPresence = async (
   await connectMongo();
 
   try {
-    const { clients, invoices } = await fetchClientsAndInvoices(dueInvoices);
+    const { clients, invoices, jobsDueSoon } =
+      await fetchClientsInvoicesAndJobsDue(dueInvoices);
     const clientEmailMap = createClientEmailMap(clients);
     const invoiceNotesMap = createInvoiceNotesMap(invoices);
+    const emailSentMap = createEmailSentMap(jobsDueSoon);
 
     return dueInvoices.map((invoice) => ({
       ...invoice,
       emailExists:
         clientEmailMap[invoice.clientId?.toString() as string] || false,
       notesExists: invoiceNotesMap[invoice.invoiceId] || false,
+      emailSent: emailSentMap[invoice.invoiceId] || false,
     }));
   } catch (error) {
     console.error("Error checking email and notes presence:", error);
@@ -245,16 +258,19 @@ export const checkEmailAndNotesPresence = async (
   }
 };
 
-const fetchClientsAndInvoices = async (dueInvoices: EmailAndNotesCheck[]) => {
+const fetchClientsInvoicesAndJobsDue = async (
+  dueInvoices: EmailAndNotesCheck[],
+) => {
   const clientIds = dueInvoices.map((invoice) => invoice.clientId);
   const invoiceIds = dueInvoices.map((invoice) => invoice.invoiceId);
 
-  const [clients, invoices] = await Promise.all([
+  const [clients, invoices, jobsDueSoon] = await Promise.all([
     Client.find({ _id: { $in: clientIds } }),
     Invoice.find({ _id: { $in: invoiceIds } }),
+    JobsDueSoon.find({ invoiceId: { $in: invoiceIds } }),
   ]);
 
-  return { clients, invoices };
+  return { clients, invoices, jobsDueSoon };
 };
 
 const createClientEmailMap = (clients: any[]) => {
@@ -267,6 +283,13 @@ const createClientEmailMap = (clients: any[]) => {
 const createInvoiceNotesMap = (invoices: any[]) => {
   return invoices.reduce<Record<string, boolean>>((map, invoice) => {
     map[invoice._id.toString()] = Boolean(invoice.notes);
+    return map;
+  }, {});
+};
+
+const createEmailSentMap = (jobsDueSoon: any[]) => {
+  return jobsDueSoon.reduce<Record<string, boolean>>((map, job) => {
+    map[job.invoiceId] = Boolean(job.emailSent);
     return map;
   }, {});
 };
@@ -302,8 +325,16 @@ export const getPendingInvoiceAmount = async () => {
   try {
     const now = new Date();
     // Use Eastern Time for business logic (adjust timezone as needed)
-    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Toronto"}));
-    const today = new Date(Date.UTC(easternTime.getFullYear(), easternTime.getMonth(), easternTime.getDate()));
+    const easternTime = new Date(
+      now.toLocaleString("en-US", { timeZone: "America/Toronto" }),
+    );
+    const today = new Date(
+      Date.UTC(
+        easternTime.getFullYear(),
+        easternTime.getMonth(),
+        easternTime.getDate(),
+      ),
+    );
 
     const result = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
@@ -311,7 +342,6 @@ export const getPendingInvoiceAmount = async () => {
       { $group: { _id: null, totalAmount: { $sum: "$items.price" } } },
     ]);
     const baseAmount = result.length > 0 ? result[0].totalAmount : 0;
-
 
     return baseAmount + baseAmount * 0.05;
   } catch (error) {
@@ -325,10 +355,16 @@ export const getPendingInvoices = async () => {
   try {
     const now = new Date();
     // Use Eastern Time for business logic (adjust timezone as needed)
-    const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/Toronto"}));
-    const today = new Date(Date.UTC(easternTime.getFullYear(), easternTime.getMonth(), easternTime.getDate()));
-
-
+    const easternTime = new Date(
+      now.toLocaleString("en-US", { timeZone: "America/Toronto" }),
+    );
+    const today = new Date(
+      Date.UTC(
+        easternTime.getFullYear(),
+        easternTime.getMonth(),
+        easternTime.getDate(),
+      ),
+    );
 
     const pendingInvoices = await Invoice.aggregate([
       { $match: { status: "pending", dateIssued: { $lte: today } } },
