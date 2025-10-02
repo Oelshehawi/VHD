@@ -52,6 +52,15 @@ const AddEvent = ({
     setValue("assignedTechnicians", invoice.assignedTechnicians);
     clearErrors(["invoiceRef", "jobTitle", "location", "assignedTechnicians"]);
 
+    // Autofill startDateTime with invoice dateIssued if available
+    if (invoice.dateIssued) {
+      // Extract date parts directly from ISO string to avoid timezone issues
+      const dateStr = invoice.dateIssued.toString();
+      const [datePart] = dateStr.split('T');
+      // Set time to 09:00 (9am) as default
+      setValue("startDateTime", `${datePart}T09:00`);
+    }
+
     // Check for previous jobs with the same title and grab technician notes if available
     if (scheduledJobs && scheduledJobs.length > 0 && invoice.jobTitle) {
       // Sort jobs by startDateTime descending to get the most recent one first

@@ -14,8 +14,8 @@ const styles = StyleSheet.create({
     fontFamily: "Helvetica",
     fontSize: 10,
     paddingTop: 20,
-    paddingBottom: 30,
-    paddingHorizontal: 25,
+    paddingBottom: 28,
+    paddingHorizontal: 26,
     color: "#000",
     position: "relative",
   },
@@ -32,12 +32,12 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: "#003e29",
     color: "#ffffff",
-    padding: 10,
-    marginBottom: 12,
+    padding: 11,
+    marginBottom: 11,
     borderRadius: 4,
   },
   headerTitle: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "bold",
     textAlign: "center",
     marginBottom: 2,
@@ -47,13 +47,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "bold",
     backgroundColor: "#f0f0f0",
     padding: 6,
     marginBottom: 6,
-    marginTop: 10,
-    borderLeft: "4px solid #003e29",
+    marginTop: 8,
+    borderLeft: "3px solid #003e29",
   },
   row: {
     flexDirection: "row",
@@ -61,7 +61,7 @@ const styles = StyleSheet.create({
   },
   col50: {
     width: "50%",
-    paddingRight: 10,
+    paddingRight: 11,
   },
   label: {
     fontSize: 8,
@@ -77,8 +77,8 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   table: {
-    marginTop: 10,
-    marginBottom: 10,
+    marginTop: 8,
+    marginBottom: 8,
   },
   tableHeader: {
     flexDirection: "row",
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     borderBottom: "1px solid #ddd",
     padding: 8,
-    minHeight: 25,
+    minHeight: 26,
   },
   col8: { width: "8%" },
   col52: { width: "52%" },
@@ -115,12 +115,12 @@ const styles = StyleSheet.create({
   },
   serviceItem: {
     width: "50%",
-    fontSize: 10,
+    fontSize: 9,
     marginBottom: 3,
-    paddingLeft: 10,
+    paddingLeft: 11,
   },
   totalsSection: {
-    marginTop: 10,
+    marginTop: 8,
   },
   totalRow: {
     flexDirection: "row",
@@ -134,12 +134,12 @@ const styles = StyleSheet.create({
     padding: 8,
     fontWeight: "bold",
     color: "#003e29",
-    fontSize: 12,
+    fontSize: 10,
   },
   totalsLabel: {
     flex: 1,
     textAlign: "right",
-    paddingRight: 10,
+    paddingRight: 11,
   },
   totalsValue: {
     width: "20%",
@@ -158,25 +158,25 @@ const styles = StyleSheet.create({
   gstRate: {
     width: "50%",
     textAlign: "right",
-    paddingRight: 10,
+    paddingRight: 11,
   },
   gstAmount: {
     width: "20%",
     textAlign: "right",
   },
   termsSection: {
-    marginTop: 10,
-    marginBottom: 10,
+    marginTop: 8,
+    marginBottom: 8,
   },
   termsTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: "bold",
     color: "#003e29",
-    marginBottom: 8,
+    marginBottom: 6,
   },
   termsText: {
     fontSize: 9,
-    lineHeight: 1.4,
+    lineHeight: 1.3,
     padding: 8,
     backgroundColor: "#f9f9f9",
     border: "1px solid #ddd",
@@ -191,28 +191,28 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   clientPortalTitle: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "bold",
     color: "#003e29",
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   clientPortalText: {
     fontSize: 9,
     textAlign: "center",
-    marginBottom: 8,
+    marginBottom: 4,
     fontWeight: "bold",
   },
   clientPortalGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    marginBottom: 8,
+    marginBottom: 4,
   },
   clientPortalItem: {
     width: "50%",
-    fontSize: 10,
-    marginBottom: 4,
-    paddingLeft: 10,
+    fontSize: 9,
+    marginBottom: 3,
+    paddingLeft: 11,
   },
   clientPortalFooter: {
     fontSize: 9,
@@ -224,14 +224,14 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "bold",
     textAlign: "center",
-    marginTop: 8,
+    marginTop: 6,
     marginBottom: 6,
   },
   itemDetails: {
     fontSize: 8,
     color: "#666",
-    marginTop: 2,
-    marginLeft: 10,
+    marginTop: 1,
+    marginLeft: 11,
     fontStyle: "italic",
   },
 });
@@ -255,121 +255,357 @@ export interface EstimateData {
 
 interface EstimatePdfDocumentProps {
   estimateData: EstimateData;
+  scale?: number; // Scale factor (e.g., 0.85 for 85%, 1.0 for 100%, 1.15 for 115%)
 }
 
 const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
   estimateData,
+  scale = 1.0,
 }) => {
+  // Helper function to scale numeric values
+  const s = (value: number) => Math.round(value * scale);
+
+  // Create scaled styles
+  const scaledStyles = StyleSheet.create({
+    page: {
+      fontFamily: "Helvetica",
+      fontSize: s(10),
+      paddingTop: s(20),
+      paddingBottom: s(28),
+      paddingHorizontal: s(26),
+      color: "#000",
+      position: "relative",
+    },
+    logoContainer: {
+      position: "absolute",
+      top: "40%",
+      left: "50%",
+      transform: "translate(-50%, -50%)",
+      width: 200,
+      height: 200,
+      opacity: 0.08,
+      zIndex: -1,
+    },
+    header: {
+      backgroundColor: "#003e29",
+      color: "#ffffff",
+      padding: s(11),
+      marginBottom: s(11),
+      borderRadius: s(4),
+    },
+    headerTitle: {
+      fontSize: s(14),
+      fontWeight: "bold",
+      textAlign: "center",
+      marginBottom: s(2),
+    },
+    headerSubtitle: {
+      fontSize: s(10),
+      textAlign: "center",
+    },
+    sectionTitle: {
+      fontSize: s(10),
+      fontWeight: "bold",
+      backgroundColor: "#f0f0f0",
+      padding: s(6),
+      marginBottom: s(6),
+      marginTop: s(8),
+      borderLeft: `${s(3)}px solid #003e29`,
+    },
+    row: {
+      flexDirection: "row",
+      marginBottom: s(6),
+    },
+    col50: {
+      width: "50%",
+      paddingRight: s(11),
+    },
+    label: {
+      fontSize: s(8),
+      fontWeight: "bold",
+      marginBottom: 1,
+      color: "#333",
+    },
+    value: {
+      fontSize: s(9),
+      padding: s(4),
+      backgroundColor: "#f9f9f9",
+      border: "1px solid #ddd",
+      borderRadius: s(2),
+    },
+    table: {
+      marginTop: s(8),
+      marginBottom: s(8),
+    },
+    tableHeader: {
+      flexDirection: "row",
+      backgroundColor: "#003e29",
+      color: "#ffffff",
+      padding: s(8),
+      fontWeight: "bold",
+    },
+    tableRow: {
+      flexDirection: "row",
+      borderBottom: "1px solid #ddd",
+      padding: s(8),
+      minHeight: s(26),
+    },
+    col8: { width: "8%" },
+    col52: { width: "52%" },
+    col20: { width: "20%" },
+    servicesSection: {
+      backgroundColor: "#f9f9f9",
+      padding: s(6),
+      borderRadius: s(4),
+      marginTop: s(6),
+      marginBottom: s(6),
+    },
+    servicesTitle: {
+      fontSize: s(9),
+      fontWeight: "bold",
+      color: "#003e29",
+      marginBottom: s(6),
+    },
+    servicesGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+    },
+    serviceItem: {
+      width: "50%",
+      fontSize: s(9),
+      marginBottom: s(3),
+      paddingLeft: s(11),
+    },
+    totalsSection: {
+      marginTop: s(8),
+    },
+    totalRow: {
+      flexDirection: "row",
+      backgroundColor: "#f0f0f0",
+      padding: s(6),
+      borderBottom: "1px solid #ddd",
+    },
+    finalTotalRow: {
+      flexDirection: "row",
+      backgroundColor: "#e0f0e8",
+      padding: s(8),
+      fontWeight: "bold",
+      color: "#003e29",
+      fontSize: s(10),
+    },
+    totalsLabel: {
+      flex: 1,
+      textAlign: "right",
+      paddingRight: s(11),
+    },
+    totalsValue: {
+      width: "20%",
+      textAlign: "right",
+    },
+    gstRow: {
+      flexDirection: "row",
+      backgroundColor: "#f0f0f0",
+      padding: s(6),
+      borderBottom: "1px solid #ddd",
+    },
+    gstNumber: {
+      width: "30%",
+      textAlign: "left",
+    },
+    gstRate: {
+      width: "50%",
+      textAlign: "right",
+      paddingRight: s(11),
+    },
+    gstAmount: {
+      width: "20%",
+      textAlign: "right",
+    },
+    termsSection: {
+      marginTop: s(8),
+      marginBottom: s(8),
+    },
+    termsTitle: {
+      fontSize: s(10),
+      fontWeight: "bold",
+      color: "#003e29",
+      marginBottom: s(6),
+    },
+    termsText: {
+      fontSize: s(9),
+      lineHeight: 1.3,
+      padding: s(8),
+      backgroundColor: "#f9f9f9",
+      border: "1px solid #ddd",
+      borderRadius: s(2),
+    },
+    clientPortalSection: {
+      backgroundColor: "#e8f5e8",
+      border: "1px solid #003e29",
+      padding: s(6),
+      borderRadius: s(4),
+      marginTop: s(6),
+      marginBottom: s(6),
+    },
+    clientPortalTitle: {
+      fontSize: s(10),
+      fontWeight: "bold",
+      color: "#003e29",
+      textAlign: "center",
+      marginBottom: s(4),
+    },
+    clientPortalText: {
+      fontSize: s(9),
+      textAlign: "center",
+      marginBottom: s(4),
+      fontWeight: "bold",
+    },
+    clientPortalGrid: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      marginBottom: s(4),
+    },
+    clientPortalItem: {
+      width: "50%",
+      fontSize: s(9),
+      marginBottom: s(3),
+      paddingLeft: s(11),
+    },
+    clientPortalFooter: {
+      fontSize: s(9),
+      textAlign: "center",
+      fontStyle: "italic",
+      color: "#003e29",
+    },
+    thankYou: {
+      fontSize: s(10),
+      fontWeight: "bold",
+      textAlign: "center",
+      marginTop: s(6),
+      marginBottom: s(6),
+    },
+    itemDetails: {
+      fontSize: s(8),
+      color: "#666",
+      marginTop: 1,
+      marginLeft: s(11),
+      fontStyle: "italic",
+    },
+  });
   return (
     <Document>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={scaledStyles.page}>
         {/* Logo Watermark */}
-        <View style={styles.logoContainer}>
+        <View style={scaledStyles.logoContainer}>
           <Image src="/images/logo.png" style={{ width: "100%", height: "100%" }} />
         </View>
 
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>VANCOUVER HOOD DOCTORS</Text>
-          <Text style={styles.headerSubtitle}>ESTIMATE</Text>
+        <View style={scaledStyles.header}>
+          <Text style={scaledStyles.headerTitle}>VANCOUVER HOOD DOCTORS</Text>
+          <Text style={scaledStyles.headerSubtitle}>ESTIMATE</Text>
         </View>
 
         {/* Estimate Details & Client Information */}
-        <Text style={styles.sectionTitle}>Estimate Details & Client Information</Text>
-        <View style={styles.row}>
-          <View style={styles.col50}>
-            <Text style={styles.label}>Estimate No:</Text>
-            <Text style={styles.value}>{estimateData.estimateNumber}</Text>
-            <View style={{ marginTop: 6 }}>
-              <Text style={styles.label}>Date:</Text>
-              <Text style={styles.value}>{estimateData.createdDate}</Text>
+        <Text style={scaledStyles.sectionTitle}>Estimate Details & Client Information</Text>
+        <View style={scaledStyles.row}>
+          <View style={scaledStyles.col50}>
+            <Text style={scaledStyles.label}>Estimate No:</Text>
+            <Text style={scaledStyles.value}>{estimateData.estimateNumber}</Text>
+            <View style={{ marginTop: s(7) }}>
+              <Text style={scaledStyles.label}>Date:</Text>
+              <Text style={scaledStyles.value}>{estimateData.createdDate}</Text>
             </View>
           </View>
-          <View style={styles.col50}>
-            <Text style={styles.label}>Business Name:</Text>
-            <Text style={styles.value}>{estimateData.clientName}</Text>
-            <View style={{ marginTop: 6 }}>
-              <Text style={styles.label}>Contact Person:</Text>
-              <Text style={styles.value}>{estimateData.contactPerson || ""}</Text>
+          <View style={scaledStyles.col50}>
+            <Text style={scaledStyles.label}>Business Name:</Text>
+            <Text style={scaledStyles.value}>{estimateData.clientName}</Text>
+            <View style={{ marginTop: s(7) }}>
+              <Text style={scaledStyles.label}>Contact Person:</Text>
+              <Text style={scaledStyles.value}>{estimateData.contactPerson || ""}</Text>
             </View>
           </View>
         </View>
-        <View style={styles.row}>
-          <View style={styles.col50}>
-            <Text style={styles.label}>Street Address:</Text>
-            <Text style={styles.value}>{estimateData.address || ""}</Text>
+        <View style={scaledStyles.row}>
+          <View style={scaledStyles.col50}>
+            <Text style={scaledStyles.label}>Street Address:</Text>
+            <Text style={scaledStyles.value}>{estimateData.address || ""}</Text>
           </View>
-          <View style={styles.col50}>
-            <Text style={styles.label}>Phone:</Text>
-            <Text style={styles.value}>{estimateData.phone || ""}</Text>
-          </View>
+          {estimateData.phone && (
+            <View style={scaledStyles.col50}>
+              <Text style={scaledStyles.label}>Phone:</Text>
+              <Text style={scaledStyles.value}>{estimateData.phone}</Text>
+            </View>
+          )}
         </View>
-        <View style={styles.row}>
-          <View style={styles.col50}>
-            <Text style={styles.label}>Email:</Text>
-            <Text style={styles.value}>{estimateData.email || ""}</Text>
+        {estimateData.email && (
+          <View style={scaledStyles.row}>
+            <View style={scaledStyles.col50}>
+              <Text style={scaledStyles.label}>Email:</Text>
+              <Text style={scaledStyles.value}>{estimateData.email}</Text>
+            </View>
           </View>
-        </View>
+        )}
 
         {estimateData.projectLocation && (
-          <View style={styles.row}>
+          <View style={scaledStyles.row}>
             <View style={{ width: "100%" }}>
-              <Text style={styles.label}>Project Location (if different from address above):</Text>
-              <Text style={styles.value}>{estimateData.projectLocation}</Text>
+              <Text style={scaledStyles.label}>Project Location (if different from address above):</Text>
+              <Text style={scaledStyles.value}>{estimateData.projectLocation}</Text>
             </View>
           </View>
         )}
 
         {/* Estimated Costs */}
-        <Text style={styles.sectionTitle}>Estimated Costs</Text>
-        <View style={styles.table}>
-          <View style={styles.tableHeader}>
-            <Text style={styles.col8}>#</Text>
-            <Text style={styles.col52}>Item Description</Text>
-            <Text style={styles.col20}>Price</Text>
-            <Text style={styles.col20}>Total</Text>
+        <Text style={scaledStyles.sectionTitle}>Estimated Costs</Text>
+        <View style={scaledStyles.table}>
+          <View style={scaledStyles.tableHeader}>
+            <Text style={scaledStyles.col8}>#</Text>
+            <Text style={scaledStyles.col52}>Item Description</Text>
+            <Text style={scaledStyles.col20}>Price</Text>
+            <Text style={scaledStyles.col20}>Total</Text>
           </View>
 
           {estimateData.items.map((item, index) => (
             <View key={index}>
-              <View style={styles.tableRow}>
-                <Text style={styles.col8}>{index + 1}</Text>
-                <View style={styles.col52}>
+              <View style={scaledStyles.tableRow}>
+                <Text style={scaledStyles.col8}>{index + 1}</Text>
+                <View style={scaledStyles.col52}>
                   <Text>{item.description}</Text>
                   {item.details && (
-                    <Text style={styles.itemDetails}>{item.details}</Text>
+                    <Text style={scaledStyles.itemDetails}>{item.details}</Text>
                   )}
                 </View>
-                <Text style={styles.col20}>${item.price.toFixed(2)}</Text>
-                <Text style={styles.col20}>${item.price.toFixed(2)}</Text>
+                <Text style={scaledStyles.col20}>${item.price.toFixed(2)}</Text>
+                <Text style={scaledStyles.col20}>${item.price.toFixed(2)}</Text>
               </View>
             </View>
           ))}
 
           {/* Totals */}
-          <View style={styles.totalsSection}>
-            <View style={styles.totalRow}>
-              <Text style={styles.totalsLabel}>Subtotal:</Text>
-              <Text style={styles.totalsValue}>${estimateData.subtotal.toFixed(2)}</Text>
+          <View style={scaledStyles.totalsSection}>
+            <View style={scaledStyles.totalRow}>
+              <Text style={scaledStyles.totalsLabel}>Subtotal:</Text>
+              <Text style={scaledStyles.totalsValue}>${estimateData.subtotal.toFixed(2)}</Text>
             </View>
-            <View style={styles.gstRow}>
-              <Text style={styles.gstNumber}>GST# 814301065</Text>
-              <Text style={styles.gstRate}>GST (5%):</Text>
-              <Text style={styles.gstAmount}>${estimateData.gst.toFixed(2)}</Text>
+            <View style={scaledStyles.gstRow}>
+              <Text style={scaledStyles.gstNumber}>GST# 814301065</Text>
+              <Text style={scaledStyles.gstRate}>GST (5%):</Text>
+              <Text style={scaledStyles.gstAmount}>${estimateData.gst.toFixed(2)}</Text>
             </View>
-            <View style={styles.finalTotalRow}>
-              <Text style={styles.totalsLabel}>Total Estimate:</Text>
-              <Text style={styles.totalsValue}>${estimateData.total.toFixed(2)}</Text>
+            <View style={scaledStyles.finalTotalRow}>
+              <Text style={scaledStyles.totalsLabel}>Total Estimate:</Text>
+              <Text style={scaledStyles.totalsValue}>${estimateData.total.toFixed(2)}</Text>
             </View>
           </View>
         </View>
 
         {/* Services Section */}
-        <View style={styles.servicesSection}>
-          <Text style={styles.servicesTitle}>Our vent cleaning service includes:</Text>
-          <View style={styles.servicesGrid}>
+        <View style={scaledStyles.servicesSection}>
+          <Text style={scaledStyles.servicesTitle}>Our vent cleaning service includes:</Text>
+          <View style={scaledStyles.servicesGrid}>
             {estimateData.services.map((service, index) => (
-              <Text key={index} style={styles.serviceItem}>
+              <Text key={index} style={scaledStyles.serviceItem}>
                 • {service}
               </Text>
             ))}
@@ -377,31 +613,31 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
         </View>
 
         {/* Client Portal Section */}
-        <View style={styles.clientPortalSection}>
-          <Text style={styles.clientPortalTitle}>CLIENT PORTAL ACCESS</Text>
-          <Text style={styles.clientPortalText}>
+        <View style={scaledStyles.clientPortalSection}>
+          <Text style={scaledStyles.clientPortalTitle}>CLIENT PORTAL ACCESS</Text>
+          <Text style={scaledStyles.clientPortalText}>
             Once you approve this estimate, you'll receive access to our client portal where you can:
           </Text>
-          <View style={styles.clientPortalGrid}>
-            <Text style={styles.clientPortalItem}>• See Upcoming Services</Text>
-            <Text style={styles.clientPortalItem}>• View before/after photos</Text>
-            <Text style={styles.clientPortalItem}>• Keep system up to date</Text>
-            <Text style={styles.clientPortalItem}>• Review service history</Text>
-            <Text style={styles.clientPortalItem}>• Download invoices and reports</Text>
-            <Text style={styles.clientPortalItem}>• Schedule future services</Text>
+          <View style={scaledStyles.clientPortalGrid}>
+            <Text style={scaledStyles.clientPortalItem}>• See Upcoming Services</Text>
+            <Text style={scaledStyles.clientPortalItem}>• View before/after photos</Text>
+            <Text style={scaledStyles.clientPortalItem}>• Keep system up to date</Text>
+            <Text style={scaledStyles.clientPortalItem}>• Review service history</Text>
+            <Text style={scaledStyles.clientPortalItem}>• Download invoices and reports</Text>
+            <Text style={scaledStyles.clientPortalItem}>• Schedule future services</Text>
           </View>
-          <Text style={styles.clientPortalFooter}>
+          <Text style={scaledStyles.clientPortalFooter}>
             Stay connected with your vent cleaning service every step of the way!
           </Text>
         </View>
 
         {/* Thank You */}
-        <Text style={styles.thankYou}>THANK YOU FOR YOUR INQUIRY</Text>
+        <Text style={scaledStyles.thankYou}>THANK YOU FOR YOUR INQUIRY</Text>
 
         {/* Terms & Conditions */}
-        <View style={styles.termsSection}>
-          <Text style={styles.termsTitle}>TERMS & CONDITIONS</Text>
-          <Text style={styles.termsText}>
+        <View style={scaledStyles.termsSection}>
+          <Text style={scaledStyles.termsTitle}>TERMS & CONDITIONS</Text>
+          <Text style={scaledStyles.termsText}>
             {estimateData.terms || "Payment is due upon completion of service. Prices subject to change if scope of work differs from initial assessment."}
           </Text>
         </View>

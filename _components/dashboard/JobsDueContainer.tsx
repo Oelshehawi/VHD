@@ -119,22 +119,83 @@ const JobsDueContainer = async ({
       </div>
 
       {/* Filters Section */}
-      <div className="flex items-center gap-2 px-6 z-20 py-4">
-        <FaFilter className="h-4 w-4 text-gray-400" />
-        <span className="text-sm font-medium text-gray-700 mr-2">Filter by:</span>
-        <div className="flex flex-wrap gap-2">
-          <CustomSelect
-            values={months}
-            currentValue={month}
-            urlName="month"
-            searchParams={searchParams}
-          />
-          <CustomSelect
-            values={years}
-            currentValue={year}
-            urlName="year"
-            searchParams={searchParams}
-          />
+      <div className="flex items-center justify-between gap-2 px-6 z-20 py-4">
+        <div className="flex items-center gap-2">
+          <FaFilter className="h-4 w-4 text-gray-400" />
+          <span className="text-sm font-medium text-gray-700 mr-2">Filter by:</span>
+          <div className="flex flex-wrap gap-2">
+            <CustomSelect
+              values={months}
+              currentValue={month}
+              urlName="month"
+              searchParams={searchParams}
+            />
+            <CustomSelect
+              values={years}
+              currentValue={year}
+              urlName="year"
+              searchParams={searchParams}
+            />
+          </div>
+        </div>
+
+        {/* Month Navigation Arrows */}
+        <div className="flex items-center gap-2">
+          <a
+            href={(() => {
+              const currentMonthIndex = months.indexOf(month || "");
+              const currentYearNum = typeof year === "string" ? parseInt(year) : year;
+
+              let prevMonth = currentMonthIndex - 1;
+              let prevYear = currentYearNum;
+
+              if (prevMonth < 0) {
+                prevMonth = 11;
+                prevYear -= 1;
+              }
+
+              const params = new URLSearchParams();
+              params.set('month', months[prevMonth] || "");
+              params.set('year', prevYear.toString());
+              if (searchParams?.scheduled) params.set('scheduled', searchParams.scheduled);
+
+              return `?${params.toString()}`;
+            })()}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:border-gray-400"
+            title="Previous Month"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </a>
+
+          <a
+            href={(() => {
+              const currentMonthIndex = months.indexOf(month || "");
+              const currentYearNum = typeof year === "string" ? parseInt(year) : year;
+
+              let nextMonth = currentMonthIndex + 1;
+              let nextYear = currentYearNum;
+
+              if (nextMonth > 11) {
+                nextMonth = 0;
+                nextYear += 1;
+              }
+
+              const params = new URLSearchParams();
+              params.set('month', months[nextMonth] || "");
+              params.set('year', nextYear.toString());
+              if (searchParams?.scheduled) params.set('scheduled', searchParams.scheduled);
+
+              return `?${params.toString()}`;
+            })()}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:border-gray-400"
+            title="Next Month"
+          >
+            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
         </div>
       </div>
 

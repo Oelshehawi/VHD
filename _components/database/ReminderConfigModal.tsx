@@ -100,6 +100,14 @@ const ReminderConfigModal = ({
   };
 
   const handleSendReminder = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to send a payment reminder now? This will immediately send an email to the client."
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
     setIsSending(true);
     try {
       const result = await sendPaymentReminderEmail(invoiceId, "user");
