@@ -118,7 +118,16 @@ export const fetchInvoiceById = async (invoiceId: string) => {
       dateIssued: invoice.dateIssued.toISOString().split("T")[0],
       clientId: invoice.clientId.toString(),
       items: formattedItems(invoice.items),
-      callHistory: invoice.callHistory,
+      callHistory: invoice.callHistory?.map((call: any) => ({
+        _id: call._id?.toString(),
+        callerId: call.callerId,
+        callerName: call.callerName,
+        timestamp: call.timestamp instanceof Date ? call.timestamp.toISOString() : call.timestamp,
+        outcome: call.outcome,
+        notes: call.notes,
+        followUpDate: call.followUpDate instanceof Date ? call.followUpDate.toISOString() : call.followUpDate,
+        duration: call.duration,
+      })) || [],
     };
   } catch (error) {
     console.error("Database Error:", error);
