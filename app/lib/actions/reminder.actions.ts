@@ -217,10 +217,25 @@ export async function sendPaymentReminderEmail(
     const issueDateFormatted = formatDateStringUTC(invoice.dateIssued);
     const formattedAmount = formatAmount(totalWithTax).replace("$", "");
 
+    // Calculate due date (14 days from issue date)
+    const issueDate = new Date(invoice.dateIssued);
+    const dueDate = new Date(issueDate);
+    dueDate.setDate(dueDate.getDate() + 14);
+    const formattedDueDate = dueDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    // Check if invoice is overdue
+    const now = new Date();
+    const isOverdue = now > dueDate;
+
     // Prepare invoice data for PDF generation
     const invoiceData: InvoiceData = {
       invoiceId: invoice.invoiceId,
       dateIssued: issueDateFormatted,
+      dateDue: formattedDueDate,
       jobTitle: invoice.jobTitle,
       location: invoice.location,
       clientName: clientDetails.clientName,
@@ -246,11 +261,13 @@ export async function sendPaymentReminderEmail(
     const pdfBase64 = pdfBuffer.toString("base64");
 
     // Send email using Postmark with sequence-aware template
+    // IMPORTANT: Variables used inside conditional sections must be nested within those sections
     const templateModel = {
       client_name: clientDetails.clientName,
-      invoice_number: invoice.invoiceId,
-      jobTitle: invoice.jobTitle,
+      invoice_number: invoice.invoiceId || "",
+      jobTitle: invoice.jobTitle || "",
       issue_date: issueDateFormatted,
+      due_date: formattedDueDate,
       amount_due: formattedAmount,
       phone_number: "604-273-8717",
       contact_email: "adam@vancouverventcleaning.ca",
@@ -258,9 +275,36 @@ export async function sendPaymentReminderEmail(
       email_title: `${sequenceText} Payment Reminder - Vent Cleaning & Certification`,
       reminder_sequence: sequenceText,
       total_reminders_sent: reminderSequence.toString(),
-      first_reminder: reminderSequence === 1,
-      subsequent_reminder: reminderSequence > 1,
+      first_reminder: reminderSequence === 1
+        ? {
+            invoice_number: invoice.invoiceId || "",
+            jobTitle: invoice.jobTitle || "",
+            due_date: formattedDueDate,
+          }
+        : false,
+      subsequent_reminder: reminderSequence > 1
+        ? {
+            reminder_sequence: sequenceText,
+          }
+        : false,
+      is_overdue: isOverdue
+        ? {
+            invoice_number: invoice.invoiceId || "",
+            jobTitle: invoice.jobTitle || "",
+            due_date: formattedDueDate,
+          }
+        : false,
+      is_before_due: !isOverdue
+        ? {
+            invoice_number: invoice.invoiceId || "",
+            jobTitle: invoice.jobTitle || "",
+            due_date: formattedDueDate,
+          }
+        : false,
     };
+
+    // Debug log to verify template data
+    console.log("Payment Reminder Template Model:", templateModel);
 
     const emailResult = await postmarkClient.sendEmailWithTemplate({
       From: "adam@vancouverventcleaning.ca",
@@ -280,9 +324,9 @@ export async function sendPaymentReminderEmail(
     });
 
     // Update reminder history and audit log
-    const now = new Date();
+    const now2 = new Date();
     const reminderEntry = {
-      sentAt: now.toISOString(), // Convert to string for client serialization
+      sentAt: now2.toISOString(), // Convert to string for client serialization
       emailTemplate: "payment-reminder",
       success: true,
       sequence: reminderSequence,
@@ -302,7 +346,7 @@ export async function sendPaymentReminderEmail(
         performedBy === "system"
           ? "reminder_sent_auto"
           : "reminder_sent_manual",
-      timestamp: now,
+      timestamp: now2,
       performedBy,
       details: {
         reminderSequence,

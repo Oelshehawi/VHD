@@ -30,7 +30,6 @@ export default async function handler(
     const { scheduleId, invoiceRef, invoiceData, technicianId, isComplete } =
       req.body;
 
-      console.log(req.body);
     // Validate inputs
     if (!scheduleId || !invoiceRef) {
       return res.status(400).json({
@@ -73,10 +72,21 @@ export default async function handler(
     const gst = subtotal * 0.05; // 5% GST
     const totalWithTax = subtotal + gst;
 
+    // Calculate due date (14 days from issue date)
+    const issueDate = new Date(invoiceData.dateIssued);
+    const dueDate = new Date(issueDate);
+    dueDate.setDate(dueDate.getDate() + 14);
+    const formattedDueDate = dueDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
     // Prepare invoice data for PDF generation
     const pdfInvoiceData: InvoiceData = {
       invoiceId: invoiceData.invoiceId,
       dateIssued: invoiceData.dateIssued,
+      dateDue: formattedDueDate,
       jobTitle: invoiceData.jobTitle,
       location: invoiceData.location,
       clientName: clientDetails.clientName,
@@ -111,6 +121,7 @@ export default async function handler(
       invoice_number: invoiceData.invoiceId,
       jobTitle: invoiceData.jobTitle,
       amount_due: totalWithTax.toFixed(2),
+      due_date: formattedDueDate,
       phone_number: "604-273-8717",
       contact_email: "adam@vancouverventcleaning.ca",
       header_title: "Invoice - Vent Cleaning & Certification",

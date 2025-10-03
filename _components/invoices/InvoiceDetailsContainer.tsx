@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { FaPenSquare, FaPrint, FaFileDownload, FaReceipt } from "react-icons/fa";
+import { FaPenSquare, FaPrint, FaFileDownload, FaReceipt, FaPaperPlane } from "react-icons/fa";
 import InlineEditInvoice from "./EditInvoiceModal";
 import ClientDetails from "./ClientDetails";
 import PriceBreakdown from "./PriceBreakdown";
@@ -13,6 +13,9 @@ import {
   formatDateToString,
   getEmailForPurpose,
 } from "../../app/lib/utils";
+import { sendInvoiceDeliveryEmail } from "../../app/lib/actions/email.actions";
+import toast from "react-hot-toast";
+import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
 
 const InvoiceDetailsContainer = ({
   invoice,
@@ -26,6 +29,17 @@ const InvoiceDetailsContainer = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
 
+  // Email sending with debounce
+  const { isProcessing: isSendingEmail, debouncedSubmit: handleSendInvoice } = useDebounceSubmit({
+    onSubmit: async () => {
+      const response = await sendInvoiceDeliveryEmail(invoice._id);
+      if (!response.success) {
+        throw new Error(response.error || "Failed to send invoice email");
+      }
+    },
+    successMessage: "Invoice email sent successfully",
+    delay: 500,
+  });
 
   const toggleEdit = () => {
     setIsEditing(!isEditing);
@@ -42,10 +56,21 @@ const InvoiceDetailsContainer = ({
   // Get client email for invoice display
   const clientEmail = getEmailForPurpose(client, "primary") || client.email || "";
 
+  // Calculate due date (14 days from issue date)
+  const issueDate = new Date(invoice.dateIssued);
+  const dueDate = new Date(issueDate);
+  dueDate.setDate(dueDate.getDate() + 14);
+  const formattedDueDate = dueDate.toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+
   // Prepare invoice data for PDF generation
   const invoiceData = {
     invoiceId: invoice.invoiceId,
     dateIssued: formatDateToString(invoice.dateIssued as string),
+    dateDue: formattedDueDate,
     jobTitle: invoice.jobTitle,
     location: invoice.location,
     clientName: client.clientName,
@@ -107,6 +132,26 @@ const InvoiceDetailsContainer = ({
             </div>
           </div>
           <div className="flex items-center space-x-3">
+            <button
+              onClick={handleSendInvoice}
+              disabled={isSendingEmail}
+              className="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isSendingEmail ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Sending...
+                </>
+              ) : (
+                <>
+                  <FaPaperPlane className="mr-2 h-4 w-4" />
+                  <span>Send Invoice</span>
+                </>
+              )}
+            </button>
             <GeneratePDF
               pdfData={{ type: "invoice", data: invoiceData }}
               fileName={`Invoice - ${invoice.jobTitle}.pdf`}

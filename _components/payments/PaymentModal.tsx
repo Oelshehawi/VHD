@@ -80,6 +80,7 @@ export default function PaymentModal({
 
   if (!isOpen) return null;
 
+  
   const modalContent = (
     <AnimatePresence>
       <motion.div

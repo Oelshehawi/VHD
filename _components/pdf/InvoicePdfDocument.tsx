@@ -254,6 +254,7 @@ const styles = StyleSheet.create({
 export interface InvoiceData {
   invoiceId: string;
   dateIssued: string;
+  dateDue: string;
   jobTitle: string;
   location: string;
   clientName: string;
@@ -400,6 +401,12 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
               ${invoiceData.totalAmount.toFixed(2)} CAD
             </Text>
           </View>
+          <View style={styles.totalRow}>
+            <Text style={{ fontSize: 12, color: "#003e29", fontWeight: "bold" }}>Due by:</Text>
+            <Text style={{ fontSize: 12, color: "#003e29", fontWeight: "bold" }}>
+              {invoiceData.dateDue} (14 days from service date)
+            </Text>
+          </View>
         </View>
       </View>
 
@@ -407,13 +414,20 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
       <Text style={styles.thankYou}>THANK YOU FOR YOUR BUSINESS</Text>
 
       <View style={styles.terms}>
-        <Text style={{ color: "#003e29", fontWeight: "bold", marginBottom: 5 }}>
-          TERMS & CONDITIONS
+        <Text style={{ color: "#003e29", fontWeight: "bold", marginBottom: 5, fontSize: 11 }}>
+          PAYMENT TERMS
         </Text>
-        <Text>{invoiceData.terms}</Text>
-        <Text>
-          Invoices due within one month of cleaning date; 5% interest on overdue
-          amounts.
+        <Text style={{ fontSize: 9, lineHeight: 1.4, marginBottom: 3 }}>
+          • Payment due within 14 days of the service date.
+        </Text>
+        <Text style={{ fontSize: 9, lineHeight: 1.4, marginBottom: 3 }}>
+          • Overdue interest: 2% per month (24% per year), simple interest, applied from the day after the due date until paid.
+        </Text>
+        <Text style={{ fontSize: 9, lineHeight: 1.4, marginBottom: 3 }}>
+          • Disputes: {invoiceData.terms}
+        </Text>
+        <Text style={{ fontSize: 9, lineHeight: 1.4 }}>
+          • First-time customers: Unless otherwise agreed in writing, payment is due on completion.
         </Text>
       </View>
 

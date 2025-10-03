@@ -98,3 +98,97 @@ export async function sendCleaningReminderEmail(
 
 // Note: sendPaymentReminderEmail has been moved to app/lib/actions/reminder.actions.ts
 // to integrate with the new automated reminder system
+
+/**
+ * Send invoice delivery email using Postmark
+ * @param invoiceId The invoice ID to send
+ * @returns Object with status and message
+ */
+export async function sendInvoiceDeliveryEmail(invoiceId: string) {
+  await connectMongo();
+
+  try {
+    // Find the invoice
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) {
+      return { success: false, error: "Invoice not found" };
+    }
+
+    // Find client details
+    const clientDetails = await Client.findById(invoice.clientId);
+    if (!clientDetails) {
+      return { success: false, error: "Client not found" };
+    }
+
+    // Get appropriate email for accounting purposes
+    const clientEmail = getEmailForPurpose(clientDetails, "accounting");
+    if (!clientEmail) {
+      return { success: false, error: "Client email not found" };
+    }
+
+    // Calculate total with tax
+    const total =
+      invoice.items?.reduce(
+        (sum: number, item: { price: number }) => sum + (item?.price || 0),
+        0,
+      ) || 0;
+    const gst = total * 0.05; // 5% GST
+    const totalWithTax = total + gst;
+
+    // Calculate due date (14 days from issue date)
+    const issueDate = new Date(invoice.dateIssued);
+    const dueDate = new Date(issueDate);
+    dueDate.setDate(dueDate.getDate() + 14);
+    const formattedDueDate = dueDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    // Format issue date
+    const formattedIssueDate = issueDate.toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+
+    // Prepare template model
+    const templateModel = {
+      client_name: clientDetails.clientName,
+      invoice_number: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+      amount_due: totalWithTax.toFixed(2),
+      due_date: formattedDueDate,
+      issue_date: formattedIssueDate,
+      phone_number: "604-273-8717",
+      contact_email: "adam@vancouverventcleaning.ca",
+      header_title: "Invoice - Vent Cleaning & Certification",
+      email_title: "Invoice - Vent Cleaning & Certification",
+    };
+
+    // Send email using Postmark (without PDF attachment)
+    const postmarkClient = new postmark.ServerClient(
+      process.env.POSTMARK_CLIENT,
+    );
+
+    await postmarkClient.sendEmailWithTemplate({
+      From: "adam@vancouverventcleaning.ca",
+      To: clientEmail,
+      TemplateAlias: "invoice-delivery",
+      TemplateModel: templateModel,
+      TrackOpens: true,
+      MessageStream: "invoice-delivery",
+    });
+
+    revalidatePath("/invoices");
+    revalidatePath(`/invoices/${invoiceId}`);
+    return { success: true, message: "Invoice email sent successfully" };
+  } catch (error) {
+    console.error("Failed to send invoice email:", error);
+    return {
+      success: false,
+      error: "Failed to send invoice email",
+      details: error instanceof Error ? error.message : String(error),
+    };
+  }
+}

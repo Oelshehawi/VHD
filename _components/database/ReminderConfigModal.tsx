@@ -41,7 +41,8 @@ const ReminderConfigModal = ({
   const [activeTab, setActiveTab] = useState<"settings" | "history">(
     "settings",
   );
-
+  console.log(settings);
+console.log(auditLogs);
   useEffect(() => {
     if (isOpen && invoiceId) {
       loadReminderSettings();

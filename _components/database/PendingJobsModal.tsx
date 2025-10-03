@@ -7,7 +7,7 @@ import {
   PaymentInfo,
   PaymentReminderSettings,
 } from "../../app/lib/typeDefinitions";
-import { FaTimes, FaPaperPlane, FaCheckCircle, FaCog } from "react-icons/fa";
+import { FaTimes, FaCog } from "react-icons/fa";
 import { CgUnavailable } from "react-icons/cg";
 import { motion, AnimatePresence } from "framer-motion";
 import { updateInvoice } from "../../app/lib/actions/actions";
@@ -104,6 +104,8 @@ const PendingJobsModal = ({
         return "bg-yellow-500 text-black hover:bg-yellow-600";
     }
   };
+
+  
 
   const getReminderStatusBadge = (invoice: ExtendedPendingInvoiceType) => {
     const reminders = invoice.paymentReminders;
