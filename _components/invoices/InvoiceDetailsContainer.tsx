@@ -32,7 +32,7 @@ const InvoiceDetailsContainer = ({
   // Email sending with debounce
   const { isProcessing: isSendingEmail, debouncedSubmit: handleSendInvoice } = useDebounceSubmit({
     onSubmit: async () => {
-      const response = await sendInvoiceDeliveryEmail(invoice._id);
+      const response = await sendInvoiceDeliveryEmail(invoice._id as string);
       if (!response.success) {
         throw new Error(response.error || "Failed to send invoice email");
       }

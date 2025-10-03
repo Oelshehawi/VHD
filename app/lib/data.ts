@@ -47,7 +47,9 @@ export const fetchClientById = async (clientId: string): Promise<ClientType> => 
 export const fetchClientInvoices = async (clientId: string) => {
   await connectMongo();
   try {
-    const invoices = await Invoice.find({ clientId: clientId }).lean<InvoiceType[]>();
+    const invoices = await Invoice.find({ clientId: clientId })
+      .sort({ invoiceId: -1 })
+      .lean<InvoiceType[]>();
 
     return invoices.map((invoice) => ({
       _id: invoice._id.toString(),

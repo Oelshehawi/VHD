@@ -445,6 +445,16 @@ const formatPendingInvoices = (invoices: any[]) => {
           enabled: false,
           frequency: "none",
         },
+    callHistory: invoice.callHistory?.map((call: any) => ({
+      _id: call._id?.toString(),
+      callerId: call.callerId,
+      callerName: call.callerName,
+      timestamp: call.timestamp instanceof Date ? call.timestamp.toISOString() : call.timestamp,
+      outcome: call.outcome,
+      notes: call.notes,
+      followUpDate: call.followUpDate instanceof Date ? call.followUpDate.toISOString() : call.followUpDate,
+      duration: call.duration,
+    })) || [],
     emailExists: invoice.emailExists,
     dateIssued: invoice.dateIssued.toISOString().split("T")[0],
     amount: invoice.items.reduce(

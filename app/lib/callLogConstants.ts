@@ -45,7 +45,7 @@ export const QUICK_OUTCOMES = {
   ],
   PAYMENT: [
     { outcome: CALL_OUTCOMES.WILL_PAY_TODAY, label: "Will pay today", followUpDays: 1 },
-    { outcome: CALL_OUTCOMES.PAYMENT_PROMISED, label: "Payment promised Friday", followUpDays: 5 },
+    { outcome: CALL_OUTCOMES.PAYMENT_PROMISED, label: "Payment promised", followUpDays: 5 },
     { outcome: CALL_OUTCOMES.NEEDS_MORE_TIME, label: "Needs more time", followUpDays: 7 },
     { outcome: CALL_OUTCOMES.DISPUTE_RAISED, label: "Dispute raised", followUpDays: null },
   ],

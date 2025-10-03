@@ -1,13 +1,14 @@
 // PendingJobsModal.jsx
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import {
   PendingInvoiceType,
   PaymentInfo,
   PaymentReminderSettings,
+  CallLogEntry,
 } from "../../app/lib/typeDefinitions";
-import { FaTimes, FaCog } from "react-icons/fa";
+import { FaTimes, FaCog, FaPhone, FaHistory } from "react-icons/fa";
 import { CgUnavailable } from "react-icons/cg";
 import { motion, AnimatePresence } from "framer-motion";
 import { updateInvoice } from "../../app/lib/actions/actions";
@@ -18,6 +19,7 @@ import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
 import Link from "next/link";
 import PaymentModal from "../payments/PaymentModal";
 import ReminderConfigModal from "./ReminderConfigModal";
+import { CallLogProvider, useCallLog } from "../dashboard/CallLogManager";
 
 interface ExtendedPendingInvoiceType extends PendingInvoiceType {
   emailExists?: boolean;
@@ -29,7 +31,7 @@ interface PendingJobsModalProps {
   onClose: () => void;
 }
 
-const PendingJobsModal = ({
+const PendingJobsModalContent = ({
   pendingInvoices,
   onClose,
 }: PendingJobsModalProps) => {
@@ -39,6 +41,12 @@ const PendingJobsModal = ({
   const [showReminderModal, setShowReminderModal] = useState<string | null>(
     null,
   );
+  const { openCallLog, openCallHistory } = useCallLog();
+
+  // Update invoices when pendingInvoices prop changes (after revalidation)
+  useEffect(() => {
+    setInvoices(pendingInvoices);
+  }, [pendingInvoices]);
 
   const handleStatusChange = (invoiceId: string, newStatus: string) => {
     if (newStatus === "paid") {
@@ -285,8 +293,41 @@ const PendingJobsModal = ({
                               </option>
                             </select>
 
+                            {/* Call Logging Buttons */}
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() =>
+                                  openCallLog({
+                                    type: 'invoice',
+                                    id: invoice._id as string,
+                                    title: invoice.jobTitle,
+                                  })
+                                }
+                                className="flex flex-1 items-center justify-center space-x-1 rounded-lg bg-purple-500 px-3 py-2 text-white transition-colors hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                                title="Log payment call"
+                              >
+                                <FaPhone className="h-3 w-3" />
+                                <span className="text-xs font-medium">Log Call</span>
+                              </button>
+                              {invoice.callHistory && invoice.callHistory.length > 0 && (
+                                <button
+                                  onClick={() =>
+                                    openCallHistory(
+                                      invoice.callHistory || [],
+                                      invoice.jobTitle
+                                    )
+                                  }
+                                  className="flex items-center justify-center space-x-1 rounded-lg bg-indigo-500 px-3 py-2 text-white transition-colors hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                                  title="View call history"
+                                >
+                                  <FaHistory className="h-3 w-3" />
+                                  <span className="text-xs font-medium">{invoice.callHistory.length}</span>
+                                </button>
+                              )}
+                            </div>
+
                             {/* Configure Reminders Button */}
-                            <div className="mt-2 flex h-10 justify-center">
+                            <div className="flex h-10 justify-center">
                               <button
                                 onClick={() =>
                                   setShowReminderModal(invoice._id as string)
@@ -302,7 +343,7 @@ const PendingJobsModal = ({
                             </div>
 
                             {/* Reminder Status Badge */}
-                            <div className="mt-2 flex justify-center">
+                            <div className="flex justify-center">
                               {getReminderStatusBadge(invoice)}
                             </div>
                           </div>
@@ -342,6 +383,17 @@ const PendingJobsModal = ({
         }}
       />
     </>
+  );
+};
+
+const PendingJobsModal = ({
+  pendingInvoices,
+  onClose,
+}: PendingJobsModalProps) => {
+  return (
+    <CallLogProvider>
+      <PendingJobsModalContent pendingInvoices={pendingInvoices} onClose={onClose} />
+    </CallLogProvider>
   );
 };
 

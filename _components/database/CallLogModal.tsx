@@ -69,8 +69,14 @@ const CallLogModal = ({ open, onClose, context }: CallLogModalProps) => {
         duration: values.duration ? Number(values.duration) : undefined,
       };
 
-      // Call the server action directly
-      const result = await logJobCall(context.id, callLogEntry);
+      // Call the appropriate server action based on context type
+      let result;
+      if (context.type === 'invoice') {
+        const { logInvoicePaymentCall } = await import("../../app/lib/actions/actions");
+        result = await logInvoicePaymentCall(context.id, callLogEntry);
+      } else {
+        result = await logJobCall(context.id, callLogEntry);
+      }
 
       if (result && result.success) {
         toast.success("Call logged successfully");

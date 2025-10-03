@@ -54,12 +54,12 @@ console.log(auditLogs);
       const result = await getReminderSettings(invoiceId);
       if (result.success) {
         setSettings(
-          result.data.paymentReminders || {
+          result.data?.paymentReminders || {
             enabled: false,
             frequency: "none",
           },
         );
-        setAuditLogs(result.data.auditLogs || []);
+        setAuditLogs(result.data?.auditLogs || []);
       }
     } catch (error) {
       console.error("Error loading reminder settings:", error);

@@ -114,6 +114,7 @@ const invoiceSchema = new Schema<InvoiceType>({
     datePaid: { type: Date },
     notes: { type: String },
   },
+  callHistory: { type: [CallLogEntrySchema], default: [] },
 });
 
 const ShiftSchema = new Schema<ShiftType>({

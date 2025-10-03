@@ -316,3 +316,35 @@ export async function logJobCall(invoiceId: string, callLog: CallLogEntry) {
     throw new Error("Failed to log job call");
   }
 }
+
+export async function logInvoicePaymentCall(invoiceId: string, callLog: CallLogEntry) {
+  await connectMongo();
+  try {
+    // Find the Invoice entry by _id and add call log to callHistory
+    const updatedInvoice = await Invoice.findByIdAndUpdate(
+      invoiceId,
+      {
+        $push: {
+          callHistory: {
+            ...callLog,
+            timestamp: new Date(callLog.timestamp),
+            followUpDate: callLog.followUpDate ? new Date(callLog.followUpDate) : undefined,
+          }
+        }
+      },
+      { new: true, runValidators: true }
+    );
+
+    if (!updatedInvoice) {
+      throw new Error("Invoice not found");
+    }
+
+    // Revalidate the dashboard to show updated call history
+    revalidatePath("/dashboard");
+
+    return { success: true };
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to log invoice payment call");
+  }
+}
