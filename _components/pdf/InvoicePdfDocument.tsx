@@ -401,12 +401,6 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
               ${invoiceData.totalAmount.toFixed(2)} CAD
             </Text>
           </View>
-          <View style={styles.totalRow}>
-            <Text style={{ fontSize: 12, color: "#003e29", fontWeight: "bold" }}>Due by:</Text>
-            <Text style={{ fontSize: 12, color: "#003e29", fontWeight: "bold" }}>
-              {invoiceData.dateDue} (14 days from service date)
-            </Text>
-          </View>
         </View>
       </View>
 
@@ -418,7 +412,7 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
           PAYMENT TERMS
         </Text>
         <Text style={{ fontSize: 9, lineHeight: 1.4, marginBottom: 3 }}>
-          • Payment due within 14 days of the service date.
+          • Payment due within 14 days of the service date unless otherwise agreed in writing.
         </Text>
         <Text style={{ fontSize: 9, lineHeight: 1.4, marginBottom: 3 }}>
           • Overdue interest: 2% per month (24% per year), simple interest, applied from the day after the due date until paid.
