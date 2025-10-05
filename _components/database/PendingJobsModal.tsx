@@ -163,29 +163,6 @@ const PendingJobsModalContent = ({
     );
   };
 
-  const createEmailSender = (invoiceId: string) => {
-    const { isProcessing, debouncedSubmit } = useDebounceSubmit({
-      onSubmit: async () => {
-        const response = await sendPaymentReminderEmail(invoiceId);
-        if (!response.success) {
-          throw new Error(response.error || "Failed to send payment reminder");
-        }
-        // Update the invoice in the local state to reflect email sent
-        setInvoices((prevInvoices) =>
-          prevInvoices.map((invoice) =>
-            invoice._id === invoiceId
-              ? { ...invoice, paymentEmailSent: true }
-              : invoice,
-          ),
-        );
-      },
-      successMessage: "Payment reminder email sent successfully",
-      delay: 500,
-    });
-
-    return { isProcessing, debouncedSubmit };
-  };
-
   return (
     <>
       <AnimatePresence>
@@ -221,10 +198,6 @@ const PendingJobsModalContent = ({
                   <p className="text-center text-gray-500">No pending jobs.</p>
                 ) : (
                   invoices.map((invoice) => {
-                    const { isProcessing, debouncedSubmit } = createEmailSender(
-                      invoice._id as string,
-                    );
-
                     return (
                       <motion.div
                         key={invoice._id as string}
