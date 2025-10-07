@@ -425,12 +425,6 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
         </Text>
       </View>
 
-      {/* Signature */}
-      <View style={styles.signature}>
-        <View style={styles.signatureLine}></View>
-        <Text style={styles.signatureText}>Authorized Signature</Text>
-      </View>
-
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>604-273-8717</Text>

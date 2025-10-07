@@ -128,6 +128,43 @@ export const fetchInvoiceById = async (invoiceId: string) => {
         followUpDate: call.followUpDate instanceof Date ? call.followUpDate.toISOString() : call.followUpDate,
         duration: call.duration,
       })) || [],
+      paymentReminders: invoice.paymentReminders
+        ? {
+            enabled: invoice.paymentReminders.enabled,
+            frequency: invoice.paymentReminders.frequency,
+            nextReminderDate:
+              invoice.paymentReminders.nextReminderDate instanceof Date
+                ? invoice.paymentReminders.nextReminderDate.toISOString()
+                : invoice.paymentReminders.nextReminderDate,
+            lastReminderSent:
+              invoice.paymentReminders.lastReminderSent instanceof Date
+                ? invoice.paymentReminders.lastReminderSent.toISOString()
+                : invoice.paymentReminders.lastReminderSent,
+            reminderHistory:
+              invoice.paymentReminders.reminderHistory?.map((entry: any) => {
+                // Create a new plain object without MongoDB properties
+                const plainEntry: any = {};
+                if (entry.sentAt !== undefined) {
+                  plainEntry.sentAt = entry.sentAt instanceof Date
+                    ? entry.sentAt.toISOString()
+                    : String(entry.sentAt);
+                }
+                if (entry.emailTemplate !== undefined) {
+                  plainEntry.emailTemplate = entry.emailTemplate;
+                }
+                if (entry.success !== undefined) {
+                  plainEntry.success = entry.success;
+                }
+                if (entry.sequence !== undefined) {
+                  plainEntry.sequence = entry.sequence;
+                }
+                if (entry.errorMessage !== undefined) {
+                  plainEntry.errorMessage = entry.errorMessage;
+                }
+                return plainEntry;
+              }) || [],
+          }
+        : undefined,
     };
   } catch (error) {
     console.error("Database Error:", error);

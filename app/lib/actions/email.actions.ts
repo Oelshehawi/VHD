@@ -7,6 +7,11 @@ import { DueInvoiceType } from "../typeDefinitions";
 import {
   getEmailForPurpose,
 } from "../utils";
+import { createElement } from "react";
+import { renderToBuffer } from "@react-pdf/renderer";
+import InvoicePdfDocument, {
+  type InvoiceData,
+} from "../../../_components/pdf/InvoicePdfDocument";
 
 
 const postmark = require("postmark");
@@ -109,16 +114,22 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string) {
 
   try {
     // Find the invoice
-    const invoice = await Invoice.findById(invoiceId);
-    if (!invoice) {
+    const invoiceDoc = await Invoice.findById(invoiceId);
+    if (!invoiceDoc) {
       return { success: false, error: "Invoice not found" };
     }
 
+    // Convert to plain object
+    const invoice = invoiceDoc.toObject();
+
     // Find client details
-    const clientDetails = await Client.findById(invoice.clientId);
-    if (!clientDetails) {
+    const clientDetailsDoc = await Client.findById(invoice.clientId);
+    if (!clientDetailsDoc) {
       return { success: false, error: "Client not found" };
     }
+
+    // Convert to plain object
+    const clientDetails = clientDetailsDoc.toObject();
 
     // Get appropriate email for accounting purposes
     const clientEmail = getEmailForPurpose(clientDetails, "accounting");
@@ -127,11 +138,12 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string) {
     }
 
     // Calculate total with tax
+    const items = invoice.items || [];
     const total =
-      invoice.items?.reduce(
+      items.reduce(
         (sum: number, item: { price: number }) => sum + (item?.price || 0),
         0,
-      ) || 0;
+      );
     const gst = total * 0.05; // 5% GST
     const totalWithTax = total + gst;
 
@@ -152,6 +164,39 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string) {
       day: "numeric",
     });
 
+    // Prepare invoice data for PDF generation
+    const pdfInvoiceData: InvoiceData = {
+      invoiceId: invoice.invoiceId,
+      dateIssued: formattedIssueDate,
+      dateDue: formattedDueDate,
+      jobTitle: invoice.jobTitle,
+      location: invoice.location,
+      clientName: clientDetails.clientName,
+      email: clientEmail,
+      phoneNumber: clientDetails.phoneNumber,
+      items: items.map(
+        (item: { description: any; price: any; details?: any }) => ({
+          description: item.description,
+          details: item.details || "",
+          price: item.price,
+          total: item.price,
+        }),
+      ),
+      subtotal: total,
+      gst: gst,
+      totalAmount: totalWithTax,
+      cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
+      eTransfer: "adam@vancouverventcleaning.ca",
+      terms:
+        "Please report any and all cleaning inquiries within 5 business days.",
+    };
+
+    // Generate PDF using the PDF document component
+    const MyDocument = () =>
+      createElement(InvoicePdfDocument, { invoiceData: pdfInvoiceData });
+    const pdfBuffer = await renderToBuffer(createElement(MyDocument));
+    const pdfBase64 = pdfBuffer.toString("base64");
+
     // Prepare template model
     const templateModel = {
       client_name: clientDetails.clientName,
@@ -166,7 +211,7 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string) {
       email_title: "Invoice - Vent Cleaning & Certification",
     };
 
-    // Send email using Postmark (without PDF attachment)
+    // Send email using Postmark with PDF attachment
     const postmarkClient = new postmark.ServerClient(
       process.env.POSTMARK_CLIENT,
     );
@@ -176,6 +221,14 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string) {
       To: clientEmail,
       TemplateAlias: "invoice-delivery",
       TemplateModel: templateModel,
+      Attachments: [
+        {
+          Name: `${invoice.jobTitle.trim()} - Invoice.pdf`,
+          Content: pdfBase64,
+          ContentType: "application/pdf",
+          ContentID: `invoice-${invoice.invoiceId}`,
+        },
+      ],
       TrackOpens: true,
       MessageStream: "invoice-delivery",
     });

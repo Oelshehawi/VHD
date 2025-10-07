@@ -394,16 +394,19 @@ export async function getReminderSettings(invoiceId: string) {
   await connectMongo();
 
   try {
-    const invoice = (await Invoice.findById(invoiceId)
+    const invoiceDoc = await Invoice.findById(invoiceId)
       .select("paymentReminders")
-      .lean()) as any;
+      .lean();
 
-    if (!invoice) {
+    if (!invoiceDoc) {
       return { success: false, error: "Invoice not found" };
     }
 
+    // Use JSON.parse(JSON.stringify()) to completely strip MongoDB types
+    const invoice = JSON.parse(JSON.stringify(invoiceDoc));
+
     // Get audit logs from separate collection
-    const rawAuditLogs = await AuditLog.find({
+    const rawAuditLogsDoc = await AuditLog.find({
       invoiceId,
       action: {
         $in: [
@@ -417,6 +420,9 @@ export async function getReminderSettings(invoiceId: string) {
       .sort({ timestamp: -1 })
       .limit(50)
       .lean();
+
+    // Use JSON.parse(JSON.stringify()) to completely strip MongoDB types
+    const rawAuditLogs = JSON.parse(JSON.stringify(rawAuditLogsDoc));
 
     // Convert MongoDB objects to plain objects for client components
     const auditLogs = rawAuditLogs.map((log: any) => ({
@@ -450,17 +456,28 @@ export async function getReminderSettings(invoiceId: string) {
               ? invoice.paymentReminders.lastReminderSent.toISOString()
               : invoice.paymentReminders.lastReminderSent,
           reminderHistory:
-            invoice.paymentReminders.reminderHistory?.map((entry: any) => ({
-              sentAt:
-                entry.sentAt instanceof Date
+            invoice.paymentReminders.reminderHistory?.map((entry: any) => {
+              // Create a new plain object without MongoDB properties like _id
+              const plainEntry: any = {};
+              if (entry.sentAt !== undefined) {
+                plainEntry.sentAt = entry.sentAt instanceof Date
                   ? entry.sentAt.toISOString()
-                  : String(entry.sentAt),
-              emailTemplate: entry.emailTemplate,
-              success: entry.success,
-              sequence: entry.sequence,
-              errorMessage: entry.errorMessage,
-              // Explicitly exclude any MongoDB-specific properties
-            })) || [],
+                  : String(entry.sentAt);
+              }
+              if (entry.emailTemplate !== undefined) {
+                plainEntry.emailTemplate = entry.emailTemplate;
+              }
+              if (entry.success !== undefined) {
+                plainEntry.success = entry.success;
+              }
+              if (entry.sequence !== undefined) {
+                plainEntry.sequence = entry.sequence;
+              }
+              if (entry.errorMessage !== undefined) {
+                plainEntry.errorMessage = entry.errorMessage;
+              }
+              return plainEntry;
+            }) || [],
         }
       : undefined;
 

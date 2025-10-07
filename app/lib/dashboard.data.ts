@@ -429,17 +429,28 @@ const formatPendingInvoices = (invoices: any[]) => {
               ? invoice.paymentReminders.lastReminderSent.toISOString()
               : invoice.paymentReminders.lastReminderSent,
           reminderHistory:
-            invoice.paymentReminders.reminderHistory?.map((entry: any) => ({
-              sentAt:
-                entry.sentAt instanceof Date
+            invoice.paymentReminders.reminderHistory?.map((entry: any) => {
+              // Create a new plain object without MongoDB properties
+              const plainEntry: any = {};
+              if (entry.sentAt !== undefined) {
+                plainEntry.sentAt = entry.sentAt instanceof Date
                   ? entry.sentAt.toISOString()
-                  : String(entry.sentAt),
-              emailTemplate: entry.emailTemplate,
-              success: entry.success,
-              sequence: entry.sequence,
-              errorMessage: entry.errorMessage,
-              // Explicitly exclude any MongoDB-specific properties
-            })) || [],
+                  : String(entry.sentAt);
+              }
+              if (entry.emailTemplate !== undefined) {
+                plainEntry.emailTemplate = entry.emailTemplate;
+              }
+              if (entry.success !== undefined) {
+                plainEntry.success = entry.success;
+              }
+              if (entry.sequence !== undefined) {
+                plainEntry.sequence = entry.sequence;
+              }
+              if (entry.errorMessage !== undefined) {
+                plainEntry.errorMessage = entry.errorMessage;
+              }
+              return plainEntry;
+            }) || [],
         }
       : {
           enabled: false,
