@@ -4,6 +4,7 @@ import { PhotoType, SignatureType } from "../../app/lib/typeDefinitions";
 import { CldImage } from "next-cloudinary";
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { formatDateFns } from "../../app/lib/utils";
+import { toPublicId } from "../../app/lib/imageUtils";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
 // Import zoom plugin
@@ -61,14 +62,23 @@ export default function MediaDisplay({
   useEffect(() => {
     const newSlides = [];
 
+    // Helper function to build optimized Cloudinary URL
+    const getOptimizedUrl = (url: string): string => {
+      const publicId = toPublicId(url);
+      if (!publicId) return url; // Fallback to original URL if extraction fails
+
+      return `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto,dpr_auto,w_1600/${publicId}`;
+    };
+
     // Add before photos
     if (beforePhotos && beforePhotos.length > 0) {
       beforePhotos.forEach((photo, idx) => {
+        const optimizedUrl = getOptimizedUrl(photo.url);
         newSlides.push({
-          src: photo.url,
+          src: optimizedUrl,
           title: "Before Photo",
           description: `Uploaded on: ${formatDateFns(photo.timestamp)}`,
-          downloadUrl: photo.url,
+          downloadUrl: optimizedUrl,
           downloadFilename: `before-photo-${idx + 1}.jpg`,
         });
       });
@@ -77,11 +87,12 @@ export default function MediaDisplay({
     // Add after photos
     if (afterPhotos && afterPhotos.length > 0) {
       afterPhotos.forEach((photo, idx) => {
+        const optimizedUrl = getOptimizedUrl(photo.url);
         newSlides.push({
-          src: photo.url,
+          src: optimizedUrl,
           title: "After Photo",
           description: `Uploaded on: ${formatDateFns(photo.timestamp)}`,
-          downloadUrl: photo.url,
+          downloadUrl: optimizedUrl,
           downloadFilename: `after-photo-${idx + 1}.jpg`,
         });
       });
@@ -89,11 +100,12 @@ export default function MediaDisplay({
 
     // Add signature if available
     if (signature) {
+      const optimizedUrl = getOptimizedUrl(signature.url);
       newSlides.push({
-        src: signature.url,
+        src: optimizedUrl,
         title: "Signature",
         description: `Signed by: ${signature.signerName} on ${formatDateFns(signature.timestamp)}`,
-        downloadUrl: signature.url,
+        downloadUrl: optimizedUrl,
         downloadFilename: `signature-${signature.signerName.replace(/\s+/g, "-").toLowerCase()}.jpg`,
       });
     }
@@ -127,11 +139,15 @@ export default function MediaDisplay({
                 onClick={() => openLightbox(signatureIndex)}
               >
                 <CldImage
-                  src={signature.url}
+                  src={toPublicId(signature.url)!}
                   alt="Signature"
                   width={200}
                   height={200}
                   crop="fit"
+                  format="auto"
+                  quality="auto"
+                  dpr="auto"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
                   className="object-contain"
                 />
               </div>
@@ -162,11 +178,15 @@ export default function MediaDisplay({
                         onClick={() => openLightbox(beforeStartIndex + index)}
                       >
                         <CldImage
-                          src={photo.url}
+                          src={toPublicId(photo.url)!}
                           alt={`Before photo ${index + 1}`}
                           width={800}
                           height={600}
                           crop="fill"
+                          format="auto"
+                          quality="auto"
+                          dpr="auto"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
                           className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                         />
                       </div>
@@ -187,11 +207,15 @@ export default function MediaDisplay({
                         onClick={() => openLightbox(afterStartIndex + index)}
                       >
                         <CldImage
-                          src={photo.url}
+                          src={toPublicId(photo.url)!}
                           alt={`After photo ${index + 1}`}
                           width={800}
                           height={600}
                           crop="fill"
+                          format="auto"
+                          quality="auto"
+                          dpr="auto"
+                          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
                           className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
                         />
                       </div>

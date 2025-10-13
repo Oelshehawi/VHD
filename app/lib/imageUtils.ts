@@ -64,3 +64,29 @@ export function getImageSrc(imagePath: string): string {
   // Client-side: use public URL
   return `/${imagePath}`;
 }
+
+/**
+ * Extract Cloudinary public_id from full URL
+ * @param url - Cloudinary full URL (e.g., https://res.cloudinary.com/cloud/image/upload/v123/path/name.jpg)
+ * @returns public_id without version and extension, or null if invalid
+ */
+export function toPublicId(url: string): string | null {
+  if (!url) return null;
+
+  try {
+    // Match pattern: /image/upload/[v<version>/]<public_id>[.<ext>]
+    // This regex captures the public_id after /upload/ (with optional version)
+    const match = url.match(/\/image\/upload\/(?:v\d+\/)?(.+?)(?:\.[^.]+)?$/);
+
+    if (match && match[1]) {
+      // Remove file extension if present
+      const publicId = match[1].replace(/\.[^.]+$/, '');
+      return publicId;
+    }
+
+    return null;
+  } catch (error) {
+    console.error('Error extracting public_id from URL:', error);
+    return null;
+  }
+}
