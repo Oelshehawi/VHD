@@ -10,8 +10,9 @@
     "test-openroute": "tsx scripts/test-openroute-integration.ts",
     "cleanup-spaces": "tsx scripts/cleanupLeadingSpaces.ts",
     "migrate-reminders": "tsx scripts/migrate-reminders-schema.ts",
-    "cloudinary:shrink": "tsx scripts/cloudinary-shrink.ts --dry-run=true --prefix=\"vhd-app/dongshujiaoma---2025-10-12\" --limit=100 --thresholdMB=2",
-    "cloudinary:shrink:real": "tsx scripts/cloudinary-shrink.ts --dry-run=false --prefix=\"vhd-app/dongshujiaoma---2025-10-12\" --limit=100 --thresholdMB=2"
+    "cloudinary:shrink": "tsx scripts/cloudinary-shrink.ts --dry-run=true --prefix=\"vhd-app\" --limit=100 --thresholdMB=2",
+    "cloudinary:shrink:real": "tsx scripts/cloudinary-shrink.ts --dry-run=false --prefix=\"vhd-app\" --limit=10000 --thresholdMB=2 --skip-verify=false",
+    "cloudinary:shrink:fast": "tsx scripts/cloudinary-shrink.ts --dry-run=false --prefix=\"vhd-app\" --limit=10000 --thresholdMB=2 --skip-verify=true"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.22.0",

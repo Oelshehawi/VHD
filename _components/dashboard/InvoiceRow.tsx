@@ -173,10 +173,12 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
                 className={`mt-1 flex w-full items-center gap-3 border-t border-gray-100 px-4 py-2 pt-3 text-sm transition-colors ${
                   invoiceData.emailSent
                     ? "cursor-not-allowed text-green-700 opacity-60 hover:bg-green-50"
-                    : "text-gray-700 hover:bg-gray-50"
+                    : !invoiceData.emailExists
+                      ? "cursor-not-allowed text-gray-400 opacity-60"
+                      : "text-gray-700 hover:bg-gray-50"
                 }`}
                 onClick={async () => {
-                  if (invoiceData.emailSent) return; // Prevent sending if already sent
+                  if (invoiceData.emailSent || !invoiceData.emailExists) return; // Prevent sending if already sent or no email
 
                   try {
                     await sendCleaningReminderEmail(invoiceData);
@@ -187,14 +189,29 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
                   }
                   setIsDropdownOpen(false);
                 }}
-                disabled={invoiceData.emailSent}
+                disabled={invoiceData.emailSent || !invoiceData.emailExists}
+                title={
+                  !invoiceData.emailExists
+                    ? "No email address available for this client"
+                    : invoiceData.emailSent
+                      ? "Email already sent"
+                      : "Send reminder email"
+                }
               >
                 <FaEnvelope
                   className={`h-4 w-4 ${
-                    invoiceData.emailSent ? "text-green-500" : "text-orange-500"
+                    invoiceData.emailSent
+                      ? "text-green-500"
+                      : !invoiceData.emailExists
+                        ? "text-gray-400"
+                        : "text-orange-500"
                   }`}
                 />
-                {invoiceData.emailSent ? "Email Sent ✓" : "Send Email"}
+                {invoiceData.emailSent
+                  ? "Email Sent ✓"
+                  : !invoiceData.emailExists
+                    ? "No Email"
+                    : "Send Email"}
               </button>
             </div>
           )}

@@ -55,3 +55,5 @@ next-env.d.ts
 
 /scripts
 .env
+
+.cloudinary-progress.json
