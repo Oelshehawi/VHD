@@ -129,7 +129,7 @@ const CalendarColumn = ({
         {HOURS.map((hour) => (
           <div
             key={hour}
-            className="relative h-[60px] border-b border-gray-100 last:border-b-0"
+            className="relative h-[50px] sm:h-[60px] border-b border-gray-100 last:border-b-0"
           >
             {/* Hour marker line */}
             <div className="absolute inset-x-0 top-0 h-px bg-gray-100" />
@@ -158,13 +158,13 @@ const CalendarColumn = ({
                   jobDuration = convertMinutesToHours(durationInMinutes);
                 }
                 
-                const heightInPixels = Math.max(80, jobDuration * 60); // 60px per hour, minimum 80px for UI elements
+                const heightInPixels = Math.max(60, jobDuration * 50); // 50px per hour on mobile, 60px on desktop, minimum 60px for UI elements
 
                 return (
                   <div
                     key={job._id as string}
-                    className="absolute inset-x-1 z-10"
-                    style={{ 
+                    className="absolute inset-x-0.5 sm:inset-x-1 z-10"
+                    style={{
                       top: `${topOffset}%`,
                       height: `${heightInPixels}px`
                     }}

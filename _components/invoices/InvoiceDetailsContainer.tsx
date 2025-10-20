@@ -186,14 +186,14 @@ const InvoiceDetailsContainer = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Action Bar - Only show if user can manage */}
       {canManage && (
-        <div className="flex items-center justify-between rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-200">
-          <div className="flex items-center space-x-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-green-100">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
+          <div className="flex items-center gap-3 sm:gap-4">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-green-100 flex-shrink-0">
               <svg
-                className="h-6 w-6 text-green-600"
+                className="h-5 w-5 sm:h-6 sm:w-6 text-green-600"
                 fill="none"
                 viewBox="0 0 24 24"
                 strokeWidth="1.5"
@@ -207,19 +207,19 @@ const InvoiceDetailsContainer = ({
               </svg>
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-gray-900">
+              <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                 Invoice Actions
               </h2>
-              <p className="text-sm text-gray-500">
+              <p className="text-xs sm:text-sm text-gray-500 hidden sm:block">
                 Generate PDFs and manage invoice details
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
+          <div className="flex flex-wrap items-center gap-2 sm:gap-3">
             <button
               onClick={handleSendInvoice}
               disabled={isSendingEmail}
-              className="inline-flex items-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+              className="inline-flex items-center rounded-lg bg-purple-600 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 touch-manipulation whitespace-nowrap"
             >
               {isSendingEmail ? (
                 <>
@@ -247,18 +247,19 @@ const InvoiceDetailsContainer = ({
                 </>
               ) : (
                 <>
-                  <FaPaperPlane className="mr-2 h-4 w-4" />
-                  <span>Send Invoice</span>
+                  <FaPaperPlane className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+                  <span className="hidden sm:inline">Send Invoice</span>
+                  <span className="sm:hidden">Send</span>
                 </>
               )}
             </button>
             <div className="relative">
               <button
                 onClick={() => setShowBillToOverride(!showBillToOverride)}
-                className="inline-flex items-center rounded-lg bg-gray-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2"
+                className="inline-flex items-center rounded-lg bg-gray-500 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 touch-manipulation whitespace-nowrap"
               >
                 <svg
-                  className="mr-2 h-4 w-4"
+                  className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2"
                   fill="none"
                   viewBox="0 0 24 24"
                   strokeWidth="1.5"
@@ -275,11 +276,12 @@ const InvoiceDetailsContainer = ({
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                <span>Bill To {overrideBillTo ? "(Custom)" : ""} - {currency}</span>
+                <span className="hidden sm:inline">Bill To {overrideBillTo ? "(Custom)" : ""} - {currency}</span>
+                <span className="sm:hidden">{currency}</span>
               </button>
 
               {showBillToOverride && (
-                <div className="ring-black absolute right-0 z-10 mt-2 w-96 rounded-lg bg-white p-4 shadow-lg ring-1 ring-opacity-5">
+                <div className="ring-black fixed inset-x-4 sm:absolute sm:inset-x-auto sm:right-0 z-50 mt-2 w-auto sm:w-96 rounded-lg bg-white p-4 shadow-lg ring-1 ring-opacity-5 max-h-[80vh] overflow-y-auto">
                   <h3 className="mb-3 text-sm font-semibold text-gray-900">
                     Bill To Options
                   </h3>
@@ -440,32 +442,34 @@ const InvoiceDetailsContainer = ({
                 pdfData={{ type: "invoice", data: invoiceData }}
                 fileName={`Invoice - ${invoice.jobTitle}.pdf`}
                 buttonText="Invoice PDF"
-                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                className="inline-flex items-center rounded-lg bg-blue-600 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 touch-manipulation whitespace-nowrap"
                 showScaleSelector={true}
               />
             )}
             <button
               onClick={openReceiptModal}
-              className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
+              className="inline-flex items-center rounded-lg bg-green-600 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 touch-manipulation whitespace-nowrap"
             >
-              <FaReceipt className="mr-2 h-4 w-4" />
-              <span>Receipt PDF</span>
+              <FaReceipt className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Receipt PDF</span>
+              <span className="sm:hidden">Receipt</span>
             </button>
             <button
               onClick={toggleEdit}
-              className="inline-flex items-center rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+              className="inline-flex items-center rounded-lg bg-gray-600 px-3 py-1.5 sm:px-4 sm:py-2 text-xs sm:text-sm font-medium text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 touch-manipulation whitespace-nowrap"
             >
-              <FaPenSquare className="mr-2 h-4 w-4" />
-              <span>{isEditing ? "Cancel Edit" : "Edit Invoice"}</span>
+              <FaPenSquare className="h-3 w-3 sm:h-4 sm:w-4 sm:mr-2" />
+              <span className="hidden sm:inline">{isEditing ? "Cancel Edit" : "Edit Invoice"}</span>
+              <span className="sm:hidden">{isEditing ? "Cancel" : "Edit"}</span>
             </button>
           </div>
         </div>
       )}
 
       {/* Main Grid Layout */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
         {/* Left side - Invoice Info & Price Breakdown */}
-        <div className="space-y-6 lg:col-span-2">
+        <div className="space-y-4 sm:space-y-6 md:col-span-2 lg:col-span-2">
           <InlineEditInvoice
             invoice={invoice}
             isEditing={isEditing}
@@ -476,7 +480,7 @@ const InvoiceDetailsContainer = ({
         </div>
 
         {/* Right side - Client Info */}
-        <div className="space-y-6 lg:col-span-1">
+        <div className="space-y-4 sm:space-y-6 md:col-span-2 lg:col-span-1">
           <ClientDetails client={client} canManage={canManage} />
         </div>
       </div>
