@@ -61,9 +61,9 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
 
     switch (pdfData.type) {
       case "invoice":
-        return <InvoicePdfDocument invoiceData={pdfData.data} />;
+        return <InvoicePdfDocument invoiceData={pdfData.data} scale={scaleValue} />;
       case "clientInvoice":
-        return <InvoicePdfDocument invoiceData={pdfData.data} />;
+        return <InvoicePdfDocument invoiceData={pdfData.data} scale={scaleValue} />;
       case "estimate":
         return <EstimatePdfDocument estimateData={pdfData.data} scale={scaleValue} />;
       case "receipt":
@@ -135,7 +135,7 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
 
   return (
     <div className="flex items-center gap-2">
-      {showScaleSelector && pdfData.type === "estimate" && (
+      {showScaleSelector && (pdfData.type === "estimate" || pdfData.type === "invoice" || pdfData.type === "clientInvoice") && (
         <div className="flex items-center gap-2">
           <label htmlFor="pdf-scale" className="text-sm font-medium text-gray-700">
             Size:
