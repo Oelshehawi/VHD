@@ -164,7 +164,6 @@ export async function updateInvoice(invoiceId: any, formData: any) {
   await connectMongo();
   try {
     // Trim all string fields to remove leading/trailing spaces
-    console.log("Before trimming - jobTitle:", formData.jobTitle);
     if (formData.jobTitle) {
       formData.jobTitle = formData.jobTitle.trim();
     }
@@ -184,7 +183,6 @@ export async function updateInvoice(invoiceId: any, formData: any) {
       }));
     }
     
-    console.log("After trimming - jobTitle:", formData.jobTitle);
 
     const currentInvoice = await Invoice.findById(invoiceId);
 

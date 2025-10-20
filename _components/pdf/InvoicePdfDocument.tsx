@@ -39,6 +39,13 @@ export interface InvoiceData {
     address: string;
     phone: string;
   } | null;
+  currency?: "CAD" | "USD";
+  exchangeRate?: number;
+  originalCAD?: {
+    subtotal: number;
+    gst: number;
+    total: number;
+  };
 }
 
 interface InvoicePdfDocumentProps {
@@ -439,22 +446,43 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
           <View style={scaledStyles.totalsSection}>
             <View style={scaledStyles.totalRow}>
               <Text style={scaledStyles.totalLabel}>Subtotal:</Text>
-              <Text style={scaledStyles.totalValue}>
-                ${invoiceData.subtotal.toFixed(2)}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+                <Text style={scaledStyles.totalValue}>
+                  ${invoiceData.subtotal.toFixed(2)} {invoiceData.currency || "CAD"}
+                </Text>
+                {invoiceData.originalCAD && (
+                  <Text style={{ fontSize: s(9), color: "#6c757d", marginLeft: s(4) }}>
+                    (${invoiceData.originalCAD.subtotal.toFixed(2)} CAD)
+                  </Text>
+                )}
+              </View>
             </View>
             <View style={scaledStyles.totalRow}>
               <Text style={scaledStyles.totalLabel}>GST# 814301065 (5%):</Text>
-              <Text style={scaledStyles.totalValue}>
-                ${invoiceData.gst.toFixed(2)}
-              </Text>
+              <View style={{ flexDirection: "row", alignItems: "baseline" }}>
+                <Text style={scaledStyles.totalValue}>
+                  ${invoiceData.gst.toFixed(2)} {invoiceData.currency || "CAD"}
+                </Text>
+                {invoiceData.originalCAD && (
+                  <Text style={{ fontSize: s(9), color: "#6c757d", marginLeft: s(4) }}>
+                    (${invoiceData.originalCAD.gst.toFixed(2)} CAD)
+                  </Text>
+                )}
+              </View>
             </View>
             <View style={scaledStyles.grandTotalRow}>
               <Text style={scaledStyles.grandTotalLabel}>Total:</Text>
               <Text style={scaledStyles.grandTotalValue}>
-                ${invoiceData.totalAmount.toFixed(2)} CAD
+                ${invoiceData.totalAmount.toFixed(2)} {invoiceData.currency || "CAD"}
               </Text>
             </View>
+            {invoiceData.originalCAD && invoiceData.exchangeRate && (
+              <View style={{ marginTop: s(8), paddingTop: s(8), borderTop: "1px solid #dee2e6" }}>
+                <Text style={{ fontSize: s(9), color: "#6c757d", textAlign: "center" }}>
+                  Converted from ${invoiceData.originalCAD.total.toFixed(2)} CAD at rate 1 CAD = {(1 / invoiceData.exchangeRate).toFixed(4)} USD
+                </Text>
+              </View>
+            )}
           </View>
         </View>
 

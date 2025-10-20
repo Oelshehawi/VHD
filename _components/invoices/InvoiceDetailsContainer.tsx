@@ -39,6 +39,8 @@ const InvoiceDetailsContainer = ({
     address: string;
     phone: string;
   } | null>(null);
+  const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
+  const [exchangeRate, setExchangeRate] = useState<number>(1.35); // Default CAD to USD rate
 
   // Email sending with debounce
   const { isProcessing: isSendingEmail, debouncedSubmit: handleSendInvoice } =
@@ -80,8 +82,57 @@ const InvoiceDetailsContainer = ({
   });
 
   // Prepare invoice data for PDF generation
-  const invoiceData = useMemo(
-    () => ({
+  const invoiceData = useMemo(() => {
+    // Ensure we have valid items and they're all valid objects
+    if (!invoice.items || invoice.items.length === 0) {
+      return null;
+    }
+
+    // Validate all items have required properties to prevent reconciliation errors
+    const hasInvalidItems = invoice.items.some(
+      (item: any) => !item || typeof item.price === 'undefined' || typeof item.description === 'undefined'
+    );
+
+    if (hasInvalidItems) {
+      return null;
+    }
+
+    // Calculate CAD amounts first
+    const subtotalCAD = calculateSubtotal(invoice.items);
+    const gstCAD = calculateGST(subtotalCAD);
+    const totalCAD = subtotalCAD + gstCAD;
+
+    // If USD, convert using exchange rate
+    let subtotal, gst, totalAmount, itemsWithPrices;
+
+    if (currency === "USD") {
+      // Convert CAD to USD
+      subtotal = subtotalCAD / exchangeRate;
+      gst = calculateGST(subtotal); // GST on USD amount
+      totalAmount = subtotal + gst;
+
+      // Convert item prices to USD
+      itemsWithPrices = invoice.items.map((item: { description: any; details?: any; price: any }) => ({
+        description: item.description,
+        details: item.details || "",
+        price: item.price / exchangeRate,
+        total: item.price / exchangeRate,
+      }));
+    } else {
+      // CAD - use original amounts
+      subtotal = subtotalCAD;
+      gst = gstCAD;
+      totalAmount = totalCAD;
+
+      itemsWithPrices = invoice.items.map((item: { description: any; details?: any; price: any }) => ({
+        description: item.description,
+        details: item.details || "",
+        price: item.price,
+        total: item.price,
+      }));
+    }
+
+    return {
       invoiceId: invoice.invoiceId,
       dateIssued: formatDateToString(invoice.dateIssued as string),
       dateDue: formattedDueDate,
@@ -90,28 +141,25 @@ const InvoiceDetailsContainer = ({
       clientName: client.clientName,
       email: clientEmail,
       phoneNumber: client.phoneNumber,
-      items: invoice.items.map(
-        (item: { description: any; details?: any; price: any }) => ({
-          description: item.description,
-          details: item.details || "",
-          price: item.price,
-          total: item.price,
-        }),
-      ),
-      subtotal: calculateSubtotal(invoice.items),
-      gst: calculateGST(calculateSubtotal(invoice.items)),
-      totalAmount:
-        calculateSubtotal(invoice.items) +
-        calculateGST(calculateSubtotal(invoice.items)),
+      items: itemsWithPrices,
+      subtotal: subtotal,
+      gst: gst,
+      totalAmount: totalAmount,
       cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
       eTransfer: "adam@vancouverventcleaning.ca",
       terms:
         "Please report any and all cleaning inquiries within 5 business days.",
-      // Override Bill To if provided
       overrideBillTo: overrideBillTo,
-    }),
-    [invoice, client, clientEmail, formattedDueDate, overrideBillTo],
-  );
+      currency: currency,
+      exchangeRate: currency === "USD" ? exchangeRate : undefined,
+      // Original CAD amounts for reference
+      originalCAD: currency === "USD" ? {
+        subtotal: subtotalCAD,
+        gst: gstCAD,
+        total: totalCAD,
+      } : undefined,
+    };
+  }, [invoice, client, clientEmail, formattedDueDate, overrideBillTo, currency, exchangeRate]);
 
   // Prepare receipt data for modal (without datePaid and paymentMethod)
   const receiptDataForModal: Omit<ReceiptData, "datePaid" | "paymentMethod"> = {
@@ -227,7 +275,7 @@ const InvoiceDetailsContainer = ({
                     d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                   />
                 </svg>
-                <span>Bill To {overrideBillTo ? "(Custom)" : ""}</span>
+                <span>Bill To {overrideBillTo ? "(Custom)" : ""} - {currency}</span>
               </button>
 
               {showBillToOverride && (
@@ -315,17 +363,87 @@ const InvoiceDetailsContainer = ({
                         </button>
                       </div>
                     </div>
+
+                    <div className="rounded-lg border border-gray-300 bg-white p-3">
+                      <div className="mb-2 text-sm font-medium text-gray-900">
+                        Invoice Currency
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setCurrency("CAD")}
+                          className={`flex-1 rounded px-3 py-2 text-sm font-medium transition-colors ${
+                            currency === "CAD"
+                              ? "bg-green-600 text-white"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          CAD
+                        </button>
+                        <button
+                          onClick={() => setCurrency("USD")}
+                          className={`flex-1 rounded px-3 py-2 text-sm font-medium transition-colors ${
+                            currency === "USD"
+                              ? "bg-green-600 text-white"
+                              : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          }`}
+                        >
+                          USD
+                        </button>
+                      </div>
+
+                      {currency === "USD" && (
+                        <div className="mt-3 space-y-2">
+                          <label className="text-xs font-medium text-gray-700">
+                            Exchange Rate (CAD to USD)
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs text-gray-500">1 CAD =</span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0.01"
+                              value={exchangeRate}
+                              onChange={(e) => setExchangeRate(parseFloat(e.target.value) || 1.35)}
+                              className="flex-1 rounded border border-gray-300 px-2 py-1 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              placeholder="1.35"
+                            />
+                            <span className="text-xs text-gray-500">USD</span>
+                          </div>
+                          <p className="text-xs text-gray-500">
+                            Current Bank of Canada rate: ~1.35 (check daily)
+                          </p>
+                          {(() => {
+                            const subtotalCAD = calculateSubtotal(invoice.items);
+                            const gstCAD = calculateGST(subtotalCAD);
+                            const totalCAD = subtotalCAD + gstCAD;
+                            const totalUSD = totalCAD / exchangeRate;
+                            return (
+                              <div className="mt-2 rounded bg-blue-50 p-2 text-xs">
+                                <div className="font-medium text-blue-900">Preview:</div>
+                                <div className="text-blue-700">
+                                  ${totalCAD.toFixed(2)} CAD = ${totalUSD.toFixed(2)} USD
+                                </div>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
-            <GeneratePDF
-              pdfData={{ type: "invoice", data: invoiceData }}
-              fileName={`Invoice - ${invoice.jobTitle}.pdf`}
-              buttonText="Invoice PDF"
-              className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-            />
+            {invoice.items && invoice.items.length > 0 && invoiceData && (
+              <GeneratePDF
+                key={`invoice-${invoice._id}-${invoice.items.length}-${currency}-${overrideBillTo?.name || 'default'}`}
+                pdfData={{ type: "invoice", data: invoiceData }}
+                fileName={`Invoice - ${invoice.jobTitle}.pdf`}
+                buttonText="Invoice PDF"
+                className="inline-flex items-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+                showScaleSelector={true}
+              />
+            )}
             <button
               onClick={openReceiptModal}
               className="inline-flex items-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
