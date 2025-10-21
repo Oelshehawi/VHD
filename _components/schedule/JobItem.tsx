@@ -174,15 +174,12 @@ const JobItem = ({
         {/* Header Row - Improved text sizes */}
         <div className="flex items-start justify-between mb-1">
           <div className="flex-1 min-w-0">
-            <Link
-              href={`/invoices/${job.invoiceRef}`}
-              onClick={(e) => e.stopPropagation()}
-              className="group/link"
+            <h3
+              className="text-sm font-semibold text-gray-900 truncate hover:text-blue-600 transition-colors leading-tight cursor-pointer"
+              onClick={handleJobClick}
             >
-              <h3 className="text-sm font-semibold text-gray-900 truncate group-hover/link:text-blue-600 transition-colors leading-tight">
-                {job.jobTitle}
-              </h3>
-            </Link>
+              {job.jobTitle}
+            </h3>
             <p className="text-xs text-gray-500 truncate leading-tight">{job.location}</p>
           </div>
 

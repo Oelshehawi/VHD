@@ -14,10 +14,11 @@ import {
   isSameDay,
   isSameMonth,
   isToday,
+  isValid,
   parse,
   startOfToday,
 } from "date-fns";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
 import { updateSchedule } from "../../app/lib/actions/scheduleJobs.actions";
 import DeleteModal from "../DeleteModal";
@@ -34,15 +35,32 @@ export default function MiniCalendar({
   scheduledJobs,
   canManage,
   technicians,
+  onDateChange,
+  initialDate,
 }: {
   invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   technicians: { id: string; name: string }[];
+  onDateChange?: (date: Date, view: "week" | "month") => void;
+  initialDate?: string | null;
 }) {
   let today = startOfToday();
-  let [selectedDay, setSelectedDay] = useState(today);
-  let [currentMonth, setCurrentMonth] = useState(format(today, "MMM-yyyy"));
+
+  // Initialize from URL if provided
+  const getInitialDay = () => {
+    if (initialDate) {
+      const parsedDate = parse(initialDate, "yyyy-MM-dd", new Date());
+      if (isValid(parsedDate)) {
+        return parsedDate;
+      }
+    }
+    return today;
+  };
+
+  const initialDay = getInitialDay();
+  let [selectedDay, setSelectedDay] = useState(initialDay);
+  let [currentMonth, setCurrentMonth] = useState(format(initialDay, "MMM-yyyy"));
   let firstDayCurrentMonth = parse(currentMonth, "MMM-yyyy", new Date());
 
   // Modal state
@@ -55,13 +73,17 @@ export default function MiniCalendar({
   });
 
   function previousMonth() {
-    let firstDayNextMonth = add(firstDayCurrentMonth, { months: -1 });
-    setCurrentMonth(format(firstDayNextMonth, "MMM-yyyy"));
+    let firstDayPrevMonth = add(firstDayCurrentMonth, { months: -1 });
+    setCurrentMonth(format(firstDayPrevMonth, "MMM-yyyy"));
+    // Update URL instantly with first day of previous month
+    onDateChange?.(firstDayPrevMonth, "month");
   }
 
   function nextMonth() {
     let firstDayNextMonth = add(firstDayCurrentMonth, { months: 1 });
     setCurrentMonth(format(firstDayNextMonth, "MMM-yyyy"));
+    // Update URL instantly with first day of next month
+    onDateChange?.(firstDayNextMonth, "month");
   }
 
   let selectedDayJobs = scheduledJobs
@@ -71,6 +93,13 @@ export default function MiniCalendar({
         new Date(a.startDateTime).getTime() -
         new Date(b.startDateTime).getTime(),
     );
+
+  // Handle day selection
+  const handleDaySelect = (day: Date) => {
+    setSelectedDay(day);
+    // Update URL instantly with selected day
+    onDateChange?.(day, "month");
+  };
 
   // Handle job click to open modal
   const handleJobClick = (job: ScheduleType) => {
@@ -83,6 +112,39 @@ export default function MiniCalendar({
     setIsModalOpen(false);
     setSelectedJob(null);
   };
+
+  // Sync state with URL params (both on mount and popstate events)
+  useEffect(() => {
+    const syncStateWithURL = () => {
+      // Get current URL params
+      const params = new URLSearchParams(window.location.search);
+      const urlDate = params.get("date");
+
+      // Update date/month state
+      if (urlDate) {
+        const parsedDate = parse(urlDate, "yyyy-MM-dd", new Date());
+
+        if (isValid(parsedDate)) {
+          setSelectedDay(parsedDate);
+          setCurrentMonth(format(parsedDate, "MMM-yyyy"));
+        }
+      }
+    };
+
+    // Sync on mount (when navigating back from different page)
+    syncStateWithURL();
+
+    // Also listen for popstate events (back/forward button within same page)
+    const handlePopState = () => {
+      syncStateWithURL();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
 
   return (
     <>
@@ -138,7 +200,7 @@ export default function MiniCalendar({
                     >
                       <button
                         type="button"
-                        onClick={() => setSelectedDay(day)}
+                        onClick={() => handleDaySelect(day)}
                         className={classNames(
                           "group relative w-full py-2 sm:py-3 md:py-4 transition-all duration-200 touch-manipulation",
                           isEqual(day, selectedDay) && "text-white z-10",

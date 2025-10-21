@@ -51,6 +51,7 @@ const CalendarOptions = ({
   const [currentWeek, setCurrentWeek] = useState<Date[]>(() => {
     let startDate = new Date();
 
+    
     if (initialDate) {
       const parsedDate = parse(initialDate, "yyyy-MM-dd", new Date());
       if (isValid(parsedDate)) {
@@ -65,16 +66,21 @@ const CalendarOptions = ({
     });
   });
 
-  // Update URL when view changes
-  const updateURL = (view: "week" | "month", date?: Date) => {
-    const params = new URLSearchParams(searchParams.toString());
+  // Instant URL update using native History API (Google Calendar style)
+  const updateURLInstant = (view: "week" | "month", date: Date) => {
+    const params = new URLSearchParams(window.location.search);
     params.set("view", view);
+    params.set("date", format(date, "yyyy-MM-dd"));
 
-    if (date) {
-      params.set("date", format(date, "yyyy-MM-dd"));
-    }
+    const newUrl = `${window.location.pathname}?${params.toString()}`;
 
-    router.push(`?${params.toString()}`, { scroll: false });
+    // Use pushState to create history entries for back/forward navigation
+    // Store the state so we can restore it on popstate
+    window.history.pushState(
+      { view, date: format(date, "yyyy-MM-dd") },
+      '',
+      newUrl
+    );
   };
 
   useEffect(() => {
@@ -84,26 +90,76 @@ const CalendarOptions = ({
     }
   }, [initialView]);
 
+  // Sync state with URL params (both on mount and popstate events)
+  useEffect(() => {
+    const syncStateWithURL = () => {
+      // Get current URL params
+      const params = new URLSearchParams(window.location.search);
+      const urlView = params.get("view");
+      const urlDate = params.get("date");
+
+      // Update view state
+      if (urlView === "month") {
+        setCalendarOption(true);
+      } else if (urlView === "week") {
+        setCalendarOption(false);
+      }
+
+      // Update date/week state
+      if (urlDate) {
+        const parsedDate = parse(urlDate, "yyyy-MM-dd", new Date());
+
+        if (isValid(parsedDate)) {
+          const weekStart = startOfWeek(parsedDate, { weekStartsOn: 0 });
+          const newWeek = eachDayOfInterval({
+            start: weekStart,
+            end: add(weekStart, { days: 6 }),
+          });
+          setCurrentWeek(newWeek);
+        }
+      }
+    };
+
+    // Sync on mount (when navigating back from different page)
+    syncStateWithURL();
+
+    // Also listen for popstate events (back/forward button within same page)
+    const handlePopState = () => {
+      syncStateWithURL();
+    };
+
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, []);
+
   const navigateWeek = (direction: "prev" | "next") => {
     const days = direction === "prev" ? -7 : 7;
     const newWeekStart = add(currentWeek[0] as Date, { days });
     const weekStart = startOfWeek(newWeekStart, { weekStartsOn: 0 });
 
-    setCurrentWeek(
-      eachDayOfInterval({
-        start: weekStart,
-        end: add(weekStart, { days: 6 }),
-      }),
-    );
+    const newWeek = eachDayOfInterval({
+      start: weekStart,
+      end: add(weekStart, { days: 6 }),
+    });
 
-    // Update URL with new date
-    updateURL("week", weekStart);
+    // Update state and URL instantly together
+    setCurrentWeek(newWeek);
+    updateURLInstant("week", weekStart);
   };
 
   const toggleCalendarView = () => {
     const newView = !calendarOption;
     setCalendarOption(newView);
-    updateURL(newView ? "month" : "week", currentWeek[0]);
+    // Update URL instantly with current date
+    updateURLInstant(newView ? "month" : "week", currentWeek[0] as Date);
+  };
+
+  // Handler for MiniCalendar to update URL when month/day changes
+  const handleDateChange = (date: Date, view: "week" | "month" = "month") => {
+    updateURLInstant(view, date);
   };
 
   return (
@@ -138,6 +194,8 @@ const CalendarOptions = ({
                 scheduledJobs={scheduledJobs}
                 canManage={canManage}
                 technicians={technicians}
+                onDateChange={handleDateChange}
+                initialDate={initialDate}
               />
             </div>
           </div>
