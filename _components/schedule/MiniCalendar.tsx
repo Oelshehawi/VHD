@@ -63,6 +63,17 @@ export default function MiniCalendar({
   let [currentMonth, setCurrentMonth] = useState(format(initialDay, "MMM-yyyy"));
   let firstDayCurrentMonth = parse(currentMonth, "MMM-yyyy", new Date());
 
+  // Update state when initialDate prop changes
+  useEffect(() => {
+    if (initialDate) {
+      const parsedDate = parse(initialDate, "yyyy-MM-dd", new Date());
+      if (isValid(parsedDate)) {
+        setSelectedDay(parsedDate);
+        setCurrentMonth(format(parsedDate, "MMM-yyyy"));
+      }
+    }
+  }, [initialDate]);
+
   // Modal state
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);

@@ -46,12 +46,13 @@ const CalendarOptions = ({
   });
 
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState<boolean>(false);
+  const [currentDate, setCurrentDate] = useState<string | null>(initialDate || null);
 
   // Initialize current week from URL date or default to today
   const [currentWeek, setCurrentWeek] = useState<Date[]>(() => {
     let startDate = new Date();
 
-    
+
     if (initialDate) {
       const parsedDate = parse(initialDate, "yyyy-MM-dd", new Date());
       if (isValid(parsedDate)) {
@@ -74,6 +75,9 @@ const CalendarOptions = ({
 
     const newUrl = `${window.location.pathname}?${params.toString()}`;
 
+    // Update currentDate state so MiniCalendar syncs
+    setCurrentDate(format(date, "yyyy-MM-dd"));
+
     // Use pushState to create history entries for back/forward navigation
     // Store the state so we can restore it on popstate
     window.history.pushState(
@@ -89,6 +93,23 @@ const CalendarOptions = ({
       setCalendarOption(isMobileDevice());
     }
   }, [initialView]);
+
+  // Add a useEffect to listen for URL changes and update currentDate
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const params = new URLSearchParams(window.location.search);
+      const urlDate = params.get("date");
+      if (urlDate) {
+        setCurrentDate(urlDate);
+      }
+    };
+
+    // Listen for popstate events (back/forward button)
+    window.addEventListener('popstate', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+    };
+  }, []);
 
   // Sync state with URL params (both on mount and popstate events)
   useEffect(() => {
@@ -110,6 +131,7 @@ const CalendarOptions = ({
         const parsedDate = parse(urlDate, "yyyy-MM-dd", new Date());
 
         if (isValid(parsedDate)) {
+          setCurrentDate(urlDate);
           const weekStart = startOfWeek(parsedDate, { weekStartsOn: 0 });
           const newWeek = eachDayOfInterval({
             start: weekStart,
@@ -162,6 +184,24 @@ const CalendarOptions = ({
     updateURLInstant(view, date);
   };
 
+  // Navigate to today
+  const navigateToToday = () => {
+    const today = new Date();
+    if (!calendarOption) {
+      // Week view - update to current week
+      const weekStart = startOfWeek(today, { weekStartsOn: 0 });
+      const newWeek = eachDayOfInterval({
+        start: weekStart,
+        end: add(weekStart, { days: 6 }),
+      });
+      setCurrentWeek(newWeek);
+      updateURLInstant("week", weekStart);
+    } else {
+      // Month view - update to today's date (which will show the month containing today)
+      updateURLInstant("month", today);
+    }
+  };
+
   return (
     <div className="flex h-[100dvh] flex-col overflow-hidden bg-white">
       <Header
@@ -170,6 +210,7 @@ const CalendarOptions = ({
         scheduledJobs={scheduledJobs}
         previousWeek={() => navigateWeek("prev")}
         nextWeek={() => navigateWeek("next")}
+        goToToday={navigateToToday}
         currentWeek={currentWeek}
         invoices={invoices}
         canManage={canManage}
@@ -190,12 +231,13 @@ const CalendarOptions = ({
           <div className="flex h-full items-start justify-center p-2 md:items-center md:p-4">
             <div className="w-full max-w-4xl rounded-xl border border-gray-200 bg-white shadow-lg">
               <MiniCalendar
+                key={currentDate}
                 invoices={invoices}
                 scheduledJobs={scheduledJobs}
                 canManage={canManage}
                 technicians={technicians}
                 onDateChange={handleDateChange}
-                initialDate={initialDate}
+                initialDate={currentDate}
               />
             </div>
           </div>
@@ -225,6 +267,7 @@ const Header = ({
   currentWeek,
   previousWeek,
   nextWeek,
+  goToToday,
   invoices,
   canManage,
   isMobile,
@@ -238,6 +281,7 @@ const Header = ({
   currentWeek: Date[];
   previousWeek: () => void;
   nextWeek: () => void;
+  goToToday: () => void;
   invoices: InvoiceType[];
   canManage: boolean;
   isMobile: boolean;
@@ -306,11 +350,30 @@ const Header = ({
               <div className="px-2 py-1.5 sm:px-3 sm:py-2 md:px-4 bg-gray-50 rounded-lg border border-gray-200">
                 <span className="text-xs sm:text-sm font-medium text-gray-900 whitespace-nowrap">{weekLabel}</span>
               </div>
+
+              <button
+                onClick={goToToday}
+                className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 touch-manipulation whitespace-nowrap"
+                aria-label="Go to today"
+              >
+                Today
+              </button>
             </div>
           )}
 
           {/* Right Section - View Toggle and Optimization */}
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4">
+            {/* Today Button - Hidden on month view since MiniCalendar has its own navigation */}
+            {calendarOption && (
+              <button
+                onClick={goToToday}
+                className="px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 hover:border-gray-400 transition-all duration-200 touch-manipulation whitespace-nowrap"
+                aria-label="Go to today"
+              >
+                Today
+              </button>
+            )}
+
             {/* Optimization Button - Hidden on mobile */}
             {canManage && (
               <button
