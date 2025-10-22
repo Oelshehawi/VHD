@@ -54,6 +54,15 @@ export interface ScheduleType {
   photos?: PhotoType[];
 }
 
+export interface TechnicianLocationType {
+  technicianId: string,
+  latitude: number,
+  longitude: number,
+  timestamp: Date,
+  isActive: Boolean,
+  currentJobId: string | undefined,
+  accuracy: string | undefined
+}
 export interface TechnicianType {
   id: string;
   name: string;

@@ -15,6 +15,7 @@ import {
   DistanceMatrixCacheType,
   AuditLogEntry,
   CallLogEntry,
+  TechnicianLocationType,
 } from "../app/lib/typeDefinitions";
 import { CALL_OUTCOMES } from "../app/lib/callLogConstants";
 
@@ -293,6 +294,16 @@ const jobsDueSoonSchema = new Schema<DueInvoiceType>({
   callHistory: { type: [CallLogEntrySchema], default: [] },
 });
 
+const TechnicianLocationSchema = new Schema<TechnicianLocationType>({
+  technicianId: { type: String, required: true },
+  latitude: { type: Number, required: true },
+  longitude: { type: Number, required: true },
+  timestamp: { type: Date, required: true, default: Date.now },
+  isActive: { type: Boolean, required: true, default: true },
+  currentJobId: { type: String },
+  accuracy: { type: Number },
+});
+
 const Client =
   (models.Client as typeof Model<ClientType>) || model("Client", ClientSchema);
 const Invoice =
@@ -427,6 +438,11 @@ EstimateSchema.index({ status: 1, createdDate: -1 }); // Estimate queries
 ReportSchema.index({ scheduleId: 1 }); // Report lookups
 PayrollPeriodSchema.index({ startDate: 1, endDate: 1 }); // Payroll period queries
 
+
+TechnicianLocationSchema.index({ technicianId: 1, timestamp: -1 }); // For technician location history
+TechnicianLocationSchema.index({ isActive: 1, timestamp: -1 }); // For active technicians
+
+
 const Estimate =
   (models.Estimate as typeof Model<EstimateType>) ||
   model("Estimate", EstimateSchema);
@@ -476,6 +492,10 @@ const AuditLog =
   (models.AuditLog as typeof Model<AuditLogEntry>) ||
   model("AuditLog", AuditLogSchema);
 
+  const TechnicianLocation =
+  (models.TechnicianLocation as typeof Model<TechnicianLocationType>) ||
+  model("TechnicianLocation", TechnicianLocationSchema);
+
 export {
   Client,
   Invoice,
@@ -487,4 +507,5 @@ export {
   LocationGeocode,
   DistanceMatrixCache,
   AuditLog,
+  TechnicianLocation,
 };
