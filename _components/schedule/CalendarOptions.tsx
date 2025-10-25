@@ -40,9 +40,13 @@ const CalendarOptions = ({
 
   // Initialize calendar view from URL or default to mobile detection
   const [calendarOption, setCalendarOption] = useState<boolean>(() => {
+    const isMobile = isMobileDevice();
+    // Force month view on mobile regardless of URL
+    if (isMobile) return true;
+    // For desktop, respect URL params
     if (initialView === "month") return true;
     if (initialView === "week") return false;
-    return isMobileDevice();
+    return false; // Default to week view for desktop if no URL param
   });
 
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState<boolean>(false);
@@ -88,11 +92,12 @@ const CalendarOptions = ({
   };
 
   useEffect(() => {
-    // Only set mobile default if no URL param is present
-    if (!initialView) {
-      setCalendarOption(isMobileDevice());
+    // Force mobile users to always use month view
+    const isMobile = isMobileDevice();
+    if (isMobile) {
+      setCalendarOption(true);
     }
-  }, [initialView]);
+  }, []);
 
   // Add a useEffect to listen for URL changes and update currentDate
   useEffect(() => {
@@ -119,11 +124,18 @@ const CalendarOptions = ({
       const urlView = params.get("view");
       const urlDate = params.get("date");
 
-      // Update view state
-      if (urlView === "month") {
+      // Update view state - force month view on mobile
+      const isMobile = isMobileDevice();
+      if (isMobile) {
+        // Mobile users always get month view
         setCalendarOption(true);
-      } else if (urlView === "week") {
-        setCalendarOption(false);
+      } else {
+        // Desktop users can switch between views
+        if (urlView === "month") {
+          setCalendarOption(true);
+        } else if (urlView === "week") {
+          setCalendarOption(false);
+        }
       }
 
       // Update date/week state
