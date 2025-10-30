@@ -79,9 +79,7 @@ const TabPanel = ({
   });
 
   // Convert AppScheduleType to ServiceCardScheduleType
-  const convertToServiceCardSchedule = (
-    service: any,
-  ): any => {
+  const convertToServiceCardSchedule = (service: any): any => {
     return {
       _id:
         typeof service._id === "string" ? service._id : service._id.toString(),
@@ -124,12 +122,14 @@ const TabPanel = ({
         clientName: clientData?.clientName || "Client",
         email: clientData?.email || "client@email.com",
         phoneNumber: clientData?.phoneNumber || "Phone Number",
-        items: invoice.items.map((item: { description: any; details?: any; price: any }) => ({
-          description: item.description,
-          details: item.details || "",
-          price: item.price,
-          total: item.price,
-        })),
+        items: invoice.items.map(
+          (item: { description: any; details?: any; price: any }) => ({
+            description: item.description,
+            details: item.details || "",
+            price: item.price,
+            total: item.price,
+          }),
+        ),
         subtotal: calculateSubtotal(invoice.items),
         gst: calculateGST(calculateSubtotal(invoice.items)),
         totalAmount:
@@ -153,7 +153,11 @@ const TabPanel = ({
     try {
       // Find the related invoice to get jobTitle and location
       const relatedInvoice = allInvoices.find(
-        (invoice) => invoice._id === (typeof report.invoiceId === "string" ? report.invoiceId : report.invoiceId.toString())
+        (invoice) =>
+          invoice._id ===
+          (typeof report.invoiceId === "string"
+            ? report.invoiceId
+            : report.invoiceId.toString()),
       );
 
       const reportData = {
@@ -255,7 +259,7 @@ const TabPanel = ({
       </div>
 
       {/* Tab Content */}
-      <div className="p-2 sm:p-4 h-[600px] overflow-hidden">
+      <div className="h-[600px] p-2 sm:p-4">
         <AnimatePresence mode="wait">
           {activeTab === "schedules" && (
             <motion.div
@@ -263,26 +267,28 @@ const TabPanel = ({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -20 }}
-              className="h-full flex flex-col space-y-4 p-2 sm:space-y-6 sm:p-4"
+              className="flex h-full flex-col space-y-4 p-2 sm:space-y-6 sm:p-4"
             >
               {/* Upcoming Services */}
-              <div className="flex-shrink-0">
+              <div className="min-h-0 flex-shrink-0">
                 <h3 className="mb-2 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
                   Upcoming Services
                 </h3>
-                <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
+                <div className="custom-scrollbar max-h-60 overflow-y-auto rounded-lg border border-gray-200 bg-white">
                   {upcomingServices.length > 0 ? (
-                    upcomingServices.map((service) => (
-                      <ServiceCard
-                        key={
-                          typeof service._id === "string"
-                            ? service._id
-                            : service._id.toString()
-                        }
-                        service={convertToServiceCardSchedule(service)}
-                        upcoming={true}
-                      />
-                    ))
+                    <div className="divide-y divide-gray-100">
+                      {upcomingServices.map((service) => (
+                        <ServiceCard
+                          key={
+                            typeof service._id === "string"
+                              ? service._id
+                              : service._id.toString()
+                          }
+                          service={convertToServiceCardSchedule(service)}
+                          upcoming={true}
+                        />
+                      ))}
+                    </div>
                   ) : (
                     <div className="p-4 text-center text-gray-500">
                       No upcoming services scheduled.
@@ -292,14 +298,14 @@ const TabPanel = ({
               </div>
 
               {/* Recent Services */}
-              <div className="flex-1 min-h-0">
-                <h3 className="mb-2 mt-6 border-t border-gray-200 pt-4 text-base font-semibold text-gray-900 sm:mb-4 sm:mt-8 sm:pt-6 sm:text-lg">
+              <div className="min-h-0 flex-1">
+                <h3 className="mb-2 border-t border-gray-200 pt-4 text-base font-semibold text-gray-900 sm:mb-4 sm:pt-6 sm:text-lg">
                   Recent Services
                 </h3>
-                <div className="h-[280px] overflow-y-auto pr-2 custom-scrollbar">
-                  <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
-                    {recentServices.length > 0 ? (
-                      recentServices.map((service) => (
+                <div className="custom-scrollbar h-full overflow-y-auto rounded-lg border border-gray-200 bg-white">
+                  {recentServices.length > 0 ? (
+                    <div className="divide-y divide-gray-100">
+                      {recentServices.map((service) => (
                         <ServiceCard
                           key={
                             typeof service._id === "string"
@@ -309,13 +315,13 @@ const TabPanel = ({
                           service={convertToServiceCardSchedule(service)}
                           upcoming={false}
                         />
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-gray-500">
-                        No recent services found.
-                      </div>
-                    )}
-                  </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="p-4 text-center text-gray-500">
+                      No recent services found.
+                    </div>
+                  )}
                 </div>
               </div>
             </motion.div>
@@ -328,82 +334,82 @@ const TabPanel = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
-              className="px-2 sm:px-0 h-full flex flex-col"
+              className="flex h-full flex-col px-2 sm:px-0"
             >
-              <div className="mb-3 flex items-center justify-between flex-shrink-0">
+              <div className="mb-3 flex flex-shrink-0 items-center justify-between">
                 <h3 className="text-base font-medium text-gray-900 sm:text-lg">
                   All Invoices
                 </h3>
               </div>
               {sortedInvoices.length > 0 ? (
-                <div className="flex-1 min-h-0 overflow-auto custom-scrollbar pr-2">
+                <div className="custom-scrollbar min-h-0 flex-1 overflow-auto pr-2">
                   <div className="-mx-2 overflow-x-auto sm:mx-0">
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
-                          Invoice #
-                        </th>
-                        <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
-                          Date
-                        </th>
-                        <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
-                          Amount
-                        </th>
-                        <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
-                          Status
-                        </th>
-                        <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
-                          Actions
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 bg-white">
-                      {sortedInvoices.map((invoice, idx) => (
-                        <motion.tr
-                          key={invoice._id}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.2, delay: idx * 0.05 }}
-                          className="hover:bg-gray-50"
-                        >
-                          <td className="whitespace-nowrap px-2 py-2 text-xs font-medium text-gray-900 sm:px-4 sm:py-3 sm:text-sm">
-                            {invoice.invoiceId}
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 text-xs text-gray-500 sm:px-4 sm:py-3 sm:text-sm">
-                            {formatDateFns(invoice.dateIssued)}
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 text-xs text-gray-500 sm:px-4 sm:py-3 sm:text-sm">
-                            {formatAmount(
-                              invoice.totalAmount +
-                                calculateTotalAmount(invoice.totalAmount),
-                            )}
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3">
-                            <span
-                              className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold leading-5 ${
-                                invoice.status === "paid"
-                                  ? "bg-green-100 text-green-800"
-                                  : invoice.status === "overdue"
-                                    ? "bg-red-100 text-red-800"
-                                    : "bg-yellow-100 text-yellow-800"
-                              }`}
-                            >
-                              {invoice.status}
-                            </span>
-                          </td>
-                          <td className="whitespace-nowrap px-2 py-2 text-right text-xs sm:px-4 sm:py-3 sm:text-sm">
-                            <GeneratePDF
-                              pdfData={createInvoicePDFData(invoice)}
-                              fileName={`Invoice - ${invoice.jobTitle}.pdf`}
-                              buttonText="PDF"
-                              className="inline-flex items-center text-blue-600 hover:text-blue-900"
-                            />
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
-                  </table>
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
+                            Invoice #
+                          </th>
+                          <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
+                            Date
+                          </th>
+                          <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
+                            Amount
+                          </th>
+                          <th className="px-2 py-2 text-left text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
+                            Status
+                          </th>
+                          <th className="px-2 py-2 text-right text-xs font-medium uppercase tracking-wider text-gray-500 sm:px-4 sm:py-3">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 bg-white">
+                        {sortedInvoices.map((invoice, idx) => (
+                          <motion.tr
+                            key={invoice._id}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.2, delay: idx * 0.05 }}
+                            className="hover:bg-gray-50"
+                          >
+                            <td className="whitespace-nowrap px-2 py-2 text-xs font-medium text-gray-900 sm:px-4 sm:py-3 sm:text-sm">
+                              {invoice.invoiceId}
+                            </td>
+                            <td className="whitespace-nowrap px-2 py-2 text-xs text-gray-500 sm:px-4 sm:py-3 sm:text-sm">
+                              {formatDateFns(invoice.dateIssued)}
+                            </td>
+                            <td className="whitespace-nowrap px-2 py-2 text-xs text-gray-500 sm:px-4 sm:py-3 sm:text-sm">
+                              {formatAmount(
+                                invoice.totalAmount +
+                                  calculateTotalAmount(invoice.totalAmount),
+                              )}
+                            </td>
+                            <td className="whitespace-nowrap px-2 py-2 sm:px-4 sm:py-3">
+                              <span
+                                className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold leading-5 ${
+                                  invoice.status === "paid"
+                                    ? "bg-green-100 text-green-800"
+                                    : invoice.status === "overdue"
+                                      ? "bg-red-100 text-red-800"
+                                      : "bg-yellow-100 text-yellow-800"
+                                }`}
+                              >
+                                {invoice.status}
+                              </span>
+                            </td>
+                            <td className="whitespace-nowrap px-2 py-2 text-right text-xs sm:px-4 sm:py-3 sm:text-sm">
+                              <GeneratePDF
+                                pdfData={createInvoicePDFData(invoice)}
+                                fileName={`Invoice - ${invoice.jobTitle}.pdf`}
+                                buttonText="PDF"
+                                className="inline-flex items-center text-blue-600 hover:text-blue-900"
+                              />
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </div>
               ) : (
@@ -419,70 +425,70 @@ const TabPanel = ({
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="p-2 sm:p-4 h-full flex flex-col"
+                className="flex h-full flex-col p-2 sm:p-4"
               >
-                <h3 className="mb-3 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg flex-shrink-0">
+                <h3 className="mb-3 flex-shrink-0 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
                   All Service Reports
                 </h3>
 
-                <div className="flex-1 min-h-0 overflow-auto custom-scrollbar pr-2">
+                <div className="custom-scrollbar min-h-0 flex-1 overflow-auto pr-2">
                   <div className="divide-y divide-gray-100 rounded-lg border border-gray-200 bg-white">
-                  {allReports.length > 0 ? (
-                    allReports.map((report) => (
-                      <div
-                        key={report._id?.toString()}
-                        className="flex flex-col p-3 hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between sm:p-4"
-                      >
-                        <div className="mb-3 flex-1 sm:mb-0">
-                          <div className="font-medium text-gray-900">
-                            {invoiceJobTitleMap.get(
-                              typeof report.invoiceId === "string"
-                                ? report.invoiceId
-                                : report.invoiceId.toString(),
-                            ) || "Service Report"}{" "}
-                            - {formatDateFns(report.dateCompleted)}
-                          </div>
-                          <div className="mt-1 text-xs text-gray-500 sm:text-sm">
-                            {report.cleaningDetails && (
-                              <span>
-                                {Object.values(report.cleaningDetails).some(
-                                  (val) => val,
-                                )
-                                  ? "Cleaning completed"
-                                  : "Inspection only"}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-
-                        <div className="flex items-center gap-2">
-                          <GeneratePDF
-                            pdfData={createReportPDFData(report)}
-                            fileName={`${
-                              invoiceJobTitleMap.get(
+                    {allReports.length > 0 ? (
+                      allReports.map((report) => (
+                        <div
+                          key={report._id?.toString()}
+                          className="flex flex-col p-3 hover:bg-gray-50 sm:flex-row sm:items-center sm:justify-between sm:p-4"
+                        >
+                          <div className="mb-3 flex-1 sm:mb-0">
+                            <div className="font-medium text-gray-900">
+                              {invoiceJobTitleMap.get(
                                 typeof report.invoiceId === "string"
                                   ? report.invoiceId
                                   : report.invoiceId.toString(),
-                              ) || "Service Report"
-                            } - Report.pdf`}
-                            buttonText="Download"
-                            className="flex items-center rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-darkGreen hover:bg-gray-100 sm:px-3 sm:py-1.5 sm:text-sm"
-                          />
-                          <button
-                            onClick={() => openReportModal(report)}
-                            className="hover:bg-darkGreen-2 flex items-center rounded-md bg-darkGreen px-2 py-1 text-xs font-medium text-white sm:px-3 sm:py-1.5 sm:text-sm"
-                          >
-                            <DocumentDuplicateIcon className="mr-1 hidden h-3 w-3 sm:block sm:h-4 sm:w-4" />
-                            <span className="xs:inline">View Report</span>
-                          </button>
+                              ) || "Service Report"}{" "}
+                              - {formatDateFns(report.dateCompleted)}
+                            </div>
+                            <div className="mt-1 text-xs text-gray-500 sm:text-sm">
+                              {report.cleaningDetails && (
+                                <span>
+                                  {Object.values(report.cleaningDetails).some(
+                                    (val) => val,
+                                  )
+                                    ? "Cleaning completed"
+                                    : "Inspection only"}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <GeneratePDF
+                              pdfData={createReportPDFData(report)}
+                              fileName={`${
+                                invoiceJobTitleMap.get(
+                                  typeof report.invoiceId === "string"
+                                    ? report.invoiceId
+                                    : report.invoiceId.toString(),
+                                ) || "Service Report"
+                              } - Report.pdf`}
+                              buttonText="Download"
+                              className="flex items-center rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-darkGreen hover:bg-gray-100 sm:px-3 sm:py-1.5 sm:text-sm"
+                            />
+                            <button
+                              onClick={() => openReportModal(report)}
+                              className="hover:bg-darkGreen-2 flex items-center rounded-md bg-darkGreen px-2 py-1 text-xs font-medium text-white sm:px-3 sm:py-1.5 sm:text-sm"
+                            >
+                              <DocumentDuplicateIcon className="mr-1 hidden h-3 w-3 sm:block sm:h-4 sm:w-4" />
+                              <span className="xs:inline">View Report</span>
+                            </button>
+                          </div>
                         </div>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-500">
+                        No service reports found.
                       </div>
-                    ))
-                  ) : (
-                    <div className="p-4 text-center text-gray-500">
-                      No service reports found.
-                    </div>
-                  )}
+                    )}
                   </div>
                 </div>
               </motion.div>
