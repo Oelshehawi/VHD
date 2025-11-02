@@ -40,6 +40,7 @@ const NavLinks = ({
         { href: "/invoices", icon: DocumentIcon },
         { href: "/schedule", icon: CalendarIcon },
         { href: "/payroll", icon: CurrencyDollarIcon },
+        { href: "/analytics", icon: ChartBarIcon },
       ]
     : [
         { href: "/employee-dashboard", icon: HomeIcon },

@@ -6,6 +6,7 @@ import {
   Client,
   Invoice,
   Schedule,
+  AuditLog,
 } from "../../../models/reactDataSchema";
 import { ClientType, InvoiceType } from "../typeDefinitions";
 import { calculateDueDate } from "../utils";
@@ -108,7 +109,7 @@ export async function deleteInvoice(invoiceId: string) {
   revalidatePath("/dashboard");
 }
 
-export async function createInvoice(invoiceData: any) {
+export async function createInvoice(invoiceData: any, performedBy: string = "user") {
   await connectMongo();
   try {
     // Trim all string fields to remove leading/trailing spaces
@@ -121,7 +122,7 @@ export async function createInvoice(invoiceData: any) {
     if (invoiceData.notes) {
       invoiceData.notes = invoiceData.notes.trim();
     }
-    
+
     // Also trim item descriptions and details if they exist
     if (invoiceData.items && Array.isArray(invoiceData.items)) {
       invoiceData.items = invoiceData.items.map((item: any) => ({
@@ -152,6 +153,23 @@ export async function createInvoice(invoiceData: any) {
 
     const newInvoice = new Invoice(newInvoiceData);
     await newInvoice.save();
+
+    // Create audit log entry
+    await AuditLog.create({
+      invoiceId: newInvoiceId,
+      action: "invoice_created",
+      timestamp: new Date(),
+      performedBy,
+      details: {
+        newValue: {
+          invoiceId: newInvoiceId,
+          jobTitle: invoiceData.jobTitle,
+          clientId: invoiceData.clientId,
+        },
+        reason: "Invoice created",
+      },
+      success: true,
+    });
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to create invoice");
@@ -305,6 +323,26 @@ export async function logJobCall(invoiceId: string, callLog: CallLogEntry) {
       throw new Error("Job not found");
     }
 
+    // Create audit log entry for job call
+    await AuditLog.create({
+      invoiceId: updatedJob.invoiceId,
+      action: "call_logged_job",
+      timestamp: new Date(callLog.timestamp),
+      performedBy: callLog.callerName,
+      details: {
+        newValue: {
+          outcome: callLog.outcome,
+          notes: callLog.notes,
+        },
+        reason: "Job call logged",
+        metadata: {
+          clientId: updatedJob.clientId,
+          jobTitle: updatedJob.jobTitle,
+        },
+      },
+      success: true,
+    });
+
     // Revalidate the dashboard to show updated call history
     revalidatePath("/dashboard");
 
@@ -336,6 +374,25 @@ export async function logInvoicePaymentCall(invoiceId: string, callLog: CallLogE
     if (!updatedInvoice) {
       throw new Error("Invoice not found");
     }
+
+    // Create audit log entry for payment call
+    await AuditLog.create({
+      invoiceId: updatedInvoice.invoiceId,
+      action: "call_logged_payment",
+      timestamp: new Date(callLog.timestamp),
+      performedBy: callLog.callerName,
+      details: {
+        newValue: {
+          outcome: callLog.outcome,
+          notes: callLog.notes,
+        },
+        reason: "Payment call logged",
+        metadata: {
+          clientId: updatedInvoice.clientId,
+        },
+      },
+      success: true,
+    });
 
     // Revalidate the dashboard to show updated call history
     revalidatePath("/dashboard");

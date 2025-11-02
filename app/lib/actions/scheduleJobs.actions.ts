@@ -5,6 +5,7 @@ import {
   Schedule,
   PayrollPeriod,
   Report,
+  AuditLog,
 } from "../../../models/reactDataSchema";
 import {
   PayrollPeriodType,
@@ -104,7 +105,7 @@ export const findOrCreatePayrollPeriod = async (
   return payrollPeriod;
 };
 
-export async function createSchedule(scheduleData: ScheduleType) {
+export async function createSchedule(scheduleData: ScheduleType, performedBy: string = "system") {
   try {
     await connectMongo();
 
@@ -153,6 +154,32 @@ export async function createSchedule(scheduleData: ScheduleType) {
 
     const newSchedule = new Schedule(scheduleData);
     await newSchedule.save();
+
+    // Fetch the invoice to get the invoiceId for audit logging
+    const invoice = await Invoice.findById(scheduleData.invoiceRef).lean<InvoiceType>();
+
+    // Create audit log entry for schedule creation
+    if (invoice) {
+      await AuditLog.create({
+        invoiceId: invoice.invoiceId,
+        action: "schedule_created",
+        timestamp: new Date(),
+        performedBy: performedBy,
+        details: {
+          newValue: {
+            jobTitle: scheduleData.jobTitle,
+            location: scheduleData.location,
+            startDateTime: scheduleData.startDateTime,
+            hours: scheduleData.hours,
+          },
+          reason: "Schedule created for invoice",
+          metadata: {
+            clientId: invoice.clientId,
+          },
+        },
+        success: true,
+      });
+    }
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to create schedule");

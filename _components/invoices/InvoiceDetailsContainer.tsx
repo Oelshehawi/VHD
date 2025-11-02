@@ -1,5 +1,6 @@
 "use client";
 import { useState, useMemo } from "react";
+import { useUser } from "@clerk/nextjs";
 import {
   FaPenSquare,
   FaPrint,
@@ -31,6 +32,7 @@ const InvoiceDetailsContainer = ({
   client: ClientType;
   canManage: boolean;
 }) => {
+  const { user } = useUser();
   const [isEditing, setIsEditing] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [showBillToOverride, setShowBillToOverride] = useState(false);
@@ -46,7 +48,8 @@ const InvoiceDetailsContainer = ({
   const { isProcessing: isSendingEmail, debouncedSubmit: handleSendInvoice } =
     useDebounceSubmit({
       onSubmit: async () => {
-        const response = await sendInvoiceDeliveryEmail(invoice._id as string);
+        const performedBy = user?.fullName || user?.firstName || "user";
+        const response = await sendInvoiceDeliveryEmail(invoice._id as string, performedBy);
         if (!response.success) {
           throw new Error(response.error || "Failed to send invoice email");
         }

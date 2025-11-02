@@ -1,7 +1,7 @@
 "use server";
 
 import connectMongo from "./connect";
-import { Client, Invoice, JobsDueSoon } from "../../models/reactDataSchema";
+import { Client, Invoice, JobsDueSoon, AuditLog } from "../../models/reactDataSchema";
 import { formatDateUTC } from "./utils";
 import {
   DueInvoiceType,
@@ -14,6 +14,7 @@ import {
   SalesAggregation,
 } from "./typeDefinitions";
 import { monthNameToNumber } from "./utils";
+import { CALL_OUTCOME_LABELS } from "./callLogConstants";
 
 export const updateScheduleStatus = async (
   invoiceId: string,
@@ -542,4 +543,302 @@ export const fetchYearlySalesData = async (
   });
 
   return salesData;
+};
+
+export interface DisplayAction {
+  _id: string;
+  type: "audit" | "call";
+  action: string;
+  description: string;
+  performedBy: string;
+  timestamp: Date;
+  formattedTime: string;
+  formattedTimeTitle: string;
+  success: boolean;
+  severity: "success" | "info" | "warning" | "error";
+  metadata?: {
+    clientName?: string;
+    jobTitle?: string;
+    callOutcome?: string;
+  };
+  details?: {
+    newValue?: any;
+    reason?: string;
+    metadata?: any;
+  };
+}
+
+export const fetchRecentActions = async (): Promise<DisplayAction[]> => {
+  await connectMongo();
+
+  try {
+    // Fetch recent audit logs
+    const auditLogs = await AuditLog.find({})
+      .sort({ timestamp: -1 })
+      .limit(50)
+      .lean()
+      .exec();
+
+    // Fetch client names for metadata
+    const clientIds = new Set<string>();
+    auditLogs.forEach((log) => {
+      if (log.details?.newValue?.clientId) {
+        clientIds.add(log.details.newValue.clientId);
+      }
+      if (log.details?.metadata?.clientId) {
+        clientIds.add(log.details.metadata.clientId);
+      }
+    });
+
+    const clients = await Client.find({
+      _id: { $in: Array.from(clientIds) },
+    })
+      .select("_id clientName")
+      .lean()
+      .exec();
+
+    const clientMap = new Map(
+      clients.map((c: any) => [c._id?.toString(), c.clientName])
+    );
+
+    // Process audit logs
+    const displayActions: DisplayAction[] = auditLogs.map((log) => {
+      // Try to get clientId from newValue first, then from metadata
+      let clientId = log.details?.newValue?.clientId;
+      if (!clientId && log.details?.metadata?.clientId) {
+        clientId = log.details.metadata.clientId;
+      }
+      const clientName = clientId ? clientMap.get(clientId.toString()) : undefined;
+      const timestamp = new Date(log.timestamp);
+      const { formatted, title } = formatTimestamp(timestamp);
+
+      // Build rich description based on action type
+      let description = formatActionDescription(log.action, clientName);
+
+      if (log.action === "schedule_created" && log.details?.newValue) {
+        const jobTitle = log.details.newValue.jobTitle || "Untitled";
+        const location = log.details.newValue.location || "";
+        const hours = log.details.newValue.hours || 0;
+        const dateTime = new Date(log.details.newValue.startDateTime);
+        const formattedDate = dateTime.toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        });
+        const formattedTime = dateTime.toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        });
+        description = `Schedule Created: ${jobTitle} at ${location} on ${formattedDate} at ${formattedTime} for ${hours}h`;
+      } else if (log.action === "invoice_created" && log.details?.newValue) {
+        const jobTitle = log.details.newValue.jobTitle || "Untitled";
+        description = `Invoice Created: ${jobTitle}`;
+      } else if (log.action === "invoice_emailed" && log.details?.newValue) {
+        const jobTitle = log.details.newValue.jobTitle || "Untitled";
+        const clientEmail = log.details.newValue.clientEmail || "";
+        description = `Invoice Sent: ${jobTitle} to ${clientEmail}`;
+      }
+
+      return {
+        _id: log._id?.toString() || "",
+        type: "audit",
+        action: log.action,
+        description,
+        performedBy: log.performedBy,
+        timestamp,
+        formattedTime: formatted,
+        formattedTimeTitle: title,
+        success: log.success,
+        severity: getActionSeverity(log.action),
+        metadata: {
+          clientName,
+        },
+        details: {
+          newValue: log.details?.newValue,
+          reason: log.details?.reason,
+          metadata: log.details?.metadata ? {
+            ...log.details.metadata,
+            clientId: log.details.metadata.clientId?.toString?.() || log.details.metadata.clientId,
+          } : undefined,
+        },
+      };
+    });
+
+    // Enhance audit logs with notes for call_logged_job and call_logged_payment
+    displayActions.forEach((action) => {
+      if (action.action === "call_logged_job" || action.action === "call_logged_payment") {
+        const details = action.details;
+        if (details?.newValue) {
+          const outcome = (CALL_OUTCOME_LABELS as any)[details.newValue.outcome] || details.newValue.outcome;
+          const notes = details.newValue.notes ? ` - Notes: ${details.newValue.notes}` : "";
+
+          if (action.action === "call_logged_job") {
+            const jobTitle = details.metadata?.jobTitle || "Untitled";
+            action.description = `Job Call Logged for ${jobTitle} - ${outcome}${notes}`;
+            action.metadata = {
+              ...action.metadata,
+              jobTitle: jobTitle,
+              callOutcome: outcome,
+            };
+          } else {
+            // For payment calls, show "to" instead of "from"
+            const clientName = action.metadata?.clientName || "Client";
+            action.description = `Payment Call to ${clientName} - ${outcome}${notes}`;
+            action.metadata = {
+              ...action.metadata,
+              callOutcome: outcome,
+            };
+          }
+        }
+      }
+    });
+
+    // Sort by timestamp descending and take top 50
+    return displayActions
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
+      .slice(0, 50);
+  } catch (error) {
+    console.error("Error fetching actions:", error);
+    return [];
+  }
+};
+
+const formatTimestamp = (date: Date): { formatted: string; title: string } => {
+  const now = new Date();
+  const diffInMs = now.getTime() - date.getTime();
+  const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+  const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+  const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+  let formatted = "Just now";
+  if (diffInMinutes >= 1 && diffInMinutes < 60) {
+    formatted = `${diffInMinutes}m ago`;
+  } else if (diffInHours >= 1 && diffInHours < 24) {
+    formatted = `${diffInHours}h ago`;
+  } else if (diffInDays >= 1 && diffInDays < 7) {
+    formatted = `${diffInDays}d ago`;
+  } else {
+    formatted = date.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+    });
+  }
+
+  const title = date.toLocaleString("en-US", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  return { formatted, title };
+};
+
+const formatActionDescription = (action: string, clientName?: string): string => {
+  const labels: { [key: string]: string } = {
+    invoice_created: "Invoice Created",
+    invoice_emailed: "Invoice Sent",
+    schedule_created: "Schedule Created",
+    call_logged_job: "Job Call Logged",
+    call_logged_payment: "Payment Call Logged",
+    reminder_configured: "Reminder Configured",
+    reminder_sent_auto: "Reminder Sent (Auto)",
+    reminder_sent_manual: "Reminder Sent",
+    reminder_failed: "Reminder Failed",
+    payment_status_changed: "Payment Status Changed",
+    payment_info_updated: "Payment Info Updated",
+  };
+  const baseLabel = labels[action] || action;
+  return clientName ? `${baseLabel} for ${clientName}` : baseLabel;
+};
+
+const getActionSeverity = (action: string): "success" | "info" | "warning" | "error" => {
+  if (action.includes("invoice_created") || action.includes("invoice_emailed")) {
+    return "info";
+  }
+  if (action.includes("schedule_created")) {
+    return "success";
+  }
+  if (action.includes("call_logged")) {
+    return "warning";
+  }
+  if (action.includes("reminder_sent")) {
+    return "info";
+  }
+  if (action.includes("reminder_failed") || action.includes("failed")) {
+    return "error";
+  }
+  return "info";
+};
+
+export interface AnalyticsMetrics {
+  totalRevenue: number;
+  pendingCount: number;
+  overdueCount: number;
+  activeClientCount: number;
+  paidCount: number;
+  jobsDueSoon: number;
+}
+
+export const fetchAnalyticsMetrics = async (): Promise<AnalyticsMetrics> => {
+  await connectMongo();
+
+  try {
+    // Calculate total revenue (all paid invoices)
+    const paidInvoices = await Invoice.aggregate([
+      { $match: { status: "paid" } },
+      { $unwind: "$items" },
+      { $group: { _id: null, totalSales: { $sum: "$items.price" } } },
+    ]);
+    const totalRevenue = paidInvoices.length > 0 ? paidInvoices[0].totalSales : 0;
+    const revenueWithTax = totalRevenue + totalRevenue * 0.05;
+
+    // Count pending invoices
+    const pendingCount = await Invoice.countDocuments({ status: "pending" });
+
+    // Count overdue invoices
+    const overdueCount = await Invoice.countDocuments({ status: "overdue" });
+
+    // Total active clients
+    const activeClientCount = await Client.countDocuments();
+
+    // Count paid invoices
+    const paidCount = await Invoice.countDocuments({ status: "paid" });
+
+    // Jobs due soon (next 30 days)
+    const thirtyDaysFromNow = new Date();
+    thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+
+    const jobsDueSoon = await JobsDueSoon.countDocuments({
+      dateDue: {
+        $gte: new Date(),
+        $lte: thirtyDaysFromNow,
+      },
+      isScheduled: false,
+    });
+
+    return {
+      totalRevenue: revenueWithTax,
+      pendingCount,
+      overdueCount,
+      activeClientCount,
+      paidCount,
+      jobsDueSoon,
+    };
+  } catch (error) {
+    console.error("Error fetching analytics metrics:", error);
+    return {
+      totalRevenue: 0,
+      pendingCount: 0,
+      overdueCount: 0,
+      activeClientCount: 0,
+      paidCount: 0,
+      jobsDueSoon: 0,
+    };
+  }
 };

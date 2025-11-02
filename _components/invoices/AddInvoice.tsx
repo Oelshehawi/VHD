@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { FaTrash, FaPlus, FaTimes, FaFileInvoice, FaBriefcase, FaCalendarCheck, FaMapMarkerAlt, FaStickyNote, FaList, FaDollarSign } from "react-icons/fa";
+import { useUser } from "@clerk/nextjs";
 import { calculateDueDate } from "../../app/lib/utils";
 import {
   createInvoice,
@@ -30,6 +31,7 @@ interface InvoiceFormValues {
 }
 
 const AddInvoice = ({ clients }: AddInvoiceProps) => {
+  const { user } = useUser();
   const [items, setItems] = useState([{ description: "", details: "", price: 0 }]);
   const [open, setOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
@@ -140,7 +142,8 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
 
   const { isProcessing, debouncedSubmit } = useDebounceSubmit({
     onSubmit: async (data: InvoiceFormValues) => {
-      await createInvoice(data);
+      const userName = user?.fullName || user?.firstName || "User";
+      await createInvoice(data, userName);
       setOpen(false);
       setResetKey((prev) => prev + 1);
       setItems([{ description: "", details: "", price: 0 }]);

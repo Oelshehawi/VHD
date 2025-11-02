@@ -121,7 +121,12 @@ export interface AuditLogEntry {
     | "reminder_sent_manual"
     | "reminder_failed"
     | "payment_status_changed"
-    | "payment_info_updated";
+    | "payment_info_updated"
+    | "invoice_created"
+    | "invoice_emailed"
+    | "schedule_created"
+    | "call_logged_job"
+    | "call_logged_payment";
   timestamp: Date;
   performedBy: string;
   details: {

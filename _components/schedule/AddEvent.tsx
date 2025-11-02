@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { motion, AnimatePresence } from "framer-motion";
+import { useUser } from "@clerk/nextjs";
 import toast from "react-hot-toast";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
 import InvoiceSearchSelect from "../invoices/InvoiceSearchSelect";
@@ -22,6 +23,7 @@ const AddEvent = ({
   technicians: { id: string; name: string }[];
   scheduledJobs: ScheduleType[];
 }) => {
+  const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -106,7 +108,8 @@ const AddEvent = ({
           ),
         );
       }
-      await createSchedule(data);
+      const performedBy = user?.fullName || user?.firstName || "user";
+      await createSchedule(data, performedBy);
       setOpen();
       toast.success("Schedule has been successfully added.");
     } catch (error) {

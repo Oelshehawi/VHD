@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import connectMongo from "../../../app/lib/connect";
-import { Invoice, Client, Schedule } from "../../../models/reactDataSchema";
+import { Invoice, Client, Schedule, AuditLog } from "../../../models/reactDataSchema";
 import { getEmailForPurpose } from "../../../app/lib/utils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
@@ -146,11 +146,24 @@ export default async function handler(
       MessageStream: "invoice-delivery",
     });
 
-    // Update the schedule to mark that invoice was sent
-    await Schedule.findByIdAndUpdate(scheduleId, {
-      invoiceSent: true,
-      invoiceSentAt: new Date(),
-      invoiceSentBy: technicianId,
+    await AuditLog.create({
+      invoiceId: invoice.invoiceId,
+      action: "invoice_emailed",
+      timestamp: new Date(),
+      performedBy: technicianId,
+      details: {
+        newValue: {
+          invoiceId: invoice.invoiceId,
+          jobTitle: invoice.jobTitle,
+          clientEmail: clientEmail,
+          clientName: clientDetails.clientName,
+        },
+        reason: "Invoice sent to client via email",
+        metadata: {
+          clientId: invoice.clientId,
+        },
+      },
+      success: true,
     });
 
     // Return success response

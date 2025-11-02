@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 import { FaTimes, FaPaperPlane, FaHistory, FaClock } from "react-icons/fa";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -31,6 +32,7 @@ const ReminderConfigModal = ({
   invoiceId,
   onSettingsUpdate,
 }: ReminderConfigModalProps) => {
+  const { user } = useUser();
   const [settings, setSettings] = useState<PaymentReminderSettings>({
     enabled: false,
     frequency: "none",
@@ -41,8 +43,6 @@ const ReminderConfigModal = ({
   const [activeTab, setActiveTab] = useState<"settings" | "history">(
     "settings",
   );
-  console.log(settings);
-console.log(auditLogs);
   useEffect(() => {
     if (isOpen && invoiceId) {
       loadReminderSettings();
@@ -80,10 +80,15 @@ console.log(auditLogs);
   const handleSaveSettings = async () => {
     setIsLoading(true);
     try {
-      const result = await configurePaymentReminders(invoiceId, {
-        enabled: settings.enabled,
-        frequency: settings.frequency,
-      });
+      const userName = user?.fullName || user?.firstName || "User";
+      const result = await configurePaymentReminders(
+        invoiceId,
+        {
+          enabled: settings.enabled,
+          frequency: settings.frequency,
+        },
+        userName
+      );
 
       if (result.success) {
         onSettingsUpdate(invoiceId, settings);
@@ -111,7 +116,8 @@ console.log(auditLogs);
 
     setIsSending(true);
     try {
-      const result = await sendPaymentReminderEmail(invoiceId, "user");
+      const userName = user?.fullName || user?.firstName || "User";
+      const result = await sendPaymentReminderEmail(invoiceId, userName);
       if (result.success) {
         toast.success(result.message || "Reminder sent successfully");
         await loadReminderSettings(); // Reload to get updated history

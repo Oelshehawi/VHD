@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import connectMongo from "../connect";
-import { Invoice, Client, JobsDueSoon } from "../../../models/reactDataSchema";
+import { Invoice, Client, JobsDueSoon, AuditLog } from "../../../models/reactDataSchema";
 import { DueInvoiceType } from "../typeDefinitions";
 import {
   getEmailForPurpose,
@@ -107,9 +107,10 @@ export async function sendCleaningReminderEmail(
 /**
  * Send invoice delivery email using Postmark
  * @param invoiceId The invoice ID to send
+ * @param performedBy The user who performed this action
  * @returns Object with status and message
  */
-export async function sendInvoiceDeliveryEmail(invoiceId: string) {
+export async function sendInvoiceDeliveryEmail(invoiceId: string, performedBy: string = "system") {
   await connectMongo();
 
   try {
@@ -231,6 +232,27 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string) {
       ],
       TrackOpens: true,
       MessageStream: "invoice-delivery",
+    });
+
+    // Create audit log entry for invoice email sent
+    await AuditLog.create({
+      invoiceId: invoice.invoiceId,
+      action: "invoice_emailed",
+      timestamp: new Date(),
+      performedBy: performedBy,
+      details: {
+        newValue: {
+          invoiceId: invoice.invoiceId,
+          jobTitle: invoice.jobTitle,
+          clientEmail: clientEmail,
+          clientName: clientDetails.clientName,
+        },
+        reason: "Invoice sent to client via email",
+        metadata: {
+          clientId: invoice.clientId,
+        },
+      },
+      success: true,
     });
 
     revalidatePath("/invoices");

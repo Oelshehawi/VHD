@@ -3,16 +3,15 @@ import JobsDueContainer from "../../../_components/dashboard/JobsDueContainer";
 import {
   InfoBoxSkeleton,
   JobsDueContainerSkeleton,
-  YearlySalesSkeleton,
 } from "../../../_components/Skeletons";
 import {
   getClientCount,
   getPendingInvoiceAmount,
   getPendingInvoices,
-  fetchYearlySalesData,
+  fetchRecentActions,
 } from "../../lib/dashboard.data";
 import { FaPeopleGroup } from "react-icons/fa6";
-import YearlySales from "../../../_components/dashboard/YearlySales";
+import ActionsFeed from "../../../_components/dashboard/ActionsFeed";
 //@ts-ignore
 import { auth } from "@clerk/nextjs/server";
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
@@ -24,17 +23,14 @@ const DashboardPage = async ({
   searchParams: Promise<DashboardSearchParams>;
 }) => {
   const resolvedSearchParams = await searchParams;
-  const currentYear = resolvedSearchParams.salesYear
-    ? parseInt(resolvedSearchParams.salesYear)
-    : new Date().getFullYear();
 
-  
-  const [{ sessionClaims }, salesData, amount, pendingInvoices] = await Promise.all([
+  const [{ sessionClaims }, amount, pendingInvoices, recentActions] = await Promise.all([
     auth(),
-    fetchYearlySalesData(currentYear),
     getPendingInvoiceAmount(),
-    getPendingInvoices()
+    getPendingInvoices(),
+    fetchRecentActions()
   ]);
+
 
   
   const canManage =
@@ -73,15 +69,15 @@ const DashboardPage = async ({
         </Suspense>
       </div>
 
-      {/* Charts and Analytics - Larger Height */}
-      <div className="flex flex-col gap-8 lg:flex-row h-[700px] lg:h-[680px]">
-        <Suspense fallback={<YearlySalesSkeleton />}>
-          <div className="flex-1 h-full">
-            <YearlySales salesData={salesData} currentYear={currentYear} />
+      {/* Activity Feed and Jobs Due */}
+      <div className="flex flex-col gap-8 lg:flex-row">
+        <Suspense fallback={<div className="rounded-xl bg-white p-8 shadow-lg border border-gray-200 h-[400px] animate-pulse" />}>
+          <div className="flex-1 lg:h-[680px]">
+            <ActionsFeed actions={recentActions} />
           </div>
         </Suspense>
         <Suspense fallback={<JobsDueContainerSkeleton />}>
-          <div className="flex-1 h-full">
+          <div className="flex-1 lg:h-[680px]">
             <JobsDueContainer searchParams={resolvedSearchParams} />
           </div>
         </Suspense>
