@@ -2,13 +2,20 @@ import {
   PayrollPeriodType,
   ScheduleType,
   TechnicianType,
+  AvailabilityType,
+  TimeOffRequestType,
 } from "../../lib/typeDefinitions";
 import {
   fetchAllPayrollPeriods,
   fetchScheduledJobsByPayrollPeriod,
 } from "../../lib/scheduleAndShifts";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
-import PayrollPeriodSelector from "../../../_components/payroll/PayrollPeriodSelector";
+import {
+  fetchTechnicianAvailability,
+  fetchTimeOffRequests,
+  getPendingTimeOffCount,
+} from "../../lib/data";
+import PayrollPageTabs from "../../../_components/payroll/PayrollPageTabs";
 // @ts-ignore
 import { auth } from "@clerk/nextjs/server";
 
@@ -24,6 +31,17 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
   const { sessionClaims }: any = await auth();
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+
+  // Fetch availability and time-off data
+  const availability: AvailabilityType[] = await fetchTechnicianAvailability();
+  const timeOffRequests: TimeOffRequestType[] = await fetchTimeOffRequests();
+  const pendingTimeOffCount: number = await getPendingTimeOffCount();
+
+  // Create technician name mapping from Clerk data
+  const technicianMap: Record<string, string> = {};
+  technicians.forEach((tech) => {
+    technicianMap[tech.id] = tech.name;
+  });
 
   const resolvedSearchParams = await searchParams;
   if (resolvedSearchParams.payrollPeriodId) {
@@ -78,14 +96,19 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
     );
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      {/* Payroll Period Selection */}
-      <PayrollPeriodSelector
-        payrollPeriods={payrollPeriods}
-        technicians={technicians}
-        schedules={schedules}
-        selectedPayrollPeriod={selectedPayrollPeriod}
-      />
+    <div className="min-h-screen bg-gray-100">
+      <div className="p-6">
+        <PayrollPageTabs
+          payrollPeriods={payrollPeriods}
+          technicians={technicians}
+          schedules={schedules}
+          selectedPayrollPeriod={selectedPayrollPeriod}
+          availability={availability}
+          timeOffRequests={timeOffRequests}
+          pendingTimeOffCount={pendingTimeOffCount}
+          technicianMap={technicianMap}
+        />
+      </div>
     </div>
   );
 };

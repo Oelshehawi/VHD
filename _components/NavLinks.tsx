@@ -16,11 +16,13 @@ const NavLinks = ({
   isNavOpen,
   canManage,
   setIsNavOpen,
+  pendingTimeOffCount = 0,
 }: {
   isNavOpen: boolean;
   canManage: boolean;
   setIsNavOpen: (isOpen: boolean) => void;
   user: any;
+  pendingTimeOffCount?: number;
 }) => {
   const pathname = usePathname();
 
@@ -39,7 +41,7 @@ const NavLinks = ({
         { href: "/estimates", icon: ClipboardDocumentListIcon },
         { href: "/invoices", icon: DocumentIcon },
         { href: "/schedule", icon: CalendarIcon },
-        { href: "/payroll", icon: CurrencyDollarIcon },
+        { href: "/payroll", icon: CurrencyDollarIcon, badge: pendingTimeOffCount ? pendingTimeOffCount : undefined },
         { href: "/analytics", icon: ChartBarIcon },
       ]
     : [
@@ -58,11 +60,12 @@ const NavLinks = ({
     >
       <div className="p-4 lg:mt-3 lg:flex lg:w-full lg:space-y-5">
         <div className="grid grid-cols-3 gap-4 lg:hidden">
-          {links.map(({ href, icon: Icon }) => (
+          {links.map(({ href, icon: Icon, badge }) => (
             <motion.div
               key={href}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              className="relative"
             >
               <Link
                 href={href}
@@ -77,16 +80,20 @@ const NavLinks = ({
                   <Icon className="h-8 w-8" />
                 </div>
               </Link>
+              {badge && badge > 0 && (
+                <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500"></span>
+              )}
             </motion.div>
           ))}
         </div>
 
         <div className="hidden flex-col items-center space-y-5 lg:flex">
-          {links.map(({ href, icon: Icon }) => (
+          {links.map(({ href, icon: Icon, badge }) => (
             <motion.div
               key={href}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
+              className="relative"
             >
               <Link
                 href={href}
@@ -101,6 +108,9 @@ const NavLinks = ({
                   <Icon className="h-6 w-6" />
                 </div>
               </Link>
+              {badge && badge > 0 && (
+                <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full bg-red-500"></span>
+              )}
             </motion.div>
           ))}
         </div>

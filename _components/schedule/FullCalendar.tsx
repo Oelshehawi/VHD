@@ -1,7 +1,7 @@
 "use client";
 import { useMemo } from "react";
 import { format } from "date-fns-tz";
-import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
+import { ScheduleType, InvoiceType, AvailabilityType } from "../../app/lib/typeDefinitions";
 import CalendarGrid from "./CalendarGrid";
 
 const FullCalendar = ({
@@ -11,6 +11,8 @@ const FullCalendar = ({
   currentWeek,
   holidays,
   technicians,
+  availability,
+  showAvailability,
   showOptimization,
 }: {
   invoices: InvoiceType[];
@@ -19,6 +21,8 @@ const FullCalendar = ({
   currentWeek: Date[];
   holidays: any;
   technicians: { id: string; name: string }[];
+  availability: AvailabilityType[];
+  showAvailability: boolean;
   showOptimization?: boolean;
 }) => {
   // Group jobs by date with optimized performance
@@ -65,6 +69,8 @@ const FullCalendar = ({
           canManage={canManage}
           holidays={holidays}
           technicians={technicians}
+          availability={availability}
+          showAvailability={showAvailability}
         />
       </div>
     </div>

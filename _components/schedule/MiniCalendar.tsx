@@ -19,13 +19,15 @@ import {
   startOfToday,
 } from "date-fns";
 import { useState, useEffect } from "react";
-import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
+import { ScheduleType, InvoiceType, AvailabilityType } from "../../app/lib/typeDefinitions";
 import { updateSchedule } from "../../app/lib/actions/scheduleJobs.actions";
 import DeleteModal from "../DeleteModal";
 import toast from "react-hot-toast";
 import Link from "next/link";
 import TechnicianPill from "./TechnicianPill";
-import JobDetailsModal from "./JobDetailsModal"; 
+import JobDetailsModal from "./JobDetailsModal";
+import { getTechnicianUnavailabilityInfo } from "../../app/lib/utils/availabilityUtils";
+import { formatTimeRange12hr } from "../../app/lib/utils/timeFormatUtils";
 
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -35,6 +37,8 @@ export default function MiniCalendar({
   scheduledJobs,
   canManage,
   technicians,
+  availability,
+  showAvailability,
   onDateChange,
   initialDate,
 }: {
@@ -42,6 +46,8 @@ export default function MiniCalendar({
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   technicians: { id: string; name: string }[];
+  availability: AvailabilityType[];
+  showAvailability: boolean;
   onDateChange?: (date: Date, view: "week" | "month") => void;
   initialDate?: string | null;
 }) {
@@ -201,6 +207,20 @@ export default function MiniCalendar({
                     isSameDay(new Date(job.startDateTime), day)
                   ).length;
 
+                  // Get unavailability info for the day
+                  const unavailabilityInfoList = showAvailability
+                    ? technicians
+                        .map(tech => ({
+                          tech,
+                          info: getTechnicianUnavailabilityInfo(availability, tech.id, day)
+                        }))
+                        .filter(item => item.info.isUnavailable === true)
+                    : [];
+
+                  const tooltipText = unavailabilityInfoList
+                    .map(item => `${item.tech.name}: ${item.info.reason}`)
+                    .join('\n');
+
                   return (
                     <div
                       key={day.toString()}
@@ -208,6 +228,7 @@ export default function MiniCalendar({
                         dayIdx === 0 && colStartClasses[getDay(day)],
                         "relative bg-white",
                       )}
+                      title={tooltipText || undefined}
                     >
                       <button
                         type="button"
@@ -235,6 +256,8 @@ export default function MiniCalendar({
                           !isEqual(day, selectedDay) && "hover:bg-gray-50",
                           (isEqual(day, selectedDay) || isToday(day)) &&
                             "font-semibold",
+                          showAvailability && unavailabilityInfoList.length > 0 && !isEqual(day, selectedDay) &&
+                            "border-2 border-red-400 hover:bg-red-50/30",
                         )}
                       >
                         {/* Date number */}
@@ -263,6 +286,13 @@ export default function MiniCalendar({
                           </div>
                         )}
 
+                        {/* Unavailability indicator dot */}
+                        {showAvailability && unavailabilityInfoList.length > 0 && (
+                          <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
+                            <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-500 shadow-sm" />
+                          </div>
+                        )}
+
                         {/* Today indicator ring */}
                         {isToday(day) && !isEqual(day, selectedDay) && (
                           <div className="absolute inset-0 rounded-lg border-2 border-blue-600 pointer-events-none"></div>
@@ -273,8 +303,38 @@ export default function MiniCalendar({
                 })}
               </div>
             </div>
-            <section className="mt-6 max-h-[60vh] overflow-y-auto lg:mt-0 lg:max-h-none lg:pl-8 xl:pl-14 pb-4">
-              <div className="sticky top-0 bg-white pb-3 mb-3 border-b border-gray-200 z-10">
+            <section className="max-h-[60vh] overflow-y-auto lg:mt-0 lg:max-h-none lg:pl-8 xl:pl-14 pb-4">
+              {/* Unavailability Banner */}
+              {showAvailability && (() => {
+                const dayUnavailability = technicians
+                  .map(tech => ({
+                    tech,
+                    info: getTechnicianUnavailabilityInfo(availability, tech.id, selectedDay)
+                  }))
+                  .filter(item => item.info.isUnavailable === true);
+
+                return dayUnavailability.length > 0 ? (
+                  <div className="sticky top-0 z-20 mb-3 rounded-lg border-l-4 border-l-red-500 bg-red-50 p-3 shadow-sm">
+                    <h3 className="text-xs font-semibold text-red-900 mb-2">⚠️ Unavailability</h3>
+                    <div className="space-y-1">
+                      {dayUnavailability.map(({ tech, info }) => (
+                        <div key={tech.id} className="text-xs text-red-800">
+                          <span className="font-medium">{tech.name}</span>
+                          {info.type === "full-day" ? (
+                            <span className="ml-2 text-red-700">- All day</span>
+                          ) : (
+                            <span className="ml-2 text-red-700">
+                              - {formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null;
+              })()}
+
+              <div className={`bg-white pb-3 mb-3 border-b border-gray-200 z-10 ${showAvailability ? 'sticky top-16' : 'sticky top-0'}`}>
                 <h2 className="text-sm font-semibold text-gray-900 sm:text-base md:text-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <span className="flex-1">
                     Schedule for{" "}

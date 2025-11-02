@@ -4,7 +4,15 @@ import UserSection from "./UserSection";
 import NavLinks from "./NavLinks";
 import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/solid";
 
-const SideNavBar = ({ canManage, user }: { canManage: boolean; user: any }) => {
+const SideNavBar = ({
+  canManage,
+  user,
+  pendingTimeOffCount = 0,
+}: {
+  canManage: boolean;
+  user: any;
+  pendingTimeOffCount?: number;
+}) => {
   const [isNavOpen, setIsNavOpen] = useState(false);
 
   const toggleNav = () => {
@@ -34,6 +42,7 @@ const SideNavBar = ({ canManage, user }: { canManage: boolean; user: any }) => {
         canManage={canManage}
         setIsNavOpen={setIsNavOpen}
         user={user}
+        pendingTimeOffCount={pendingTimeOffCount}
       />
     </div>
   );

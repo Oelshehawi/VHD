@@ -4,12 +4,14 @@ import FullCalendar from "./FullCalendar";
 import SearchSelect from "./JobSearchSelect";
 import OptimizationModal from "../optimization/OptimizationModal";
 import { useState, useEffect } from "react";
-import { InvoiceType, ScheduleType } from "../../app/lib/typeDefinitions";
+import { InvoiceType, ScheduleType, AvailabilityType } from "../../app/lib/typeDefinitions";
 import { add, startOfWeek, eachDayOfInterval, format, parse, isValid } from "date-fns";
 import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/24/solid";
 import { AnimatePresence } from "framer-motion";
 import AddEvent from "./AddEvent";
 import { useRouter, useSearchParams } from "next/navigation";
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline";
+import toast from "react-hot-toast";
 
 const isMobileDevice = (): boolean => {
   if (typeof window !== "undefined") {
@@ -24,6 +26,7 @@ const CalendarOptions = ({
   canManage,
   holidays,
   technicians,
+  availability,
   initialView,
   initialDate,
 }: {
@@ -32,6 +35,7 @@ const CalendarOptions = ({
   canManage: boolean;
   holidays: any;
   technicians: { id: string; name: string }[];
+  availability: AvailabilityType[];
   initialView?: string;
   initialDate?: string | null;
 }) => {
@@ -50,6 +54,7 @@ const CalendarOptions = ({
   });
 
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] = useState<boolean>(false);
+  const [showAvailability, setShowAvailability] = useState<boolean>(false);
   const [currentDate, setCurrentDate] = useState<string | null>(initialDate || null);
 
   // Initialize current week from URL date or default to today
@@ -230,6 +235,8 @@ const CalendarOptions = ({
         technicians={technicians}
         isOptimizationModalOpen={isOptimizationModalOpen}
         setIsOptimizationModalOpen={setIsOptimizationModalOpen}
+        showAvailability={showAvailability}
+        setShowAvailability={setShowAvailability}
       />
 
       <OptimizationModal
@@ -248,6 +255,8 @@ const CalendarOptions = ({
                 scheduledJobs={scheduledJobs}
                 canManage={canManage}
                 technicians={technicians}
+                availability={availability}
+                showAvailability={showAvailability}
                 onDateChange={handleDateChange}
                 initialDate={currentDate}
               />
@@ -262,6 +271,8 @@ const CalendarOptions = ({
               currentWeek={currentWeek}
               holidays={holidays}
               technicians={technicians}
+              availability={availability}
+              showAvailability={showAvailability}
             />
           </div>
         )}
@@ -286,6 +297,8 @@ const Header = ({
   technicians,
   isOptimizationModalOpen,
   setIsOptimizationModalOpen,
+  showAvailability,
+  setShowAvailability,
 }: {
   setCalendarOption: () => void;
   calendarOption: boolean;
@@ -300,9 +313,11 @@ const Header = ({
   technicians: { id: string; name: string }[];
   isOptimizationModalOpen: boolean;
   setIsOptimizationModalOpen: (open: boolean) => void;
+  showAvailability: boolean;
+  setShowAvailability: (show: boolean) => void;
 }) => {
   const [open, setOpen] = useState(false);
-  
+
   const weekStart = currentWeek[0];
   const weekEnd = currentWeek[currentWeek.length - 1];
   const weekLabel = `${format(weekStart as Date, "MMM d")} - ${format(weekEnd as Date, "MMM d, yyyy")}`;
@@ -398,6 +413,26 @@ const Header = ({
                 <span className="hidden sm:inline">Optimize</span>
               </button>
             )}
+
+            {/* Availability Toggle */}
+            <button
+              onClick={() => setShowAvailability(!showAvailability)}
+              className={`flex items-center gap-2 px-2.5 py-1.5 sm:px-3 sm:py-2 text-xs sm:text-sm font-medium rounded-lg transition-all duration-200 touch-manipulation ${
+                showAvailability
+                  ? "bg-amber-100 text-amber-700 hover:bg-amber-200"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              }`}
+              title={showAvailability ? "Hide availability" : "Show availability"}
+            >
+              {showAvailability ? (
+                <EyeIcon className="h-4 w-4" />
+              ) : (
+                <EyeSlashIcon className="h-4 w-4" />
+              )}
+              <span className="hidden sm:inline">
+                {showAvailability ? "Availability On" : "Availability Off"}
+              </span>
+            </button>
 
             {/* View Toggle */}
             {!isMobile && (

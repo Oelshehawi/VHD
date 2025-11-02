@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 import { FaTrash } from "react-icons/fa";
 import { deleteJob } from "../app/lib/actions/scheduleJobs.actions";
 import { deleteEstimate } from "../app/lib/actions/estimates.actions";
+import { deleteAvailability } from "../app/lib/actions/availability.actions";
 
 const DeleteModal = ({
   deleteText,
@@ -70,9 +71,18 @@ const DeleteModal = ({
         setIsLoading(false);
         handleClose();
         toast.success("Estimate deleted successfully");
+      } else if (deletingValue === "availability") {
+        const result = await deleteAvailability(deletionId.toString());
+        if (!result.success) {
+          toast.error(result.message || "Failed to delete availability");
+        } else {
+          handleClose();
+          toast.success("Availability deleted successfully");
+        }
+        setIsLoading(false);
       }
     } catch (error) {
-      console.error("Error updating invoice:", error);
+      console.error("Error deleting item:", error);
       toast.error("Database Error: Failed to delete");
     }
     return;

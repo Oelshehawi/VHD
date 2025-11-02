@@ -1,7 +1,7 @@
 import connectMongo from "./connect";
-import { Client, Invoice } from "../../models/reactDataSchema";
+import { Client, Invoice, Availability, TimeOffRequest } from "../../models/reactDataSchema";
 import { formatPhoneNumber } from "./utils";
-import { ClientType, Holiday, HolidayResponse, OBSERVANCES, InvoiceType } from "./typeDefinitions";
+import { ClientType, Holiday, HolidayResponse, OBSERVANCES, InvoiceType, AvailabilityType, TimeOffRequestType } from "./typeDefinitions";
 
 export const fetchAllClients = async () => {
   await connectMongo();
@@ -350,3 +350,165 @@ export const fetchHolidays = async (): Promise<Holiday[]> => {
     return [];
   }
 };
+
+/**
+ * Fetch all technician availability
+ */
+export async function fetchTechnicianAvailability(): Promise<AvailabilityType[]> {
+  await connectMongo();
+  try {
+    const availability = await Availability.find().lean<AvailabilityType[]>();
+    return availability.map((a) => ({
+      ...a,
+      _id: typeof a._id === "string" ? a._id : a._id?.toString(),
+    }));
+  } catch (error) {
+    console.error("Error fetching availability:", error);
+    throw new Error("Failed to fetch technician availability");
+  }
+}
+
+/**
+ * Fetch availability for a specific technician
+ */
+export async function fetchTechnicianAvailabilityById(
+  technicianId: string,
+): Promise<AvailabilityType[]> {
+  await connectMongo();
+  try {
+    const availability = await Availability.find({ technicianId }).lean<AvailabilityType[]>();
+    return availability.map((a) => ({
+      ...a,
+      _id: typeof a._id === "string" ? a._id : a._id?.toString(),
+    }));
+  } catch (error) {
+    console.error("Error fetching technician availability:", error);
+    throw new Error("Failed to fetch technician availability");
+  }
+}
+
+/**
+ * Check if a technician is available at a specific date and time
+ */
+export async function isTechnicianAvailable(
+  technicianId: string,
+  date: Date,
+  startTime?: string,
+  endTime?: string,
+): Promise<boolean> {
+  await connectMongo();
+  try {
+    const dayOfWeek = date.getDay();
+
+    // Check for specific date blocks
+    const specificDateBlock = await Availability.findOne({
+      technicianId,
+      specificDate: {
+        $gte: new Date(date.getFullYear(), date.getMonth(), date.getDate()),
+        $lt: new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1),
+      },
+    });
+
+    if (specificDateBlock) {
+      return false; // Unavailable due to specific date block
+    }
+
+    // Check for recurring patterns
+    const recurringBlocks = await Availability.find({
+      technicianId,
+      isRecurring: true,
+      dayOfWeek,
+    });
+
+    if (recurringBlocks.length > 0) {
+      if (startTime && endTime) {
+        // Check for time conflicts
+        const [reqStart] = startTime.split(":").map(Number);
+        const [reqEnd] = endTime.split(":").map(Number);
+
+        for (const block of recurringBlocks) {
+          if (block.isFullDay) {
+            return false; // Full day unavailable
+          }
+
+          const [blockStart] = block.startTime.split(":").map(Number);
+          const [blockEnd] = block.endTime.split(":").map(Number);
+
+          // Check if time ranges overlap
+          if (reqStart && reqEnd && blockStart && blockEnd && reqStart < blockEnd && reqEnd > blockStart) {
+            return false; // Time conflict
+          }
+        }
+      } else {
+        // If no specific time provided, check for any blocks
+        const hasFullDayBlock = recurringBlocks.some((b) => b.isFullDay);
+        if (hasFullDayBlock) {
+          return false;
+        }
+      }
+    }
+
+    return true; // Available
+  } catch (error) {
+    console.error("Error checking technician availability:", error);
+    throw new Error("Failed to check technician availability");
+  }
+}
+
+/**
+ * Fetch all pending time-off requests
+ */
+export async function fetchPendingTimeOffRequests(): Promise<TimeOffRequestType[]> {
+  await connectMongo();
+  try {
+    const requests = await TimeOffRequest.find({ status: "pending" })
+      .sort({ requestedAt: -1 })
+      .lean<TimeOffRequestType[]>();
+
+    return requests.map((r) => ({
+      ...r,
+      _id: typeof r._id === "string" ? r._id : r._id?.toString(),
+    }));
+  } catch (error) {
+    console.error("Error fetching pending time-off requests:", error);
+    throw new Error("Failed to fetch pending time-off requests");
+  }
+}
+
+/**
+ * Fetch all time-off requests with optional filtering
+ */
+export async function fetchTimeOffRequests(
+  status?: "pending" | "approved" | "rejected",
+): Promise<TimeOffRequestType[]> {
+  await connectMongo();
+  try {
+    const query = status ? { status } : {};
+    const requests = await TimeOffRequest.find(query)
+      .sort({ requestedAt: -1 })
+      .lean<TimeOffRequestType[]>();
+
+    return requests.map((r) => ({
+      ...r,
+      _id: typeof r._id === "string" ? r._id : r._id?.toString(),
+    }));
+  } catch (error) {
+    console.error("Error fetching time-off requests:", error);
+    throw new Error("Failed to fetch time-off requests");
+  }
+}
+
+/**
+ * Get count of pending time-off requests
+ * Useful for badge notification
+ */
+export async function getPendingTimeOffCount(): Promise<number> {
+  await connectMongo();
+  try {
+    const count = await TimeOffRequest.countDocuments({ status: "pending" });
+    return count;
+  } catch (error) {
+    console.error("Error getting pending time-off count:", error);
+    return 0;
+  }
+}

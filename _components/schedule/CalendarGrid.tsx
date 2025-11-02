@@ -1,6 +1,8 @@
 import { format, isToday } from "date-fns";
 import CalendarColumn from "./CalendarColumn";
-import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
+import { ScheduleType, InvoiceType, AvailabilityType } from "../../app/lib/typeDefinitions";
+import { getTechnicianUnavailabilityInfo } from "../../app/lib/utils/availabilityUtils";
+import { formatTimeRange12hr } from "../../app/lib/utils/timeFormatUtils";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -11,6 +13,8 @@ const CalendarGrid = ({
   canManage,
   holidays,
   technicians,
+  availability,
+  showAvailability,
 }: {
   invoices: InvoiceType[];
   week: Date[];
@@ -18,6 +22,8 @@ const CalendarGrid = ({
   canManage: boolean;
   holidays: any;
   technicians: { id: string; name: string }[];
+  availability: AvailabilityType[];
+  showAvailability: boolean;
   showOptimization?: boolean;
 }) => {
   const firstDay = week[0] as Date;
@@ -43,51 +49,82 @@ const CalendarGrid = ({
           </div>
 
           {/* Day headers */}
-          {week.map((day, idx) => (
-            <div
-              key={idx}
-              className={`relative flex flex-1 flex-col items-center py-2 sm:py-3 md:py-4 transition-colors ${
-                isToday(day)
-                  ? "bg-gradient-to-b from-blue-50 to-blue-100/50 border-l-2 border-r-2 border-blue-200"
-                  : "bg-white hover:bg-gray-50/50"
-              }`}
-            >
-              {/* Day name */}
-              <span className={`text-[10px] sm:text-xs md:text-sm font-semibold tracking-wide ${
-                isToday(day) ? "text-blue-700" : "text-gray-600"
-              }`}>
-                {/* Show abbreviated on mobile, full on desktop */}
-                <span className="hidden md:inline">{format(day, "EEEE")}</span>
-                <span className="md:hidden">{format(day, "EEE")}</span>
-              </span>
+          {week.map((day, idx) => {
+            // Check if there's any unavailability for this day
+            const hasUnavailability = technicians.some(tech =>
+              getTechnicianUnavailabilityInfo(availability, tech.id, day).isUnavailable
+            );
 
-              {/* Date */}
-              <span className={`mt-0.5 sm:mt-1 text-lg sm:text-xl md:text-2xl font-bold ${
-                isToday(day) ? "text-blue-700" : "text-gray-900"
-              }`}>
-                {format(day, "d")}
-              </span>
+            // Build tooltip with unavailability details
+            const unavailabilityTitle = technicians
+              .map(tech => {
+                const info = getTechnicianUnavailabilityInfo(availability, tech.id, day);
+                if (info.isUnavailable) {
+                  if (info.type === "full-day") {
+                    return `${tech.name}: All day`;
+                  } else {
+                    return `${tech.name}: ${formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}`;
+                  }
+                }
+                return null;
+              })
+              .filter((item) => item !== null)
+              .join("\n");
 
-              {/* Today indicator */}
-              {isToday(day) && (
-                <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full"></div>
-              )}
+            return (
+              <div
+                key={idx}
+                className={`relative flex flex-1 flex-col items-center py-2 sm:py-3 md:py-4 transition-colors ${
+                  isToday(day)
+                    ? "bg-gradient-to-b from-blue-50 to-blue-100/50 border-l-2 border-r-2 border-blue-200"
+                    : "bg-white hover:bg-gray-50/50"
+                } ${hasUnavailability ? "border-t-2 border-t-red-400" : ""}`}
+                title={hasUnavailability ? unavailabilityTitle : ""}
+              >
+                {/* Day name */}
+                <span className={`text-[10px] sm:text-xs md:text-sm font-semibold tracking-wide ${
+                  isToday(day) ? "text-blue-700" : "text-gray-600"
+                }`}>
+                  {/* Show abbreviated on mobile, full on desktop */}
+                  <span className="hidden md:inline">{format(day, "EEEE")}</span>
+                  <span className="md:hidden">{format(day, "EEE")}</span>
+                </span>
 
-              {/* Job count indicator */}
-              {selectedDayJobs(day).length > 0 && (
-                <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
-                  <span className={`inline-flex items-center justify-center h-4 w-4 sm:h-5 sm:w-5 text-[10px] sm:text-xs font-medium rounded-full ${
-                    isToday(day)
-                      ? "bg-blue-200 text-blue-800"
-                      : "bg-gray-200 text-gray-700"
-                  }`}>
-                    {selectedDayJobs(day).length}
-                  </span>
-                </div>
-              )}
+                {/* Date */}
+                <span className={`mt-0.5 sm:mt-1 text-lg sm:text-xl md:text-2xl font-bold ${
+                  isToday(day) ? "text-blue-700" : "text-gray-900"
+                }`}>
+                  {format(day, "d")}
+                </span>
 
-            </div>
-          ))}
+                {/* Unavailability indicator dot */}
+                {hasUnavailability && (
+                  <div className="absolute top-1 left-1 sm:top-2 sm:left-2">
+                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-500 shadow-sm" />
+                  </div>
+                )}
+
+                {/* Today indicator */}
+                {isToday(day) && (
+                  <div className="absolute bottom-0 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-blue-500 rounded-full"></div>
+                )}
+
+                {/* Job count indicator */}
+                {selectedDayJobs(day).length > 0 && (
+                  <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
+                    <span className={`inline-flex items-center justify-center h-4 w-4 sm:h-5 sm:w-5 text-[10px] sm:text-xs font-medium rounded-full ${
+                      isToday(day)
+                        ? "bg-blue-200 text-blue-800"
+                        : "bg-gray-200 text-gray-700"
+                    }`}>
+                      {selectedDayJobs(day).length}
+                    </span>
+                  </div>
+                )}
+
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -135,6 +172,8 @@ const CalendarGrid = ({
                   canManage={canManage}
                   holidays={holidays}
                   technicians={technicians}
+                  availability={availability}
+                  showAvailability={showAvailability}
                 />
               </div>
             ))}

@@ -63,6 +63,33 @@ export interface TechnicianLocationType {
   currentJobId: string | undefined,
   accuracy: string | undefined
 }
+
+export interface AvailabilityType {
+  _id?: ObjectId | string;
+  technicianId: string;
+  dayOfWeek?: number; // 0-6 for recurring patterns, null if specific date
+  startTime: string; // HH:mm format
+  endTime: string; // HH:mm format
+  isFullDay: boolean;
+  isRecurring: boolean;
+  specificDate?: Date | string; // For one-time blocks
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+export interface TimeOffRequestType {
+  _id?: ObjectId | string;
+  technicianId: string;
+  startDate: Date | string;
+  endDate: Date | string;
+  reason: string;
+  status: "pending" | "approved" | "rejected";
+  requestedAt: Date;
+  reviewedAt?: Date;
+  reviewedBy?: string; // Admin Clerk ID
+  notes?: string;
+}
+
 export interface TechnicianType {
   id: string;
   name: string;
@@ -126,7 +153,13 @@ export interface AuditLogEntry {
     | "invoice_emailed"
     | "schedule_created"
     | "call_logged_job"
-    | "call_logged_payment";
+    | "call_logged_payment"
+    | "availability_created"
+    | "availability_updated"
+    | "availability_deleted"
+    | "timeoff_requested"
+    | "timeoff_approved"
+    | "timeoff_rejected";
   timestamp: Date;
   performedBy: string;
   details: {

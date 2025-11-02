@@ -6,6 +6,8 @@
     "dev": "next dev --turbo",
     "build": "next build",
     "start": "next start",
+    "lint:eslint": "eslint",
+    "lint:types": "tsc --noEmit",
     "test-optimization": "tsx scripts/test-august-optimization.ts",
     "test-openroute": "tsx scripts/test-openroute-integration.ts",
     "cleanup-spaces": "tsx scripts/cleanupLeadingSpaces.ts",

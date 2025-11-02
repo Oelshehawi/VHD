@@ -7,6 +7,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { auth, currentUser } from "@clerk/nextjs/server";
 import type { Metadata, Viewport } from "next";
 import SideNavBar from "../../_components/SideNavBar";
+import { getPendingTimeOffCount } from "../lib/data";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -64,7 +65,6 @@ export default async function RootLayout({
 }) {
   const { sessionClaims } = await auth();
 
-
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
@@ -76,6 +76,9 @@ export default async function RootLayout({
     firstName: user.firstName,
     lastName: user.lastName,
   };
+
+  // Fetch pending time-off count for badge
+  const pendingTimeOffCount = canManage ? await getPendingTimeOffCount() : 0;
 
   return (
     <ClerkProvider>
@@ -89,6 +92,7 @@ export default async function RootLayout({
             <SideNavBar
               canManage={canManage as boolean}
               user={serializedUser}
+              pendingTimeOffCount={pendingTimeOffCount}
             />
             <main className="flex-1 lg:ml-20">{children}</main>
           </div>

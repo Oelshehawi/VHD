@@ -16,6 +16,8 @@ import {
   AuditLogEntry,
   CallLogEntry,
   TechnicianLocationType,
+  AvailabilityType,
+  TimeOffRequestType,
 } from "../app/lib/typeDefinitions";
 import { CALL_OUTCOMES } from "../app/lib/callLogConstants";
 
@@ -304,6 +306,34 @@ const TechnicianLocationSchema = new Schema<TechnicianLocationType>({
   accuracy: { type: Number },
 });
 
+const AvailabilitySchema = new Schema<AvailabilityType>({
+  technicianId: { type: String, required: true },
+  dayOfWeek: { type: Number, min: 0, max: 6 }, // 0-6 for recurring patterns
+  startTime: { type: String, required: true }, // HH:mm format
+  endTime: { type: String, required: true }, // HH:mm format
+  isFullDay: { type: Boolean, default: false },
+  isRecurring: { type: Boolean, default: false },
+  specificDate: { type: Date }, // For one-time blocks
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now },
+});
+
+const TimeOffRequestSchema = new Schema<TimeOffRequestType>({
+  technicianId: { type: String, required: true },
+  startDate: { type: Date, required: true },
+  endDate: { type: Date, required: true },
+  reason: { type: String, required: true },
+  status: {
+    type: String,
+    enum: ["pending", "approved", "rejected"],
+    default: "pending",
+  },
+  requestedAt: { type: Date, default: Date.now, required: true },
+  reviewedAt: { type: Date },
+  reviewedBy: { type: String }, // Admin Clerk ID
+  notes: { type: String },
+});
+
 const Client =
   (models.Client as typeof Model<ClientType>) || model("Client", ClientSchema);
 const Invoice =
@@ -442,6 +472,13 @@ PayrollPeriodSchema.index({ startDate: 1, endDate: 1 }); // Payroll period queri
 TechnicianLocationSchema.index({ technicianId: 1, timestamp: -1 }); // For technician location history
 TechnicianLocationSchema.index({ isActive: 1, timestamp: -1 }); // For active technicians
 
+// Availability and TimeOff indexes
+AvailabilitySchema.index({ technicianId: 1 }); // For technician availability lookups
+AvailabilitySchema.index({ technicianId: 1, dayOfWeek: 1 }); // For recurring availability
+AvailabilitySchema.index({ technicianId: 1, specificDate: 1 }); // For one-time availability
+TimeOffRequestSchema.index({ technicianId: 1, status: 1 }); // For pending requests
+TimeOffRequestSchema.index({ technicianId: 1, startDate: 1, endDate: 1 }); // For date range queries
+TimeOffRequestSchema.index({ status: 1, requestedAt: -1 }); // For admin dashboard
 
 const Estimate =
   (models.Estimate as typeof Model<EstimateType>) ||
@@ -472,6 +509,12 @@ const AuditLogSchema = new Schema<AuditLogEntry>({
       "schedule_created",
       "call_logged_job",
       "call_logged_payment",
+      "availability_created",
+      "availability_updated",
+      "availability_deleted",
+      "timeoff_requested",
+      "timeoff_approved",
+      "timeoff_rejected",
     ],
     required: true,
   },
@@ -497,9 +540,17 @@ const AuditLog =
   (models.AuditLog as typeof Model<AuditLogEntry>) ||
   model("AuditLog", AuditLogSchema);
 
-  const TechnicianLocation =
+const TechnicianLocation =
   (models.TechnicianLocation as typeof Model<TechnicianLocationType>) ||
   model("TechnicianLocation", TechnicianLocationSchema);
+
+const Availability =
+  (models.Availability as typeof Model<AvailabilityType>) ||
+  model("Availability", AvailabilitySchema);
+
+const TimeOffRequest =
+  (models.TimeOffRequest as typeof Model<TimeOffRequestType>) ||
+  model("TimeOffRequest", TimeOffRequestSchema);
 
 export {
   Client,
@@ -513,4 +564,6 @@ export {
   DistanceMatrixCache,
   AuditLog,
   TechnicianLocation,
+  Availability,
+  TimeOffRequest,
 };

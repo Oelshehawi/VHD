@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { format, isSameDay } from "date-fns";
-import { Holiday, ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
+import { Holiday, ScheduleType, InvoiceType, AvailabilityType } from "../../app/lib/typeDefinitions";
 import JobItem from "./JobItem";
 import JobDetailsModal from "./JobDetailsModal";
 import { calculateJobDurationFromPrice, convertMinutesToHours } from "../../app/lib/utils";
+import { isTechnicianUnavailable } from "../../app/lib/utils/availabilityUtils";
 
 const parseDate = (dateString: string): Date => {
   const [year, month, day] = dateString.split("-").map(Number);
@@ -41,6 +42,8 @@ const CalendarColumn = ({
   canManage,
   holidays,
   technicians,
+  availability,
+  showAvailability,
 }: {
   invoices: InvoiceType[];
   day: Date;
@@ -49,6 +52,8 @@ const CalendarColumn = ({
   canManage: boolean;
   holidays: Holiday[];
   technicians: { id: string; name: string }[];
+  availability: AvailabilityType[];
+  showAvailability: boolean;
   showOptimization?: boolean;
 }) => {
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
@@ -126,13 +131,30 @@ const CalendarColumn = ({
 
       {/* Time slots */}
       <div className="relative h-full">
-        {HOURS.map((hour) => (
+        {HOURS.map((hour) => {
+          // Check for unavailable technicians at this hour
+          const unavailableTechs = technicians.filter(tech =>
+            isTechnicianUnavailable(availability, tech.id, day, `${String(hour).padStart(2, '0')}:00`, `${String(hour + 1).padStart(2, '0')}:00`)
+          );
+
+          return (
           <div
             key={hour}
-            className="relative h-[50px] sm:h-[60px] border-b border-gray-100 last:border-b-0"
+            className={`relative h-[50px] sm:h-[60px] border-b border-gray-100 last:border-b-0 transition-colors ${
+              showAvailability && unavailableTechs.length > 0
+                ? "bg-red-200/50 hover:bg-red-200/70"
+                : ""
+            }`}
           >
             {/* Hour marker line */}
             <div className="absolute inset-x-0 top-0 h-px bg-gray-100" />
+
+            {/* Unavailable technician indicator */}
+            {showAvailability && unavailableTechs.length > 0 && (
+              <div className="absolute right-0.5 top-0.5 text-[10px] font-semibold text-red-700 px-1 py-0.5 rounded bg-red-300/90 z-5 pointer-events-none">
+                {unavailableTechs.length} unavailable
+              </div>
+            )}
 
             {/* Regular jobs that start at this hour */}
             {sortedJobs
@@ -180,7 +202,8 @@ const CalendarColumn = ({
                 );
               })}
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Job Details Modal */}

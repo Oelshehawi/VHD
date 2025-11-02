@@ -1,10 +1,11 @@
-import { fetchAllInvoices, fetchHolidays } from "../../lib/data";
+import { fetchAllInvoices, fetchHolidays, fetchTechnicianAvailability } from "../../lib/data";
 import { fetchAllScheduledJobsWithShifts } from "../../lib/scheduleAndShifts";
 import { auth } from "@clerk/nextjs/server";
 import {
   InvoiceType,
   ScheduleType,
   TechnicianType,
+  AvailabilityType,
 } from "../../../app/lib/typeDefinitions";
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
@@ -20,6 +21,7 @@ const Schedule = async ({
   const invoices: InvoiceType[] = (await fetchAllInvoices()) ?? [];
   let scheduledJobs: ScheduleType[] = await fetchAllScheduledJobsWithShifts();
   const holidays = await fetchHolidays();
+  const availability: AvailabilityType[] = await fetchTechnicianAvailability();
   const { sessionClaims, userId }: any = await auth();
   const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
   const technicians: TechnicianType[] = await getTechnicians();
@@ -51,6 +53,7 @@ const Schedule = async ({
           canManage={canManage}
           holidays={holidays}
           technicians={technicians}
+          availability={availability}
           initialView={view}
           initialDate={date}
         />
