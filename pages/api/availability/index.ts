@@ -3,6 +3,11 @@ import connectMongo from "../../../app/lib/connect";
 import { Availability, AuditLog } from "../../../models/reactDataSchema";
 import { AvailabilityType } from "../../../app/lib/typeDefinitions";
 
+// Helper function to check if string is a valid MongoDB ObjectId
+function isValidObjectId(id: string): boolean {
+  return /^[0-9a-fA-F]{24}$/.test(id);
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -57,7 +62,7 @@ export default async function handler(
     let updatedAvailability: AvailabilityType | null;
     let action: "availability_created" | "availability_updated" = "availability_created";
 
-    if (availabilityId) {
+    if (availabilityId && isValidObjectId(availabilityId)) {
       // Update existing availability
       const oldAvailability = await Availability.findById(availabilityId);
 
