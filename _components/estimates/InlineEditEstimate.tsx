@@ -107,7 +107,6 @@ const InlineEditEstimate = ({
     try {
       await updateEstimateWithId({ status: newStatus });
       toast.success("Status updated successfully!");
-      window.location.reload();
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Error updating status!");

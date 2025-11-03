@@ -31,7 +31,7 @@ const CallLogEntrySchema = new Schema<CallLogEntry>({
   outcome: {
     type: String,
     required: true,
-    enum: Object.values(CALL_OUTCOMES)
+    enum: Object.values(CALL_OUTCOMES),
   },
   notes: { type: String, required: true },
   followUpDate: { type: Date },
@@ -468,7 +468,6 @@ EstimateSchema.index({ status: 1, createdDate: -1 }); // Estimate queries
 ReportSchema.index({ scheduleId: 1 }); // Report lookups
 PayrollPeriodSchema.index({ startDate: 1, endDate: 1 }); // Payroll period queries
 
-
 TechnicianLocationSchema.index({ technicianId: 1, timestamp: -1 }); // For technician location history
 TechnicianLocationSchema.index({ isActive: 1, timestamp: -1 }); // For active technicians
 
@@ -516,7 +515,9 @@ const AuditLogSchema = new Schema<AuditLogEntry>({
       "timeoff_approved",
       "timeoff_rejected",
       "timeoff_deleted",
-      "timeoff_updated"
+      "timeoff_updated",
+      "schedule_confirmed",
+      "schedule_unconfirmed",
     ],
     required: true,
   },

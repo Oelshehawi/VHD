@@ -42,6 +42,8 @@ export const formatDateUTC = (dateInput: string | Date): string => {
  * @param dateInput - Date string in ISO format or Date object  
  * @returns Formatted date string (e.g., "January 15, 2024")
  */
+
+// This is how to display date correctly from our database.
 export const formatDateStringUTC = (dateInput: string | Date): string => {
   let dateString: string | undefined;
   

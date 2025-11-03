@@ -203,13 +203,49 @@ export const deleteJob = async (jobId: string) => {
 export const updateSchedule = async ({
   scheduleId,
   confirmed,
+  performedBy = "system",
 }: {
   scheduleId: string;
   confirmed: boolean;
+  performedBy?: string;
 }) => {
   await connectMongo();
   try {
-    await Schedule.findByIdAndUpdate(scheduleId, { confirmed }, { new: true });
+    // Fetch the schedule to get job details for audit logging
+    const schedule = await Schedule.findByIdAndUpdate(
+      scheduleId,
+      { confirmed },
+      { new: true }
+    );
+
+    if (schedule) {
+      // Create audit log entry for schedule confirmation/unconfirmation
+      const invoice = await Invoice.findById(schedule.invoiceRef).lean<InvoiceType>();
+
+      if (invoice) {
+        const action = confirmed ? "schedule_confirmed" : "schedule_unconfirmed";
+        await AuditLog.create({
+          invoiceId: invoice.invoiceId,
+          action,
+          timestamp: new Date(),
+          performedBy,
+          details: {
+            newValue: {
+              jobTitle: schedule.jobTitle,
+              location: schedule.location,
+              startDateTime: schedule.startDateTime,
+              confirmed,
+            },
+            reason: `Schedule ${confirmed ? "confirmed" : "unconfirmed"}`,
+            metadata: {
+              clientId: invoice.clientId,
+            },
+          },
+          success: true,
+        });
+      }
+    }
+
     revalidatePath("/schedule");
   } catch (error) {
     console.error("Database Error:", error);
@@ -399,7 +435,7 @@ export const getReportsByJobNameAndLocation = async (jobTitle: string, location:
     }
 
     // Get all reports for these schedules
-    const scheduleIds = schedules.map(schedule => schedule._id.toString());
+    const scheduleIds = schedules.map((schedule: any) => schedule._id?.toString());
     const reports = await Report.find({ scheduleId: { $in: scheduleIds } })
       .sort({ dateCompleted: -1 })
       .lean();
@@ -410,8 +446,8 @@ export const getReportsByJobNameAndLocation = async (jobTitle: string, location:
 
     // Map reports with schedule information for better context and ensure proper serialization
     return reports.map((report: any) => {
-      const relatedSchedule = schedules.find(schedule =>
-        schedule._id.toString() === report.scheduleId.toString()
+      const relatedSchedule = schedules.find((schedule: any) =>
+        schedule._id?.toString() === report.scheduleId?.toString()
       );
 
       return {

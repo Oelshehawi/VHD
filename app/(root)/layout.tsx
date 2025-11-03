@@ -8,6 +8,7 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import type { Metadata, Viewport } from "next";
 import SideNavBar from "../../_components/SideNavBar";
 import { getPendingTimeOffCount } from "../lib/data";
+import { QueryProvider } from "../lib/QueryProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -82,24 +83,26 @@ export default async function RootLayout({
 
   return (
     <ClerkProvider>
-      <html lang="en">
-        <head>
-          <link rel="manifest" href="/manifest.json" />
-        </head>
-        <body className={inter.className}>
-          <Toaster position="top-center" />
-          <div className="flex min-h-screen flex-col lg:flex-row">
-            <SideNavBar
-              canManage={canManage as boolean}
-              user={serializedUser}
-              pendingTimeOffCount={pendingTimeOffCount}
-            />
-            <main className="flex-1 lg:ml-20">{children}</main>
-          </div>
-          <SpeedInsights />
-          <Analytics />
-        </body>
-      </html>
+      <QueryProvider>
+        <html lang="en">
+          <head>
+            <link rel="manifest" href="/manifest.json" />
+          </head>
+          <body className={inter.className}>
+            <Toaster position="top-center" />
+            <div className="flex min-h-screen flex-col lg:flex-row">
+              <SideNavBar
+                canManage={canManage as boolean}
+                user={serializedUser}
+                pendingTimeOffCount={pendingTimeOffCount}
+              />
+              <main className="flex-1 lg:ml-20">{children}</main>
+            </div>
+            <SpeedInsights />
+            <Analytics />
+          </body>
+        </html>
+      </QueryProvider>
     </ClerkProvider>
   );
 }

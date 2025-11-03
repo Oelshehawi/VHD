@@ -127,21 +127,129 @@ API routes use folder structure with `index.ts`:
 
 ### Data Fetching
 
-- **Use `fetch` API over axios** (explicit project convention)
-- **Error Handling:** Check `response.ok` before parsing JSON
-- **Reusable Logic:** Place in custom hooks when needed
+#### Server Components (Async Functions)
+- **Call server functions directly** - they are "use server" by default
+- **Error Handling:** Use try/catch or let errors propagate to Suspense boundaries
 - **Close to Consumption:** Keep fetch calls near where data is used
 
 ```typescript
-const response = await fetch("/api/endpoint", {
-  method: "POST",
-  headers: { "Content-Type": "application/json" },
-  body: JSON.stringify(data),
-});
-
-if (!response.ok) throw new Error("Request failed");
-const result = await response.json();
+// Server Component - async function
+export const DashboardPage = async () => {
+  const data = await fetchServerData();
+  return <ClientComponent data={data} />;
+};
 ```
+
+#### Client Components (with TanStack Query)
+- **MUST use TanStack Query** for all data fetching in client components
+- **Never call server functions during initial render** - creates fetch waterfalls and violates RSC contracts
+- **Import and use `useQuery` hook** for caching, refetching, and loading states
+- **Query keys must reference dependencies** - changes trigger refetches automatically
+
+**Basic Pattern:**
+```typescript
+"use client";
+import { useQuery } from "@tanstack/react-query";
+import { fetchServerFunction } from "@/app/lib/actions";
+
+export function MyComponent({ filterValue, dateRange }) {
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["myData", filterValue, dateRange], // Include all deps - triggers refetch on change
+    queryFn: async () => {
+      return await fetchServerFunction(filterValue, dateRange);
+    },
+  });
+
+  if (isLoading) return <LoadingSkeleton />;
+  if (error) return <ErrorState error={error} />;
+  return <div>{/* render data */}</div>;
+}
+```
+
+**Advanced Pattern with Debouncing (for search/date inputs):**
+```typescript
+"use client";
+import { useState, useRef, useCallback, useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+
+export function SearchableComponent() {
+  const [searchInput, setSearchInput] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
+
+  // Debounce search: 500ms delay before state updates
+  const handleSearchChange = useCallback((value: string) => {
+    setSearchInput(value);
+    clearTimeout(debounceTimeoutRef.current);
+    debounceTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearch(value);
+    }, 500);
+  }, []);
+
+  // Fetch uses debouncedSearch, not live input
+  const { data, isLoading } = useQuery({
+    queryKey: ["items", debouncedSearch],
+    queryFn: async () => await searchItems(debouncedSearch),
+  });
+
+  return (
+    <>
+      <input value={searchInput} onChange={(e) => handleSearchChange(e.target.value)} />
+      {isLoading && <Skeleton />}
+      {!isLoading && <Results data={data} />}
+    </>
+  );
+}
+```
+
+**Date Picker Pattern (avoid refetch on arrow clicks):**
+- Use `onBlur` instead of `onChange` on date inputs to prevent rapid refetches
+- Debounce date changes (300ms) so only final date value triggers refetch
+- Never refetch on native date picker arrow clicks
+
+```typescript
+const handleDateBlur = (e: React.FocusEvent<HTMLInputElement>) => {
+  const newDate = e.target.value;
+  dateDebounceTimeoutRef.current = setTimeout(() => {
+    setDate(newDate); // This state change triggers query refetch
+  }, 300);
+};
+
+<input type="date" onBlur={handleDateBlur} />
+```
+
+**QueryProvider Setup (Required):**
+The app requires a `QueryProvider` wrapper at the root to avoid serialization errors:
+
+```typescript
+// app/lib/QueryProvider.tsx (client component)
+"use client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+const queryClient = new QueryClient();
+
+export function QueryProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <QueryClientProvider client={queryClient}>
+      {children}
+    </QueryClientProvider>
+  );
+}
+
+// app/(root)/layout.tsx - use QueryProvider instead of QueryClientProvider
+<QueryProvider>
+  {children}
+</QueryProvider>
+```
+
+#### Best Practices
+- **Server Components**: Initial page loads, authentication, SEO-critical data
+- **Client + TanStack Query**: User interactions, filters, dynamic parameters, tabs, modal data
+- **Query Key Dependencies**: Always include filters, search, dates in queryKey - auto-triggers refetch
+- **Loading States**: Show skeleton loaders during load, NOT "no data" messages
+- **Debouncing**: Use timeouts for search (500ms) and date changes (300ms) to prevent excessive API calls
+- **Pattern**: Server fetches initial data → passes to client → client uses TanStack for interactive updates
+- **CRITICAL**: Never call server functions during client component render (violates RSC pattern)
 
 ### Component Structure
 

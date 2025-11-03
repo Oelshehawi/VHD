@@ -13,6 +13,7 @@ import ClientDetails from "./ClientDetails";
 import PriceBreakdown from "./PriceBreakdown";
 import GeneratePDF, { type ReceiptData } from "../pdf/GeneratePDF";
 import ReceiptModal from "./ReceiptModal";
+import InvoiceConfirmationModal from "./InvoiceConfirmationModal";
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
 import {
   calculateGST,
@@ -43,9 +44,10 @@ const InvoiceDetailsContainer = ({
   } | null>(null);
   const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
   const [exchangeRate, setExchangeRate] = useState<number>(1.35); // Default CAD to USD rate
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
   // Email sending with debounce
-  const { isProcessing: isSendingEmail, debouncedSubmit: handleSendInvoice } =
+  const { isProcessing: isSendingEmail, debouncedSubmit: handleSendInvoiceConfirmed } =
     useDebounceSubmit({
       onSubmit: async () => {
         const performedBy = user?.fullName || user?.firstName || "user";
@@ -53,10 +55,22 @@ const InvoiceDetailsContainer = ({
         if (!response.success) {
           throw new Error(response.error || "Failed to send invoice email");
         }
+        // Close modal after successful send
+        setShowConfirmationModal(false);
       },
       successMessage: "Invoice email sent successfully",
       delay: 500,
     });
+
+  // Open confirmation modal instead of sending directly
+  const handleSendInvoice = () => {
+    setShowConfirmationModal(true);
+  };
+
+  // Handle confirmation modal cancel
+  const handleCancelConfirmation = () => {
+    setShowConfirmationModal(false);
+  };
 
   const toggleEdit = () => {
     setIsEditing(!isEditing);
@@ -487,6 +501,18 @@ const InvoiceDetailsContainer = ({
           <ClientDetails client={client} canManage={canManage} />
         </div>
       </div>
+
+      {/* Invoice Confirmation Modal */}
+      <InvoiceConfirmationModal
+        invoice={invoice}
+        client={client}
+        isOpen={showConfirmationModal}
+        isLoading={isSendingEmail}
+        onConfirm={() => {
+          handleSendInvoiceConfirmed(undefined);
+        }}
+        onCancel={handleCancelConfirmation}
+      />
 
       {/* Receipt Modal */}
       <ReceiptModal

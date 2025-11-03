@@ -570,18 +570,34 @@ export interface DisplayAction {
   };
 }
 
-export const fetchRecentActions = async (): Promise<DisplayAction[]> => {
+export const fetchRecentActions = async (
+  startDate?: Date,
+  endDate?: Date,
+  searchQuery?: string
+): Promise<DisplayAction[]> => {
   await connectMongo();
 
   try {
-    // Calculate timestamp for 2 weeks ago
-    const twoWeeksAgo = new Date();
-    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+    // If no dates provided, default to current month
+    let queryStartDate = startDate;
+    let queryEndDate = endDate;
 
-    // Fetch recent audit logs from the last 2 weeks (no count limit, just time-based)
-    const auditLogs = await AuditLog.find({
-      timestamp: { $gte: twoWeeksAgo },
-    })
+    if (!startDate || !endDate) {
+      const now = new Date();
+      queryStartDate = new Date(now.getFullYear(), now.getMonth(), 1);
+      queryStartDate.setHours(0, 0, 0, 0);
+
+      queryEndDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      queryEndDate.setHours(23, 59, 59, 999);
+    }
+
+    // Build the query filter
+    const query: any = {
+      timestamp: { $gte: queryStartDate, $lte: queryEndDate },
+    };
+
+    // Fetch recent audit logs based on date range
+    let auditLogs = await AuditLog.find(query)
       .sort({ timestamp: -1 })
       .lean()
       .exec();
@@ -647,6 +663,12 @@ export const fetchRecentActions = async (): Promise<DisplayAction[]> => {
           hour12: true,
         });
         description = `Schedule Created: ${jobTitle} at ${location} on ${formattedDate} at ${formattedTime} for ${hours}h`;
+      } else if (log.action === "schedule_confirmed" && log.details?.newValue) {
+        const jobTitle = log.details.newValue.jobTitle || "Untitled";
+        description = `Schedule Confirmed: ${jobTitle}`;
+      } else if (log.action === "schedule_unconfirmed" && log.details?.newValue) {
+        const jobTitle = log.details.newValue.jobTitle || "Untitled";
+        description = `Schedule Unconfirmed: ${jobTitle}`;
       } else if (log.action === "invoice_created" && log.details?.newValue) {
         const jobTitle = log.details.newValue.jobTitle || "Untitled";
         description = `Invoice Created: ${jobTitle}`;
@@ -711,8 +733,33 @@ export const fetchRecentActions = async (): Promise<DisplayAction[]> => {
       }
     });
 
+    // Apply search filter if provided
+    let filtered = displayActions;
+    if (searchQuery && searchQuery.trim().length > 0) {
+      const lowerQuery = searchQuery.toLowerCase();
+      filtered = displayActions.filter((action) => {
+        // Search in description
+        if (action.description.toLowerCase().includes(lowerQuery)) return true;
+        // Search in job title
+        if (action.details?.newValue?.jobTitle?.toLowerCase().includes(lowerQuery)) return true;
+        // Search in client name
+        if (action.metadata?.clientName?.toLowerCase().includes(lowerQuery)) return true;
+        // Search in client email
+        if (action.details?.newValue?.clientEmail?.toLowerCase().includes(lowerQuery)) return true;
+        // Search in invoice ID
+        if (action.details?.newValue?.invoiceId?.toLowerCase().includes(lowerQuery)) return true;
+        // Search in action label
+        if (formatActionDescription(action.action).toLowerCase().includes(lowerQuery)) return true;
+        // Search in performed by name
+        if (action.performedByName.toLowerCase().includes(lowerQuery)) return true;
+        // Search in location
+        if (action.details?.newValue?.location?.toLowerCase().includes(lowerQuery)) return true;
+        return false;
+      });
+    }
+
     // Sort by timestamp descending
-    const sorted = displayActions.sort(
+    const sorted = filtered.sort(
       (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
     );
 
@@ -770,6 +817,8 @@ const formatActionDescription = (action: string, clientName?: string): string =>
     invoice_created: "Invoice Created",
     invoice_emailed: "Invoice Sent",
     schedule_created: "Schedule Created",
+    schedule_confirmed: "Schedule Confirmed",
+    schedule_unconfirmed: "Schedule Unconfirmed",
     call_logged_job: "Job Call Logged",
     call_logged_payment: "Payment Call Logged",
     reminder_configured: "Reminder Configured",
@@ -787,8 +836,11 @@ const getActionSeverity = (action: string): "success" | "info" | "warning" | "er
   if (action.includes("invoice_created") || action.includes("invoice_emailed")) {
     return "info";
   }
-  if (action.includes("schedule_created")) {
+  if (action.includes("schedule_created") || action.includes("schedule_confirmed")) {
     return "success";
+  }
+  if (action.includes("schedule_unconfirmed")) {
+    return "warning";
   }
   if (action.includes("call_logged")) {
     return "warning";
@@ -810,6 +862,55 @@ export interface AnalyticsMetrics {
   paidCount: number;
   jobsDueSoon: number;
 }
+
+export interface JobsDueDataType {
+  invoicesWithSchedule: DueInvoiceType[];
+  scheduledCount: number;
+  unscheduledCount: number;
+}
+
+/**
+ * Combined server function to fetch all jobs due data in a single request.
+ * Replaces 4 separate function calls with 1 to reduce network requests.
+ */
+export const fetchJobsDueData = async ({
+  month,
+  year,
+}: {
+  month: string | undefined;
+  year: string | number;
+}): Promise<JobsDueDataType> => {
+  try {
+    // Fetch invoices with schedule status (combines fetchDueInvoices + checkScheduleStatus)
+    const dueInvoices = await fetchDueInvoices({ month, year });
+    const invoicesWithSchedule = await checkScheduleStatus(dueInvoices);
+
+    if (!Array.isArray(invoicesWithSchedule)) {
+      throw new Error("Failed to load invoices");
+    }
+
+    // Calculate counts from the already-fetched data instead of making 2 extra DB queries
+    const scheduledCount = invoicesWithSchedule.filter(
+      (invoice) => invoice.isScheduled
+    ).length;
+    const unscheduledCount = invoicesWithSchedule.filter(
+      (invoice) => !invoice.isScheduled
+    ).length;
+
+    return {
+      invoicesWithSchedule,
+      scheduledCount,
+      unscheduledCount,
+    };
+  } catch (error) {
+    console.error("Error fetching jobs due data:", error);
+    return {
+      invoicesWithSchedule: [],
+      scheduledCount: 0,
+      unscheduledCount: 0,
+    };
+  }
+};
 
 export const fetchAnalyticsMetrics = async (): Promise<AnalyticsMetrics> => {
   await connectMongo();

@@ -8,10 +8,10 @@ import {
   getClientCount,
   getPendingInvoiceAmount,
   getPendingInvoices,
-  fetchRecentActions,
 } from "../../lib/dashboard.data";
 import { FaPeopleGroup } from "react-icons/fa6";
 import ActionsFeed from "../../../_components/dashboard/ActionsFeed";
+import MobileTabInterface from "../../../_components/dashboard/MobileTabInterface";
 //@ts-ignore
 import { auth } from "@clerk/nextjs/server";
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
@@ -24,11 +24,10 @@ const DashboardPage = async ({
 }) => {
   const resolvedSearchParams = await searchParams;
 
-  const [{ sessionClaims }, amount, pendingInvoices, recentActions] = await Promise.all([
+  const [{ sessionClaims }, amount, pendingInvoices] = await Promise.all([
     auth(),
     getPendingInvoiceAmount(),
     getPendingInvoices(),
-    fetchRecentActions()
   ]);
 
 
@@ -68,11 +67,12 @@ const DashboardPage = async ({
         </Suspense>
       </div>
 
-      {/* Activity Feed and Jobs Due */}
-      <div className="flex flex-col gap-8 lg:flex-row">
+      {/* Activity Feed and Jobs Due - With Mobile Tabs */}
+      {/* Desktop: Side by side layout */}
+      <div className="hidden md:flex flex-col gap-8 lg:flex-row">
         <Suspense fallback={<div className="rounded-xl bg-white p-8 shadow-lg border border-gray-200 h-[400px] animate-pulse" />}>
           <div className="flex-1 lg:h-[680px]">
-            <ActionsFeed actions={recentActions} />
+            <ActionsFeed />
           </div>
         </Suspense>
         <Suspense fallback={<JobsDueContainerSkeleton />}>
@@ -81,6 +81,9 @@ const DashboardPage = async ({
           </div>
         </Suspense>
       </div>
+
+      {/* Mobile: Tab interface - Jobs Due first */}
+      <MobileTabInterface searchParams={resolvedSearchParams} />
     </div>
   );
 };

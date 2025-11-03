@@ -1,59 +1,180 @@
+"use client";
+
+import { useMemo, useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { DashboardSearchParams } from "../../app/lib/typeDefinitions";
 import InvoiceRow from "./InvoiceRow";
 import CustomSelect from "./CustomSelect";
 import {
-  checkScheduleStatus,
-  getScheduledCount,
-  getUnscheduledCount,
-  fetchDueInvoices,
+  fetchJobsDueData,
 } from "../../app/lib/dashboard.data";
 import { FaCalendarAlt, FaFilter, FaClock } from "react-icons/fa";
 import ScheduledJobsBox from "./ScheduledJobsBox";
 import { CallLogProvider } from "./CallLogManager";
+
+// Constants
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const YEARS = Array.from({ length: 8 }, (_, i) => 2024 + i);
 
 // Helper function to serialize objects (convert to plain objects)
 const serializeData = <T,>(data: T): T => {
   return JSON.parse(JSON.stringify(data));
 };
 
-const JobsDueContainer = async ({
+const JobsDueContainer = ({
   searchParams,
 }: {
   searchParams: DashboardSearchParams;
 }) => {
-  const months = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
+  // Calculate current date at render time (not at module load)
+  const currentDate = new Date();
+  const currentMonth = MONTHS[currentDate.getMonth()];
+  const currentYear = currentDate.getFullYear();
 
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 8 }, (_, i) => 2024 + i);
-
-  const month = searchParams.month || months[new Date().getMonth()];
+  // Use searchParams if provided, otherwise default to current month/year
+  const month = searchParams.month || currentMonth;
   const year = searchParams.year || currentYear;
 
-  // Add type safety for result
-  const result: { month: string; year: number } = {
-    month: month || "",
-    year: typeof year === "string" ? parseInt(year) : year,
-  };
+  // Local state for month/year to avoid server re-renders
+  const [displayMonth, setDisplayMonth] = useState(month);
+  const [displayYear, setDisplayYear] = useState(typeof year === "string" ? parseInt(year) : year);
 
-  // Fetch all due invoices and check their schedule status
-  const dueInvoices = await fetchDueInvoices(result);
-  const invoicesWithSchedule = await checkScheduleStatus(dueInvoices);
+  // Update URL without triggering server re-renders
+  const updateUrl = useCallback((newMonth: string | undefined, newYear: number) => {
+    if (!newMonth) return;
+    const params = new URLSearchParams();
+    params.set("month", newMonth);
+    params.set("year", newYear.toString());
+    if (searchParams?.scheduled) params.set("scheduled", searchParams.scheduled);
 
-  // Add type safety
-  if (!Array.isArray(invoicesWithSchedule)) {
+    const newUrl = `?${params.toString()}`;
+    window.history.pushState({ month: newMonth, year: newYear }, "", newUrl);
+  }, [searchParams?.scheduled]);
+
+  // Handler for month selection from dropdown
+  const handleMonthChange = useCallback(
+    (selectedMonth: string | number) => {
+      const monthStr = String(selectedMonth);
+      setDisplayMonth(monthStr);
+      updateUrl(monthStr, displayYear);
+    },
+    [displayYear, updateUrl]
+  );
+
+  // Handler for year selection from dropdown
+  const handleYearChange = useCallback(
+    (selectedYear: string | number) => {
+      const yearNum = typeof selectedYear === "string" ? parseInt(selectedYear) : selectedYear;
+      setDisplayYear(yearNum);
+      updateUrl(displayMonth || MONTHS[0], yearNum);
+    },
+    [displayMonth, updateUrl]
+  );
+
+  // Handler for month navigation arrows (previous/next)
+  const navigateMonth = useCallback(
+    (offset: number) => {
+      const currentMonthIndex = MONTHS.indexOf(displayMonth || "");
+      const currentYearNum = displayYear;
+
+      let newMonthIndex = currentMonthIndex + offset;
+      let newYear = currentYearNum;
+
+      if (newMonthIndex < 0) {
+        newMonthIndex = 11;
+        newYear -= 1;
+      } else if (newMonthIndex > 11) {
+        newMonthIndex = 0;
+        newYear += 1;
+      }
+
+      const newMonthStr = MONTHS[newMonthIndex];
+      setDisplayMonth(newMonthStr);
+      setDisplayYear(newYear);
+      updateUrl(newMonthStr, newYear);
+    },
+    [displayMonth, displayYear, updateUrl]
+  );
+
+  // Fetch data using TanStack Query
+  const { data: invoicesData, isLoading, error } = useQuery({
+    queryKey: ["jobsDue", displayMonth, displayYear],
+    queryFn: async () => {
+      return await fetchJobsDueData({
+        month: displayMonth || "",
+        year: displayYear,
+      });
+    },
+  });
+
+  // Compute filtered data from query result
+  const { totalDue, displayInvoices, scheduledInvoices, scheduledCount, unscheduledCount } = useMemo(() => {
+    if (!invoicesData) {
+      return {
+        totalDue: 0,
+        displayInvoices: [],
+        scheduledInvoices: [],
+        scheduledCount: 0,
+        unscheduledCount: 0,
+      };
+    }
+
+    const { invoicesWithSchedule, scheduledCount, unscheduledCount } = invoicesData;
+    const total = invoicesWithSchedule?.length || 0;
+
+    // Filter for display based on isScheduled - default to showing unscheduled
+    const display = invoicesWithSchedule.filter((invoice) =>
+      searchParams?.scheduled === "true"
+        ? invoice?.isScheduled
+        : !invoice?.isScheduled,
+    );
+
+    // Get scheduled invoices for the modal
+    const scheduled = invoicesWithSchedule.filter(
+      (invoice) => invoice?.isScheduled,
+    );
+
+    return {
+      totalDue: total,
+      displayInvoices: serializeData(display),
+      scheduledInvoices: serializeData(scheduled),
+      scheduledCount,
+      unscheduledCount,
+    };
+  }, [invoicesData]);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-full w-full flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-lg animate-pulse">
+        <div className="flex items-center justify-between mb-4">
+          <div className="h-8 w-48 bg-gray-200 rounded"></div>
+          <div className="h-12 w-12 bg-gray-200 rounded-xl"></div>
+        </div>
+        <div className="space-y-4">
+          <div className="h-6 w-full bg-gray-100 rounded"></div>
+          <div className="h-64 w-full bg-gray-100 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
     return (
       <div className="flex h-full w-full flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-lg">
         <div className="flex h-full items-center justify-center">
@@ -66,29 +187,6 @@ const JobsDueContainer = async ({
       </div>
     );
   }
-
-  // Get total counts with safety checks
-  const totalDue = invoicesWithSchedule?.length || 0;
-  const invoiceIds =
-    invoicesWithSchedule?.map((invoice) => invoice.invoiceId) || [];
-  const scheduledCount = (await getScheduledCount(invoiceIds)) || 0;
-  const unscheduledCount = (await getUnscheduledCount(invoiceIds)) || 0;
-
-  // Filter for display based on isScheduled - default to showing unscheduled
-  const displayInvoices = invoicesWithSchedule.filter((invoice) =>
-    searchParams?.scheduled === "true"
-      ? invoice?.isScheduled
-      : !invoice?.isScheduled,
-  );
-
-  // Get scheduled invoices for the modal
-  const scheduledInvoices = invoicesWithSchedule.filter(
-    (invoice) => invoice?.isScheduled,
-  );
-
-  // Ensure we're passing serialized data to client components
-  const serializedScheduledInvoices = serializeData(scheduledInvoices);
-  const serializedDisplayInvoices = serializeData(displayInvoices);
 
   return (
     <CallLogProvider>
@@ -114,7 +212,7 @@ const JobsDueContainer = async ({
         <ScheduledJobsBox
           scheduledCount={scheduledCount}
           unscheduledCount={unscheduledCount}
-          scheduledInvoices={serializedScheduledInvoices}
+          scheduledInvoices={scheduledInvoices}
         />
       </div>
 
@@ -125,77 +223,43 @@ const JobsDueContainer = async ({
           <span className="text-sm font-medium text-gray-700 mr-2">Filter by:</span>
           <div className="flex flex-wrap gap-2">
             <CustomSelect
-              values={months}
-              currentValue={month}
+              values={MONTHS}
+              currentValue={displayMonth}
               urlName="month"
               searchParams={searchParams}
+              onChange={handleMonthChange}
             />
             <CustomSelect
-              values={years}
-              currentValue={year}
+              values={YEARS}
+              currentValue={displayYear.toString()}
               urlName="year"
               searchParams={searchParams}
+              onChange={handleYearChange}
             />
           </div>
         </div>
 
         {/* Month Navigation Arrows */}
         <div className="flex items-center gap-2">
-          <a
-            href={(() => {
-              const currentMonthIndex = months.indexOf(month || "");
-              const currentYearNum = typeof year === "string" ? parseInt(year) : year;
-
-              let prevMonth = currentMonthIndex - 1;
-              let prevYear = currentYearNum;
-
-              if (prevMonth < 0) {
-                prevMonth = 11;
-                prevYear -= 1;
-              }
-
-              const params = new URLSearchParams();
-              params.set('month', months[prevMonth] || "");
-              params.set('year', prevYear.toString());
-              if (searchParams?.scheduled) params.set('scheduled', searchParams.scheduled);
-
-              return `?${params.toString()}`;
-            })()}
+          <button
+            onClick={() => navigateMonth(-1)}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:border-gray-400"
             title="Previous Month"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-          </a>
+          </button>
 
-          <a
-            href={(() => {
-              const currentMonthIndex = months.indexOf(month || "");
-              const currentYearNum = typeof year === "string" ? parseInt(year) : year;
-
-              let nextMonth = currentMonthIndex + 1;
-              let nextYear = currentYearNum;
-
-              if (nextMonth > 11) {
-                nextMonth = 0;
-                nextYear += 1;
-              }
-
-              const params = new URLSearchParams();
-              params.set('month', months[nextMonth] || "");
-              params.set('year', nextYear.toString());
-              if (searchParams?.scheduled) params.set('scheduled', searchParams.scheduled);
-
-              return `?${params.toString()}`;
-            })()}
+          <button
+            onClick={() => navigateMonth(1)}
             className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:border-gray-400"
             title="Next Month"
           >
             <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </a>
+          </button>
         </div>
       </div>
 
@@ -223,7 +287,7 @@ const JobsDueContainer = async ({
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200 bg-white">
-                {serializedDisplayInvoices.length === 0 ? (
+                {displayInvoices.length === 0 ? (
                   <tr>
                     <td className="px-4 py-12 text-center" colSpan={3}>
                       <div className="flex flex-col items-center justify-center">
@@ -234,7 +298,7 @@ const JobsDueContainer = async ({
                     </td>
                   </tr>
                 ) : (
-                  serializedDisplayInvoices.map((invoice) => (
+                  displayInvoices.map((invoice) => (
                     <InvoiceRow key={invoice.invoiceId} invoiceData={invoice} />
                   ))
                 )}

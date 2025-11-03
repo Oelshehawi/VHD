@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 import { motion, AnimatePresence } from "framer-motion";
 import { createPortal } from "react-dom";
 import { ScheduleType, ReportType } from "../../app/lib/typeDefinitions";
@@ -42,6 +43,7 @@ export default function JobDetailsModal({
   canManage,
   technicians,
 }: JobDetailsModalProps) {
+  const { user } = useUser();
   const [activeView, setActiveView] = useState<ModalView>("details");
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmed, setConfirmed] = useState(false);
@@ -100,9 +102,12 @@ export default function JobDetailsModal({
     const newStatus = !isConfirmed;
 
     try {
+      const performedBy = user?.fullName || user?.firstName || "user";
+
       await updateSchedule({
         scheduleId: job._id.toString(),
         confirmed: newStatus,
+        performedBy,
       });
 
       toast.success(

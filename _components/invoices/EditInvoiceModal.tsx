@@ -94,7 +94,6 @@ const InlineEditInvoice = ({
       toast.success("Status updated successfully!");
       setShowPaymentModal(false);
       // Refresh the page to show updated payment info
-      window.location.reload();
     } catch (error) {
       console.error("Error updating status:", error);
       toast.error("Error updating status!");
