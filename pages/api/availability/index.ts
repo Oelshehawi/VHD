@@ -1,25 +1,60 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import connectMongo from "../../../app/lib/connect";
 import { Availability, AuditLog } from "../../../models/reactDataSchema";
-import { AvailabilityType } from "../../../app/lib/typeDefinitions";
 
-// Helper function to check if string is a valid MongoDB ObjectId
-function isValidObjectId(id: string): boolean {
-  return /^[0-9a-fA-F]{24}$/.test(id);
+// Helper function to validate time format
+function validateTimeFormat(time: string): boolean {
+  const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+  return timeRegex.test(time);
+}
+
+// Helper function to validate time logic
+function validateTimeLogic(startTime: string, endTime: string, isFullDay: boolean): string | null {
+  const startParts = startTime.split(":");
+  const endParts = endTime.split(":");
+
+  if (startParts.length !== 2 || endParts.length !== 2) {
+    return "Invalid time format";
+  }
+
+  const startHour = parseInt(startParts[0] ?? "0", 10);
+  const startMin = parseInt(startParts[1] ?? "0", 10);
+  const endHour = parseInt(endParts[0] ?? "0", 10);
+  const endMin = parseInt(endParts[1] ?? "0", 10);
+
+  const startTimeMinutes = startHour * 60 + startMin;
+  const endTimeMinutes = endHour * 60 + endMin;
+
+  if (startTimeMinutes >= endTimeMinutes && !isFullDay) {
+    return "Start time must be before end time";
+  }
+  return null;
 }
 
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
 ) {
-  // Only allow POST requests
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" });
+  // Route to appropriate handler based on HTTP method
+  switch (req.method) {
+    case "POST":
+      return handlePost(req, res);
+    case "PATCH":
+      return handlePatch(req, res);
+    case "DELETE":
+      return handleDelete(req, res);
+    default:
+      return res.status(405).json({ message: "Method not allowed" });
   }
+}
 
+/**
+ * POST: Create a new availability entry
+ */
+async function handlePost(req: NextApiRequest, res: NextApiResponse) {
   try {
     // Extract availability data from request body
-    const { technicianId, availabilityId, ...availabilityData } = req.body;
+    const { technicianId, ...availabilityData } = req.body;
 
     // Validate required fields
     if (!technicianId) {
@@ -31,19 +66,14 @@ export default async function handler(
     }
 
     // Validate time format (HH:mm)
-    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
-    if (!timeRegex.test(availabilityData.startTime) || !timeRegex.test(availabilityData.endTime)) {
+    if (!validateTimeFormat(availabilityData.startTime) || !validateTimeFormat(availabilityData.endTime)) {
       return res.status(400).json({ message: "Invalid time format. Use HH:mm" });
     }
 
     // Validate start time < end time
-    const [startHour, startMin] = availabilityData.startTime.split(":").map(Number);
-    const [endHour, endMin] = availabilityData.endTime.split(":").map(Number);
-    const startTimeMinutes = startHour * 60 + startMin;
-    const endTimeMinutes = endHour * 60 + endMin;
-
-    if (startTimeMinutes >= endTimeMinutes && !availabilityData.isFullDay) {
-      return res.status(400).json({ message: "Start time must be before end time" });
+    const timeError = validateTimeLogic(availabilityData.startTime, availabilityData.endTime, availabilityData.isFullDay);
+    if (timeError) {
+      return res.status(400).json({ message: timeError });
     }
 
     // For recurring patterns, dayOfWeek is required
@@ -59,65 +89,125 @@ export default async function handler(
     // Connect to the database
     await connectMongo();
 
-    let updatedAvailability: AvailabilityType | null;
-    let action: "availability_created" | "availability_updated" = "availability_created";
+    // Create new availability
+    const newAvailability = new Availability({
+      technicianId,
+      ...availabilityData,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
-    if (availabilityId && isValidObjectId(availabilityId)) {
-      // Update existing availability
-      const oldAvailability = await Availability.findById(availabilityId);
+    const savedAvailability = await newAvailability.save();
 
-      updatedAvailability = await Availability.findByIdAndUpdate(
-        availabilityId,
-        {
-          ...availabilityData,
-          updatedAt: new Date(),
-        },
-        { new: true, runValidators: true },
-      );
-
-      if (!updatedAvailability) {
-        return res.status(404).json({ message: "Availability not found" });
-      }
-
-      action = "availability_updated";
-
-      // Create audit log for update
-      await AuditLog.create({
-        invoiceId: "system", // System-level action
-        action,
-        timestamp: new Date(),
-        performedBy: technicianId,
-        details: {
-          oldValue: oldAvailability,
-          newValue: updatedAvailability,
-        },
-        success: true,
-      });
-    } else {
-      // Create new availability
-      const newAvailability = new Availability({
-        technicianId,
-        ...availabilityData,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
-
-      updatedAvailability = await newAvailability.save();
-
-      // Create audit log for creation
-      await AuditLog.create({
-        invoiceId: "system", // System-level action
-        action: "availability_created",
-        timestamp: new Date(),
-        performedBy: technicianId,
-        details: {
-          newValue: updatedAvailability,
-        },
-        success: true,
-      });
-    }
+    // Create audit log for creation
+    await AuditLog.create({
+      invoiceId: "system",
+      action: "availability_created",
+      timestamp: new Date(),
+      performedBy: technicianId,
+      details: {
+        newValue: savedAvailability,
+      },
+      success: true,
+    });
 
     // Return success response
+    return res.status(201).json({
+      message: "Availability created successfully",
+      availability: savedAvailability,
+    });
+  } catch (error) {
+    console.error("Error creating availability:", error);
+    return res.status(500).json({
+      message: "Failed to create availability",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+/**
+ * PATCH: Update an existing availability entry
+ */
+async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const { id, technicianId, startTime, endTime, ...otherData } = req.body;
+
+    // Validate that ID is provided
+    if (!id) {
+      return res.status(400).json({ message: "Availability ID is required" });
+    }
+
+    // Connect to the database
+    await connectMongo();
+
+    // Find the existing availability
+    const existingAvailability = await Availability.findById(id);
+    if (!existingAvailability) {
+      return res.status(404).json({ message: "Availability not found" });
+    }
+
+    // Prepare update object with only provided fields
+    const updateData: Record<string, unknown> = { ...otherData };
+
+    if (startTime !== undefined) {
+      if (!validateTimeFormat(startTime)) {
+        return res.status(400).json({ message: "Invalid start time format. Use HH:mm" });
+      }
+      updateData.startTime = startTime;
+    }
+
+    if (endTime !== undefined) {
+      if (!validateTimeFormat(endTime)) {
+        return res.status(400).json({ message: "Invalid end time format. Use HH:mm" });
+      }
+      updateData.endTime = endTime;
+    }
+
+    // Validate time logic if times are being updated
+    if (startTime !== undefined || endTime !== undefined) {
+      const finalStartTime = startTime || existingAvailability.startTime;
+      const finalEndTime = endTime || existingAvailability.endTime;
+      const finalIsFullDay = otherData.isFullDay ?? existingAvailability.isFullDay;
+      const timeError = validateTimeLogic(finalStartTime, finalEndTime, finalIsFullDay);
+      if (timeError) {
+        return res.status(400).json({ message: timeError });
+      }
+    }
+
+    // Validate recurring/specific date logic
+    if (otherData.isRecurring === true && otherData.dayOfWeek === undefined && existingAvailability.dayOfWeek === undefined) {
+      return res.status(400).json({ message: "Day of week is required for recurring availability" });
+    }
+
+    if (otherData.isRecurring === false && otherData.specificDate === undefined && !existingAvailability.specificDate) {
+      return res.status(400).json({ message: "Specific date is required for non-recurring availability" });
+    }
+
+    updateData.updatedAt = new Date();
+
+    // Update the availability
+    const updatedAvailability = await Availability.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
+
+    // Create audit log for update
+    await AuditLog.create({
+      invoiceId: "system",
+      action: "availability_updated",
+      timestamp: new Date(),
+      performedBy: existingAvailability.technicianId,
+      details: {
+        oldValue: existingAvailability,
+        newValue: updatedAvailability,
+        metadata: {
+          availabilityId: id,
+          updatedFields: Object.keys(updateData),
+        },
+      },
+      success: true,
+    });
+
     return res.status(200).json({
       message: "Availability updated successfully",
       availability: updatedAvailability,
@@ -126,6 +216,56 @@ export default async function handler(
     console.error("Error updating availability:", error);
     return res.status(500).json({
       message: "Failed to update availability",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+}
+
+/**
+ * DELETE: Delete an availability entry
+ */
+async function handleDelete(req: NextApiRequest, res: NextApiResponse) {
+  try {
+    const { id } = req.body;
+
+    // Validate that ID is provided
+    if (!id) {
+      return res.status(400).json({ message: "Availability ID is required" });
+    }
+
+    // Connect to the database
+    await connectMongo();
+
+    // Find and delete the availability
+    const deletedAvailability = await Availability.findByIdAndDelete(id);
+
+    if (!deletedAvailability) {
+      return res.status(404).json({ message: "Availability not found" });
+    }
+
+    // Create audit log for deletion
+    await AuditLog.create({
+      invoiceId: "system",
+      action: "availability_deleted",
+      timestamp: new Date(),
+      performedBy: deletedAvailability.technicianId,
+      details: {
+        oldValue: deletedAvailability,
+        metadata: {
+          availabilityId: id,
+        },
+      },
+      success: true,
+    });
+
+    return res.status(200).json({
+      message: "Availability deleted successfully",
+      availability: deletedAvailability,
+    });
+  } catch (error) {
+    console.error("Error deleting availability:", error);
+    return res.status(500).json({
+      message: "Failed to delete availability",
       error: error instanceof Error ? error.message : "Unknown error",
     });
   }

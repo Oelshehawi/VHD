@@ -7,6 +7,11 @@ import { format } from "date-fns";
 import { formatTimeRange12hr } from "../../app/lib/utils/timeFormatUtils";
 import DeleteModal from "../DeleteModal";
 import toast from "react-hot-toast";
+import {
+  TrashIcon,
+  CalendarIcon,
+  ArrowPathIcon,
+} from "@heroicons/react/24/outline";
 
 interface AvailabilityTableProps {
   availability: AvailabilityType[];
@@ -59,88 +64,93 @@ export function AvailabilityTable({
     }
   };
 
-  const formatAvailabilityLabel = (entry: AvailabilityType): string => {
-    if (entry.isRecurring) {
-      const day = DAYS_OF_WEEK[entry.dayOfWeek || 0];
-      if (entry.isFullDay) {
-        return `Every ${day} (All day)`;
-      }
-      const timeRange = formatTimeRange12hr(entry.startTime || "00:00", entry.endTime || "23:59");
-      return `Every ${day} (${timeRange})`;
-    }
-
-    if (entry.specificDate) {
-      const date = new Date(entry.specificDate);
-      const dateStr = format(date, "MMMM d, yyyy");
-      if (entry.isFullDay) {
-        return `${dateStr} (All day)`;
-      }
-      const timeRange = formatTimeRange12hr(entry.startTime || "00:00", entry.endTime || "23:59");
-      return `${dateStr} (${timeRange})`;
-    }
-
-    return "Unknown";
-  };
-
   if (availability.length === 0) {
     return (
-      <div className="text-center py-8 bg-gray-50 rounded-lg">
-        <p className="text-gray-500">No availability entries yet</p>
+      <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+        <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
+        <p className="text-gray-500 font-medium">No availability entries yet</p>
       </div>
     );
   }
 
+  // Group by recurring and one-time
+  const recurringEntries = availability.filter((a) => a.isRecurring);
+  const oneTimeEntries = availability.filter((a) => !a.isRecurring);
+
   return (
     <>
-      <div className="overflow-x-auto max-h-[600px] border border-gray-200 rounded-lg">
-        <table className="w-full border-collapse">
-          <thead className="sticky top-0 bg-gray-100 border-b z-10">
-            <tr>
-              <th className="p-3 text-left font-semibold text-gray-700">Technician</th>
-              <th className="p-3 text-left font-semibold text-gray-700">Unavailability</th>
-              <th className="p-3 text-left font-semibold text-gray-700">Type</th>
-              <th className="p-3 text-left font-semibold text-gray-700">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {availability.length === 0 ? (
-              <tr>
-                <td colSpan={4} className="p-8 text-center text-gray-500">
-                  No availability entries yet
-                </td>
-              </tr>
-            ) : (
-              availability.map((entry) => (
-                <tr key={entry._id?.toString() || ""} className="border-b hover:bg-gray-50">
-                  <td className="p-3 text-gray-700">
-                    {technicians[entry.technicianId] || entry.technicianId}
-                  </td>
-                  <td className="p-3 text-gray-700">{formatAvailabilityLabel(entry)}</td>
-                  <td className="p-3 text-sm">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        entry.isRecurring
-                          ? "bg-blue-100 text-blue-700"
-                          : "bg-orange-100 text-orange-700"
-                      }`}
-                    >
-                      {entry.isRecurring ? "Recurring" : "One-time"}
-                    </span>
-                  </td>
-                  <td className="p-3">
-                    <button
-                      onClick={() => handleDeleteClick(entry)}
-                      disabled={loading}
-                      className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              ))
-            )}
-          </tbody>
-        </table>
+      <div className="space-y-8">
+        {/* Recurring Entries */}
+        {recurringEntries.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <ArrowPathIcon className="h-4 w-4 text-indigo-600" />
+              <h3 className="text-sm font-semibold text-gray-800">Recurring</h3>
+              <span className="text-xs font-medium text-gray-600">({recurringEntries.length})</span>
+            </div>
+            <div className="space-y-1.5">
+              {recurringEntries.map((entry) => (
+                <div
+                  key={entry._id?.toString() || ""}
+                  className="bg-indigo-50 border border-indigo-200 rounded p-2 hover:shadow-sm transition-shadow flex items-center justify-between gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-700">
+                      {technicians[entry.technicianId] || entry.technicianId}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      {DAYS_OF_WEEK[entry.dayOfWeek || 0]} • {entry.isFullDay ? "All day" : formatTimeRange12hr(entry.startTime || "00:00", entry.endTime || "23:59")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteClick(entry)}
+                    disabled={loading}
+                    className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    title="Delete"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* One-Time Entries */}
+        {oneTimeEntries.length > 0 && (
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <CalendarIcon className="h-4 w-4 text-orange-600" />
+              <h3 className="text-sm font-semibold text-gray-800">One-Time</h3>
+              <span className="text-xs font-medium text-gray-600">({oneTimeEntries.length})</span>
+            </div>
+            <div className="space-y-1.5">
+              {oneTimeEntries.map((entry) => (
+                <div
+                  key={entry._id?.toString() || ""}
+                  className="bg-orange-50 border border-orange-200 rounded p-2 hover:shadow-sm transition-shadow flex items-center justify-between gap-2"
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-semibold text-gray-700">
+                      {technicians[entry.technicianId] || entry.technicianId}
+                    </p>
+                    <p className="text-xs text-gray-600 mt-0.5">
+                      {entry.specificDate && format(new Date(entry.specificDate), "MMM d, yyyy")} • {entry.isFullDay ? "All day" : formatTimeRange12hr(entry.startTime || "00:00", entry.endTime || "23:59")}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteClick(entry)}
+                    disabled={loading}
+                    className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    title="Delete"
+                  >
+                    <TrashIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <DeleteModal

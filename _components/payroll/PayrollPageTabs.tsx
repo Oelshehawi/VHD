@@ -48,32 +48,36 @@ const PayrollPageTabs = ({
   ];
 
   return (
-    <div className="w-full bg-white shadow-sm">
-      {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200">
+    <div className="w-full">
+      {/* Tab Navigation - Modern underline style */}
+      <div className="flex border-b border-gray-200 bg-white">
         {tabs.map((tab) => {
           const isActive = activeTab === tab.id;
           const Icon = tab.icon;
+          const hasPending = tab.id === "availability" && pendingTimeOffCount > 0;
 
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id as any)}
-              className={`relative flex-1 px-4 py-4 text-center text-sm font-medium ${
+              className={`relative flex-1 px-6 py-4 text-center text-sm font-medium transition-colors ${
                 isActive
                   ? "text-gray-900"
                   : "text-gray-500 hover:text-gray-700"
               }`}
             >
-              <span className="flex items-center justify-center">
-                <Icon className="mr-2 h-5 w-5" />
+              <span className="flex items-center justify-center gap-2">
+                <Icon className="h-5 w-5" />
                 {tab.label}
+                {hasPending && (
+                  <span className="inline-flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+                )}
               </span>
 
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 h-0.5 w-full bg-gray-900"
+                  className="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-indigo-600 to-blue-600"
                   initial={false}
                 />
               )}
@@ -83,7 +87,7 @@ const PayrollPageTabs = ({
       </div>
 
       {/* Tab Content */}
-      <div className="p-6">
+      <div className="bg-gray-50 min-h-screen p-6">
         <AnimatePresence mode="wait">
           {activeTab === "payroll" && (
             <motion.div
@@ -120,12 +124,13 @@ const PayrollPageTabs = ({
 
               {/* Time-Off Requests Section */}
               <div>
-                <div className="mb-6 flex items-center justify-between">
+                <div className="mb-6 flex items-center gap-3">
                   <h2 className="text-2xl font-bold text-gray-800">
                     Time-Off Requests
                   </h2>
                   {pendingTimeOffCount > 0 && (
-                    <span className="inline-flex items-center justify-center rounded-full bg-red-500 px-3 py-1 text-sm font-medium text-white">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-4 py-1.5 text-sm font-semibold text-red-700">
+                      <span className="inline-flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
                       {pendingTimeOffCount} Pending
                     </span>
                   )}

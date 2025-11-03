@@ -2,8 +2,17 @@
 
 import { TimeOffRequestType } from "../../app/lib/typeDefinitions";
 import { TimeOffApprovalModal } from "./TimeOffApprovalModal";
+import { deleteTimeOffRequest } from "../../app/lib/actions/availability.actions";
 import { useState } from "react";
 import { format } from "date-fns";
+import {
+  CheckCircleIcon,
+  XCircleIcon,
+  ClockIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
+import DeleteModal from "../DeleteModal";
+import toast from "react-hot-toast";
 
 interface TimeOffRequestsTableProps {
   requests: TimeOffRequestType[];
@@ -11,10 +20,28 @@ interface TimeOffRequestsTableProps {
   onRefresh?: () => void;
 }
 
-const STATUS_COLORS = {
-  pending: "bg-yellow-100 text-yellow-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
+const STATUS_CONFIG = {
+  pending: {
+    bgColor: "bg-amber-50",
+    textColor: "text-amber-700",
+    badgeColor: "bg-amber-100 text-amber-700",
+    icon: ClockIcon,
+    label: "Pending",
+  },
+  approved: {
+    bgColor: "bg-green-50",
+    textColor: "text-green-700",
+    badgeColor: "bg-green-100 text-green-700",
+    icon: CheckCircleIcon,
+    label: "Approved",
+  },
+  rejected: {
+    bgColor: "bg-red-50",
+    textColor: "text-red-700",
+    badgeColor: "bg-red-100 text-red-700",
+    icon: XCircleIcon,
+    label: "Rejected",
+  },
 };
 
 export function TimeOffRequestsTable({
@@ -57,69 +84,56 @@ export function TimeOffRequestsTable({
 
   const renderRequestsSection = (
     sectionRequests: TimeOffRequestType[],
-    title: string,
+    status: "pending" | "approved" | "rejected",
   ) => {
     if (sectionRequests.length === 0) return null;
 
+    const config = STATUS_CONFIG[status];
+
     return (
       <div className="mb-8">
-        <h3 className="text-lg font-semibold mb-3 text-gray-800">{title}</h3>
-        <div className="overflow-x-auto max-h-[500px] border border-gray-200 rounded-lg">
-          <table className="w-full border-collapse">
-            <thead className="sticky top-0 bg-gray-100 border-b z-10">
-              <tr>
-                <th className="p-3 text-left font-semibold text-gray-700">Technician</th>
-                <th className="p-3 text-left font-semibold text-gray-700">Date Range</th>
-                <th className="p-3 text-left font-semibold text-gray-700">Days</th>
-                <th className="p-3 text-left font-semibold text-gray-700">Reason</th>
-                <th className="p-3 text-left font-semibold text-gray-700">Requested</th>
-                <th className="p-3 text-left font-semibold text-gray-700">Status</th>
-                {title.includes("Pending") && (
-                  <th className="p-3 text-left font-semibold text-gray-700">Actions</th>
-                )}
-              </tr>
-            </thead>
-            <tbody>
-              {sectionRequests.map((request) => (
-                <tr key={request._id?.toString() || ""} className="border-b hover:bg-gray-50">
-                  <td className="p-3 text-gray-700">
-                    {technicians[request.technicianId] || request.technicianId}
-                  </td>
-                  <td className="p-3 text-gray-700 text-sm">
-                    {formatDate(request.startDate)} to {formatDate(request.endDate)}
-                  </td>
-                  <td className="p-3 text-gray-700 text-sm font-medium">
-                    {calculateDays(request.startDate, request.endDate)} days
-                  </td>
-                  <td className="p-3 text-gray-700 text-sm max-w-xs truncate">
-                    {request.reason}
-                  </td>
-                  <td className="p-3 text-gray-700 text-sm">
-                    {formatDate(request.requestedAt)}
-                  </td>
-                  <td className="p-3">
-                    <span
-                      className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        STATUS_COLORS[request.status as keyof typeof STATUS_COLORS]
-                      }`}
-                    >
-                      {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+        <div className="flex items-center gap-3 mb-4">
+          <config.icon className={`h-5 w-5 ${config.textColor}`} />
+          <h3 className={`text-lg font-semibold ${config.textColor}`}>
+            {config.label} Requests
+          </h3>
+          <span className="ml-auto text-sm font-medium text-gray-600">
+            {sectionRequests.length}
+          </span>
+        </div>
+
+        <div className="space-y-2">
+          {sectionRequests.map((request) => (
+            <div
+              key={request._id?.toString() || ""}
+              className={`${config.bgColor} border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {technicians[request.technicianId] || request.technicianId}
+                    </p>
+                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-white ${config.textColor}`}>
+                      <config.icon className="h-3 w-3" />
+                      {config.label}
                     </span>
-                  </td>
-                  {title.includes("Pending") && (
-                    <td className="p-3">
-                      <button
-                        onClick={() => handleOpenModal(request)}
-                        className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 font-medium"
-                      >
-                        Review
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  </div>
+                  <p className="text-xs text-gray-600">
+                    {formatDate(request.startDate)} – {formatDate(request.endDate)} ({calculateDays(request.startDate, request.endDate)}d) • {request.reason}
+                  </p>
+                </div>
+                {status === "pending" && (
+                  <button
+                    onClick={() => handleOpenModal(request)}
+                    className="px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition-colors whitespace-nowrap flex-shrink-0"
+                  >
+                    Review
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -135,9 +149,9 @@ export function TimeOffRequestsTable({
         </div>
       ) : (
         <>
-          {renderRequestsSection(pendingRequests, "Pending Requests")}
-          {renderRequestsSection(approvedRequests, "Approved Requests")}
-          {renderRequestsSection(rejectedRequests, "Rejected Requests")}
+          {renderRequestsSection(pendingRequests, "pending")}
+          {renderRequestsSection(approvedRequests, "approved")}
+          {renderRequestsSection(rejectedRequests, "rejected")}
         </>
       )}
 

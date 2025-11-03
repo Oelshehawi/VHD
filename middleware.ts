@@ -14,8 +14,8 @@ const isPublicRoute = createRouteMatcher([
   "/api/cron/process-reminders",
   "/api/cron/process-reminders(.*)",
   "/api/send-invoice(.*)",
-  "/api/availability/(.*)",
-  "/api/timeoff/(.*)",
+  "/api/availability",
+  "/api/timeoff",
 ]);
 
 // Define client portal routes
