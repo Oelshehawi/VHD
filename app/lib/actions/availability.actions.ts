@@ -283,7 +283,7 @@ export async function updateAvailability(
     return {
       success: true,
       message: "Availability entry updated",
-      availability: updatedAvailability,
+      availability: updatedAvailability ? JSON.parse(JSON.stringify(updatedAvailability)) : null,
     };
   } catch (error) {
     console.error("Error updating availability:", error);

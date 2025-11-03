@@ -21,6 +21,14 @@ function getActionLabel(action: string): string {
     reminder_failed: "Reminder Failed",
     payment_status_changed: "Payment Status Changed",
     payment_info_updated: "Payment Info Updated",
+    availability_created: "Availability Created",
+    availability_updated: "Availability Updated",
+    availability_deleted: "Availability Deleted",
+    timeoff_requested: "Time-off Requested",
+    timeoff_approved: "Time-off Approved",
+    timeoff_rejected: "Time-off Rejected",
+    timeoff_deleted: "Time-off Deleted",
+    timeoff_updated: "Time-off Updated",
   };
   return labels[action] || action;
 }
@@ -46,6 +54,8 @@ const ACTION_CATEGORIES = {
   schedules: "Schedules",
   calls: "Calls",
   reminders: "Reminders",
+  availability: "Availability",
+  timeoff: "Time-off",
 };
 
 export default function ActionsFeed({ actions }: ActionsFeedProps) {
@@ -62,6 +72,10 @@ export default function ActionsFeed({ actions }: ActionsFeedProps) {
         return action.action.includes("call_logged");
       if (selectedCategory === "reminders")
         return action.action.includes("reminder");
+      if (selectedCategory === "availability")
+        return action.action.includes("availability");
+      if (selectedCategory === "timeoff")
+        return action.action.includes("timeoff");
       return true;
     });
   }, [actions, selectedCategory]);
@@ -136,6 +150,8 @@ export default function ActionsFeed({ actions }: ActionsFeedProps) {
                     if (key === "schedules") return a.action.includes("schedule");
                     if (key === "calls") return a.action.includes("call_logged");
                     if (key === "reminders") return a.action.includes("reminder");
+                    if (key === "availability") return a.action.includes("availability");
+                    if (key === "timeoff") return a.action.includes("timeoff");
                     return false;
                   }).length
                 })`}
@@ -188,7 +204,7 @@ export default function ActionsFeed({ actions }: ActionsFeedProps) {
                   </p>
                   <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                     <p className="text-xs sm:text-sm text-gray-600">
-                      <span className="font-semibold">{action.performedBy}</span>
+                      <span className="font-semibold">{action.performedByName}</span>
                     </p>
                     <span className="hidden sm:inline text-gray-300">•</span>
                     <p
@@ -207,7 +223,7 @@ export default function ActionsFeed({ actions }: ActionsFeedProps) {
 
       {/* Footer */}
       <div className="px-4 sm:px-6 py-3 bg-gray-50 border-t border-gray-200 text-center text-xs text-gray-600">
-        Showing {filteredActions.length} of {actions.length} actions
+        Showing {filteredActions.length} of {actions.length} actions from the last 2 weeks
       </div>
     </div>
   );

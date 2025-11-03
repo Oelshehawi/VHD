@@ -358,10 +358,7 @@ export async function fetchTechnicianAvailability(): Promise<AvailabilityType[]>
   await connectMongo();
   try {
     const availability = await Availability.find().lean<AvailabilityType[]>();
-    return availability.map((a) => ({
-      ...a,
-      _id: typeof a._id === "string" ? a._id : a._id?.toString(),
-    }));
+    return JSON.parse(JSON.stringify(availability));
   } catch (error) {
     console.error("Error fetching availability:", error);
     throw new Error("Failed to fetch technician availability");
@@ -377,10 +374,7 @@ export async function fetchTechnicianAvailabilityById(
   await connectMongo();
   try {
     const availability = await Availability.find({ technicianId }).lean<AvailabilityType[]>();
-    return availability.map((a) => ({
-      ...a,
-      _id: typeof a._id === "string" ? a._id : a._id?.toString(),
-    }));
+    return JSON.parse(JSON.stringify(availability));
   } catch (error) {
     console.error("Error fetching technician availability:", error);
     throw new Error("Failed to fetch technician availability");
@@ -465,10 +459,7 @@ export async function fetchPendingTimeOffRequests(): Promise<TimeOffRequestType[
       .sort({ requestedAt: -1 })
       .lean<TimeOffRequestType[]>();
 
-    return requests.map((r) => ({
-      ...r,
-      _id: typeof r._id === "string" ? r._id : r._id?.toString(),
-    }));
+    return JSON.parse(JSON.stringify(requests));
   } catch (error) {
     console.error("Error fetching pending time-off requests:", error);
     throw new Error("Failed to fetch pending time-off requests");
@@ -488,10 +479,7 @@ export async function fetchTimeOffRequests(
       .sort({ requestedAt: -1 })
       .lean<TimeOffRequestType[]>();
 
-    return requests.map((r) => ({
-      ...r,
-      _id: typeof r._id === "string" ? r._id : r._id?.toString(),
-    }));
+    return JSON.parse(JSON.stringify(requests));
   } catch (error) {
     console.error("Error fetching time-off requests:", error);
     throw new Error("Failed to fetch time-off requests");

@@ -119,6 +119,7 @@ async function handlePatch(req: NextApiRequest, res: NextApiResponse) {
   try {
     const { id, startDate, endDate, reason } = req.body;
 
+
     // Validate that ID is provided
     if (!id) {
       return res.status(400).json({ message: "Request ID is required" });

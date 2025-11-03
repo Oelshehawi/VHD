@@ -32,7 +32,6 @@ const DashboardPage = async ({
   ]);
 
 
-  
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 

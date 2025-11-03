@@ -67,7 +67,13 @@ export function TimeOffRequestsTable({
   };
 
   const formatDate = (date: string | Date) => {
-    return format(new Date(date), "MMMM d, yyyy");
+    // Handle timezone offset by extracting UTC components directly
+    const d = new Date(date);
+    const year = d.getUTCFullYear();
+    const month = d.getUTCMonth();
+    const day = d.getUTCDate();
+    // Create local date from UTC components to avoid timezone shift
+    return format(new Date(year, month, day), "MMMM d, yyyy");
   };
 
   const calculateDays = (startDate: string | Date, endDate: string | Date) => {

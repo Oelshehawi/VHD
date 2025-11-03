@@ -15,6 +15,7 @@ import {
 } from "./typeDefinitions";
 import { monthNameToNumber } from "./utils";
 import { CALL_OUTCOME_LABELS } from "./callLogConstants";
+import { getUserNames } from "./clerkUtils";
 
 export const updateScheduleStatus = async (
   invoiceId: string,
@@ -551,6 +552,7 @@ export interface DisplayAction {
   action: string;
   description: string;
   performedBy: string;
+  performedByName: string;
   timestamp: Date;
   formattedTime: string;
   formattedTimeTitle: string;
@@ -572,21 +574,32 @@ export const fetchRecentActions = async (): Promise<DisplayAction[]> => {
   await connectMongo();
 
   try {
-    // Fetch recent audit logs
-    const auditLogs = await AuditLog.find({})
+    // Calculate timestamp for 2 weeks ago
+    const twoWeeksAgo = new Date();
+    twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+    // Fetch recent audit logs from the last 2 weeks (no count limit, just time-based)
+    const auditLogs = await AuditLog.find({
+      timestamp: { $gte: twoWeeksAgo },
+    })
       .sort({ timestamp: -1 })
-      .limit(50)
       .lean()
       .exec();
 
     // Fetch client names for metadata
     const clientIds = new Set<string>();
+    const userIds = new Set<string>();
+
     auditLogs.forEach((log) => {
       if (log.details?.newValue?.clientId) {
         clientIds.add(log.details.newValue.clientId);
       }
       if (log.details?.metadata?.clientId) {
         clientIds.add(log.details.metadata.clientId);
+      }
+      // Collect all unique user IDs for Clerk lookup
+      if (log.performedBy) {
+        userIds.add(log.performedBy);
       }
     });
 
@@ -600,6 +613,9 @@ export const fetchRecentActions = async (): Promise<DisplayAction[]> => {
     const clientMap = new Map(
       clients.map((c: any) => [c._id?.toString(), c.clientName])
     );
+
+    // Fetch user names from Clerk
+    const userNameMap = await getUserNames(Array.from(userIds));
 
     // Process audit logs
     const displayActions: DisplayAction[] = auditLogs.map((log) => {
@@ -646,6 +662,7 @@ export const fetchRecentActions = async (): Promise<DisplayAction[]> => {
         action: log.action,
         description,
         performedBy: log.performedBy,
+        performedByName: userNameMap.get(log.performedBy) || log.performedBy,
         timestamp,
         formattedTime: formatted,
         formattedTimeTitle: title,
@@ -694,10 +711,19 @@ export const fetchRecentActions = async (): Promise<DisplayAction[]> => {
       }
     });
 
-    // Sort by timestamp descending and take top 50
-    return displayActions
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 50);
+    // Sort by timestamp descending
+    const sorted = displayActions.sort(
+      (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+    );
+
+    // Fully serialize to ensure no ObjectIds or other non-serializable objects
+    const serialized = JSON.parse(JSON.stringify(sorted));
+
+    // Re-parse dates since JSON.stringify converts them to strings
+    return serialized.map((action: any) => ({
+      ...action,
+      timestamp: new Date(action.timestamp),
+    }));
   } catch (error) {
     console.error("Error fetching actions:", error);
     return [];

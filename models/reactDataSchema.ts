@@ -515,6 +515,8 @@ const AuditLogSchema = new Schema<AuditLogEntry>({
       "timeoff_requested",
       "timeoff_approved",
       "timeoff_rejected",
+      "timeoff_deleted",
+      "timeoff_updated"
     ],
     required: true,
   },
