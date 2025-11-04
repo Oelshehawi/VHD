@@ -304,37 +304,39 @@ export default function MiniCalendar({
               </div>
             </div>
             <section className="max-h-[60vh] overflow-y-auto lg:mt-0 lg:max-h-none lg:pl-8 xl:pl-14 pb-4">
-              {/* Unavailability Banner */}
-              {showAvailability && (() => {
-                const dayUnavailability = technicians
-                  .map(tech => ({
-                    tech,
-                    info: getTechnicianUnavailabilityInfo(availability, tech.id, selectedDay)
-                  }))
-                  .filter(item => item.info.isUnavailable === true);
+              {/* Sticky Container for Banner and Header */}
+              <div className="sticky top-0 z-20">
+                {/* Unavailability Banner */}
+                {showAvailability && (() => {
+                  const dayUnavailability = technicians
+                    .map(tech => ({
+                      tech,
+                      info: getTechnicianUnavailabilityInfo(availability, tech.id, selectedDay)
+                    }))
+                    .filter(item => item.info.isUnavailable === true);
 
-                return dayUnavailability.length > 0 ? (
-                  <div className="sticky top-0 z-20 mb-3 rounded-lg border-l-4 border-l-red-500 bg-red-50 p-3 shadow-sm">
-                    <h3 className="text-xs font-semibold text-red-900 mb-2">⚠️ Unavailability</h3>
-                    <div className="space-y-1">
-                      {dayUnavailability.map(({ tech, info }) => (
-                        <div key={tech.id} className="text-xs text-red-800">
-                          <span className="font-medium">{tech.name}</span>
-                          {info.type === "full-day" ? (
-                            <span className="ml-2 text-red-700">- All day</span>
-                          ) : (
-                            <span className="ml-2 text-red-700">
-                              - {formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
-                            </span>
-                          )}
-                        </div>
-                      ))}
+                  return dayUnavailability.length > 0 ? (
+                    <div className="mb-3 rounded-lg border-l-4 border-l-red-500 bg-red-50 p-3 shadow-sm">
+                      <h3 className="text-xs font-semibold text-red-900 mb-2">⚠️ Unavailability</h3>
+                      <div className="space-y-1">
+                        {dayUnavailability.map(({ tech, info }) => (
+                          <div key={tech.id} className="text-xs text-red-800">
+                            <span className="font-medium">{tech.name}</span>
+                            {info.type === "full-day" ? (
+                              <span className="ml-2 text-red-700">- All day</span>
+                            ) : (
+                              <span className="ml-2 text-red-700">
+                                - {formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ) : null;
-              })()}
+                  ) : null;
+                })()}
 
-              <div className={`bg-white pb-3 mb-3 border-b border-gray-200 z-10 ${showAvailability ? 'sticky top-16' : 'sticky top-0'}`}>
+                <div className="bg-white pb-3 mb-3 border-b border-gray-200">
                 <h2 className="text-sm font-semibold text-gray-900 sm:text-base md:text-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <span className="flex-1">
                     Schedule for{" "}
@@ -348,6 +350,7 @@ export default function MiniCalendar({
                     </span>
                   )}
                 </h2>
+              </div>
               </div>
               <ol className="flex flex-col gap-3 sm:gap-4 text-xs leading-6 text-gray-500 md:text-sm">
                 {selectedDayJobs.length > 0 ? (
@@ -445,15 +448,6 @@ export function Job({
 
   return (
     <li className="group relative rounded-xl bg-darkGreen p-3 text-white shadow-md hover:shadow-lg transition-all duration-200 border border-green-900/20 md:p-4">
-      {/* Confirmed indicator */}
-      {isConfirmed && (
-        <div className="absolute -top-1 -right-1 z-10">
-          <span className="flex h-3 w-3">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
-          </span>
-        </div>
-      )}
 
       <div className="flex items-start justify-between gap-3">
         <div
