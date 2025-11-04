@@ -11,7 +11,6 @@ import {
   CategoryScale,
 } from 'chart.js';
 import { YearlySalesData } from '../../app/lib/typeDefinitions';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { FaChartBar, FaCalendarAlt, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
 
 ChartJS.register(
@@ -26,6 +25,8 @@ ChartJS.register(
 interface YearlySalesProps {
   salesData: YearlySalesData[];
   currentYear: number;
+  onYearChange?: (newYear: number) => void;
+  isLoading?: boolean;
 }
 
 interface ChartData {
@@ -91,9 +92,7 @@ interface ChartOptions {
   };
 }
 
-const YearlySales = ({ salesData, currentYear }: YearlySalesProps) => {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+const YearlySales = ({ salesData, currentYear, onYearChange, isLoading }: YearlySalesProps) => {
   const [chartOptions, setChartOptions] = useState<ChartOptions>({
     plugins: {
       legend: {
@@ -189,13 +188,13 @@ const YearlySales = ({ salesData, currentYear }: YearlySalesProps) => {
   }, [salesData, currentYear]);
 
   const handleYearChange = (direction: 'next' | 'previous') => {
-    const params = new URLSearchParams(searchParams?.toString());
     const newYear = direction === 'next' ? currentYear + 1 : currentYear - 1;
-    
+
     if (newYear > new Date().getFullYear()) return; // Don't allow future years
-    
-    params.set('salesYear', newYear.toString());
-    router.push(`/dashboard?${params.toString()}`);
+
+    if (onYearChange) {
+      onYearChange(newYear);
+    }
   };
 
   return (

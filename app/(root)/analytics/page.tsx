@@ -1,10 +1,9 @@
 import { Suspense } from "react";
 import {
-  fetchYearlySalesData,
   fetchAnalyticsMetrics,
 } from "../../lib/dashboard.data";
-import YearlySales from "../../../_components/dashboard/YearlySales";
 import AnalyticsMetrics from "../../../_components/analytics/AnalyticsMetrics";
+import YearlySalesContainer from "../../../_components/analytics/YearlySalesContainer";
 import {
   YearlySalesSkeleton,
   InfoBoxSkeleton,
@@ -49,8 +48,6 @@ export default async function AnalyticsPage() {
       </div>
     );
 
-  const currentYear = new Date().getFullYear();
-
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 p-8">
       {/* Header */}
@@ -81,11 +78,7 @@ export default async function AnalyticsPage() {
 
         {/* Sales Chart - Main Content */}
         <div className="flex-1 lg:col-span-3">
-          <Suspense fallback={<YearlySalesSkeleton />}>
-            <div className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-lg">
-              <YearlySalesChart currentYear={currentYear} />
-            </div>
-          </Suspense>
+          <YearlySalesContainer initialYear={new Date().getFullYear()} />
         </div>
       </div>
     </div>
@@ -95,9 +88,4 @@ export default async function AnalyticsPage() {
 async function AnalyticsMetricsContainer() {
   const metrics = await fetchAnalyticsMetrics();
   return <AnalyticsMetrics metrics={metrics} />;
-}
-
-async function YearlySalesChart({ currentYear }: { currentYear: number }) {
-  const salesData = await fetchYearlySalesData(currentYear);
-  return <YearlySales salesData={salesData} currentYear={currentYear} />;
 }
