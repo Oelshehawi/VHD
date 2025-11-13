@@ -360,7 +360,8 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
               Ovens: {report.cookingEquipment?.ovens ? "Yes" : "No"}
             </Text>
             <Text style={styles.infoItem}>
-              Flattop Grills: {report.cookingEquipment?.flattopGrills ? "Yes" : "No"}
+              Flattop Grills:{" "}
+              {report.cookingEquipment?.flattopGrills ? "Yes" : "No"}
             </Text>
           </View>
         </View>
@@ -385,9 +386,9 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
                         .replace(/^./, (str) => str.toUpperCase())}
                     </Text>
                     <Text style={[styles.tableCell, { width: "50%" }]}>
-                      {typeof value === 'object' && value !== null 
+                      {typeof value === "object" && value !== null
                         ? (value as any).status || JSON.stringify(value)
-                        : String(value || 'N/A')}
+                        : String(value || "N/A")}
                     </Text>
                   </View>
                 ))}

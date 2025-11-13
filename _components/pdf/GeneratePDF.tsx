@@ -61,11 +61,17 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
 
     switch (pdfData.type) {
       case "invoice":
-        return <InvoicePdfDocument invoiceData={pdfData.data} scale={scaleValue} />;
+        return (
+          <InvoicePdfDocument invoiceData={pdfData.data} scale={scaleValue} />
+        );
       case "clientInvoice":
-        return <InvoicePdfDocument invoiceData={pdfData.data} scale={scaleValue} />;
+        return (
+          <InvoicePdfDocument invoiceData={pdfData.data} scale={scaleValue} />
+        );
       case "estimate":
-        return <EstimatePdfDocument estimateData={pdfData.data} scale={scaleValue} />;
+        return (
+          <EstimatePdfDocument estimateData={pdfData.data} scale={scaleValue} />
+        );
       case "receipt":
         return <ReceiptPdfDocument receiptData={pdfData.data} />;
       case "report":
@@ -136,31 +142,38 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {showScaleSelector && (pdfData.type === "estimate" || pdfData.type === "invoice" || pdfData.type === "clientInvoice" || pdfData.type === "report") && (
-        <div className="flex items-center gap-2">
-          <label htmlFor="pdf-scale" className="text-sm font-medium text-gray-700">
-            Size:
-          </label>
-          <select
-            id="pdf-scale"
-            value={scale}
-            onChange={(e) => setScale(Number(e.target.value))}
-            className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 min-w-[110px]"
-          >
-            <option value={70}>70%</option>
-            <option value={75}>75%</option>
-            <option value={80}>80%</option>
-            <option value={85}>85%</option>
-            <option value={90}>90%</option>
-            <option value={95}>95%</option>
-            <option value={100}>100%</option>
-            <option value={105}>105%</option>
-            <option value={110}>110%</option>
-            <option value={115}>115%</option>
-            <option value={120}>120%</option>
-          </select>
-        </div>
-      )}
+      {showScaleSelector &&
+        (pdfData.type === "estimate" ||
+          pdfData.type === "invoice" ||
+          pdfData.type === "clientInvoice" ||
+          pdfData.type === "report") && (
+          <div className="flex items-center gap-2">
+            <label
+              htmlFor="pdf-scale"
+              className="text-sm font-medium text-gray-700"
+            >
+              Size:
+            </label>
+            <select
+              id="pdf-scale"
+              value={scale}
+              onChange={(e) => setScale(Number(e.target.value))}
+              className="min-w-[110px] rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            >
+              <option value={70}>70%</option>
+              <option value={75}>75%</option>
+              <option value={80}>80%</option>
+              <option value={85}>85%</option>
+              <option value={90}>90%</option>
+              <option value={95}>95%</option>
+              <option value={100}>100%</option>
+              <option value={105}>105%</option>
+              <option value={110}>110%</option>
+              <option value={115}>115%</option>
+              <option value={120}>120%</option>
+            </select>
+          </div>
+        )}
 
       <PDFDownloadLink document={document} fileName={generateFileName()}>
         {({ loading, error }) => (

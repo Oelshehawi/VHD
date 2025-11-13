@@ -48,7 +48,8 @@ export default function JobDetailsModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmed, setConfirmed] = useState(false);
   const [hasExistingReport, setHasExistingReport] = useState(false);
-  const [existingReportData, setExistingReportData] = useState<ReportType | null>(null);
+  const [existingReportData, setExistingReportData] =
+    useState<ReportType | null>(null);
   const [isCheckingReport, setIsCheckingReport] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
 
@@ -68,18 +69,18 @@ export default function JobDetailsModal({
   useEffect(() => {
     const checkForExistingReport = async () => {
       if (!job || activeView !== "report") return;
-      
+
       setIsCheckingReport(true);
-      
+
       // Add minimum loading time to prevent flickering
       const [report] = await Promise.all([
-        getReportByScheduleId(job._id.toString()).catch(error => {
+        getReportByScheduleId(job._id.toString()).catch((error) => {
           console.error("Error checking for existing report:", error);
           return null;
         }),
-        new Promise(resolve => setTimeout(resolve, 500)) // Minimum 500ms loading
+        new Promise((resolve) => setTimeout(resolve, 500)), // Minimum 500ms loading
       ]);
-      
+
       setHasExistingReport(!!report);
       setExistingReportData(report);
       setIsCheckingReport(false);
@@ -133,11 +134,17 @@ export default function JobDetailsModal({
 
   const createReportPDFData = (report: ReportType): PDFData | undefined => {
     if (!job) return undefined;
-    
+
     try {
       const reportData = {
-        _id: typeof report._id === "string" ? report._id : report._id?.toString() || "",
-        scheduleId: typeof report.scheduleId === "string" ? report.scheduleId : report.scheduleId.toString(),
+        _id:
+          typeof report._id === "string"
+            ? report._id
+            : report._id?.toString() || "",
+        scheduleId:
+          typeof report.scheduleId === "string"
+            ? report.scheduleId
+            : report.scheduleId.toString(),
         jobTitle: job.jobTitle,
         location: job.location,
         dateCompleted: report.dateCompleted,
@@ -154,7 +161,9 @@ export default function JobDetailsModal({
         inspectionItems: report.inspectionItems,
       };
 
-      const assignedTech = technicians.find((tech) => tech.id === report.technicianId);
+      const assignedTech = technicians.find(
+        (tech) => tech.id === report.technicianId,
+      );
       const technicianData = {
         id: report.technicianId,
         firstName: assignedTech?.name.split(" ")[0] || "Technician",
@@ -191,7 +200,7 @@ export default function JobDetailsModal({
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={handleModalClose}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
+        className="bg-black/60 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
       >
         <motion.div
           initial={{ scale: 0.95, opacity: 0 }}
@@ -199,39 +208,39 @@ export default function JobDetailsModal({
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ duration: 0.2 }}
           onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-2xl bg-white shadow-2xl"
+          className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
         >
           {/* Header */}
-          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
+          <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
             <div className="flex items-start justify-between">
-              <div className="flex-1 min-w-0">
+              <div className="min-w-0 flex-1">
                 <Link
                   href={`/invoices/${job.invoiceRef}`}
                   className="group block"
                 >
-                  <h2 className="text-xl font-semibold text-gray-900 group-hover:text-blue-600 transition-colors truncate">
+                  <h2 className="truncate text-xl font-semibold text-gray-900 transition-colors group-hover:text-blue-600">
                     {job.jobTitle}
                   </h2>
                 </Link>
-                <div className="flex items-center mt-1 text-sm text-gray-500">
-                  <MapPinIcon className="h-4 w-4 mr-1" />
+                <div className="mt-1 flex items-center text-sm text-gray-500">
+                  <MapPinIcon className="mr-1 h-4 w-4" />
                   <span className="truncate">{job.location}</span>
                 </div>
               </div>
-              
+
               <button
                 onClick={handleModalClose}
-                className="ml-4 p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="ml-4 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
               >
                 <XMarkIcon className="h-5 w-5" />
               </button>
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex mt-4 border-b border-gray-200">
+            <div className="mt-4 flex border-b border-gray-200">
               <button
                 onClick={() => setActiveView("details")}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
                   activeView === "details"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
@@ -239,56 +248,64 @@ export default function JobDetailsModal({
               >
                 Details
               </button>
-              
+
               {hasMedia && (
                 <button
                   onClick={() => setActiveView("media")}
-                  className={`flex items-center px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  className={`flex items-center border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
                     activeView === "media"
                       ? "border-blue-500 text-blue-600"
                       : "border-transparent text-gray-500 hover:text-gray-700"
                   }`}
                 >
-                  <CameraIcon className="h-4 w-4 mr-1" />
+                  <CameraIcon className="mr-1 h-4 w-4" />
                   Media
                 </button>
               )}
-              
+
               <button
                 onClick={() => setActiveView("report")}
-                className={`flex items-center px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                className={`flex items-center border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
                   activeView === "report"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700"
                 }`}
               >
-                <DocumentTextIcon className="h-4 w-4 mr-1" />
+                <DocumentTextIcon className="mr-1 h-4 w-4" />
                 Report
               </button>
             </div>
           </div>
 
           {/* Content */}
-          <div className="overflow-y-auto max-h-[calc(90vh-140px)]">
+          <div className="max-h-[calc(90vh-140px)] overflow-y-auto">
             {activeView === "details" && (
-              <div className="p-6 space-y-6">
+              <div className="space-y-6 p-6">
                 {/* Job Info */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="flex items-center text-sm text-gray-600">
-                    <ClockIcon className="h-4 w-4 mr-2" />
+                    <ClockIcon className="mr-2 h-4 w-4" />
                     <span>
-                      {format(job.startDateTime, "EEEE, MMM d, yyyy 'at' h:mm a", {
-                        timeZone: "PST",
-                      })}
+                      {format(
+                        job.startDateTime,
+                        "EEEE, MMM d, yyyy 'at' h:mm a",
+                        {
+                          timeZone: "PST",
+                        },
+                      )}
                     </span>
                   </div>
-                  
+
                   <div className="flex items-center text-sm text-gray-600">
-                    <UserGroupIcon className="h-4 w-4 mr-2" />
+                    <UserGroupIcon className="mr-2 h-4 w-4" />
                     <span>
                       {job.assignedTechnicians.length > 0
                         ? job.assignedTechnicians
-                            .map((techId) => technicians.find((tech) => tech.id === techId)?.name)
+                            .map(
+                              (techId) =>
+                                technicians.find((tech) => tech.id === techId)
+                                  ?.name,
+                            )
                             .filter(Boolean)
                             .join(", ")
                         : "No technicians assigned"}
@@ -297,12 +314,14 @@ export default function JobDetailsModal({
                 </div>
 
                 {/* Status */}
-                <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50">
+                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
                   <div>
-                    <span className="text-sm font-medium text-gray-900">Status</span>
-                    <div className="flex items-center mt-1">
+                    <span className="text-sm font-medium text-gray-900">
+                      Status
+                    </span>
+                    <div className="mt-1 flex items-center">
                       <div
-                        className={`h-2 w-2 rounded-full mr-2 ${
+                        className={`mr-2 h-2 w-2 rounded-full ${
                           isConfirmed ? "bg-emerald-500" : "bg-rose-500"
                         }`}
                       />
@@ -311,18 +330,22 @@ export default function JobDetailsModal({
                       </span>
                     </div>
                   </div>
-                  
+
                   {canManage && (
                     <button
                       onClick={toggleConfirmedStatus}
                       disabled={isLoading}
-                      className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                      className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
                         isConfirmed
                           ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
                           : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
                       }`}
                     >
-                      {isLoading ? "Updating..." : isConfirmed ? "Unconfirm" : "Confirm"}
+                      {isLoading
+                        ? "Updating..."
+                        : isConfirmed
+                          ? "Unconfirm"
+                          : "Confirm"}
                     </button>
                   )}
                 </div>
@@ -330,8 +353,10 @@ export default function JobDetailsModal({
                 {/* Technician Notes */}
                 {job.technicianNotes && (
                   <div className="rounded-lg bg-blue-50 p-4">
-                    <h4 className="font-medium text-blue-900 mb-2">Technician Notes</h4>
-                    <p className="text-sm text-blue-800 whitespace-pre-wrap">
+                    <h4 className="mb-2 font-medium text-blue-900">
+                      Technician Notes
+                    </h4>
+                    <p className="whitespace-pre-wrap text-sm text-blue-800">
                       {job.technicianNotes}
                     </p>
                   </div>
@@ -339,15 +364,15 @@ export default function JobDetailsModal({
 
                 {/* Actions */}
                 {canManage && (
-                  <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-gray-200">
+                  <div className="flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row">
                     <button
                       onClick={() => setActiveView("edit")}
-                      className="flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors"
+                      className="flex items-center justify-center rounded-lg bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-200"
                     >
-                      <PencilIcon className="h-4 w-4 mr-2" />
+                      <PencilIcon className="mr-2 h-4 w-4" />
                       Edit Job
                     </button>
-                    
+
                     <DeleteModal
                       deleteText="Are you sure you want to delete this job?"
                       deleteDesc="This action cannot be undone."
@@ -369,58 +394,83 @@ export default function JobDetailsModal({
             )}
 
             {activeView === "report" && (
-              <div className="p-6 space-y-4">
+              <div className="space-y-4 p-6">
                 {isCheckingReport ? (
-                  <div className="text-center py-8">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                    <p className="text-sm text-gray-600">Checking for existing report...</p>
+                  <div className="py-8 text-center">
+                    <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
+                    <p className="text-sm text-gray-600">
+                      Checking for existing report...
+                    </p>
                   </div>
                 ) : hasExistingReport && existingReportData ? (
                   // Show existing report details
                   <div className="space-y-4">
                     <div className="text-center">
-                      <DocumentTextIcon className="h-12 w-12 text-green-500 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      <DocumentTextIcon className="mx-auto mb-4 h-12 w-12 text-green-500" />
+                      <h3 className="mb-2 text-lg font-medium text-gray-900">
                         Kitchen Exhaust Cleaning Report
                       </h3>
                       <p className="text-sm text-gray-600">
-                        Report completed on {new Date(existingReportData.dateCompleted).toLocaleDateString()}
+                        Report completed on{" "}
+                        {new Date(
+                          existingReportData.dateCompleted,
+                        ).toLocaleDateString()}
                       </p>
                     </div>
 
                     {/* Report Summary */}
-                    <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                      <h4 className="font-medium text-gray-900">Report Summary</h4>
-                      
+                    <div className="space-y-3 rounded-lg bg-gray-50 p-4">
+                      <h4 className="font-medium text-gray-900">
+                        Report Summary
+                      </h4>
+
                       {existingReportData.fuelType && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">Fuel Type:</span> {existingReportData.fuelType}
+                          <span className="font-medium text-gray-700">
+                            Fuel Type:
+                          </span>{" "}
+                          {existingReportData.fuelType}
                         </div>
                       )}
-                      
+
                       {existingReportData.cookingVolume && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">Cooking Volume:</span> {existingReportData.cookingVolume}
+                          <span className="font-medium text-gray-700">
+                            Cooking Volume:
+                          </span>{" "}
+                          {existingReportData.cookingVolume}
                         </div>
                       )}
-                      
+
                       {existingReportData.recommendedCleaningFrequency && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">Recommended Frequency:</span> {existingReportData.recommendedCleaningFrequency} times per year
+                          <span className="font-medium text-gray-700">
+                            Recommended Frequency:
+                          </span>{" "}
+                          {existingReportData.recommendedCleaningFrequency}{" "}
+                          times per year
                         </div>
                       )}
 
                       {existingReportData.recommendations && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">Recommendations:</span>
-                          <p className="mt-1 text-gray-600">{existingReportData.recommendations}</p>
+                          <span className="font-medium text-gray-700">
+                            Recommendations:
+                          </span>
+                          <p className="mt-1 text-gray-600">
+                            {existingReportData.recommendations}
+                          </p>
                         </div>
                       )}
 
                       {existingReportData.comments && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">Comments:</span>
-                          <p className="mt-1 text-gray-600">{existingReportData.comments}</p>
+                          <span className="font-medium text-gray-700">
+                            Comments:
+                          </span>
+                          <p className="mt-1 text-gray-600">
+                            {existingReportData.comments}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -428,7 +478,7 @@ export default function JobDetailsModal({
                     <div className="flex flex-col gap-3">
                       <button
                         onClick={() => setShowReportModal(true)}
-                        className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-blue-700 bg-blue-100 rounded-lg hover:bg-blue-200 transition-colors"
+                        className="flex w-full items-center justify-center rounded-lg bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-200"
                       >
                         Edit Report
                       </button>
@@ -437,7 +487,7 @@ export default function JobDetailsModal({
                         pdfData={createReportPDFData(existingReportData)}
                         fileName={`Report - ${job.jobTitle}.pdf`}
                         buttonText="Download Report PDF"
-                        className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                        className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                         showScaleSelector
                       />
                     </div>
@@ -446,8 +496,8 @@ export default function JobDetailsModal({
                   // Show create new report interface
                   <div className="space-y-4">
                     <div className="text-center">
-                      <DocumentTextIcon className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      <DocumentTextIcon className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                      <h3 className="mb-2 text-lg font-medium text-gray-900">
                         Kitchen Exhaust Cleaning Report
                       </h3>
                       <p className="text-sm text-gray-600">
@@ -457,7 +507,7 @@ export default function JobDetailsModal({
 
                     <button
                       onClick={() => setShowReportModal(true)}
-                      className="w-full flex items-center justify-center px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                      className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
                     >
                       Create New Report
                     </button>
@@ -492,15 +542,15 @@ export default function JobDetailsModal({
               setHasExistingReport(false);
               setExistingReportData(null);
               setIsCheckingReport(true);
-              
+
               // Trigger a re-check of the report
               setTimeout(() => {
                 const checkForExistingReport = async () => {
                   const [report] = await Promise.all([
                     getReportByScheduleId(job._id.toString()).catch(() => null),
-                    new Promise(resolve => setTimeout(resolve, 200))
+                    new Promise((resolve) => setTimeout(resolve, 200)),
                   ]);
-                  
+
                   setHasExistingReport(!!report);
                   setExistingReportData(report);
                   setIsCheckingReport(false);
@@ -516,4 +566,4 @@ export default function JobDetailsModal({
   );
 
   return createPortal(modalContent, document.body);
-} 
+}
