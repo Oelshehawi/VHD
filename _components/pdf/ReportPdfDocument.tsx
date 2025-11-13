@@ -11,109 +11,121 @@ import {
   Image,
 } from "@react-pdf/renderer";
 
-const styles = StyleSheet.create({
-  page: {
-    fontFamily: "Helvetica",
-    fontSize: 8,
-    paddingTop: 15,
-    paddingBottom: 35,
-    paddingHorizontal: 20,
-    color: "#000",
-  },
-  logoContainer: {
-    position: "absolute",
-    left: 540,
-    top: 10,
-    bottom: 0,
-    right: 0,
-    width: "10%",
-    padding: 0,
-    height: 80,
-    zIndex: 1,
-    opacity: 0.7,
-  },
-  header: { position: "relative", marginBottom: 8 },
-  headerWave: {
-    position: "absolute",
-    top: -270,
-    left: -700,
-    width: 1000,
-    height: 500,
-  },
-  headerContent: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  reportTitle: { fontSize: 20, color: "#003e29", fontWeight: "bold" },
-  companyTitle: {
-    fontSize: 14,
-    color: "#003e29",
-    fontWeight: "bold",
-    zIndex: 2,
-  },
-  footer: {
-    position: "absolute",
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 25,
-    backgroundColor: "#003e29",
-    color: "#FFFFFF",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-  },
-  footerText: { fontSize: 9 },
-  section: {
-    marginTop: 10,
-    border: "1px solid black",
-    borderColor: "#ccc",
-    borderRadius: 4,
-    padding: 8,
-  },
-  rowContainer: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginTop: 10,
-    gap: 8,
-  },
-  columnSection: {
-    flex: 1,
-    border: "1px solid black",
-    borderRadius: 4,
-    padding: 8,
-  },
-  sectionTitle: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#003e29",
-    marginBottom: 6,
-  },
-  table: {
-    display: "flex",
-    width: "auto",
-    marginTop: 3,
-    border: "1px solid black",
-  },
-  tableRow: {
-    flexDirection: "row",
-    borderBottomWidth: 1,
-    borderBottomColor: "#ccc",
-  },
-  tableHeader: { backgroundColor: "#003e29", color: "#fff" },
-  tableCell: { padding: 3, borderRightWidth: 1, borderRightColor: "#ccc" },
-  infoGroup: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 8,
-  },
-  infoRow: { flexDirection: "row", marginBottom: 2, gap: 10 },
-  infoItem: { marginBottom: 2 },
-  boldText: { fontWeight: "bold" },
-  technicianItem: { backgroundColor: "#f5f5f5", padding: 3, borderRadius: 4 },
-});
+const createStyles = (scale: number) => {
+  const s = (value: number) => Math.round(value * scale);
+
+  return StyleSheet.create({
+    page: {
+      fontFamily: "Helvetica",
+      fontSize: s(8),
+      paddingTop: s(15),
+      paddingBottom: s(35),
+      paddingHorizontal: s(20),
+      color: "#000",
+    },
+    logoContainer: {
+      position: "absolute",
+      left: 540,
+      top: 10,
+      bottom: 0,
+      right: 0,
+      width: "10%",
+      padding: 0,
+      height: s(80),
+      zIndex: 1,
+      opacity: 0.7,
+    },
+    header: { position: "relative", marginBottom: s(8) },
+    headerWave: {
+      position: "absolute",
+      top: -270,
+      left: -700,
+      width: 1000,
+      height: 500,
+    },
+    headerContent: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+    },
+    reportTitle: { fontSize: s(20), color: "#003e29", fontWeight: "bold" },
+    companyTitle: {
+      fontSize: s(14),
+      color: "#003e29",
+      fontWeight: "bold",
+      zIndex: 2,
+    },
+    footer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: s(25),
+      backgroundColor: "#003e29",
+      color: "#FFFFFF",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: s(20),
+    },
+    footerText: { fontSize: s(9) },
+    section: {
+      marginTop: s(10),
+      border: "1px solid black",
+      borderColor: "#ccc",
+      borderRadius: s(4),
+      padding: s(8),
+    },
+    rowContainer: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginTop: s(10),
+      gap: s(8),
+    },
+    columnSection: {
+      flex: 1,
+      border: "1px solid black",
+      borderRadius: s(4),
+      padding: s(8),
+    },
+    sectionTitle: {
+      fontSize: s(12),
+      fontWeight: "bold",
+      color: "#003e29",
+      marginBottom: s(6),
+    },
+    table: {
+      display: "flex",
+      width: "auto",
+      marginTop: s(3),
+      border: "1px solid black",
+    },
+    tableRow: {
+      flexDirection: "row",
+      borderBottomWidth: 1,
+      borderBottomColor: "#ccc",
+    },
+    tableHeader: { backgroundColor: "#003e29", color: "#fff" },
+    tableCell: {
+      padding: s(3),
+      borderRightWidth: 1,
+      borderRightColor: "#ccc",
+    },
+    infoGroup: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: s(8),
+    },
+    infoRow: { flexDirection: "row", marginBottom: s(2), gap: s(10) },
+    infoItem: { marginBottom: s(2) },
+    boldText: { fontWeight: "bold" },
+    technicianItem: {
+      backgroundColor: "#f5f5f5",
+      padding: s(3),
+      borderRadius: s(4),
+    },
+  });
+};
 
 export interface ReportData {
   _id: string;
@@ -161,12 +173,16 @@ export interface TechnicianData {
 interface ReportPdfDocumentProps {
   report: ReportData;
   technician: TechnicianData;
+  scale?: number;
 }
 
 const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
   report,
   technician,
+  scale = 1,
 }) => {
+  const styles = React.useMemo(() => createStyles(scale), [scale]);
+
   const formatDate = (date: string | Date) => {
     const dateObj = new Date(date);
     return dateObj
