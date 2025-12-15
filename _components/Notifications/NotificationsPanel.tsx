@@ -1,21 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCheck, ExternalLink } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { formatDistanceToNow } from "date-fns";
 import { Button } from "../../app/components/ui/button";
 import { ScrollArea } from "../../app/components/ui/scroll-area";
 import { Separator } from "../../app/components/ui/separator";
+import { Badge } from "../../app/components/ui/badge";
 import {
   getNotifications,
   markAsRead,
   markAllAsRead,
 } from "../../app/lib/actions/notifications.actions";
 import { NotificationType, NOTIFICATION_TYPES } from "../../app/lib/typeDefinitions";
-import { useRouter } from "next/navigation";
-import { formatDistanceToNow } from "date-fns";
 
 interface NotificationsPanelProps {
-  onNotificationChange: () => void;
   onClose: () => void;
 }
 
@@ -28,47 +28,77 @@ const typeIcons: Record<string, string> = {
   [NOTIFICATION_TYPES.SYSTEM]: "🔔",
 };
 
-export default function NotificationsPanel({
-  onNotificationChange,
-  onClose,
-}: NotificationsPanelProps) {
-  const [notifications, setNotifications] = useState<NotificationType[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function NotificationsPanel({ onClose }: NotificationsPanelProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    async function fetchNotifications() {
-      setLoading(true);
+  // Fetch notifications with TanStack Query
+  const { data: notifications = [], isLoading } = useQuery({
+    queryKey: ["notifications"],
+    queryFn: async () => {
       const result = await getNotifications(30);
-      if (result.success) {
-        setNotifications(result.notifications);
-      }
-      setLoading(false);
-    }
-    fetchNotifications();
-  }, []);
+      return result.success ? result.notifications : [];
+    },
+  });
 
-  const handleMarkAllAsRead = async () => {
-    await markAllAsRead();
-    setNotifications((prev) =>
-      prev.map((n) => ({ ...n, readAt: new Date() }))
-    );
-    onNotificationChange();
-  };
+  // Mark single notification as read
+  const markAsReadMutation = useMutation({
+    mutationFn: (notificationId: string) => markAsRead(notificationId),
+    onMutate: async (notificationId) => {
+      // Optimistic update
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+      const previousNotifications = queryClient.getQueryData<NotificationType[]>(["notifications"]);
+
+      queryClient.setQueryData<NotificationType[]>(["notifications"], (old = []) =>
+        old.map((n) => (n._id === notificationId ? { ...n, readAt: new Date() } : n))
+      );
+
+      return { previousNotifications };
+    },
+    onSuccess: () => {
+      // Invalidate both queries to refetch fresh data
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+    },
+    onError: (err, notificationId, context) => {
+      // Rollback on error
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(["notifications"], context.previousNotifications);
+      }
+    },
+  });
+
+  // Mark all notifications as read
+  const markAllAsReadMutation = useMutation({
+    mutationFn: () => markAllAsRead(),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["notifications"] });
+      const previousNotifications = queryClient.getQueryData<NotificationType[]>(["notifications"]);
+
+      queryClient.setQueryData<NotificationType[]>(["notifications"], (old = []) =>
+        old.map((n) => ({ ...n, readAt: new Date() }))
+      );
+
+      return { previousNotifications };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousNotifications) {
+        queryClient.setQueryData(["notifications"], context.previousNotifications);
+      }
+    },
+  });
 
   const handleNotificationClick = async (notification: NotificationType) => {
     // Mark as read if not already
     if (!notification.readAt && notification._id) {
-      await markAsRead(notification._id);
-      setNotifications((prev) =>
-        prev.map((n) =>
-          n._id === notification._id ? { ...n, readAt: new Date() } : n
-        )
-      );
-      onNotificationChange();
+      markAsReadMutation.mutate(notification._id);
     }
 
-    // Navigate if there's a link in metadata
+    // Navigate to related page
     if (notification.metadata?.link) {
       onClose();
       router.push(notification.metadata.link);
@@ -87,7 +117,7 @@ export default function NotificationsPanel({
     }
   };
 
-  const unreadCount = notifications.filter((n) => !n.readAt).length;
+  const unreadCount = notifications.filter((n: NotificationType) => !n.readAt).length;
 
   return (
     <div className="flex flex-col">
@@ -103,7 +133,8 @@ export default function NotificationsPanel({
           <Button
             variant="ghost"
             size="sm"
-            onClick={handleMarkAllAsRead}
+            onClick={() => markAllAsReadMutation.mutate()}
+            disabled={markAllAsReadMutation.isPending}
             className="text-xs text-blue-600 hover:text-blue-700"
           >
             <CheckCheck className="mr-1 h-3 w-3" />
@@ -113,8 +144,8 @@ export default function NotificationsPanel({
       </div>
 
       {/* Notification List */}
-      <ScrollArea className="h-100">
-        {loading ? (
+      <ScrollArea className="h-96">
+        {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
           </div>
@@ -125,7 +156,7 @@ export default function NotificationsPanel({
           </div>
         ) : (
           <div>
-            {notifications.map((notification, index) => (
+            {notifications.map((notification: NotificationType, index: number) => (
               <div key={notification._id}>
                 <button
                   type="button"
@@ -150,7 +181,10 @@ export default function NotificationsPanel({
                           {notification.title}
                         </p>
                         {!notification.readAt && (
-                          <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600" />
+                          <Badge
+                            variant="default"
+                            className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600 p-0"
+                          />
                         )}
                       </div>
                       <p className="mt-0.5 text-sm text-gray-600 line-clamp-2">

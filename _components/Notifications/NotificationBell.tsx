@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 import { Button } from "../../app/components/ui/button";
 import { Badge } from "../../app/components/ui/badge";
@@ -13,31 +14,21 @@ import { getUnreadCount } from "../../app/lib/actions/notifications.actions";
 import NotificationsPanel from "./NotificationsPanel";
 
 export default function NotificationBell() {
-  const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
 
-  const fetchUnreadCount = useCallback(async () => {
-    const result = await getUnreadCount();
-    if (result.success) {
-      setUnreadCount(result.count);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchUnreadCount();
-
-    // Poll every 60 seconds for new notifications
-    const interval = setInterval(fetchUnreadCount, 60000);
-    return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
-
-  const handleNotificationChange = useCallback(() => {
-    fetchUnreadCount();
-  }, [fetchUnreadCount]);
+  // TanStack Query with automatic polling
+  const { data: unreadCount = 0 } = useQuery({
+    queryKey: ["unreadCount"],
+    queryFn: async () => {
+      const result = await getUnreadCount();
+      return result.success ? result.count : 0;
+    },
+    refetchInterval: 60000, // Poll every 60s
+  });
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
+      <PopoverTrigger asChild suppressHydrationWarning>
         <Button
           variant="ghost"
           size="icon"
@@ -54,15 +45,8 @@ export default function NotificationBell() {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        className="w-80 p-0 sm:w-96"
-        sideOffset={8}
-      >
-        <NotificationsPanel
-          onNotificationChange={handleNotificationChange}
-          onClose={() => setOpen(false)}
-        />
+      <PopoverContent align="end" className="w-80 p-0 sm:w-96" sideOffset={8}>
+        <NotificationsPanel onClose={() => setOpen(false)} />
       </PopoverContent>
     </Popover>
   );
