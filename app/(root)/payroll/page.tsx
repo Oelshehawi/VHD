@@ -90,7 +90,7 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
 
   if (!canManage)
     return (
-      <div className="flex min-h-[100vh] items-center justify-center text-3xl font-bold">
+      <div className="flex min-h-screen items-center justify-center text-3xl font-bold">
         You don't have correct permissions to access this page!
       </div>
     );

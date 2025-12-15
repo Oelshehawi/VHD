@@ -4,6 +4,7 @@ import {
   InfoBoxSkeleton,
   JobsDueContainerSkeleton,
 } from "../../../_components/Skeletons";
+import PWASetupBanner from "../../../_components/Notifications/PWASetupBanner";
 import {
   getClientCount,
   getPendingInvoiceAmount,
@@ -12,7 +13,6 @@ import {
 import { FaPeopleGroup } from "react-icons/fa6";
 import ActionsFeed from "../../../_components/dashboard/ActionsFeed";
 import MobileTabInterface from "../../../_components/dashboard/MobileTabInterface";
-//@ts-ignore
 import { auth } from "@clerk/nextjs/server";
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
 import { DashboardSearchParams } from "../../lib/typeDefinitions";
@@ -54,6 +54,7 @@ const DashboardPage = async ({
   
   return (
     <div className="min-h-screen bg-gray-50 p-8">
+      <PWASetupBanner />
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-8 mb-12 sm:grid-cols-2">
         <Suspense fallback={<InfoBoxSkeleton />}>
@@ -70,13 +71,13 @@ const DashboardPage = async ({
       {/* Activity Feed and Jobs Due - With Mobile Tabs */}
       {/* Desktop: Side by side layout */}
       <div className="hidden md:flex flex-col gap-8 lg:flex-row">
-        <Suspense fallback={<div className="rounded-xl bg-white p-8 shadow-lg border border-gray-200 h-[400px] animate-pulse" />}>
-          <div className="flex-1 lg:h-[680px]">
+        <Suspense fallback={<div className="rounded-xl bg-white p-8 shadow-lg border border-gray-200 h-100 animate-pulse" />}>
+          <div className="flex-1 lg:h-170">
             <ActionsFeed />
           </div>
         </Suspense>
         <Suspense fallback={<JobsDueContainerSkeleton />}>
-          <div className="flex-1 lg:h-[680px]">
+          <div className="flex-1 lg:h-170">
             <JobsDueContainer searchParams={resolvedSearchParams} />
           </div>
         </Suspense>
@@ -94,7 +95,7 @@ const ClientCount = async () => {
     <div className="rounded-xl bg-white p-4 sm:p-8 shadow-lg border border-gray-200 transition-all hover:scale-[1.02] hover:shadow-xl">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
         <div className="flex items-center gap-3 sm:gap-6">
-          <div className="rounded-xl bg-gradient-to-r from-darkGreen to-green-600 p-3 sm:p-4 shadow-lg">
+          <div className="rounded-xl bg-linear-to-r from-darkGreen to-green-600 p-3 sm:p-4 shadow-lg">
             <FaPeopleGroup className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
           </div>
           <div>

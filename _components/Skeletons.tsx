@@ -1,5 +1,5 @@
 const shimmer =
-  'before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-gradient-to-r before:from-transparent before:via-gray-200/40 before:to-transparent';
+  'before:absolute before:inset-0 before:-translate-x-full before:animate-[shimmer_2s_infinite] before:bg-linear-to-r before:from-transparent before:via-gray-200/40 before:to-transparent';
 
 export function InfoBoxSkeleton() {
   return (
@@ -50,7 +50,7 @@ export const JobsDueContainerSkeleton = () => {
       </div>
 
       {/* Table */}
-      <div className="flex-grow overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+      <div className="grow overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
         <div className="bg-gray-100 border-b border-gray-200 p-4">
           <div className="flex justify-between">
             <div className="h-4 w-16 bg-gray-300 rounded"></div>

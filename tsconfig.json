@@ -2,15 +2,6 @@
   "compilerOptions": {
     "rootDir": "./",
     "outDir": "./dist",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext",
-      "webworker"
-    ],
-    "types": [
-      "@serwist/next/typings"
-    ],
     "allowJs": true,
     "skipLibCheck": true,
     "noEmit": false,
@@ -23,14 +14,25 @@
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "checkJs": true,
-    "jsx": "preserve",
+    "jsx": "react-jsx",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": [
+        "./app/*"
+      ]
+    },
     "plugins": [
       {
         "name": "next"
       }
     ],
     "strictNullChecks": true,
-    "target": "ES2017"
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ]
   },
   "include": [
     ".eslintrc.cjs",
@@ -41,8 +43,11 @@
     "**/*.js",
     ".next/types/**/*.ts",
     "scripts/cleanup-invoice-photos.cjs",
-    "scripts/migrate-photos-signatures.cjs"
-, "scripts/test-scheduling.ts", "scripts/test-scheduling.js"  ],
+    "scripts/migrate-photos-signatures.cjs",
+    "scripts/test-scheduling.ts",
+    "scripts/test-scheduling.js",
+    ".next/dev/types/**/*.ts"
+  ],
   "exclude": [
     "node_modules"
   ]

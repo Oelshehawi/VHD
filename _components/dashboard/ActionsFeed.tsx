@@ -156,9 +156,9 @@ export default function ActionsFeed({}: ActionsFeedProps) {
   return (
     <div className="rounded-xl bg-white shadow-lg border border-gray-200 overflow-hidden flex flex-col h-full">
       {/* Header Section */}
-      <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-blue-100 space-y-4">
+      <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100 space-y-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-r from-blue-500 to-blue-600 shadow-lg">
             <FaHistory className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -359,7 +359,7 @@ export default function ActionsFeed({}: ActionsFeedProps) {
                       </span>
                     )}
                   </div>
-                  <p className="text-sm sm:text-base text-gray-900 font-medium break-words">
+                  <p className="text-sm sm:text-base text-gray-900 font-medium wrap-break-word">
                     {action.description}
                   </p>
                   <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">

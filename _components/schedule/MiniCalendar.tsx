@@ -477,7 +477,7 @@ export function Job({
         </div>
 
         {canManage && (
-          <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div className="flex flex-col items-end gap-2 shrink-0">
             <button
               className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
                 isConfirmed

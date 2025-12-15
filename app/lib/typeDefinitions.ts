@@ -539,3 +539,49 @@ export interface JobOptimizationData {
   // Temporary field for historical time data
   historicalTime?: { hour: number; minute: number } | null;
 }
+
+// Notification Types Enum
+export const NOTIFICATION_TYPES = {
+  JOB_REMINDER: "job_reminder",
+  INVOICE_PAID: "invoice_paid",
+  INVOICE_OVERDUE: "invoice_overdue",
+  SCHEDULE_UPDATE: "schedule_update",
+  ESTIMATE_STATUS: "estimate_status",
+  SYSTEM: "system",
+} as const;
+
+export type NotificationTypeEnum =
+  (typeof NOTIFICATION_TYPES)[keyof typeof NOTIFICATION_TYPES];
+
+// Push Subscription Type - for storing web push subscriptions
+export interface PushSubscriptionType {
+  _id?: string;
+  userId: string; // Clerk user ID
+  endpoint: string;
+  keys: {
+    p256dh: string;
+    auth: string;
+  };
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Notification Type - for in-app notifications
+export interface NotificationType {
+  _id?: string;
+  userId: string; // Clerk user ID
+  title: string;
+  body: string;
+  type: NotificationTypeEnum;
+  readAt: Date | null;
+  metadata?: {
+    invoiceId?: string;
+    scheduleId?: string;
+    clientId?: string;
+    estimateId?: string;
+    link?: string; // Direct link to navigate to
+  };
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+

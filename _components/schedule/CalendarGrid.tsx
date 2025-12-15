@@ -38,7 +38,7 @@ const CalendarGrid = ({
   return (
     <div className="flex h-full flex-col bg-white">
       {/* Enhanced Header */}
-      <div className="flex-none bg-gradient-to-r from-gray-50 to-white border-b border-gray-200">
+      <div className="flex-none bg-linear-to-r from-gray-50 to-white border-b border-gray-200">
 
         {/* Enhanced Days header */}
         <div className="flex bg-white">
@@ -76,7 +76,7 @@ const CalendarGrid = ({
                 key={idx}
                 className={`relative flex flex-1 flex-col items-center py-2 sm:py-3 md:py-4 transition-colors ${
                   isToday(day)
-                    ? "bg-gradient-to-b from-blue-50 to-blue-100/50 border-l-2 border-r-2 border-blue-200"
+                    ? "bg-linear-to-b from-blue-50 to-blue-100/50 border-l-2 border-r-2 border-blue-200"
                     : "bg-white hover:bg-gray-50/50"
                 } ${hasUnavailability ? "border-t-2 border-t-red-400" : ""}`}
                 title={hasUnavailability ? unavailabilityTitle : ""}
@@ -132,7 +132,7 @@ const CalendarGrid = ({
       <div className="relative flex-1 overflow-y-auto overflow-x-hidden">
         <div className="flex h-full min-h-[1200px] md:min-h-[1440px]">
           {/* Enhanced Time axis */}
-          <div className="sticky left-0 w-12 sm:w-16 md:w-20 flex-none bg-gradient-to-r from-gray-50 to-gray-25 border-r border-gray-200 z-10">
+          <div className="sticky left-0 w-12 sm:w-16 md:w-20 flex-none bg-linear-to-r from-gray-50 to-gray-25 border-r border-gray-200 z-10">
             <div className="grid auto-rows-[50px] sm:auto-rows-[60px]">
               {HOURS.map((hour) => (
                 <div

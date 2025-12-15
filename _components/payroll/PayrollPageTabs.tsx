@@ -77,7 +77,7 @@ const PayrollPageTabs = ({
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 h-1 w-full bg-gradient-to-r from-indigo-600 to-blue-600"
+                  className="absolute bottom-0 left-0 h-1 w-full bg-linear-to-r from-indigo-600 to-blue-600"
                   initial={false}
                 />
               )}

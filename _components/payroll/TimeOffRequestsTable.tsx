@@ -132,7 +132,7 @@ export function TimeOffRequestsTable({
                 {status === "pending" && (
                   <button
                     onClick={() => handleOpenModal(request)}
-                    className="px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition-colors whitespace-nowrap flex-shrink-0"
+                    className="px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition-colors whitespace-nowrap shrink-0"
                   >
                     Review
                   </button>

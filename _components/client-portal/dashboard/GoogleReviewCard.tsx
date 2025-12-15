@@ -41,7 +41,7 @@ const GoogleReviewCard = ({ reviewUrl }: GoogleReviewCardProps) => {
       transition={{ duration: 0.5, delay: 0.2 }}
       className="mt-6 overflow-hidden rounded-xl bg-white shadow-sm"
     >
-      <div className="bg-gradient-to-r from-green-600 to-green-900 px-6 py-4">
+      <div className="bg-linear-to-r from-green-600 to-green-900 px-6 py-4">
         <h2 className="text-xl font-semibold text-white">
           We Value Your Feedback
         </h2>

@@ -1,6 +1,10 @@
-import clsx from "clsx";
+import {clsx, type ClassValue} from "clsx";
 import { format } from "date-fns-tz";
 import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
 
 export const formatDate = (dateString: any) => {
   const parts = dateString.split("-");
@@ -101,10 +105,6 @@ export const formatDateStringUTC = (dateInput: string | Date): string => {
   const monthName = monthNames[parseInt(month, 10) - 1];
   return `${monthName} ${parseInt(day, 10)}, ${year}`;
 };
-
-export function cn(...inputs: any[]) {
-  return twMerge(clsx(inputs));
-}
 
 export const formatDateTime = (dateString: Date) => {
   const dateTimeOptions: Intl.DateTimeFormatOptions = {

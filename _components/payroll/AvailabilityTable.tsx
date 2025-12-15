@@ -105,7 +105,7 @@ export function AvailabilityTable({
                   <button
                     onClick={() => handleDeleteClick(entry)}
                     disabled={loading}
-                    className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                     title="Delete"
                   >
                     <TrashIcon className="h-4 w-4" />
@@ -141,7 +141,7 @@ export function AvailabilityTable({
                   <button
                     onClick={() => handleDeleteClick(entry)}
                     disabled={loading}
-                    className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+                    className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                     title="Delete"
                   >
                     <TrashIcon className="h-4 w-4" />

@@ -36,7 +36,7 @@ const RecentJobs = ({ schedules }: RecentJobsProps) => {
           {recentJobs.map((job) => (
             <li
               key={job._id as string}
-              className="flex flex-col rounded-lg bg-gradient-to-r from-yellow-100 to-yellow-200 p-4 shadow-inner"
+              className="flex flex-col rounded-lg bg-linear-to-r from-yellow-100 to-yellow-200 p-4 shadow-inner"
             >
               <p className="text-lg font-medium text-yellow-700">{job.jobTitle}</p>
               <p className="text-sm text-yellow-600">

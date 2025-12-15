@@ -88,7 +88,7 @@ const JobSearchSelect = ({
                   onClick={() => handleClick(job)}
                 >
                   <div className="flex items-center gap-3">
-                    <CalendarIcon className="h-8 w-8 text-blue-600 flex-shrink-0" />
+                    <CalendarIcon className="h-8 w-8 text-blue-600 shrink-0" />
                     <div>
                       <div className="font-medium text-gray-900">{job.jobTitle}</div>
                       <div className="text-sm text-gray-500">{job.location}</div>

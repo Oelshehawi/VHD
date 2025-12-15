@@ -21,7 +21,7 @@ const ClientInfoCard = ({
       transition={{ duration: 0.5 }}
       className="overflow-hidden rounded-xl bg-white shadow-sm"
     >
-      <div className="bg-gradient-to-r from-green-600 to-green-900 px-6 py-4">
+      <div className="bg-linear-to-r from-green-600 to-green-900 px-6 py-4">
         <h2 className="text-xl font-semibold text-white">Client Information</h2>
       </div>
       <div className="space-y-4 p-6">

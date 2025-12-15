@@ -50,7 +50,7 @@ const CallHistoryModal = ({ open, onClose, callHistory, jobTitle }: CallHistoryM
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
-          <div className="flex items-center justify-between bg-gradient-to-r from-purple-600 to-purple-700 p-4 text-white">
+          <div className="flex items-center justify-between bg-linear-to-r from-purple-600 to-purple-700 p-4 text-white">
             <div className="flex items-center gap-3">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
                 <FaHistory className="h-4 w-4" />

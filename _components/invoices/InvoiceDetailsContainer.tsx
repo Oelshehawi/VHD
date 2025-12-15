@@ -208,7 +208,7 @@ const InvoiceDetailsContainer = ({
       {canManage && (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-xl bg-white p-4 sm:p-6 shadow-sm ring-1 ring-gray-200">
           <div className="flex items-center gap-3 sm:gap-4">
-            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-green-100 flex-shrink-0">
+            <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-lg bg-green-100 shrink-0">
               <svg
                 className="h-5 w-5 sm:h-6 sm:w-6 text-green-600"
                 fill="none"

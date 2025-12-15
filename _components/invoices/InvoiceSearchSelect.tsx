@@ -62,7 +62,7 @@ const InvoiceSearchSelect = ({
             register("invoiceRef").onChange(e);
             handleSearch(e.target.value);
           }}
-          className="h-10 w-full flex-grow rounded-e-lg pl-5 focus:outline-none "
+          className="h-10 w-full grow rounded-e-lg pl-5 focus:outline-none "
         />
       </div>
       {error && (

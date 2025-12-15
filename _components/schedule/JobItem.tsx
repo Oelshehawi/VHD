@@ -159,7 +159,7 @@ const JobItem = ({
       {/* Dead Run Overlay - Enhanced visibility */}
       {isDeadRun && (
         <div className="absolute inset-0 bg-red-600/30 pointer-events-none z-10">
-          <div className="absolute inset-0 bg-gradient-to-br from-red-500/40 to-red-700/40"></div>
+          <div className="absolute inset-0 bg-linear-to-br from-red-500/40 to-red-700/40"></div>
         </div>
       )}
 
@@ -225,7 +225,7 @@ const JobItem = ({
 
         {/* Action Buttons - Always visible with compact design */}
         {canManage && (
-          <div className="flex items-center justify-between pt-1 border-t border-gray-100 mt-auto flex-shrink-0">
+          <div className="flex items-center justify-between pt-1 border-t border-gray-100 mt-auto shrink-0">
             <button
               onClick={toggleConfirmedStatus}
               disabled={isLoading}
@@ -243,7 +243,7 @@ const JobItem = ({
               onMouseDown={(e) => e.stopPropagation()}
               onTouchStart={(e) => e.stopPropagation()}
               disabled={isLoading}
-              className={`p-1 rounded transition-colors relative z-30 flex-shrink-0 ${
+              className={`p-1 rounded transition-colors relative z-30 shrink-0 ${
                 isDeadRun 
                   ? "bg-red-500 text-white hover:bg-red-600" 
                   : "bg-gray-100 text-gray-600 hover:bg-gray-200"

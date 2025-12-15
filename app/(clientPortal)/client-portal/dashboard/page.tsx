@@ -78,9 +78,9 @@ export default async function ClientDashboardPage({
     <div className="mx-auto max-w-7xl h-full flex flex-col">
       {/* Admin Viewing Banner */}
       {isAdminView && (
-        <div className="mb-4 rounded-md bg-amber-100 p-4 flex-shrink-0">
+        <div className="mb-4 rounded-md bg-amber-100 p-4 shrink-0">
           <div className="flex">
-            <div className="flex-shrink-0">
+            <div className="shrink-0">
               <svg
                 className="h-5 w-5 text-amber-400"
                 viewBox="0 0 20 20"
@@ -107,7 +107,7 @@ export default async function ClientDashboardPage({
       )}
 
       {/* Welcome Banner */}
-      <div className="flex-shrink-0">
+      <div className="shrink-0">
         <WelcomeBanner clientName={client.clientName} />
       </div>
 

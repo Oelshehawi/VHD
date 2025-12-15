@@ -12,7 +12,7 @@ const WelcomeBanner = ({ clientName }: WelcomeBannerProps) => {
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}
-      className="relative overflow-hidden rounded-xl bg-gradient-to-r from-green-600 to-green-900 p-6 text-white shadow-md"
+      className="relative overflow-hidden rounded-xl bg-linear-to-r from-green-600 to-green-900 p-6 text-white shadow-md"
     >
       {/* Decorative elements */}
       <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-green-500 opacity-20" />

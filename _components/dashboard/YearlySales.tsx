@@ -203,7 +203,7 @@ const YearlySales = ({ salesData, currentYear, onYearChange, isLoading }: Yearly
       <div className="flex-1 rounded-xl border border-gray-200 bg-white p-3 sm:p-6 shadow-lg transition-all hover:shadow-xl flex flex-col">
         {/* Header */}
         <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-6">
-          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-gradient-to-r from-darkGreen to-green-600 shadow-lg">
+          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-linear-to-r from-darkGreen to-green-600 shadow-lg">
             <FaChartBar className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
           </div>
           <div>
@@ -221,7 +221,7 @@ const YearlySales = ({ salesData, currentYear, onYearChange, isLoading }: Yearly
       {/* Controls */}
       <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-4 sm:pt-6">
         <button
-          className="flex items-center gap-2 sm:gap-3 rounded-xl bg-gradient-to-r from-darkBlue to-blue-600 px-3 py-2 sm:px-4 sm:py-2.5 text-white font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 text-sm sm:text-base"
+          className="flex items-center gap-2 sm:gap-3 rounded-xl bg-linear-to-r from-darkBlue to-blue-600 px-3 py-2 sm:px-4 sm:py-2.5 text-white font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 text-sm sm:text-base"
           onClick={() => handleYearChange('previous')}
         >
           <FaArrowLeft className="h-3 w-3" />
@@ -235,7 +235,7 @@ const YearlySales = ({ salesData, currentYear, onYearChange, isLoading }: Yearly
         </div>
         
         <button
-          className="flex items-center gap-2 sm:gap-3 rounded-xl bg-gradient-to-r from-darkBlue to-blue-600 px-3 py-2 sm:px-4 sm:py-2.5 text-white font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-sm sm:text-base"
+          className="flex items-center gap-2 sm:gap-3 rounded-xl bg-linear-to-r from-darkBlue to-blue-600 px-3 py-2 sm:px-4 sm:py-2.5 text-white font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-sm sm:text-base"
           onClick={() => handleYearChange('next')}
           disabled={currentYear === new Date().getFullYear()}
         >

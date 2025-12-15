@@ -71,8 +71,8 @@ const NavLinks = ({
                 href={href}
                 className={`text-black flex items-center justify-center rounded-lg bg-gray-600 p-4 text-xl font-bold ${
                   isActive(href)
-                    ? "!bg-darkBlue !text-white"
-                    : "hover:bg-darkBlue hover:!text-white"
+                    ? "!bg-darkBlue text-white!"
+                    : "hover:bg-darkBlue hover:text-white!"
                 }`}
                 onClick={() => setIsNavOpen(false)}
               >
@@ -99,8 +99,8 @@ const NavLinks = ({
                 href={href}
                 className={`text-black flex items-center justify-center rounded-lg bg-gray-600 p-2 text-xl font-bold ${
                   isActive(href)
-                    ? "!bg-darkBlue !text-white"
-                    : "hover:bg-darkBlue hover:!text-white"
+                    ? "!bg-darkBlue text-white!"
+                    : "hover:bg-darkBlue hover:text-white!"
                 }`}
                 onClick={() => setIsNavOpen(false)}
               >

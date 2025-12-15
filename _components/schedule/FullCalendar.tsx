@@ -58,7 +58,7 @@ const FullCalendar = ({
   };
 
   return (
-    <div className="h-full bg-gradient-to-br from-gray-50 to-white">
+    <div className="h-full bg-linear-to-br from-gray-50 to-white">
 
       {/* Modern Calendar Container */}
       <div className="h-full bg-white rounded-t-2xl shadow-xl border border-gray-200/50">

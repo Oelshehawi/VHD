@@ -204,7 +204,7 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
       >
         <div className="flex w-full flex-col bg-white shadow-2xl">
           {/* Header */}
-          <div className="flex w-full flex-row items-center justify-between bg-gradient-to-r from-darkGreen to-green-600 p-4 shadow-lg">
+          <div className="flex w-full flex-row items-center justify-between bg-linear-to-r from-darkGreen to-green-600 p-4 shadow-lg">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
                 <FaFileInvoice className="h-4 w-4 text-white" />
@@ -261,7 +261,7 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
               {showProspectFields && (
                 <div className="space-y-3 border-t border-gray-200 pt-4">
                   <div className="flex items-center gap-2">
-                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-blue-600">
+                    <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-linear-to-r from-blue-500 to-blue-600">
                       <FaUser className="h-3 w-3 text-white" />
                     </div>
                     <div>
@@ -345,7 +345,7 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
               {/* Services Section */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-r from-blue-500 to-blue-600">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-linear-to-r from-blue-500 to-blue-600">
                     <FaList className="h-3 w-3 text-white" />
                   </div>
                   <div>
@@ -384,7 +384,7 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
               {/* Estimate Items Section */}
               <div className="space-y-3">
                 <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-r from-darkBlue to-blue-600">
+                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-linear-to-r from-darkBlue to-blue-600">
                     <FaList className="h-3 w-3 text-white" />
                   </div>
                   <div>
@@ -509,7 +509,7 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
               <button
                 type="submit"
                 disabled={isProcessing}
-                className={`w-full rounded-lg bg-gradient-to-r from-darkBlue to-blue-600 py-3 text-white font-bold border border-blue-500/20 transition-all duration-300 shadow-lg text-sm
+                className={`w-full rounded-lg bg-linear-to-r from-darkBlue to-blue-600 py-3 text-white font-bold border border-blue-500/20 transition-all duration-300 shadow-lg text-sm
                   ${
                     isProcessing
                       ? "opacity-70 cursor-not-allowed"

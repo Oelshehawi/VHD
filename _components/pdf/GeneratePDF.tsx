@@ -144,7 +144,7 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
     <div className="flex flex-wrap items-center gap-2">
       {showScaleSelector &&
         (pdfData.type === "estimate" ||
-          pdfData.type === "invoice" ||
+        pdfData.type === "invoice" ||
           pdfData.type === "clientInvoice" ||
           pdfData.type === "report") && (
           <div className="flex items-center gap-2">
@@ -158,7 +158,7 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
               id="pdf-scale"
               value={scale}
               onChange={(e) => setScale(Number(e.target.value))}
-              className="min-w-[110px] rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="min-w-27.5 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
             >
               <option value={70}>70%</option>
               <option value={75}>75%</option>

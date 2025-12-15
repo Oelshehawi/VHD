@@ -98,7 +98,7 @@ export default function Pagination({ totalPages }: { totalPages: number }) {
     isDisabled?: boolean;
   }) {
     const className = clsx(
-      'flex h-10 w-[100%] md:w-10 items-center justify-center rounded-md border',
+      'flex h-10 w-full md:w-10 items-center justify-center rounded-md border',
       {
         'pointer-events-none text-gray-300': isDisabled,
         'hover:bg-gray-100': !isDisabled,

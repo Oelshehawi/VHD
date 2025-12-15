@@ -14,7 +14,7 @@ const ClientPortalFooter = () => {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="mt-auto border-t bg-gradient-to-r from-green-700 to-green-900 text-white"
+      className="mt-auto border-t bg-linear-to-r from-green-700 to-green-900 text-white"
     >
       <div className="container mx-auto px-4 py-4 sm:py-6">
         <div className="flex flex-col items-center justify-between space-y-4 md:flex-row md:space-y-0">

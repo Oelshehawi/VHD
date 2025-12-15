@@ -50,7 +50,7 @@ export default function InvoiceConfirmationModal({
           className="relative w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden"
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-purple-50 to-purple-100 px-6 py-6 border-b border-purple-200">
+          <div className="bg-linear-to-r from-purple-50 to-purple-100 px-6 py-6 border-b border-purple-200">
             <h2 className="text-xl font-bold text-gray-900 mb-1">
               Send Invoice
             </h2>
@@ -104,7 +104,7 @@ export default function InvoiceConfirmationModal({
                 </label>
                 <div className="flex items-center gap-3 rounded-lg bg-blue-50 px-4 py-3 border border-blue-200">
                   <svg
-                    className="h-5 w-5 text-blue-600 flex-shrink-0"
+                    className="h-5 w-5 text-blue-600 shrink-0"
                     fill="none"
                     viewBox="0 0 24 24"
                     strokeWidth="1.5"

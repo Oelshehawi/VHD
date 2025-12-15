@@ -150,7 +150,7 @@ export function TimeOffApprovalModal({
           <div className="p-6 space-y-4">
             {error && (
               <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-medium flex items-start gap-2">
-                <XCircleIcon className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <XCircleIcon className="h-4 w-4 shrink-0 mt-0.5" />
                 <span>{error}</span>
               </div>
             )}

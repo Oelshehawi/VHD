@@ -220,7 +220,7 @@ const CalendarOptions = ({
   };
 
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden bg-white">
+    <div className="flex h-dvh flex-col overflow-hidden bg-white">
       <Header
         calendarOption={calendarOption}
         setCalendarOption={toggleCalendarView}
@@ -343,7 +343,7 @@ const Header = ({
             {canManage && (
               <button
                 onClick={() => setOpen(!open)}
-                className="flex items-center px-3 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-lg sm:rounded-xl font-medium text-xs sm:text-sm hover:from-emerald-600 hover:to-emerald-700 shadow-sm hover:shadow-md transition-all duration-200 whitespace-nowrap touch-manipulation"
+                className="flex items-center px-3 py-2 sm:px-4 sm:py-2.5 bg-linear-to-r from-emerald-500 to-emerald-600 text-white rounded-lg sm:rounded-xl font-medium text-xs sm:text-sm hover:from-emerald-600 hover:to-emerald-700 shadow-sm hover:shadow-md transition-all duration-200 whitespace-nowrap touch-manipulation"
               >
                 <svg className="h-4 w-4 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -405,7 +405,7 @@ const Header = ({
             {canManage && (
               <button
                 onClick={() => setIsOptimizationModalOpen(true)}
-                className="hidden md:flex items-center px-3 py-2 sm:px-4 sm:py-2.5 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg sm:rounded-xl font-medium text-xs sm:text-sm hover:from-blue-600 hover:to-blue-700 shadow-sm hover:shadow-md transition-all duration-200 whitespace-nowrap"
+                className="hidden md:flex items-center px-3 py-2 sm:px-4 sm:py-2.5 bg-linear-to-r from-blue-500 to-blue-600 text-white rounded-lg sm:rounded-xl font-medium text-xs sm:text-sm hover:from-blue-600 hover:to-blue-700 shadow-sm hover:shadow-md transition-all duration-200 whitespace-nowrap"
               >
                 <svg className="h-4 w-4 sm:mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />

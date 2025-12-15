@@ -105,7 +105,7 @@ export default function AnalyticsMetrics({ metrics }: AnalyticsMetricsProps) {
               </p>
             </div>
             <div
-              className={`bg-gradient-to-r ${iconColorClasses[card.color]} p-2.5 rounded-lg shadow-md flex-shrink-0`}
+              className={`bg-linear-to-r ${iconColorClasses[card.color]} p-2.5 rounded-lg shadow-md shrink-0`}
             >
               <div className="text-white text-lg">{card.icon}</div>
             </div>

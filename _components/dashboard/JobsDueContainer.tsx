@@ -194,7 +194,7 @@ const JobsDueContainer = ({
       {/* Header Section */}
       <div className="flex items-center justify-between border-b border-gray-200 p-6 pb-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-darkGreen to-green-600 shadow-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-r from-darkGreen to-green-600 shadow-lg">
             <FaCalendarAlt className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -202,7 +202,7 @@ const JobsDueContainer = ({
             <p className="text-sm text-gray-600">Track and manage upcoming jobs</p>
           </div>
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-r from-darkGreen to-green-600 font-bold text-white shadow-lg">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-r from-darkGreen to-green-600 font-bold text-white shadow-lg">
           {totalDue}
         </div>
       </div>
@@ -264,7 +264,7 @@ const JobsDueContainer = ({
       </div>
 
       {/* Table Section */}
-      <div className="flex-grow overflow-hidden px-6 pb-6">
+      <div className="grow overflow-hidden px-6 pb-6">
         <div className="h-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
           <div className="h-full overflow-auto">
             <table className="w-full">

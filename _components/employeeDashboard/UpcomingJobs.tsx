@@ -25,7 +25,7 @@ const UpcomingJobs = ({ schedules }: UpcomingJobsProps) => {
 
   return (
     <motion.div
-      className="rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 p-6 shadow-md"
+      className="rounded-lg bg-linear-to-r from-blue-500 to-indigo-600 p-6 shadow-md"
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}

@@ -187,7 +187,7 @@ export default function OptimizationSetupWithPreferences({
         <button
           onClick={handleRunOptimization}
           disabled={isPending || !canRunOptimization}
-          className="w-full inline-flex items-center justify-center space-x-3 px-6 py-4 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
+          className="w-full inline-flex items-center justify-center space-x-3 px-6 py-4 bg-linear-to-r from-blue-600 to-blue-700 text-white font-medium rounded-xl hover:from-blue-700 hover:to-blue-800 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl transition-all"
         >
           {isPending ? (
             <>

@@ -9,55 +9,11 @@ import type { Metadata, Viewport } from "next";
 import SideNavBar from "../../_components/SideNavBar";
 import { getPendingTimeOffCount } from "../lib/data";
 import { QueryProvider } from "../lib/QueryProvider";
+import NotificationBell from "../../_components/Notifications/NotificationBell";
 
 const inter = Inter({ subsets: ["latin"] });
 
-const APP_NAME = "VHD";
-const APP_DEFAULT_TITLE = "VHD";
-const APP_TITLE_TEMPLATE = "%s - PWA App";
-const APP_DESCRIPTION = "VHD CRM";
 
-export const metadata: Metadata = {
-  applicationName: APP_NAME,
-  title: {
-    default: APP_DEFAULT_TITLE,
-    template: APP_TITLE_TEMPLATE,
-  },
-  description: APP_DESCRIPTION,
-  manifest: "/manifest.json",
-  appleWebApp: {
-    capable: true,
-    statusBarStyle: "default",
-    title: APP_DEFAULT_TITLE,
-  },
-  formatDetection: {
-    telephone: false,
-  },
-  openGraph: {
-    type: "website",
-    siteName: APP_NAME,
-    title: {
-      default: APP_DEFAULT_TITLE,
-      template: APP_TITLE_TEMPLATE,
-    },
-    description: APP_DESCRIPTION,
-  },
-  twitter: {
-    card: "summary",
-    title: {
-      default: APP_DEFAULT_TITLE,
-      template: APP_TITLE_TEMPLATE,
-    },
-    description: APP_DESCRIPTION,
-  },
-};
-
-export const viewport: Viewport = {
-  themeColor: "#000000",
-  width: "device-width",
-  initialScale: 1,
-  maximumScale: 1,
-};
 
 export default async function RootLayout({
   children,
@@ -96,7 +52,13 @@ export default async function RootLayout({
                 user={serializedUser}
                 pendingTimeOffCount={pendingTimeOffCount}
               />
-              <main className="flex-1 lg:ml-20">{children}</main>
+              <main className="relative flex-1 lg:ml-20">
+                {/* Notification Bell - Fixed position in top right */}
+                <div className="fixed right-4 top-4 z-50 lg:right-6 lg:top-6">
+                  <NotificationBell />
+                </div>
+                {children}
+              </main>
             </div>
             <SpeedInsights />
             <Analytics />

@@ -125,7 +125,7 @@ const DeleteModal = ({
 
       {/* Modal content */}
       <div
-        className="fixed inset-0 z-[1000] flex h-full w-full flex-wrap items-center justify-center overflow-auto p-4 font-[sans-serif] text-darkGray before:fixed before:inset-0 before:h-full before:w-full before:bg-[rgba(0,0,0,0.5)]"
+        className="fixed inset-0 z-1000 flex h-full w-full flex-wrap items-center justify-center overflow-auto p-4 font-[sans-serif] text-darkGray before:fixed before:inset-0 before:h-full before:w-full before:bg-[rgba(0,0,0,0.5)]"
         onClick={handleClose}
       >
         <div
@@ -162,10 +162,10 @@ const DeleteModal = ({
                 data-original="#000000"
               />
             </svg>
-            <h4 className="text-black mt-6 break-words text-xl font-semibold">
+            <h4 className="text-black mt-6 wrap-break-word text-xl font-semibold">
               {deleteText}
             </h4>
-            <p className="mt-4 break-words text-sm leading-relaxed text-gray-500">
+            <p className="mt-4 wrap-break-word text-sm leading-relaxed text-gray-500">
               {deleteDesc}
             </p>
           </div>

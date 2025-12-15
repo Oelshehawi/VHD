@@ -81,7 +81,7 @@ export default function OptimizationScheduleCompact({
       </div>
 
       {/* Total Metrics */}
-      <div className="flex justify-center items-center space-x-6 text-sm text-gray-600 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-3 border border-blue-100">
+      <div className="flex justify-center items-center space-x-6 text-sm text-gray-600 bg-linear-to-r from-blue-50 to-green-50 rounded-lg p-3 border border-blue-100">
         <div className="flex items-center space-x-2">
           <span className="font-medium">Total Work:</span>
           <span className="text-green-600 font-semibold">{Math.round(totalWorkTime)}m</span>
@@ -134,7 +134,7 @@ export default function OptimizationScheduleCompact({
               {/* Route Visualization */}
               <div className="space-y-1.5">
                 {/* Starting Depot */}
-                <div className="text-xs p-2 rounded-md border bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+                <div className="text-xs p-2 rounded-md border bg-linear-to-r from-blue-50 to-blue-100 border-blue-200">
                   <div className="flex justify-between items-center">
                     <div className="flex-1">
                       <div className="font-medium text-blue-900">🏢 Depot</div>
@@ -166,8 +166,8 @@ export default function OptimizationScheduleCompact({
                       {/* Job Card */}
                       <div className={`text-xs p-2.5 rounded-md border transition-colors ${
                         isApplied 
-                          ? 'bg-gradient-to-r from-green-50 to-green-100 border-green-200' 
-                          : 'bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 hover:border-gray-300'
+                          ? 'bg-linear-to-r from-green-50 to-green-100 border-green-200' 
+                          : 'bg-linear-to-r from-gray-50 to-gray-100 border-gray-200 hover:border-gray-300'
                       }`}>
                         <div className="flex justify-between items-start">
                           <div className="flex-1 min-w-0">
@@ -224,7 +224,7 @@ export default function OptimizationScheduleCompact({
                 })()}
 
                 {/* Ending Depot */}
-                <div className="text-xs p-2 rounded-md border bg-gradient-to-r from-blue-50 to-blue-100 border-blue-200">
+                <div className="text-xs p-2 rounded-md border bg-linear-to-r from-blue-50 to-blue-100 border-blue-200">
                   <div className="flex justify-between items-center">
                     <div className="flex-1">
                       <div className="font-medium text-blue-900">🏢 Depot</div>

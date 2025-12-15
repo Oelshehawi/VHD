@@ -122,7 +122,7 @@ export function EstimatesPage({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="flex-shrink-0 flex justify-center">
+        <div className="shrink-0 flex justify-center">
           <Pagination totalPages={totalPages} />
         </div>
       )}

@@ -68,7 +68,7 @@ const PayrollBreakdown = ({
 
   return (
     <motion.div
-      className="mb-6 rounded bg-gradient-to-r from-green-400 to-blue-500 p-4 text-white shadow-md"
+      className="mb-6 rounded bg-linear-to-r from-green-400 to-blue-500 p-4 text-white shadow-md"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.5 }}

@@ -249,7 +249,7 @@ const TabPanel = ({
               {isActive && (
                 <motion.div
                   layoutId="activeTab"
-                  className="absolute bottom-0 left-0 h-0.5 w-full bg-gradient-to-r from-green-700 to-green-900"
+                  className="absolute bottom-0 left-0 h-0.5 w-full bg-linear-to-r from-green-700 to-green-900"
                   initial={false}
                 />
               )}
@@ -270,7 +270,7 @@ const TabPanel = ({
               className="flex h-full flex-col space-y-4 p-2 sm:space-y-6 sm:p-4"
             >
               {/* Upcoming Services */}
-              <div className="min-h-0 flex-shrink-0">
+              <div className="min-h-0 shrink-0">
                 <h3 className="mb-2 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
                   Upcoming Services
                 </h3>
@@ -336,7 +336,7 @@ const TabPanel = ({
               transition={{ duration: 0.2 }}
               className="flex h-full flex-col px-2 sm:px-0"
             >
-              <div className="mb-3 flex flex-shrink-0 items-center justify-between">
+              <div className="mb-3 flex shrink-0 items-center justify-between">
                 <h3 className="text-base font-medium text-gray-900 sm:text-lg">
                   All Invoices
                 </h3>
@@ -427,7 +427,7 @@ const TabPanel = ({
                 exit={{ opacity: 0, y: -20 }}
                 className="flex h-full flex-col p-2 sm:p-4"
               >
-                <h3 className="mb-3 flex-shrink-0 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
+                <h3 className="mb-3 shrink-0 text-base font-semibold text-gray-900 sm:mb-4 sm:text-lg">
                   All Service Reports
                 </h3>
 

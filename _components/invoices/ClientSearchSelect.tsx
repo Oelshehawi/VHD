@@ -68,7 +68,7 @@ const ClientSearchSelect = ({
             register("clientId").onChange(e);
             handleSearch(e.target.value);
           }}
-          className="h-10 w-full flex-grow rounded-e-lg pl-5 focus:outline-none "
+          className="h-10 w-full grow rounded-e-lg pl-5 focus:outline-none "
         />
       </div>
       {error && <p className="mt-1 text-xs text-red-500">Client is required</p>}

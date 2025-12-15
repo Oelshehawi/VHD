@@ -1,7 +1,7 @@
 
 export default function Loading() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
+    <div className="min-h-screen bg-linear-to-br from-blue-50 to-indigo-100 flex items-center justify-center">
       <div className="relative">
         {/* Main spinner */}
         <div className="h-20 w-20 rounded-full border-4 border-gray-200"></div>

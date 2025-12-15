@@ -158,7 +158,7 @@ const CallLogModal = ({ open, onClose, context }: CallLogModalProps) => {
       >
         <div className="flex w-full flex-col bg-white shadow-2xl">
           {/* Header */}
-          <div className="flex w-full flex-row items-center justify-between bg-gradient-to-r from-blue-600 to-blue-700 p-4 shadow-lg">
+          <div className="flex w-full flex-row items-center justify-between bg-linear-to-r from-blue-600 to-blue-700 p-4 shadow-lg">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
                 <FaPhone className="h-4 w-4 text-white" />
@@ -344,7 +344,7 @@ const CallLogModal = ({ open, onClose, context }: CallLogModalProps) => {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`w-full rounded-lg border border-blue-500/20 bg-gradient-to-r from-blue-600 to-blue-700 py-3 text-sm font-bold text-white shadow-lg transition-all duration-300
+                className={`w-full rounded-lg border border-blue-500/20 bg-linear-to-r from-blue-600 to-blue-700 py-3 text-sm font-bold text-white shadow-lg transition-all duration-300
                   ${
                     isSubmitting
                       ? "cursor-not-allowed opacity-70"

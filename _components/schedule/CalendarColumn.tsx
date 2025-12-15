@@ -101,7 +101,7 @@ const CalendarColumn = ({
     >
       {/* Day indicator for today */}
       {isToday && (
-        <div className="absolute -top-[3.25rem] left-1/2 flex -translate-x-1/2 items-center justify-center">
+        <div className="absolute -top-13 left-1/2 flex -translate-x-1/2 items-center justify-center">
           <div className="relative">
             {/* Outer glow effect */}
             <div className="absolute inset-0 rounded-full bg-blue-200/50 blur-sm" />

@@ -122,7 +122,7 @@ const AddClient = () => {
       {/* Header Section */}
       <div className="mb-4 flex flex-row items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-r from-darkGreen to-green-600 shadow-lg">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-r from-darkGreen to-green-600 shadow-lg">
             <FaUser className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -132,7 +132,7 @@ const AddClient = () => {
         </div>
         <button
           onClick={() => setOpen(true)}
-          className="group flex items-center gap-2 rounded-xl bg-gradient-to-r from-darkBlue to-blue-600 px-4 py-2 font-semibold text-white shadow-lg border border-blue-500/20 transition-all duration-300 hover:shadow-xl hover:scale-105 active:scale-95"
+          className="group flex items-center gap-2 rounded-xl bg-linear-to-r from-darkBlue to-blue-600 px-4 py-2 font-semibold text-white shadow-lg border border-blue-500/20 transition-all duration-300 hover:shadow-xl hover:scale-105 active:scale-95"
         >
           <FaPlus className="h-3 w-3 transition-transform group-hover:rotate-90" />
           Add Client
@@ -155,7 +155,7 @@ const AddClient = () => {
       >
         <div className="flex w-full flex-col bg-white shadow-2xl">
           {/* Header */}
-          <div className="flex w-full flex-row items-center justify-between bg-gradient-to-r from-darkGreen to-green-600 p-4 shadow-lg">
+          <div className="flex w-full flex-row items-center justify-between bg-linear-to-r from-darkGreen to-green-600 p-4 shadow-lg">
             <div className="flex items-center gap-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
                 <FaUser className="h-4 w-4 text-white" />
@@ -250,7 +250,7 @@ const AddClient = () => {
               <button
                 type="submit"
                 disabled={isProcessing}
-                className={`w-full rounded-lg bg-gradient-to-r from-darkBlue to-blue-600 py-3 text-white font-bold border border-blue-500/20 transition-all duration-300 shadow-lg text-sm
+                className={`w-full rounded-lg bg-linear-to-r from-darkBlue to-blue-600 py-3 text-white font-bold border border-blue-500/20 transition-all duration-300 shadow-lg text-sm
                   ${
                     isProcessing
                       ? "opacity-70 cursor-not-allowed"

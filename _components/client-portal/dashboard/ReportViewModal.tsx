@@ -86,7 +86,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
-            <div className="bg-gradient-to-r from-green-600 to-green-900 px-4 py-3">
+            <div className="bg-linear-to-r from-green-600 to-green-900 px-4 py-3">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold text-white">
                   Service Report

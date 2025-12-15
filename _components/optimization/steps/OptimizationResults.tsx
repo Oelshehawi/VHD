@@ -84,7 +84,7 @@ export default function OptimizationResults({
         <p className="text-gray-600 mb-4">Review the optimized schedule and apply jobs as needed</p>
         
         {/* Key Metrics */}
-        <div className="flex justify-center items-center space-x-6 text-sm text-gray-600 bg-gradient-to-r from-blue-50 to-green-50 rounded-lg p-4 border border-blue-100">
+        <div className="flex justify-center items-center space-x-6 text-sm text-gray-600 bg-linear-to-r from-blue-50 to-green-50 rounded-lg p-4 border border-blue-100">
           <div className="flex items-center space-x-2">
             <span className="font-medium">Drive/Work Ratio:</span>
             <span className="text-blue-600 font-semibold">{driveWorkRatio}</span>

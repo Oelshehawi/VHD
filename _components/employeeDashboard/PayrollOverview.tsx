@@ -23,7 +23,7 @@ const PayrollOverview = ({ payrollPeriods }: PayrollOverviewProps) => {
   if (!currentPeriod) {
     return (
       <motion.div
-        className="rounded-lg bg-gradient-to-r from-green-500 to-teal-600 p-6 shadow-md"
+        className="rounded-lg bg-linear-to-r from-green-500 to-teal-600 p-6 shadow-md"
         initial={{ opacity: 0, y: 50 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
@@ -52,7 +52,7 @@ const PayrollOverview = ({ payrollPeriods }: PayrollOverviewProps) => {
 
   return (
     <motion.div
-      className="rounded-lg bg-gradient-to-r from-green-500 to-teal-600 p-6 shadow-md"
+      className="rounded-lg bg-linear-to-r from-green-500 to-teal-600 p-6 shadow-md"
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}

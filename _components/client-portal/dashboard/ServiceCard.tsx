@@ -112,13 +112,13 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
 
         <div className="space-y-2">
           <div className="flex items-center text-gray-600">
-            <CalendarIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+            <CalendarIcon className="mr-2 h-4 w-4 shrink-0" />
             <span className="text-sm">{formatDateTime(service.startDateTime)}</span>
           </div>
 
           {upcoming && service.dateDue && (
             <div className="flex items-center text-orange-600">
-              <ClockIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+              <ClockIcon className="mr-2 h-4 w-4 shrink-0" />
               <span className="text-sm font-medium">
                 Due: {formatDateStringUTC(service.dateDue)}
               </span>
@@ -127,7 +127,7 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
 
           { service.dateDue && (
             <div className="flex items-center text-blue-600">
-              <ClockIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+              <ClockIcon className="mr-2 h-4 w-4 shrink-0" />
               <span className="text-sm font-medium">
                 Next Due: {formatDateStringUTC(service.dateDue)}
               </span>
@@ -136,14 +136,14 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
 
           {service.location && (
             <div className="flex items-center text-gray-600">
-              <MapPinIcon className="mr-2 h-4 w-4 flex-shrink-0" />
+              <MapPinIcon className="mr-2 h-4 w-4 shrink-0" />
               <span className="truncate text-sm">{service.location}</span>
             </div>
           )}
 
           {hasPhotos && !upcoming && (
             <div className="mt-3 flex items-center">
-              <PhotoIcon className="mr-2 h-4 w-4 flex-shrink-0 text-darkGreen" />
+              <PhotoIcon className="mr-2 h-4 w-4 shrink-0 text-darkGreen" />
               <button
                 onClick={() => setShowPhotoGallery(true)}
                 className="text-sm text-darkGreen hover:underline"
@@ -159,7 +159,7 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
 
         {upcoming && service.confirmed && (
           <div className="mt-3 flex items-center text-green-600">
-            <CheckCircleIcon className="mr-1 h-4 w-4 flex-shrink-0" />
+            <CheckCircleIcon className="mr-1 h-4 w-4 shrink-0" />
             <span className="text-xs font-medium">Appointment confirmed</span>
           </div>
         )}
@@ -184,7 +184,7 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
                 onClick={(e) => e.stopPropagation()}
               >
                 {/* Header */}
-                <div className="bg-gradient-to-r from-green-600 to-green-900 px-4 py-3">
+                <div className="bg-linear-to-r from-green-600 to-green-900 px-4 py-3">
                   <div className="flex items-center justify-between">
                     <h2 className="text-lg font-semibold text-white">
                       Service Photos
