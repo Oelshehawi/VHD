@@ -41,9 +41,6 @@ export default async function RootLayout({
     <ClerkProvider>
       <QueryProvider>
         <html lang="en">
-          <head>
-            <link rel="manifest" href="/manifest.json" />
-          </head>
           <body className={inter.className}>
             <Toaster position="top-center" />
             <div className="flex min-h-screen flex-col lg:flex-row">

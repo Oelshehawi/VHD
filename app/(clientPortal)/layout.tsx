@@ -20,9 +20,6 @@ export default async function ClientPortalLayout({
   return (
     <ClerkProvider>
       <html lang="en">
-        <head>
-          <link rel="manifest" href="/manifest.json" />
-        </head>
         <body className={inter.className}>
           <Toaster position="top-center" />
           <div className="flex min-h-screen flex-col">
