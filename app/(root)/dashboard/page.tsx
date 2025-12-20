@@ -4,7 +4,6 @@ import {
   InfoBoxSkeleton,
   JobsDueContainerSkeleton,
 } from "../../../_components/Skeletons";
-import PWASetupBanner from "../../../_components/Notifications/PWASetupBanner";
 import {
   getClientCount,
   getPendingInvoiceAmount,
@@ -54,7 +53,6 @@ const DashboardPage = async ({
   
   return (
     <div className="min-h-screen bg-gray-50 p-8">
-      <PWASetupBanner />
       {/* Stats Cards */}
       <div className="grid grid-cols-1 gap-8 mb-12 sm:grid-cols-2">
         <Suspense fallback={<InfoBoxSkeleton />}>

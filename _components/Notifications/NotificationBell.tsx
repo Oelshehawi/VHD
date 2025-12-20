@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
-import { Button } from "../../app/components/ui/button";
-import { Badge } from "../../app/components/ui/badge";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "../../app/components/ui/popover";
+} from "../ui/popover";
 import { getUnreadCount } from "../../app/lib/actions/notifications.actions";
 import NotificationsPanel from "./NotificationsPanel";
 

@@ -17,9 +17,7 @@
     "jsx": "react-jsx",
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./app/*"
-      ]
+      "@/*": ["./app/*", "./*"]
     },
     "plugins": [
       {
@@ -28,27 +26,17 @@
     ],
     "strictNullChecks": true,
     "target": "ES2017",
-    "lib": [
-      "dom",
-      "dom.iterable",
-      "esnext"
-    ]
+    "lib": ["dom", "dom.iterable", "esnext"]
   },
   "include": [
-    ".eslintrc.cjs",
     "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    // "**/*.cjs",
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "_components/**/*.ts",
+    "_components/**/*.tsx",
     "**/*.js",
     ".next/types/**/*.ts",
-    "scripts/cleanup-invoice-photos.cjs",
-    "scripts/migrate-photos-signatures.cjs",
-    "scripts/test-scheduling.ts",
-    "scripts/test-scheduling.js",
     ".next/dev/types/**/*.ts"
   ],
-  "exclude": [
-    "node_modules"
-  ]
+  "exclude": ["node_modules", "scripts"]
 }
