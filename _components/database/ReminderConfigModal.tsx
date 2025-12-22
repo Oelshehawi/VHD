@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { FaTimes, FaPaperPlane, FaHistory, FaClock } from "react-icons/fa";
-import { motion, AnimatePresence } from "framer-motion";
+import { FaPaperPlane, FaHistory } from "react-icons/fa";
 import {
   PaymentReminderSettings,
   AuditLogEntry,
@@ -15,6 +14,19 @@ import {
 } from "../../app/lib/actions/reminder.actions";
 import toast from "react-hot-toast";
 import { formatDateStringUTC } from "../../app/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
+import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { ScrollArea } from "../ui/scroll-area";
+import { Badge } from "../ui/badge";
+import { Separator } from "../ui/separator";
 
 interface ReminderConfigModalProps {
   isOpen: boolean;
@@ -40,9 +52,8 @@ const ReminderConfigModal = ({
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [activeTab, setActiveTab] = useState<"settings" | "history">(
-    "settings",
-  );
+
+  // Reload settings when modal opens
   useEffect(() => {
     if (isOpen && invoiceId) {
       loadReminderSettings();
@@ -67,9 +78,8 @@ const ReminderConfigModal = ({
     }
   };
 
-  const handleFrequencyChange = (
-    frequency: "none" | "3days" | "7days" | "14days",
-  ) => {
+  const handleFrequencyChange = (value: string) => {
+    const frequency = value as "none" | "3days" | "7days" | "14days";
     setSettings((prev) => ({
       ...prev,
       enabled: frequency !== "none",
@@ -87,7 +97,7 @@ const ReminderConfigModal = ({
           enabled: settings.enabled,
           frequency: settings.frequency,
         },
-        userName
+        userName,
       );
 
       if (result.success) {
@@ -107,7 +117,7 @@ const ReminderConfigModal = ({
 
   const handleSendReminder = async () => {
     const confirmed = window.confirm(
-      "Are you sure you want to send a payment reminder now? This will immediately send an email to the client."
+      "Are you sure you want to send a payment reminder now? This will immediately send an email to the client.",
     );
 
     if (!confirmed) {
@@ -161,227 +171,155 @@ const ReminderConfigModal = ({
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="bg-black/50 fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
-        >
-          <motion.div
-            onClick={(e) => e.stopPropagation()}
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 50, opacity: 0 }}
-            className="relative h-full max-h-[90vh] w-full overflow-hidden rounded-lg bg-white shadow-xl md:h-auto md:max-h-[700px] md:w-[500px]"
-          >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b bg-white p-4">
-              <h2 className="text-lg font-bold text-gray-800">
-                Configure Auto Reminders
-              </h2>
-              <button
-                onClick={onClose}
-                className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-              >
-                <FaTimes size={16} />
-              </button>
-            </div>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[500px]">
+        <DialogHeader>
+          <DialogTitle>Configure Auto Reminders</DialogTitle>
+        </DialogHeader>
 
-            {/* Tabs */}
-            <div className="flex border-b">
-              <button
-                onClick={() => setActiveTab("settings")}
-                className={`flex-1 px-4 py-3 text-sm font-medium ${
-                  activeTab === "settings"
-                    ? "border-b-2 border-blue-500 text-blue-600"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Settings
-              </button>
-              <button
-                onClick={() => setActiveTab("history")}
-                className={`flex-1 px-4 py-3 text-sm font-medium ${
-                  activeTab === "history"
-                    ? "border-b-2 border-blue-500 text-blue-600"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                History
-              </button>
-            </div>
+        <Tabs defaultValue="settings" className="w-full">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="settings">Settings</TabsTrigger>
+            <TabsTrigger value="history">History</TabsTrigger>
+          </TabsList>
 
-            {/* Content */}
-            <div className="min-h-0 flex-1 overflow-y-auto p-4">
-              {activeTab === "settings" ? (
-                <div className="space-y-6">
-                  {/* Current Settings */}
-                  <div>
-                    <h3 className="mb-2 text-sm font-medium text-gray-700">
-                      Current Setting
-                    </h3>
-                    <div className="rounded-lg bg-gray-50 p-3">
-                      <span className="text-sm text-gray-600">
-                        {settings.enabled
-                          ? getFrequencyLabel(settings.frequency)
-                          : "No auto reminders"}
-                      </span>
-                      {settings.nextReminderDate && (
-                        <div className="mt-1 text-xs text-gray-500">
-                          Next reminder:{" "}
-                          {formatDateStringUTC(settings.nextReminderDate)}
-                        </div>
-                      )}
-                    </div>
+          <TabsContent value="settings" className="space-y-6 pt-4">
+            {/* Current Settings */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Current Setting
+              </label>
+              <div className="bg-muted/50 rounded-md border p-3">
+                <span className="text-sm font-medium">
+                  {settings.enabled
+                    ? getFrequencyLabel(settings.frequency)
+                    : "No auto reminders"}
+                </span>
+                {settings.nextReminderDate && (
+                  <div className="text-muted-foreground mt-1 text-xs">
+                    Next reminder:{" "}
+                    {formatDateStringUTC(settings.nextReminderDate)}
                   </div>
-
-                  {/* Frequency Selection */}
-                  <div>
-                    <h3 className="mb-3 text-sm font-medium text-gray-700">
-                      Reminder Frequency
-                    </h3>
-                    <div className="space-y-2">
-                      {[
-                        { value: "none", label: "None (default)" },
-                        { value: "3days", label: "Every 3 days" },
-                        { value: "7days", label: "Every 7 days" },
-                        { value: "14days", label: "Every 14 days" },
-                      ].map((option) => (
-                        <label
-                          key={option.value}
-                          className="flex cursor-pointer items-center space-x-3 rounded-lg border p-3 hover:bg-gray-50"
-                        >
-                          <input
-                            type="radio"
-                            name="frequency"
-                            value={option.value}
-                            checked={settings.frequency === option.value}
-                            onChange={(e) =>
-                              handleFrequencyChange(e.target.value as any)
-                            }
-                            className="h-4 w-4 text-blue-600"
-                          />
-                          <span className="text-sm text-gray-700">
-                            {option.label}
-                          </span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Manual Send Button */}
-                  <div>
-                    <h3 className="mb-2 text-sm font-medium text-gray-700">
-                      Send Reminder Now
-                    </h3>
-                    <button
-                      onClick={handleSendReminder}
-                      disabled={isSending}
-                      className="flex w-full items-center justify-center space-x-2 rounded-lg bg-blue-500 px-4 py-2 text-white transition-colors hover:bg-blue-600 disabled:opacity-50"
-                    >
-                      {isSending ? (
-                        <FaPaperPlane className="h-4 w-4 animate-spin" />
-                      ) : (
-                        <FaPaperPlane className="h-4 w-4" />
-                      )}
-                      <span>Send Reminder Now</span>
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-gray-700">
-                    Reminder History & Audit
-                  </h3>
-
-                  {auditLogs.length === 0 ? (
-                    <div className="rounded-lg border-2 border-dashed border-gray-200 p-8 text-center">
-                      <FaHistory className="mx-auto h-8 w-8 text-gray-400" />
-                      <p className="mt-2 text-sm text-gray-500">
-                        No reminder history yet
-                      </p>
-                    </div>
-                  ) : (
-                    <div className="max-h-64 space-y-3 overflow-y-auto">
-                      {auditLogs
-                        .filter((log) =>
-                          [
-                            "reminder_configured",
-                            "reminder_sent_auto",
-                            "reminder_sent_manual",
-                            "reminder_failed",
-                          ].includes(log.action),
-                        )
-                        .sort(
-                          (a, b) =>
-                            new Date(b.timestamp).getTime() -
-                            new Date(a.timestamp).getTime(),
-                        )
-                        .map((log, index) => (
-                          <div
-                            key={index}
-                            className="rounded-lg border bg-gray-50 p-3"
-                          >
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center space-x-2">
-                                  <span className="text-sm font-medium text-gray-900">
-                                    {getActionLabel(log.action)}
-                                  </span>
-                                  {log.success ? (
-                                    <span className="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-600">
-                                      Success
-                                    </span>
-                                  ) : (
-                                    <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs text-red-600">
-                                      Failed
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="mt-1 text-xs text-gray-500">
-                                  {formatDateStringUTC(log.timestamp)} by{" "}
-                                  {log.performedBy}
-                                </div>
-                                {log.details?.reason && (
-                                  <div className="mt-1 text-xs text-gray-600">
-                                    {log.details.reason}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-
-            {/* Footer */}
-            {activeTab === "settings" && (
-              <div className="flex items-center justify-end space-x-3 border-t bg-gray-50 p-4">
-                <button
-                  onClick={onClose}
-                  className="rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleSaveSettings}
-                  disabled={isLoading}
-                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {isLoading ? "Saving..." : "Save Settings"}
-                </button>
+                )}
               </div>
+            </div>
+
+            {/* Frequency Selection */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Reminder Frequency
+              </label>
+              <Select
+                value={settings.frequency}
+                onValueChange={handleFrequencyChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None (default)</SelectItem>
+                  <SelectItem value="3days">Every 3 days</SelectItem>
+                  <SelectItem value="7days">Every 7 days</SelectItem>
+                  <SelectItem value="14days">Every 14 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Save Button */}
+            <Button
+              onClick={handleSaveSettings}
+              disabled={isLoading}
+              className="w-full"
+            >
+              {isLoading ? "Saving..." : "Save Settings"}
+            </Button>
+
+            <Separator />
+
+            {/* Manual Send Button */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">
+                Send Reminder Now
+              </label>
+              <Button
+                onClick={handleSendReminder}
+                disabled={isSending}
+                variant="secondary"
+                className="w-full gap-2"
+              >
+                {isSending ? (
+                  <FaPaperPlane className="h-4 w-4 animate-spin" />
+                ) : (
+                  <FaPaperPlane className="h-4 w-4" />
+                )}
+                <span>Send Reminder Now</span>
+              </Button>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="history" className="pt-4">
+            <h3 className="mb-4 text-sm font-medium text-gray-700">
+              Reminder History & Audit
+            </h3>
+
+            {auditLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 text-center">
+                <FaHistory className="text-muted-foreground/50 mb-2 h-8 w-8" />
+                <p className="text-muted-foreground text-sm">
+                  No reminder history yet
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[300px] w-full rounded-md border p-4">
+                <div className="space-y-4">
+                  {auditLogs
+                    .filter((log) =>
+                      [
+                        "reminder_configured",
+                        "reminder_sent_auto",
+                        "reminder_sent_manual",
+                        "reminder_failed",
+                      ].includes(log.action),
+                    )
+                    .sort(
+                      (a, b) =>
+                        new Date(b.timestamp).getTime() -
+                        new Date(a.timestamp).getTime(),
+                    )
+                    .map((log, index) => (
+                      <div
+                        key={index}
+                        className="flex flex-col gap-1 border-b pb-3 last:border-0 last:pb-0"
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">
+                            {getActionLabel(log.action)}
+                          </span>
+                          <Badge
+                            variant={log.success ? "secondary" : "destructive"}
+                            className="bg-opacity-10 px-2 py-0 text-[10px]"
+                          >
+                            {log.success ? "Success" : "Failed"}
+                          </Badge>
+                        </div>
+                        <div className="text-muted-foreground flex justify-between text-xs">
+                          <span>{formatDateStringUTC(log.timestamp)}</span>
+                          <span>by {log.performedBy}</span>
+                        </div>
+                        {log.details?.reason && (
+                          <p className="text-muted-foreground/80 text-xs">
+                            {log.details.reason}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                </div>
+              </ScrollArea>
             )}
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 };
 

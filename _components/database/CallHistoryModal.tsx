@@ -1,8 +1,20 @@
 "use client";
-import { useState, useEffect } from "react";
-import { FaHistory, FaTimes } from "react-icons/fa";
+import { useState } from "react";
+import {
+  FaHistory,
+  FaPhone,
+  FaClock,
+  FaCalendar,
+  FaUser,
+  FaChevronDown,
+  FaChevronUp,
+} from "react-icons/fa";
 import { CallLogEntry } from "../../app/lib/typeDefinitions";
-import CallHistoryDisplay from "./CallHistoryDisplay";
+import { CALL_OUTCOME_LABELS } from "../../app/lib/callLogConstants";
+import { formatDateStringUTC } from "../../app/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { ScrollArea } from "../ui/scroll-area";
+import { Button } from "../ui/button";
 
 interface CallHistoryModalProps {
   open: boolean;
@@ -11,77 +23,152 @@ interface CallHistoryModalProps {
   jobTitle: string;
 }
 
-const CallHistoryModal = ({ open, onClose, callHistory, jobTitle }: CallHistoryModalProps) => {
-  const [preservedCallHistory, setPreservedCallHistory] = useState<CallLogEntry[]>([]);
-  const [preservedJobTitle, setPreservedJobTitle] = useState<string>("");
+const CallHistoryModal = ({
+  open,
+  onClose,
+  callHistory,
+  jobTitle,
+}: CallHistoryModalProps) => {
+  const [showAll, setShowAll] = useState(false);
+  const maxVisible = 10;
 
-  // Preserve data when modal opens or when new data arrives
-  useEffect(() => {
-    if (open && callHistory && callHistory.length > 0) {
-      setPreservedCallHistory(callHistory);
+  const getOutcomeColor = (outcome: string) => {
+    switch (outcome) {
+      case "scheduled":
+      case "payment_promised":
+      case "will_pay_today":
+        return "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800";
+      case "will_call_back":
+      case "requested_callback":
+      case "needs_more_time":
+        return "text-primary bg-primary/10 border-primary/20";
+      case "no_answer":
+      case "voicemail_left":
+        return "text-yellow-700 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800";
+      case "not_interested":
+      case "cancelled":
+      case "dispute_raised":
+        return "text-destructive bg-destructive/10 border-destructive/20";
+      default:
+        return "text-muted-foreground bg-muted border-border";
     }
-    if (open && jobTitle) {
-      setPreservedJobTitle(jobTitle);
-    }
-  }, [open, callHistory, jobTitle]);
+  };
 
-  // Use preserved data for display
-  const displayCallHistory = preservedCallHistory.length > 0 ? preservedCallHistory : callHistory;
-  const displayJobTitle = preservedJobTitle || jobTitle;
+  const sortedCalls = [...(callHistory || [])].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
+  );
+
+  const visibleCalls = showAll ? sortedCalls : sortedCalls.slice(0, maxVisible);
+  const hasMoreCalls = sortedCalls.length > maxVisible;
+
   return (
-    <>
-      {/* Background Overlay */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/70 backdrop-blur-md transition-all duration-300 ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        onClick={onClose}
-      />
+    <Dialog open={open} onOpenChange={(val) => !val && onClose()}>
+      <DialogContent className="max-h-[85vh] w-full max-w-4xl overflow-hidden">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+              <FaHistory className="text-primary h-4 w-4" />
+            </div>
+            <div>
+              <DialogTitle>Call History</DialogTitle>
+              <p className="text-muted-foreground mt-1 text-sm">{jobTitle}</p>
+            </div>
+          </div>
+        </DialogHeader>
 
-      {/* Modal */}
-      <div
-        className={`fixed inset-0 z-50 flex items-center justify-center p-4 transition-all duration-300 ${
-          open ? "opacity-100 scale-100" : "opacity-0 scale-95 pointer-events-none"
-        }`}
-        onClick={onClose}
-      >
-        <div
-          className="w-full max-w-4xl max-h-[80vh] bg-white rounded-xl shadow-2xl overflow-hidden transform transition-all duration-300"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between bg-linear-to-r from-purple-600 to-purple-700 p-4 text-white">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-                <FaHistory className="h-4 w-4" />
+        <ScrollArea className="max-h-[calc(85vh-120px)] px-6">
+          {!callHistory || callHistory.length === 0 ? (
+            <div className="text-muted-foreground py-8 text-center">
+              <FaHistory className="text-muted-foreground/30 mx-auto mb-4 h-12 w-12" />
+              <p>No call history found</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <h3 className="text-foreground flex items-center gap-2 text-sm font-semibold">
+                  <FaPhone className="text-muted-foreground h-4 w-4" />
+                  Call History ({callHistory.length})
+                </h3>
+                {hasMoreCalls && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowAll(!showAll)}
+                    className="text-primary hover:text-primary/90 text-xs"
+                  >
+                    {showAll ? (
+                      <>
+                        Show Less <FaChevronUp className="ml-1 h-3 w-3" />
+                      </>
+                    ) : (
+                      <>
+                        Show All <FaChevronDown className="ml-1 h-3 w-3" />
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
-              <div>
-                <h2 className="text-lg font-bold">Call History</h2>
-                <p className="text-sm text-purple-100">{displayJobTitle}</p>
+
+              <div className="space-y-3">
+                {visibleCalls.map((call, index) => (
+                  <div
+                    key={call._id || index}
+                    className="bg-card border-border rounded-lg border p-3 transition-shadow hover:shadow-sm"
+                  >
+                    {/* Call Header */}
+                    <div className="mb-2 flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="text-muted-foreground flex items-center gap-1 text-xs">
+                          <FaUser className="h-3 w-3" />
+                          {call.callerName}
+                        </div>
+                        <div className="text-muted-foreground flex items-center gap-1 text-xs">
+                          <FaClock className="h-3 w-3" />
+                          {formatDateStringUTC(call.timestamp)}
+                        </div>
+                      </div>
+                      {call.duration && (
+                        <div className="text-muted-foreground text-xs">
+                          {call.duration}m
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Outcome Badge */}
+                    <div className="mb-2">
+                      <span
+                        className={`inline-flex rounded-full border px-2 py-1 text-xs font-medium ${getOutcomeColor(call.outcome)}`}
+                      >
+                        {
+                          CALL_OUTCOME_LABELS[
+                            call.outcome as keyof typeof CALL_OUTCOME_LABELS
+                          ]
+                        }
+                      </span>
+                    </div>
+
+                    {/* Notes */}
+                    {call.notes && (
+                      <div className="text-foreground mb-2 text-sm">
+                        {call.notes}
+                      </div>
+                    )}
+
+                    {/* Follow-up Date */}
+                    {call.followUpDate && (
+                      <div className="text-primary bg-primary/10 flex items-center gap-1 rounded px-2 py-1 text-xs">
+                        <FaCalendar className="h-3 w-3" />
+                        Follow up: {formatDateStringUTC(call.followUpDate)}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
-            <button
-              onClick={onClose}
-              className="rounded-lg p-2 text-white hover:bg-white/20 transition-colors"
-            >
-              <FaTimes className="h-4 w-4" />
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="p-6 overflow-y-auto max-h-[calc(80vh-120px)]">
-            {callHistory && callHistory.length > 0 ? (
-              <CallHistoryDisplay callHistory={callHistory} maxVisible={10} />
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <FaHistory className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p>No call history found</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </div>
-    </>
+          )}
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 };
 

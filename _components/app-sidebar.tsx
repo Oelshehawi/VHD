@@ -81,12 +81,17 @@ export function AppSidebar({
                     asChild
                     isActive={isActive(item.url)}
                     tooltip={item.title}
+                    className={
+                      isActive(item.url)
+                        ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
+                        : ""
+                    }
                   >
                     <Link href={item.url}>
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                       {item.badge ? (
-                        <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
+                        <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px]">
                           {item.badge}
                         </span>
                       ) : null}

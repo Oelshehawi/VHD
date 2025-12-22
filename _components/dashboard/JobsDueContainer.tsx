@@ -1,16 +1,34 @@
 "use client";
 
-import { useMemo, useCallback, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { DashboardSearchParams } from "../../app/lib/typeDefinitions";
+import { useMemo, useState, useEffect, useRef } from "react";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { JobsDueDataType } from "../../app/lib/dashboard.data";
 import InvoiceRow from "./InvoiceRow";
-import CustomSelect from "./CustomSelect";
-import {
-  fetchJobsDueData,
-} from "../../app/lib/dashboard.data";
-import { FaCalendarAlt, FaFilter, FaClock } from "react-icons/fa";
+import { FaClock, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import ScheduledJobsBox from "./ScheduledJobsBox";
-import { CallLogProvider } from "./CallLogManager";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Button } from "../ui/button";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+  TableCell,
+} from "../ui/table";
 
 // Constants
 const MONTHS = [
@@ -30,117 +48,105 @@ const MONTHS = [
 
 const YEARS = Array.from({ length: 8 }, (_, i) => 2024 + i);
 
-// Helper function to serialize objects (convert to plain objects)
+// Helper function to serialize objects
 const serializeData = <T,>(data: T): T => {
   return JSON.parse(JSON.stringify(data));
 };
 
 const JobsDueContainer = ({
-  searchParams,
+  jobsDueData,
 }: {
-  searchParams: DashboardSearchParams;
+  jobsDueData: JobsDueDataType;
 }) => {
-  // Calculate current date at render time (not at module load)
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Track if component has mounted to prevent URL updates on initial mount
+  const isInitialMount = useRef(true);
+  const hasUserInteracted = useRef(false);
+
+  // Calculate current date at render time
   const currentDate = new Date();
   const currentMonth = MONTHS[currentDate.getMonth()];
   const currentYear = currentDate.getFullYear();
 
-  // Use searchParams if provided, otherwise default to current month/year
-  const month = searchParams.month || currentMonth;
-  const year = searchParams.year || currentYear;
+  // Read from URL params using useSearchParams hook
+  const monthParam = searchParams?.get("month") || null;
+  const yearParam = searchParams?.get("year") || null;
+  const scheduledParam = searchParams?.get("scheduled") || null;
 
-  // Local state for month/year to avoid server re-renders
-  const [displayMonth, setDisplayMonth] = useState(month);
-  const [displayYear, setDisplayYear] = useState(typeof year === "string" ? parseInt(year) : year);
+  // Use URL params or default to current month/year
+  const month = (monthParam || currentMonth) as string;
+  const year: number = yearParam ? parseInt(yearParam) : currentYear;
 
-  // Update URL without triggering server re-renders
-  const updateUrl = useCallback((newMonth: string | undefined, newYear: number) => {
-    if (!newMonth) return;
-    const params = new URLSearchParams();
-    params.set("month", newMonth);
-    params.set("year", newYear.toString());
-    if (searchParams?.scheduled) params.set("scheduled", searchParams.scheduled);
+  // Mark as mounted after first render
+  useEffect(() => {
+    isInitialMount.current = false;
+  }, []);
 
-    const newUrl = `?${params.toString()}`;
-    window.history.pushState({ month: newMonth, year: newYear }, "", newUrl);
-  }, [searchParams?.scheduled]);
-
-  // Handler for month selection from dropdown
-  const handleMonthChange = useCallback(
-    (selectedMonth: string | number) => {
-      const monthStr = String(selectedMonth);
-      setDisplayMonth(monthStr);
-      updateUrl(monthStr, displayYear);
-    },
-    [displayYear, updateUrl]
-  );
-
-  // Handler for year selection from dropdown
-  const handleYearChange = useCallback(
-    (selectedYear: string | number) => {
-      const yearNum = typeof selectedYear === "string" ? parseInt(selectedYear) : selectedYear;
-      setDisplayYear(yearNum);
-      updateUrl(displayMonth || MONTHS[0], yearNum);
-    },
-    [displayMonth, updateUrl]
-  );
-
-  // Handler for month navigation arrows (previous/next)
-  const navigateMonth = useCallback(
-    (offset: number) => {
-      const currentMonthIndex = MONTHS.indexOf(displayMonth || "");
-      const currentYearNum = displayYear;
-
-      let newMonthIndex = currentMonthIndex + offset;
-      let newYear = currentYearNum;
-
-      if (newMonthIndex < 0) {
-        newMonthIndex = 11;
-        newYear -= 1;
-      } else if (newMonthIndex > 11) {
-        newMonthIndex = 0;
-        newYear += 1;
-      }
-
-      const newMonthStr = MONTHS[newMonthIndex];
-      setDisplayMonth(newMonthStr);
-      setDisplayYear(newYear);
-      updateUrl(newMonthStr, newYear);
-    },
-    [displayMonth, displayYear, updateUrl]
-  );
-
-  // Fetch data using TanStack Query
-  const { data: invoicesData, isLoading, error } = useQuery({
-    queryKey: ["jobsDue", displayMonth, displayYear],
-    queryFn: async () => {
-      return await fetchJobsDueData({
-        month: displayMonth || "",
-        year: displayYear,
-      });
-    },
-  });
-
-  // Compute filtered data from query result
-  const { totalDue, displayInvoices, scheduledInvoices, scheduledCount, unscheduledCount } = useMemo(() => {
-    if (!invoicesData) {
-      return {
-        totalDue: 0,
-        displayInvoices: [],
-        scheduledInvoices: [],
-        scheduledCount: 0,
-        unscheduledCount: 0,
-      };
+  // Update URL using router.replace() - only when user explicitly changes values
+  const updateUrl = (newMonth: string, newYear: number) => {
+    // Don't update URL on initial mount
+    if (isInitialMount.current && !hasUserInteracted.current) {
+      return;
     }
 
-    const { invoicesWithSchedule, scheduledCount, unscheduledCount } = invoicesData;
+    hasUserInteracted.current = true;
+    const params = new URLSearchParams(searchParams?.toString() || "");
+    params.set("month", newMonth);
+    params.set("year", newYear.toString());
+    if (scheduledParam) params.set("scheduled", scheduledParam);
+
+    // router.replace() does client-side navigation, no full refresh
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  // Handler for month selection
+  const handleMonthChange = (selectedMonth: string) => {
+    updateUrl(selectedMonth, year);
+  };
+
+  // Handler for year selection
+  const handleYearChange = (selectedYear: string) => {
+    const yearNum = parseInt(selectedYear);
+    updateUrl(month, yearNum);
+  };
+
+  // Handler for month navigation arrows
+  const navigateMonth = (offset: number) => {
+    const currentMonthIndex = MONTHS.indexOf(month);
+    const currentYearNum = year;
+
+    let newMonthIndex = currentMonthIndex + offset;
+    let newYear = currentYearNum;
+
+    if (newMonthIndex < 0) {
+      newMonthIndex = 11;
+      newYear -= 1;
+    } else if (newMonthIndex > 11) {
+      newMonthIndex = 0;
+      newYear += 1;
+    }
+
+    const newMonthStr = MONTHS[newMonthIndex]!;
+    updateUrl(newMonthStr, newYear);
+  };
+
+  // Use jobsDueData directly - no TanStack Query
+  const {
+    displayInvoices,
+    scheduledInvoices,
+    scheduledCount,
+    unscheduledCount,
+  } = useMemo(() => {
+    const { invoicesWithSchedule, scheduledCount, unscheduledCount } =
+      jobsDueData;
     const total = invoicesWithSchedule?.length || 0;
 
     // Filter for display based on isScheduled - default to showing unscheduled
     const display = invoicesWithSchedule.filter((invoice) =>
-      searchParams?.scheduled === "true"
-        ? invoice?.isScheduled
-        : !invoice?.isScheduled,
+      scheduledParam === "true" ? invoice?.isScheduled : !invoice?.isScheduled,
     );
 
     // Get scheduled invoices for the modal
@@ -155,160 +161,111 @@ const JobsDueContainer = ({
       scheduledCount,
       unscheduledCount,
     };
-  }, [invoicesData]);
-
-  // Loading state
-  if (isLoading) {
-    return (
-      <div className="flex h-full w-full flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-lg animate-pulse">
-        <div className="flex items-center justify-between mb-4">
-          <div className="h-8 w-48 bg-gray-200 rounded"></div>
-          <div className="h-12 w-12 bg-gray-200 rounded-xl"></div>
-        </div>
-        <div className="space-y-4">
-          <div className="h-6 w-full bg-gray-100 rounded"></div>
-          <div className="h-64 w-full bg-gray-100 rounded"></div>
-        </div>
-      </div>
-    );
-  }
-
-  // Error state
-  if (error) {
-    return (
-      <div className="flex h-full w-full flex-col rounded-xl border border-gray-200 bg-white p-6 shadow-lg">
-        <div className="flex h-full items-center justify-center">
-          <div className="text-center">
-            <FaClock className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-            <p className="text-lg font-medium text-gray-500">Error loading jobs</p>
-            <p className="text-sm text-gray-400">Please try again later</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  }, [jobsDueData, scheduledParam]);
 
   return (
-    <CallLogProvider>
-      <div className="flex h-full w-full flex-col rounded-xl border border-gray-200 bg-white shadow-lg transition-all duration-300 hover:shadow-xl">
-      {/* Header Section */}
-      <div className="flex items-center justify-between border-b border-gray-200 p-6 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-r from-darkGreen to-green-600 shadow-lg">
-            <FaCalendarAlt className="h-5 w-5 text-white" />
-          </div>
+    <Card className="flex h-full max-h-[calc(100vh-120px)] w-full flex-col shadow-sm">
+      <CardHeader className="bg-muted/40 border-border border-b p-4 pb-4 sm:p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Jobs Due</h2>
-            <p className="text-sm text-gray-600">Track and manage upcoming jobs</p>
+            <CardTitle className="text-xl">Jobs Due</CardTitle>
+            <CardDescription className="mt-1">
+              Track and manage upcoming jobs
+            </CardDescription>
+          </div>
+          {/* KPI Stats - Clickable to open ScheduledJobsBox */}
+          <ScheduledJobsBox
+            scheduledCount={scheduledCount}
+            unscheduledCount={unscheduledCount}
+            scheduledInvoices={scheduledInvoices}
+          />
+        </div>
+
+        <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-1 items-center gap-2">
+            <Select value={month} onValueChange={handleMonthChange}>
+              <SelectTrigger className="bg-background w-[130px]">
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                {MONTHS.map((monthOption) => (
+                  <SelectItem key={monthOption} value={monthOption}>
+                    {monthOption}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={year.toString()} onValueChange={handleYearChange}>
+              <SelectTrigger className="bg-background w-[100px]">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {YEARS.map((year) => (
+                  <SelectItem key={year} value={year.toString()}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigateMonth(-1)}
+              title="Previous Month"
+              className="bg-background cursor-pointer"
+            >
+              <FaChevronLeft className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigateMonth(1)}
+              title="Next Month"
+              className="bg-background cursor-pointer"
+            >
+              <FaChevronRight className="h-4 w-4" />
+            </Button>
           </div>
         </div>
-        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-linear-to-r from-darkGreen to-green-600 font-bold text-white shadow-lg">
-          {totalDue}
-        </div>
-      </div>
+      </CardHeader>
 
-      {/* Status Cards */}
-      <div className="px-6 pt-4">
-        <ScheduledJobsBox
-          scheduledCount={scheduledCount}
-          unscheduledCount={unscheduledCount}
-          scheduledInvoices={scheduledInvoices}
-        />
-      </div>
-
-      {/* Filters Section */}
-      <div className="flex items-center justify-between gap-2 px-6 z-20 py-4">
-        <div className="flex items-center gap-2">
-          <FaFilter className="h-4 w-4 text-gray-400" />
-          <span className="text-sm font-medium text-gray-700 mr-2">Filter by:</span>
-          <div className="flex flex-wrap gap-2">
-            <CustomSelect
-              values={MONTHS}
-              currentValue={displayMonth}
-              urlName="month"
-              searchParams={searchParams}
-              onChange={handleMonthChange}
-            />
-            <CustomSelect
-              values={YEARS}
-              currentValue={displayYear.toString()}
-              urlName="year"
-              searchParams={searchParams}
-              onChange={handleYearChange}
-            />
-          </div>
-        </div>
-
-        {/* Month Navigation Arrows */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => navigateMonth(-1)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:border-gray-400"
-            title="Previous Month"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-
-          <button
-            onClick={() => navigateMonth(1)}
-            className="flex h-8 w-8 items-center justify-center rounded-lg border border-gray-300 bg-white text-gray-600 transition-colors hover:bg-gray-50 hover:border-gray-400"
-            title="Next Month"
-          >
-            <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Table Section */}
-      <div className="grow overflow-hidden px-6 pb-6">
-        <div className="h-full overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-          <div className="h-full overflow-auto">
-            <table className="w-full">
-              <thead className="sticky top-0 z-10 bg-white border-b border-gray-200 shadow-sm">
-                <tr>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">
-                    <div className="flex items-center gap-2">
-                      <span>Job & Contact</span>
-                    </div>
-                  </th>
-                  <th className="px-4 py-4 text-left text-sm font-semibold text-gray-700">
-                    <div className="flex items-center gap-2">
-                      <FaClock className="h-3 w-3" />
-                      <span>Due Date</span>
-                    </div>
-                  </th>
-                  <th className="px-4 py-4 text-center text-sm font-semibold text-gray-700">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {displayInvoices.length === 0 ? (
-                  <tr>
-                    <td className="px-4 py-12 text-center" colSpan={3}>
-                      <div className="flex flex-col items-center justify-center">
-                        <FaClock className="mb-4 h-12 w-12 text-gray-300" />
-                        <p className="text-lg font-medium text-gray-500">No jobs due this month</p>
-                        <p className="text-sm text-gray-400 mt-1">Check back later or adjust your filters</p>
-                      </div>
-                    </td>
-                  </tr>
-                ) : (
-                  displayInvoices.map((invoice) => (
-                    <InvoiceRow key={invoice.invoiceId} invoiceData={invoice} />
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-    </div>
-    </CallLogProvider>
+      <CardContent className="flex min-h-0 flex-1 flex-col p-0">
+        <Table>
+          <TableHeader className="bg-background sticky top-0 z-10 border-b">
+            <TableRow>
+              <TableHead className="w-[60%]">Job & Contact</TableHead>
+              <TableHead>Due Date</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {displayInvoices.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={3} className="h-64 text-center">
+                  <div className="text-muted-foreground flex flex-col items-center justify-center">
+                    <FaClock className="text-muted-foreground/30 mb-4 h-12 w-12" />
+                    <p className="text-foreground text-lg font-medium">
+                      No jobs due this month
+                    </p>
+                    <p className="text-muted-foreground text-sm">
+                      Check back later or adjust your filters
+                    </p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ) : (
+              displayInvoices.map((invoice) => (
+                <InvoiceRow key={invoice.invoiceId} invoiceData={invoice} />
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </CardContent>
+    </Card>
   );
 };
 

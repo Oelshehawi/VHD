@@ -6,7 +6,7 @@ export function formatTime24to12hr(time24: string): string {
   if (!time24) return "";
 
   const [hoursStr, minutesStr] = time24.split(":");
-  const hours = parseInt(hoursStr, 10);
+  const hours = parseInt(hoursStr || "0", 10);
   const minutes = parseInt(minutesStr || "0", 10);
 
   const ampm = hours >= 12 ? "PM" : "AM";
@@ -19,6 +19,9 @@ export function formatTime24to12hr(time24: string): string {
  * Format a time range in 12-hour format
  * Example: ("18:00", "21:00") -> "6:00 PM - 9:00 PM"
  */
-export function formatTimeRange12hr(startTime: string, endTime: string): string {
+export function formatTimeRange12hr(
+  startTime: string,
+  endTime: string,
+): string {
   return `${formatTime24to12hr(startTime)} - ${formatTime24to12hr(endTime)}`;
 }

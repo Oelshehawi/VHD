@@ -5,16 +5,20 @@ import {
   JobsDueContainerSkeleton,
 } from "../../../_components/Skeletons";
 import {
-  getClientCount,
   getPendingInvoiceAmount,
   getPendingInvoices,
+  getUnscheduledJobs,
+  fetchJobsDueData,
+  fetchRecentActions,
 } from "../../lib/dashboard.data";
-import { FaPeopleGroup } from "react-icons/fa6";
 import ActionsFeed from "../../../_components/dashboard/ActionsFeed";
 import MobileTabInterface from "../../../_components/dashboard/MobileTabInterface";
 import { auth } from "@clerk/nextjs/server";
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
+import UrgentAttention from "../../../_components/dashboard/UrgentAttention";
 import { DashboardSearchParams } from "../../lib/typeDefinitions";
+import { Card, CardContent } from "../../../_components/ui/card";
+import { AlertCircle } from "lucide-react";
 
 const DashboardPage = async ({
   searchParams,
@@ -23,89 +27,136 @@ const DashboardPage = async ({
 }) => {
   const resolvedSearchParams = await searchParams;
 
-  const [{ sessionClaims }, amount, pendingInvoices] = await Promise.all([
+  // Parse date range for actions feed (default to current month)
+  const now = new Date();
+  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+  const actionsDateFrom = resolvedSearchParams.actionsDateFrom
+    ? new Date(resolvedSearchParams.actionsDateFrom)
+    : currentMonthStart;
+  const actionsDateTo = resolvedSearchParams.actionsDateTo
+    ? new Date(resolvedSearchParams.actionsDateTo)
+    : currentMonthEnd;
+  const actionsSearch = resolvedSearchParams.actionsSearch || "";
+
+  // Adjust end date for fetchRecentActions (it expects exclusive end date)
+  const adjustedActionsDateTo = new Date(actionsDateTo);
+  adjustedActionsDateTo.setDate(adjustedActionsDateTo.getDate() + 1);
+
+  // Parse month/year for jobs due - default to current month/year on server side
+  const MONTHS = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  const currentMonthName = MONTHS[now.getMonth()];
+  const jobsMonth = resolvedSearchParams.month || currentMonthName;
+  const jobsYear = resolvedSearchParams.year
+    ? typeof resolvedSearchParams.year === "string"
+      ? parseInt(resolvedSearchParams.year)
+      : resolvedSearchParams.year
+    : now.getFullYear();
+
+  const [
+    { sessionClaims },
+    amount,
+    pendingInvoices,
+    unscheduledJobs,
+    jobsDueData,
+    recentActions,
+  ] = await Promise.all([
     auth(),
     getPendingInvoiceAmount(),
     getPendingInvoices(),
+    getUnscheduledJobs(),
+    fetchJobsDueData({
+      month: jobsMonth,
+      year: jobsYear,
+    }),
+    fetchRecentActions(actionsDateFrom, adjustedActionsDateTo, actionsSearch),
   ]);
-
 
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
+  const overdueInvoices = pendingInvoices.filter(
+    (inv) => inv.status === "overdue",
+  );
+
+  // Filter unscheduled jobs to only show those due before the current month
+  const urgentUnscheduledJobs = unscheduledJobs.filter((job) => {
+    const dueDate = new Date(job.dateDue);
+    return dueDate < currentMonthStart;
+  });
+
   if (!canManage)
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="rounded-xl bg-white p-8 shadow-xl border border-gray-200 max-w-md mx-4">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-red-100 flex items-center justify-center border border-red-200">
-              <svg className="h-8 w-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+      <div className="flex items-center justify-center bg-gray-50">
+        <Card className="w-full max-w-md">
+          <CardContent className="flex flex-col items-center justify-center p-8 text-center">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <AlertCircle className="h-8 w-8 text-red-500" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-            <p className="text-gray-600">You don't have the required permissions to access this page.</p>
-          </div>
-        </div>
+            <h2 className="mb-2 text-2xl font-bold text-gray-900">
+              Access Denied
+            </h2>
+            <p className="text-gray-600">
+              You don&apos;t have the required permissions to access this page.
+            </p>
+          </CardContent>
+        </Card>
       </div>
     );
 
-  
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 gap-8 mb-12 sm:grid-cols-2">
-        <Suspense fallback={<InfoBoxSkeleton />}>
-          <ClientCount />
-        </Suspense>
+    <>
+      {/* Top Row: Pending Amount & Urgent Attention - Side by Side */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Suspense fallback={<InfoBoxSkeleton />}>
           <PendingAmountContainer
             amount={amount}
             pendingInvoices={pendingInvoices}
           />
         </Suspense>
+        <UrgentAttention
+          overdueInvoices={overdueInvoices}
+          unscheduledJobs={urgentUnscheduledJobs}
+        />
       </div>
 
-      {/* Activity Feed and Jobs Due - With Mobile Tabs */}
-      {/* Desktop: Side by side layout */}
-      <div className="hidden md:flex flex-col gap-8 lg:flex-row">
-        <Suspense fallback={<div className="rounded-xl bg-white p-8 shadow-lg border border-gray-200 h-100 animate-pulse" />}>
-          <div className="flex-1 lg:h-170">
-            <ActionsFeed />
-          </div>
-        </Suspense>
-        <Suspense fallback={<JobsDueContainerSkeleton />}>
-          <div className="flex-1 lg:h-170">
-            <JobsDueContainer searchParams={resolvedSearchParams} />
-          </div>
-        </Suspense>
+      {/* Main Content Grid - flex-1 fills remaining space */}
+      <div className="hidden min-h-0 flex-1 gap-8 lg:grid lg:grid-cols-2">
+        {/* Jobs Due - 1/2 width */}
+        <div className="h-full min-h-0 min-w-0 flex-1 overflow-auto">
+          <JobsDueContainer jobsDueData={jobsDueData} />
+        </div>
+
+        {/* Activity Feed - 1/2 width */}
+        <div className="h-full min-h-0 min-w-0 flex-1 overflow-auto">
+          <ActionsFeed
+            searchParams={resolvedSearchParams}
+            recentActions={recentActions}
+          />
+        </div>
       </div>
 
       {/* Mobile: Tab interface - Jobs Due first */}
-      <MobileTabInterface searchParams={resolvedSearchParams} />
-    </div>
-  );
-};
-
-const ClientCount = async () => {
-  const count = await getClientCount();
-  return (
-    <div className="rounded-xl bg-white p-4 sm:p-8 shadow-lg border border-gray-200 transition-all hover:scale-[1.02] hover:shadow-xl">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 sm:gap-6">
-        <div className="flex items-center gap-3 sm:gap-6">
-          <div className="rounded-xl bg-linear-to-r from-darkGreen to-green-600 p-3 sm:p-4 shadow-lg">
-            <FaPeopleGroup className="h-6 w-6 sm:h-8 sm:w-8 text-white" />
-          </div>
-          <div>
-            <h2 className="text-lg font-bold text-gray-900 sm:text-2xl">Total Clients</h2>
-            <p className="text-gray-600 text-sm sm:text-base">Active customer base</p>
-          </div>
-        </div>
-        <div className="rounded-xl bg-gray-50 p-4 sm:p-6 text-center border border-gray-200">
-          <div className="text-2xl font-bold text-gray-900 sm:text-4xl">{count}</div>
-        </div>
-      </div>
-    </div>
+      <MobileTabInterface
+        searchParams={resolvedSearchParams}
+        jobsDueData={jobsDueData}
+        recentActions={recentActions}
+      />
+    </>
   );
 };
 

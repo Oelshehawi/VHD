@@ -1,7 +1,12 @@
 "use server";
 
 import connectMongo from "./connect";
-import { Client, Invoice, JobsDueSoon, AuditLog } from "../../models/reactDataSchema";
+import {
+  Client,
+  Invoice,
+  JobsDueSoon,
+  AuditLog,
+} from "../../models/reactDataSchema";
 import { formatDateUTC } from "./utils";
 import {
   DueInvoiceType,
@@ -435,9 +440,10 @@ const formatPendingInvoices = (invoices: any[]) => {
               // Create a new plain object without MongoDB properties
               const plainEntry: any = {};
               if (entry.sentAt !== undefined) {
-                plainEntry.sentAt = entry.sentAt instanceof Date
-                  ? entry.sentAt.toISOString()
-                  : String(entry.sentAt);
+                plainEntry.sentAt =
+                  entry.sentAt instanceof Date
+                    ? entry.sentAt.toISOString()
+                    : String(entry.sentAt);
               }
               if (entry.emailTemplate !== undefined) {
                 plainEntry.emailTemplate = entry.emailTemplate;
@@ -458,16 +464,23 @@ const formatPendingInvoices = (invoices: any[]) => {
           enabled: false,
           frequency: "none",
         },
-    callHistory: invoice.callHistory?.map((call: any) => ({
-      _id: call._id?.toString(),
-      callerId: call.callerId,
-      callerName: call.callerName,
-      timestamp: call.timestamp instanceof Date ? call.timestamp.toISOString() : call.timestamp,
-      outcome: call.outcome,
-      notes: call.notes,
-      followUpDate: call.followUpDate instanceof Date ? call.followUpDate.toISOString() : call.followUpDate,
-      duration: call.duration,
-    })) || [],
+    callHistory:
+      invoice.callHistory?.map((call: any) => ({
+        _id: call._id?.toString(),
+        callerId: call.callerId,
+        callerName: call.callerName,
+        timestamp:
+          call.timestamp instanceof Date
+            ? call.timestamp.toISOString()
+            : call.timestamp,
+        outcome: call.outcome,
+        notes: call.notes,
+        followUpDate:
+          call.followUpDate instanceof Date
+            ? call.followUpDate.toISOString()
+            : call.followUpDate,
+        duration: call.duration,
+      })) || [],
     emailExists: invoice.emailExists,
     dateIssued: invoice.dateIssued.toISOString().split("T")[0],
     amount: invoice.items.reduce(
@@ -573,7 +586,7 @@ export interface DisplayAction {
 export const fetchRecentActions = async (
   startDate?: Date,
   endDate?: Date,
-  searchQuery?: string
+  searchQuery?: string,
 ): Promise<DisplayAction[]> => {
   await connectMongo();
 
@@ -627,7 +640,7 @@ export const fetchRecentActions = async (
       .exec();
 
     const clientMap = new Map(
-      clients.map((c: any) => [c._id?.toString(), c.clientName])
+      clients.map((c: any) => [c._id?.toString(), c.clientName]),
     );
 
     // Fetch user names from Clerk
@@ -640,7 +653,9 @@ export const fetchRecentActions = async (
       if (!clientId && log.details?.metadata?.clientId) {
         clientId = log.details.metadata.clientId;
       }
-      const clientName = clientId ? clientMap.get(clientId.toString()) : undefined;
+      const clientName = clientId
+        ? clientMap.get(clientId.toString())
+        : undefined;
       const timestamp = new Date(log.timestamp);
       const { formatted, title } = formatTimestamp(timestamp);
 
@@ -666,7 +681,10 @@ export const fetchRecentActions = async (
       } else if (log.action === "schedule_confirmed" && log.details?.newValue) {
         const jobTitle = log.details.newValue.jobTitle || "Untitled";
         description = `Schedule Confirmed: ${jobTitle}`;
-      } else if (log.action === "schedule_unconfirmed" && log.details?.newValue) {
+      } else if (
+        log.action === "schedule_unconfirmed" &&
+        log.details?.newValue
+      ) {
         const jobTitle = log.details.newValue.jobTitle || "Untitled";
         description = `Schedule Unconfirmed: ${jobTitle}`;
       } else if (log.action === "invoice_created" && log.details?.newValue) {
@@ -696,21 +714,32 @@ export const fetchRecentActions = async (
         details: {
           newValue: log.details?.newValue,
           reason: log.details?.reason,
-          metadata: log.details?.metadata ? {
-            ...log.details.metadata,
-            clientId: log.details.metadata.clientId?.toString?.() || log.details.metadata.clientId,
-          } : undefined,
+          metadata: log.details?.metadata
+            ? {
+                ...log.details.metadata,
+                clientId:
+                  log.details.metadata.clientId?.toString?.() ||
+                  log.details.metadata.clientId,
+              }
+            : undefined,
         },
       };
     });
 
     // Enhance audit logs with notes for call_logged_job and call_logged_payment
     displayActions.forEach((action) => {
-      if (action.action === "call_logged_job" || action.action === "call_logged_payment") {
+      if (
+        action.action === "call_logged_job" ||
+        action.action === "call_logged_payment"
+      ) {
         const details = action.details;
         if (details?.newValue) {
-          const outcome = (CALL_OUTCOME_LABELS as any)[details.newValue.outcome] || details.newValue.outcome;
-          const notes = details.newValue.notes ? ` - Notes: ${details.newValue.notes}` : "";
+          const outcome =
+            (CALL_OUTCOME_LABELS as any)[details.newValue.outcome] ||
+            details.newValue.outcome;
+          const notes = details.newValue.notes
+            ? ` - Notes: ${details.newValue.notes}`
+            : "";
 
           if (action.action === "call_logged_job") {
             const jobTitle = details.metadata?.jobTitle || "Untitled";
@@ -741,26 +770,49 @@ export const fetchRecentActions = async (
         // Search in description
         if (action.description.toLowerCase().includes(lowerQuery)) return true;
         // Search in job title
-        if (action.details?.newValue?.jobTitle?.toLowerCase().includes(lowerQuery)) return true;
+        if (
+          action.details?.newValue?.jobTitle?.toLowerCase().includes(lowerQuery)
+        )
+          return true;
         // Search in client name
-        if (action.metadata?.clientName?.toLowerCase().includes(lowerQuery)) return true;
+        if (action.metadata?.clientName?.toLowerCase().includes(lowerQuery))
+          return true;
         // Search in client email
-        if (action.details?.newValue?.clientEmail?.toLowerCase().includes(lowerQuery)) return true;
+        if (
+          action.details?.newValue?.clientEmail
+            ?.toLowerCase()
+            .includes(lowerQuery)
+        )
+          return true;
         // Search in invoice ID
-        if (action.details?.newValue?.invoiceId?.toLowerCase().includes(lowerQuery)) return true;
+        if (
+          action.details?.newValue?.invoiceId
+            ?.toLowerCase()
+            .includes(lowerQuery)
+        )
+          return true;
         // Search in action label
-        if (formatActionDescription(action.action).toLowerCase().includes(lowerQuery)) return true;
+        if (
+          formatActionDescription(action.action)
+            .toLowerCase()
+            .includes(lowerQuery)
+        )
+          return true;
         // Search in performed by name
-        if (action.performedByName.toLowerCase().includes(lowerQuery)) return true;
+        if (action.performedByName.toLowerCase().includes(lowerQuery))
+          return true;
         // Search in location
-        if (action.details?.newValue?.location?.toLowerCase().includes(lowerQuery)) return true;
+        if (
+          action.details?.newValue?.location?.toLowerCase().includes(lowerQuery)
+        )
+          return true;
         return false;
       });
     }
 
     // Sort by timestamp descending
     const sorted = filtered.sort(
-      (a, b) => b.timestamp.getTime() - a.timestamp.getTime()
+      (a, b) => b.timestamp.getTime() - a.timestamp.getTime(),
     );
 
     // Fully serialize to ensure no ObjectIds or other non-serializable objects
@@ -812,7 +864,10 @@ const formatTimestamp = (date: Date): { formatted: string; title: string } => {
   return { formatted, title };
 };
 
-const formatActionDescription = (action: string, clientName?: string): string => {
+const formatActionDescription = (
+  action: string,
+  clientName?: string,
+): string => {
   const labels: { [key: string]: string } = {
     invoice_created: "Invoice Created",
     invoice_emailed: "Invoice Sent",
@@ -832,11 +887,19 @@ const formatActionDescription = (action: string, clientName?: string): string =>
   return clientName ? `${baseLabel} for ${clientName}` : baseLabel;
 };
 
-const getActionSeverity = (action: string): "success" | "info" | "warning" | "error" => {
-  if (action.includes("invoice_created") || action.includes("invoice_emailed")) {
+const getActionSeverity = (
+  action: string,
+): "success" | "info" | "warning" | "error" => {
+  if (
+    action.includes("invoice_created") ||
+    action.includes("invoice_emailed")
+  ) {
     return "info";
   }
-  if (action.includes("schedule_created") || action.includes("schedule_confirmed")) {
+  if (
+    action.includes("schedule_created") ||
+    action.includes("schedule_confirmed")
+  ) {
     return "success";
   }
   if (action.includes("schedule_unconfirmed")) {
@@ -891,10 +954,10 @@ export const fetchJobsDueData = async ({
 
     // Calculate counts from the already-fetched data instead of making 2 extra DB queries
     const scheduledCount = invoicesWithSchedule.filter(
-      (invoice) => invoice.isScheduled
+      (invoice) => invoice.isScheduled,
     ).length;
     const unscheduledCount = invoicesWithSchedule.filter(
-      (invoice) => !invoice.isScheduled
+      (invoice) => !invoice.isScheduled,
     ).length;
 
     return {
@@ -922,7 +985,8 @@ export const fetchAnalyticsMetrics = async (): Promise<AnalyticsMetrics> => {
       { $unwind: "$items" },
       { $group: { _id: null, totalSales: { $sum: "$items.price" } } },
     ]);
-    const totalRevenue = paidInvoices.length > 0 ? paidInvoices[0].totalSales : 0;
+    const totalRevenue =
+      paidInvoices.length > 0 ? paidInvoices[0].totalSales : 0;
     const revenueWithTax = totalRevenue + totalRevenue * 0.05;
 
     // Count pending invoices
@@ -967,5 +1031,27 @@ export const fetchAnalyticsMetrics = async (): Promise<AnalyticsMetrics> => {
       paidCount: 0,
       jobsDueSoon: 0,
     };
+  }
+};
+
+export const getUnscheduledJobs = async () => {
+  await connectMongo();
+  try {
+    const jobs = await JobsDueSoon.find({ isScheduled: false })
+      .sort({ dateDue: 1 })
+      .lean();
+
+    return jobs.map((job: any) => ({
+      _id: job._id.toString(),
+      clientId: job.clientId?.toString(),
+      invoiceId: job.invoiceId,
+      jobTitle: job.jobTitle,
+      dateDue:
+        job.dateDue instanceof Date ? job.dateDue.toISOString() : job.dateDue,
+      isScheduled: job.isScheduled,
+    }));
+  } catch (error) {
+    console.error("Error fetching unscheduled jobs:", error);
+    return [];
   }
 };

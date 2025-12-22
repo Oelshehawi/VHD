@@ -1,12 +1,40 @@
 "use client";
 
-import { useState, useMemo, useEffect, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { DisplayAction, fetchRecentActions } from "../../app/lib/dashboard.data";
-import { FaFilter, FaHistory, FaChevronDown, FaSearch } from "react-icons/fa";
-import { formatDateStringUTC } from "../../app/lib/utils";
+import { useState, useMemo } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import { useDebouncedCallback } from "use-debounce";
+import { DisplayAction } from "../../app/lib/dashboard.data";
+import { DashboardSearchParams } from "../../app/lib/typeDefinitions";
+import { FaCalendarAlt, FaSearch } from "react-icons/fa";
+import { format } from "date-fns";
+import type { DateRange } from "react-day-picker";
+import {
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../ui/card";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Calendar } from "../ui/calendar";
+import { Badge } from "../ui/badge";
+import { ScrollArea } from "../ui/scroll-area";
+import { Avatar, AvatarFallback } from "../ui/avatar";
 
-interface ActionsFeedProps {}
+interface ActionsFeedProps {
+  searchParams: DashboardSearchParams;
+  recentActions: DisplayAction[];
+}
 
 function getActionLabel(action: string): string {
   const labels: { [key: string]: string } = {
@@ -35,23 +63,40 @@ function getActionLabel(action: string): string {
   return labels[action] || action;
 }
 
-function getBadgeClass(severity: string): string {
+function getBadgeVariant(
+  severity: string,
+): "default" | "secondary" | "destructive" | "outline" {
   switch (severity) {
     case "success":
-      return "bg-green-100 text-green-800";
+      return "default"; // green-ish in default theme usually, or we can use custom classes
     case "info":
-      return "bg-blue-100 text-blue-800";
+      return "secondary";
     case "warning":
-      return "bg-yellow-100 text-yellow-800";
+      return "secondary"; // Warning usually needs custom color
     case "error":
-      return "bg-red-100 text-red-800";
+      return "destructive";
     default:
-      return "bg-gray-100 text-gray-800";
+      return "outline";
+  }
+}
+
+function getBadgeClassName(severity: string): string {
+  switch (severity) {
+    case "success":
+      return "bg-green-100 text-green-800 hover:bg-green-100";
+    case "info":
+      return "bg-blue-100 text-blue-800 hover:bg-blue-100";
+    case "warning":
+      return "bg-yellow-100 text-yellow-800 hover:bg-yellow-100";
+    case "error":
+      return "bg-red-100 text-red-800 hover:bg-red-100";
+    default:
+      return "";
   }
 }
 
 const ACTION_CATEGORIES = {
-  all: "All",
+  all: "All Categories",
   invoices: "Invoices",
   schedules: "Schedules",
   confirmations: "Confirmations",
@@ -61,330 +106,262 @@ const ACTION_CATEGORIES = {
   timeoff: "Time-off",
 };
 
-export default function ActionsFeed({}: ActionsFeedProps) {
-  const [selectedCategory, setSelectedCategory] = useState<keyof typeof ACTION_CATEGORIES>("all");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
-  const [showDateRangeDropdown, setShowDateRangeDropdown] = useState(false);
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
-  const dateDebounceTimeoutRef = useRef<NodeJS.Timeout>();
+export default function ActionsFeed({
+  searchParams,
+  recentActions,
+}: ActionsFeedProps) {
+  const router = useRouter();
+  const pathname = usePathname();
 
-  // Debounce search query (500ms delay)
-  useEffect(() => {
-    debounceTimeoutRef.current = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 500);
-
-    return () => {
-      if (debounceTimeoutRef.current) {
-        clearTimeout(debounceTimeoutRef.current);
-      }
-    };
-  }, [searchQuery]);
-
-  // Date range state - default to current month
-  const [startDate, setStartDate] = useState(() => {
+  // Parse date range from searchParams
+  const dateRange: DateRange | undefined = useMemo(() => {
     const now = new Date();
-    const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-    return firstDay.toISOString().split("T")[0];
-  });
+    const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+    const defaultTo = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-  const [endDate, setEndDate] = useState(() => {
-    const now = new Date();
-    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-    return lastDay.toISOString().split("T")[0];
-  });
+    const from = searchParams.actionsDateFrom
+      ? new Date(searchParams.actionsDateFrom)
+      : defaultFrom;
+    const to = searchParams.actionsDateTo
+      ? new Date(searchParams.actionsDateTo)
+      : defaultTo;
 
-  // Handlers for date input with debounce on blur (prevents refetch on arrow clicks)
-  const handleStartDateBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const newDate = e.target.value;
-    if (dateDebounceTimeoutRef.current) {
-      clearTimeout(dateDebounceTimeoutRef.current);
+    // Validate dates
+    if (isNaN(from.getTime()) || isNaN(to.getTime())) {
+      return { from: defaultFrom, to: defaultTo };
     }
-    dateDebounceTimeoutRef.current = setTimeout(() => {
-      setStartDate(newDate);
-    }, 300);
+
+    return { from, to };
+  }, [searchParams.actionsDateFrom, searchParams.actionsDateTo]);
+
+  // Parse search query from searchParams
+  const searchQuery = searchParams.actionsSearch || "";
+
+  // Local state for category filter (client-side only)
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  // Update URL with debounced search query
+  const updateSearchQuery = useDebouncedCallback((query: string) => {
+    const params = new URLSearchParams(window.location.search);
+    if (query.trim()) {
+      params.set("actionsSearch", query);
+    } else {
+      params.delete("actionsSearch");
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  }, 500);
+
+  // Update date range in URL
+  const handleDateRangeChange = (range: DateRange | undefined) => {
+    const params = new URLSearchParams(window.location.search);
+    if (range?.from) {
+      params.set("actionsDateFrom", range.from.toISOString());
+    } else {
+      params.delete("actionsDateFrom");
+    }
+    if (range?.to) {
+      params.set("actionsDateTo", range.to.toISOString());
+    } else {
+      params.delete("actionsDateTo");
+    }
+    router.replace(`${pathname}?${params.toString()}`);
   };
 
-  const handleEndDateBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-    const newDate = e.target.value;
-    if (dateDebounceTimeoutRef.current) {
-      clearTimeout(dateDebounceTimeoutRef.current);
-    }
-    dateDebounceTimeoutRef.current = setTimeout(() => {
-      setEndDate(newDate);
-    }, 300);
-  };
-
-  // Convert ISO date strings to Date objects for the query
-  const startDateObj = new Date(startDate || "");
-  const endDateObj = new Date(endDate || "");
-
-  // Fetch actions using TanStack Query
-  const { data: actions = [], isLoading } = useQuery({
-    queryKey: ["recentActions", startDate, endDate, debouncedSearchQuery],
-    queryFn: async () => {
-      // Adjust end date to include the entire day (add 1 day then subtract 1 ms)
-      const adjustedEndDate = new Date(endDateObj);
-      adjustedEndDate.setDate(adjustedEndDate.getDate() + 1);
-
-      const result = await fetchRecentActions(startDateObj, adjustedEndDate, debouncedSearchQuery);
-      return result;
-    },
-  });
-
-  // Client-side filtering by category only (date and search are server-side via useQuery)
+  // Client-side filtering by category
   const filteredActions = useMemo(() => {
-    return actions.filter((action: DisplayAction) => {
-      // Filter by category
+    return recentActions.filter((action: DisplayAction) => {
       if (selectedCategory !== "all") {
-        if (selectedCategory === "invoices" && !action.action.includes("invoice")) return false;
-        if (selectedCategory === "schedules" && !action.action.includes("schedule")) return false;
-        if (selectedCategory === "confirmations" && !(action.action.includes("confirmed") || action.action.includes("unconfirmed"))) return false;
-        if (selectedCategory === "calls" && !action.action.includes("call_logged")) return false;
-        if (selectedCategory === "reminders" && !action.action.includes("reminder")) return false;
-        if (selectedCategory === "availability" && !action.action.includes("availability")) return false;
-        if (selectedCategory === "timeoff" && !action.action.includes("timeoff")) return false;
+        if (
+          selectedCategory === "invoices" &&
+          !action.action.includes("invoice")
+        )
+          return false;
+        if (
+          selectedCategory === "schedules" &&
+          !action.action.includes("schedule")
+        )
+          return false;
+        if (
+          selectedCategory === "confirmations" &&
+          !(
+            action.action.includes("confirmed") ||
+            action.action.includes("unconfirmed")
+          )
+        )
+          return false;
+        if (
+          selectedCategory === "calls" &&
+          !action.action.includes("call_logged")
+        )
+          return false;
+        if (
+          selectedCategory === "reminders" &&
+          !action.action.includes("reminder")
+        )
+          return false;
+        if (
+          selectedCategory === "availability" &&
+          !action.action.includes("availability")
+        )
+          return false;
+        if (
+          selectedCategory === "timeoff" &&
+          !action.action.includes("timeoff")
+        )
+          return false;
       }
-
       return true;
     });
-  }, [actions, selectedCategory]);
-
+  }, [recentActions, selectedCategory]);
 
   return (
-    <div className="rounded-xl bg-white shadow-lg border border-gray-200 overflow-hidden flex flex-col h-full">
-      {/* Header Section */}
-      <div className="px-4 sm:px-6 py-4 sm:py-6 border-b border-gray-200 bg-linear-to-r from-blue-50 to-blue-100 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-r from-blue-500 to-blue-600 shadow-lg">
-            <FaHistory className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h2 className="text-lg sm:text-xl font-bold text-gray-900">
-              Recent Activity
-            </h2>
-            <p className="text-xs sm:text-sm text-gray-600 mt-1">
-              Latest actions by your team
-            </p>
-          </div>
+    <Card className="flex h-full max-h-[calc(100vh-120px)] min-h-0 flex-col overflow-hidden shadow-sm">
+      <CardHeader className="bg-muted/40 shrink-0 border-b p-3 pb-3 sm:p-4 sm:pb-4 lg:p-6 lg:pb-4">
+        {/* Title Section - Compact on mobile */}
+        <div className="mb-3 sm:mb-4">
+          <CardTitle className="truncate text-lg sm:text-xl">
+            Recent Activity
+          </CardTitle>
+          <CardDescription className="mt-0.5 truncate text-xs sm:text-sm">
+            Latest actions by your team
+          </CardDescription>
         </div>
 
-        {/* Search and Filter Controls */}
-        <div className="flex flex-col sm:flex-row gap-3">
-          {/* Search Input */}
-          <div className="flex-1 relative">
-            <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Search actions, clients, invoices..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+        {/* Filters Section - Responsive layout */}
+        <div className="flex min-w-0 flex-col gap-2 sm:gap-2.5 lg:gap-3">
+          {/* Search Bar - Full width on mobile, flex-1 on larger screens */}
+          <div className="relative min-w-0 flex-1">
+            <FaSearch className="text-muted-foreground absolute top-2.5 left-2.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+            <Input
+              type="search"
+              placeholder="Search actions..."
+              defaultValue={searchQuery}
+              onChange={(e) => updateSearchQuery(e.target.value)}
+              className="bg-background h-9 min-w-0 pl-8 text-sm sm:h-10 sm:pl-9 sm:text-base"
             />
           </div>
 
-          {/* Category Filter Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
+          {/* Category and Date Picker - Side by side on tablet+, stacked on mobile */}
+          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:gap-2 lg:gap-3">
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
             >
-              <FaFilter className="h-4 w-4" />
-              Category
-              {selectedCategory !== "all" && (
-                <span className="ml-1 inline-flex items-center justify-center h-5 w-5 rounded-full text-xs font-semibold bg-blue-100 text-blue-600">
-                  1
-                </span>
-              )}
-              <FaChevronDown className="h-3 w-3 ml-1" />
-            </button>
+              <SelectTrigger className="bg-background h-9 w-full shrink-0 text-sm sm:h-10 sm:w-[140px] sm:text-base lg:w-[180px]">
+                <SelectValue placeholder="Category" />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(ACTION_CATEGORIES).map(([key, label]) => (
+                  <SelectItem key={key} value={key}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
 
-            {/* Category Dropdown Menu */}
-            {showCategoryDropdown && (
-              <div className="absolute right-0 mt-2 w-56 max-h-80 overflow-y-auto rounded-lg shadow-lg bg-white border border-gray-200 z-10">
-                <div className="p-3 space-y-2">
-                  {Object.entries(ACTION_CATEGORIES).map(([key, label]) => (
-                    <button
-                      key={key}
-                      onClick={() => {
-                        setSelectedCategory(key as keyof typeof ACTION_CATEGORIES);
-                        setShowCategoryDropdown(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${
-                        selectedCategory === key
-                          ? "bg-blue-100 text-blue-700 font-medium"
-                          : "text-gray-700 hover:bg-gray-100"
-                      }`}
-                    >
-                      <span className="flex justify-between items-center">
-                        <span>{label}</span>
-                        {key !== "all" && (
-                          <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
-                            {
-                              actions.filter((a) => {
-                                if (key === "invoices") return a.action.includes("invoice");
-                                if (key === "schedules") return a.action.includes("schedule");
-                                if (key === "confirmations") return a.action.includes("confirmed") || a.action.includes("unconfirmed");
-                                if (key === "calls") return a.action.includes("call_logged");
-                                if (key === "reminders") return a.action.includes("reminder");
-                                if (key === "availability") return a.action.includes("availability");
-                                if (key === "timeoff") return a.action.includes("timeoff");
-                                return false;
-                              }).length
-                            }
-                          </span>
-                        )}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Date Range Filter Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowDateRangeDropdown(!showDateRangeDropdown)}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors whitespace-nowrap"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0A2.25 2.25 0 015.25 3h13.5A2.25 2.25 0 0121 7.5" />
-              </svg>
-              Dates
-              <FaChevronDown className="h-3 w-3 ml-1" />
-            </button>
-
-            {/* Date Range Dropdown Menu */}
-            {showDateRangeDropdown && (
-              <div className="absolute right-0 mt-2 w-64 rounded-lg shadow-lg bg-white border border-gray-200 z-10 p-4">
-                <div className="space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      From
-                    </label>
-                    <input
-                      type="date"
-                      value={startDate}
-                      onChange={(e) => setStartDate(e.target.value)}
-                      onBlur={handleStartDateBlur}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-gray-700 mb-1">
-                      To
-                    </label>
-                    <input
-                      type="date"
-                      value={endDate}
-                      onChange={(e) => setEndDate(e.target.value)}
-                      onBlur={handleEndDateBlur}
-                      className="w-full px-3 py-2 rounded-lg border border-gray-300 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="text-xs text-gray-600 bg-gray-50 p-2 rounded">
-                    {formatDateStringUTC(startDate || "")} to {formatDateStringUTC(endDate || "")}
-                  </div>
-                </div>
-              </div>
-            )}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className="bg-background h-9 w-full shrink-0 justify-start text-left text-sm font-normal sm:h-10 sm:w-auto sm:text-base"
+                >
+                  <FaCalendarAlt className="mr-2 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                  <span className="truncate text-xs sm:text-sm">
+                    {dateRange?.from ? (
+                      dateRange.to ? (
+                        <>
+                          {format(dateRange.from, "MMM d, yyyy")} -{" "}
+                          {format(dateRange.to, "MMM d, yyyy")}
+                        </>
+                      ) : (
+                        format(dateRange.from, "MMM d, yyyy")
+                      )
+                    ) : (
+                      <span>Pick a date range</span>
+                    )}
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="end">
+                <Calendar
+                  mode="range"
+                  defaultMonth={dateRange?.from}
+                  selected={dateRange}
+                  onSelect={handleDateRangeChange}
+                  numberOfMonths={1}
+                  className="rounded-lg border shadow-sm"
+                />
+              </PopoverContent>
+            </Popover>
           </div>
         </div>
-      </div>
+      </CardHeader>
 
-      {/* Actions List */}
-      <div className="divide-y divide-gray-100 flex-1 overflow-y-auto">
-        {isLoading ? (
-          <div className="divide-y divide-gray-100">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="px-4 sm:px-6 py-4 sm:py-5 border-l-4 border-l-gray-300 animate-pulse">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
-                  <div className="flex-1 min-w-0">
-                    {/* Badge skeleton */}
-                    <div className="flex items-center gap-2 mb-3 flex-wrap">
-                      <div className="h-6 w-32 bg-gray-200 rounded-full"></div>
-                    </div>
-                    {/* Description skeleton */}
-                    <div className="space-y-2">
-                      <div className="h-5 w-full bg-gray-200 rounded"></div>
-                      <div className="h-4 w-2/3 bg-gray-100 rounded"></div>
-                    </div>
-                    {/* Meta info skeleton */}
-                    <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                      <div className="h-3 w-24 bg-gray-100 rounded"></div>
-                      <span className="hidden sm:block text-gray-300">•</span>
-                      <div className="h-3 w-20 bg-gray-100 rounded"></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : filteredActions.length === 0 ? (
-          <div className="flex h-full items-center justify-center p-8">
-            <div className="text-center text-gray-500">
-              <p className="font-medium">No {selectedCategory} actions found</p>
+      <CardContent className="flex min-h-0 flex-1 overflow-hidden p-0">
+        <ScrollArea className="h-full">
+          {filteredActions.length === 0 ? (
+            <div className="text-muted-foreground flex h-64 items-center justify-center p-8 text-center">
+              <p>No actions found matching your criteria</p>
             </div>
-          </div>
-        ) : (
-          filteredActions.map((action: DisplayAction, index: number) => (
-            <div
-              key={`${action._id}-${index}`}
-              className={`px-4 sm:px-6 py-4 sm:py-5 border-l-4 ${
-                action.severity === "success"
-                  ? "border-l-green-500"
-                  : action.severity === "warning"
-                    ? "border-l-yellow-500"
-                    : action.severity === "error"
-                      ? "border-l-red-500"
-                      : "border-l-blue-500"
-              } transition-all hover:bg-gray-50`}
-            >
-              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-2 flex-wrap">
-                    <span
-                      className={`px-2.5 py-1 rounded-full text-xs sm:text-sm font-medium ${getBadgeClass(
-                        action.severity
-                      )}`}
-                    >
-                      {getActionLabel(action.action)}
-                    </span>
-                    {!action.success && (
-                      <span className="inline-block px-2 py-1 text-xs bg-red-100 text-red-800 rounded-full font-medium">
-                        Failed
+          ) : (
+            <div className="divide-border divide-y">
+              {filteredActions.map((action: DisplayAction, index: number) => (
+                <div
+                  key={`${action._id}-${index}`}
+                  className="hover:bg-muted/50 flex items-start gap-3 p-4 transition-colors"
+                >
+                  <Avatar className="mt-1 h-9 w-9 border">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                      {action.performedByName?.substring(0, 2).toUpperCase() ||
+                        "??"}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="min-w-0 flex-1 space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-foreground text-sm font-medium">
+                        {action.performedByName}
                       </span>
-                    )}
-                  </div>
-                  <p className="text-sm sm:text-base text-gray-900 font-medium wrap-break-word">
-                    {action.description}
-                  </p>
-                  <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
-                    <p className="text-xs sm:text-sm text-gray-600">
-                      <span className="font-semibold">{action.performedByName}</span>
+                      <span className="text-muted-foreground text-xs">•</span>
+                      <span
+                        className="text-muted-foreground text-xs"
+                        title={action.formattedTimeTitle}
+                      >
+                        {action.formattedTime}
+                      </span>
+                    </div>
+
+                    <p className="text-foreground/90 text-sm leading-relaxed">
+                      {action.description}
                     </p>
-                    <span className="hidden sm:inline text-gray-300">•</span>
-                    <p
-                      className="text-xs sm:text-sm text-gray-500"
-                      title={action.formattedTimeTitle}
-                    >
-                      {action.formattedTime}
-                    </p>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <Badge
+                        variant="outline"
+                        className={`font-normal ${getBadgeClassName(action.severity)}`}
+                      >
+                        {getActionLabel(action.action)}
+                      </Badge>
+
+                      {!action.success && (
+                        <Badge variant="destructive" className="font-normal">
+                          Failed
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
+              ))}
             </div>
-          ))
-        )}
-      </div>
+          )}
+        </ScrollArea>
+      </CardContent>
 
-      {/* Footer */}
-      <div className="px-4 sm:px-6 py-3 bg-gray-50 border-t border-gray-200 text-center text-xs text-gray-600">
-        Showing {filteredActions.length} of {actions.length} actions from {formatDateStringUTC(startDate || "")} to {formatDateStringUTC(endDate || "")}
-      </div>
-    </div>
+      <CardFooter className="bg-muted/20 text-muted-foreground shrink-0 justify-center border-t px-4 py-2 text-xs">
+        <span className="truncate">
+          Showing {filteredActions.length} of {recentActions.length} actions
+        </span>
+      </CardFooter>
+    </Card>
   );
 }

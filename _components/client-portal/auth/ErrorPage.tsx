@@ -31,7 +31,7 @@ export default function ErrorPage() {
         <div className="mt-6 text-center">
           <p className="mb-4 text-sm text-gray-600">
             Please use the secure access link provided by our team to log in. If
-            you've lost your access link, please contact us for assistance.
+            you&apos;ve lost your access link, please contact us for assistance.
           </p>
 
           <Link

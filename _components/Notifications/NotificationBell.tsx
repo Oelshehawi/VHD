@@ -5,11 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Bell } from "lucide-react";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { getUnreadCount } from "../../app/lib/actions/notifications.actions";
 import NotificationsPanel from "./NotificationsPanel";
 
@@ -32,13 +28,13 @@ export default function NotificationBell() {
         <Button
           variant="ghost"
           size="icon"
-          className="relative h-10 w-10 rounded-full bg-white shadow-md hover:bg-gray-50"
+          className="bg-background hover:bg-muted relative h-10 w-10 rounded-full shadow-md"
         >
-          <Bell className="h-5 w-5 text-gray-600" />
+          <Bell className="text-foreground h-5 w-5" />
           {unreadCount > 0 && (
             <Badge
               variant="destructive"
-              className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs"
+              className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-xs"
             >
               {unreadCount > 99 ? "99+" : unreadCount}
             </Badge>

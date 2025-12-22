@@ -4,6 +4,8 @@ import Link from "next/link";
 import clsx from 'clsx';
 import { generatePagination } from "../../app/lib/utils";
 import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/24/solid";
+import { Button } from "../ui/button";
+import { cn } from "@/lib/utils";
 
 
 export default function Pagination({ totalPages }: { totalPages: number }) {
@@ -68,14 +70,14 @@ export default function Pagination({ totalPages }: { totalPages: number }) {
     position?: 'first' | 'last' | 'middle' | 'single';
     isActive: boolean;
   }) {
-    const className = clsx(
+    const className = cn(
       'flex h-10 w-10 items-center justify-center text-sm border',
       {
         'rounded-l-md': position === 'first' || position === 'single',
         'rounded-r-md': position === 'last' || position === 'single',
-        'z-10 bg-darkGreen border-darkGreen text-white': isActive,
-        'hover:bg-gray-100': !isActive && position !== 'middle',
-        'text-gray-300': position === 'middle',
+        'z-10 bg-primary border-primary text-primary-foreground': isActive,
+        'hover:bg-accent': !isActive && position !== 'middle',
+        'text-muted-foreground': position === 'middle',
       },
     );
   
@@ -97,13 +99,13 @@ export default function Pagination({ totalPages }: { totalPages: number }) {
     direction: 'left' | 'right';
     isDisabled?: boolean;
   }) {
-    const className = clsx(
+    const className = cn(
       'flex h-10 w-full md:w-10 items-center justify-center rounded-md border',
       {
-        'pointer-events-none text-gray-300': isDisabled,
-        'hover:bg-gray-100': !isDisabled,
-        ' md:mr-4': direction === 'left',
-        ' md:ml-4': direction === 'right',
+        'pointer-events-none text-muted-foreground opacity-50': isDisabled,
+        'hover:bg-accent': !isDisabled,
+        'md:mr-4': direction === 'left',
+        'md:ml-4': direction === 'right',
       },
     );
   

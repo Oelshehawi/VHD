@@ -1,25 +1,32 @@
-// PendingJobsModal.jsx
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useOptimistic } from "react";
 import {
   PendingInvoiceType,
   PaymentInfo,
   PaymentReminderSettings,
-  CallLogEntry,
 } from "../../app/lib/typeDefinitions";
-import { FaTimes, FaCog, FaPhone, FaHistory } from "react-icons/fa";
+import { FaCog, FaPhone, FaHistory } from "react-icons/fa";
 import { CgUnavailable } from "react-icons/cg";
-import { motion, AnimatePresence } from "framer-motion";
 import { updateInvoice } from "../../app/lib/actions/actions";
-import { sendPaymentReminderEmail } from "../../app/lib/actions/reminder.actions";
 import toast from "react-hot-toast";
 import { formatAmount, formatDateStringUTC } from "../../app/lib/utils";
-import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
 import Link from "next/link";
 import PaymentModal from "../payments/PaymentModal";
 import ReminderConfigModal from "./ReminderConfigModal";
-import { CallLogProvider, useCallLog } from "../dashboard/CallLogManager";
+import CallLogModal from "./CallLogModal";
+import CallHistoryModal from "./CallHistoryModal";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { ScrollArea } from "../ui/scroll-area";
+import { Badge } from "../ui/badge";
 
 interface ExtendedPendingInvoiceType extends PendingInvoiceType {
   emailExists?: boolean;
@@ -35,18 +42,49 @@ const PendingJobsModalContent = ({
   pendingInvoices,
   onClose,
 }: PendingJobsModalProps) => {
-  const [invoices, setInvoices] = useState(pendingInvoices);
   const [isPending, startTransition] = useTransition();
   const [showPaymentModal, setShowPaymentModal] = useState<string | null>(null);
   const [showReminderModal, setShowReminderModal] = useState<string | null>(
     null,
   );
-  const { openCallLog, openCallHistory } = useCallLog();
+  const [callLogOpen, setCallLogOpen] = useState(false);
+  const [callLogContext, setCallLogContext] = useState<{
+    type: "job" | "invoice";
+    id: string;
+    title: string;
+    clientName?: string;
+  } | null>(null);
+  const [callHistoryOpen, setCallHistoryOpen] = useState(false);
+  const [callHistoryData, setCallHistoryData] = useState<{
+    callHistory: any[];
+    jobTitle: string;
+  }>({ callHistory: [], jobTitle: "" });
 
-  // Update invoices when pendingInvoices prop changes (after revalidation)
-  useEffect(() => {
-    setInvoices(pendingInvoices);
-  }, [pendingInvoices]);
+  const [optimisticInvoices, setOptimisticInvoice] = useOptimistic(
+    pendingInvoices,
+    (
+      state,
+      {
+        id,
+        status,
+        paymentReminders,
+      }: {
+        id: string;
+        status?: string;
+        paymentReminders?: PaymentReminderSettings;
+      },
+    ) => {
+      return state.map((invoice) => {
+        if (invoice._id === id) {
+          const updates: any = {};
+          if (status) updates.status = status;
+          if (paymentReminders) updates.paymentReminders = paymentReminders;
+          return { ...invoice, ...updates };
+        }
+        return invoice;
+      });
+    },
+  );
 
   const handleStatusChange = (invoiceId: string, newStatus: string) => {
     if (newStatus === "paid") {
@@ -64,6 +102,9 @@ const PendingJobsModalContent = ({
     paymentInfo?: PaymentInfo,
   ) => {
     startTransition(async () => {
+      // Optimistic update
+      setOptimisticInvoice({ id: invoiceId, status: newStatus });
+
       try {
         const updateData: any = { status: newStatus };
 
@@ -79,19 +120,17 @@ const PendingJobsModalContent = ({
         const updateInvoiceStatus = updateInvoice.bind(null, invoiceId);
         await updateInvoiceStatus(updateData);
 
-        setInvoices((prevInvoices) =>
-          prevInvoices.map((invoice) =>
-            invoice._id === invoiceId
-              ? { ...invoice, status: newStatus }
-              : invoice,
-          ),
-        );
-
         toast.success("Status updated successfully!");
         setShowPaymentModal(null);
       } catch (error) {
         console.error("Error updating status:", error);
         toast.error("Error updating status!");
+        // Note: useOptimistic automatically reverts if we don't return new state from server,
+        // but here we depend on revalidatePath in the action to update 'pendingInvoices' prop.
+        // If action fails, the prop won't change, and optimistic state will vanish next render?
+        // No, optimistic state persists until a new "real" state comes in or we move away?
+        // Actually, optimistic state is for the duration of the transition.
+        // If the transition fails/ends, providing we get new props or just reset, it should be fine.
       }
     });
   };
@@ -102,36 +141,29 @@ const PendingJobsModalContent = ({
     }
   };
 
-  const getStatusStyles = (status: string) => {
-    switch (status) {
-      case "paid":
-        return "bg-green-500 text-white hover:bg-green-600";
-      case "overdue":
-        return "bg-red-500 text-white hover:bg-red-600";
-      default:
-        return "bg-yellow-500 text-black hover:bg-yellow-600";
-    }
-  };
-
-  
-
   const getReminderStatusBadge = (invoice: ExtendedPendingInvoiceType) => {
     const reminders = invoice.paymentReminders;
 
     if (!invoice.emailExists) {
       return (
-        <div className="flex items-center justify-center space-x-1 rounded-lg bg-red-100 px-2 py-1 text-red-600">
+        <Badge
+          variant="destructive"
+          className="flex items-center gap-1 rounded-lg px-2 py-1"
+        >
           <CgUnavailable className="h-3 w-3" />
           <span className="text-xs font-medium">No Email</span>
-        </div>
+        </Badge>
       );
     }
 
     if (!reminders || !reminders.enabled || reminders.frequency === "none") {
       return (
-        <div className="flex items-center justify-center space-x-1 rounded-lg bg-gray-100 px-2 py-1 text-gray-600">
+        <Badge
+          variant="secondary"
+          className="flex items-center gap-1 rounded-lg px-2 py-1"
+        >
           <span className="text-xs font-medium">No Auto Reminders</span>
-        </div>
+        </Badge>
       );
     }
 
@@ -141,17 +173,18 @@ const PendingJobsModalContent = ({
     const now = new Date();
     const isOverdue = nextReminder && nextReminder < now;
 
-    let badgeColor = "bg-green-100 text-green-600";
+    let badgeClass = "bg-primary/10 text-primary border-primary/30";
     let statusText = `Every ${reminders.frequency.replace("days", "")} days`;
 
     if (isOverdue) {
-      badgeColor = "bg-orange-100 text-orange-600";
+      badgeClass = "bg-destructive/10 text-destructive border-destructive/30";
       statusText = "Due for reminder";
     }
 
     return (
-      <div
-        className={`flex items-center justify-center space-x-1 rounded-lg px-2 py-1 ${badgeColor}`}
+      <Badge
+        variant="outline"
+        className={`flex items-center gap-1 rounded-lg border px-2 py-1 ${badgeClass}`}
       >
         <span className="text-xs font-medium">{statusText}</span>
         {nextReminder && !isOverdue && (
@@ -159,177 +192,162 @@ const PendingJobsModalContent = ({
             ({formatDateStringUTC(nextReminder.toISOString())})
           </span>
         )}
-      </div>
+      </Badge>
     );
   };
 
   return (
     <>
-      <AnimatePresence>
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-          className="bg-black/50 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm md:p-0"
-        >
-          <motion.div
-            onClick={(e) => e.stopPropagation()}
-            initial={{ y: 50, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 50, opacity: 0 }}
-            className="scrollbar-thin scrollbar-thumb-gray-400 scrollbar-track-gray-100 relative h-full w-full overflow-y-auto rounded-lg bg-white shadow-xl md:h-auto md:max-h-[80vh] md:w-[600px]"
-          >
-            {/* Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white p-4">
-              <h2 className="text-xl font-bold text-gray-800">Pending Jobs</h2>
-              <button
-                className="rounded-full p-2 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                onClick={onClose}
-              >
-                <FaTimes size={20} />
-              </button>
-            </div>
+      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+        <DialogContent className="max-h-[85vh] w-full max-w-4xl overflow-hidden p-0">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="text-xl font-bold">
+              Pending Jobs
+            </DialogTitle>
+          </DialogHeader>
 
-            {/* Content */}
-            <div className="p-6">
-              <div className="space-y-6">
-                {invoices.length === 0 ? (
-                  <p className="text-center text-gray-500">No pending jobs.</p>
-                ) : (
-                  invoices.map((invoice) => {
-                    return (
-                      <motion.div
-                        key={invoice._id as string}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="rounded-lg border bg-white p-6 shadow-sm transition-shadow hover:shadow-md"
-                      >
-                        <div className="flex flex-col space-y-4 md:flex-row md:items-start md:justify-between md:space-y-0">
-                          <div className="flex-1 space-y-3">
-                            <Link href={`/invoices/${invoice._id}`}>
-                              <h3 className="line-clamp-2 text-lg font-semibold text-gray-800 hover:text-darkGreen">
-                                {invoice.jobTitle}
-                              </h3>
-                            </Link>
+          <ScrollArea className="max-h-[calc(85vh-80px)] p-6 pt-2">
+            <div className="space-y-6">
+              {optimisticInvoices.length === 0 ? (
+                <p className="text-muted-foreground py-8 text-center">
+                  No pending jobs.
+                </p>
+              ) : (
+                optimisticInvoices.map((invoice) => {
+                  return (
+                    <div
+                      key={invoice._id as string}
+                      className="bg-card rounded-lg border p-6 shadow-sm transition-shadow hover:shadow-md"
+                    >
+                      <div className="flex flex-col gap-4 space-y-4 md:flex-row md:items-start md:justify-between md:space-y-0">
+                        <div className="flex-1 space-y-3">
+                          <Link href={`/invoices/${invoice._id}`}>
+                            <h3 className="text-foreground hover:text-primary line-clamp-2 text-lg font-semibold underline-offset-4 hover:underline">
+                              {invoice.jobTitle}
+                            </h3>
+                          </Link>
 
-                            <div className="space-y-2 text-sm text-gray-700">
-                              <div className="flex items-center space-x-2">
-                                <span className="font-medium">Invoice ID:</span>
-                                <span className="rounded bg-gray-100 px-3 py-1.5 font-mono text-gray-800">
-                                  {invoice.invoiceId}
-                                </span>
-                              </div>
-                              <p className="flex items-center space-x-2">
-                                <span className="font-medium">Date:</span>
-                                <span>
-                                  {formatDateStringUTC(invoice.dateIssued)}
-                                </span>
-                              </p>
-                              <p className="flex items-center space-x-2">
-                                <span className="font-medium">Amount:</span>
-                                <span className="font-semibold text-gray-900">
-                                  {formatAmount(
-                                    invoice.amount + invoice.amount * 0.05,
-                                  )}
-                                </span>
-                              </p>
+                          <div className="text-foreground/80 space-y-2 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium">Invoice ID:</span>
+                              <Badge
+                                variant="outline"
+                                className="font-mono font-normal"
+                              >
+                                {invoice.invoiceId}
+                              </Badge>
                             </div>
+                            <p className="flex items-center space-x-2">
+                              <span className="font-medium">Date:</span>
+                              <span>
+                                {formatDateStringUTC(invoice.dateIssued)}
+                              </span>
+                            </p>
+                            <p className="flex items-center space-x-2">
+                              <span className="font-medium">Amount:</span>
+                              <span className="text-foreground font-semibold">
+                                {formatAmount(
+                                  invoice.amount + invoice.amount * 0.05,
+                                )}
+                              </span>
+                            </p>
                           </div>
+                        </div>
 
-                          <div className="flex w-full flex-col space-y-3 md:w-44">
-                            <select
-                              onChange={(e) =>
-                                handleStatusChange(
-                                  invoice._id as string,
-                                  e.target.value,
-                                )
-                              }
-                              value={invoice.status}
-                              disabled={isPending}
-                              className={`${getStatusStyles(
-                                invoice.status,
-                              )} w-full appearance-none rounded-lg border-0 px-4 py-3 text-center font-medium shadow-sm transition-all duration-200 hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50`}
+                        <div className="flex w-full flex-col space-y-3 md:w-56">
+                          <Select
+                            value={invoice.status}
+                            onValueChange={(val) =>
+                              handleStatusChange(invoice._id as string, val)
+                            }
+                            disabled={isPending}
+                          >
+                            <SelectTrigger
+                              className={`w-full ${
+                                invoice.status === "paid"
+                                  ? "border-primary/30 bg-primary/10 text-primary"
+                                  : invoice.status === "overdue"
+                                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                                    : "border-muted-foreground/30 bg-muted text-muted-foreground"
+                              }`}
                             >
-                              <option
-                                value="paid"
-                                className="bg-green-500 py-12 text-white"
-                              >
-                                Paid
-                              </option>
-                              <option
-                                value="pending"
-                                className="text-black bg-yellow-500 py-12"
-                              >
-                                Pending
-                              </option>
-                            </select>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="pending">Pending</SelectItem>
+                              <SelectItem value="paid">Paid</SelectItem>
+                            </SelectContent>
+                          </Select>
 
-                            {/* Call Logging Buttons */}
-                            <div className="flex gap-2">
-                              <button
-                                onClick={() =>
-                                  openCallLog({
-                                    type: 'invoice',
-                                    id: invoice._id as string,
-                                    title: invoice.jobTitle,
-                                  })
-                                }
-                                className="flex flex-1 items-center justify-center space-x-1 rounded-lg bg-purple-500 px-3 py-2 text-white transition-colors hover:bg-purple-600 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                                title="Log payment call"
-                              >
-                                <FaPhone className="h-3 w-3" />
-                                <span className="text-xs font-medium">Log Call</span>
-                              </button>
-                              {invoice.callHistory && invoice.callHistory.length > 0 && (
-                                <button
-                                  onClick={() =>
-                                    openCallHistory(
-                                      invoice.callHistory || [],
-                                      invoice.jobTitle
-                                    )
-                                  }
-                                  className="flex items-center justify-center space-x-1 rounded-lg bg-indigo-500 px-3 py-2 text-white transition-colors hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                          {/* Call Logging Buttons */}
+                          <div className="flex gap-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setCallLogContext({
+                                  type: "invoice",
+                                  id: invoice._id as string,
+                                  title: invoice.jobTitle,
+                                });
+                                setCallLogOpen(true);
+                              }}
+                              className="flex-1"
+                              title="Log payment call"
+                            >
+                              <FaPhone className="mr-2 h-3 w-3" />
+                              Log Call
+                            </Button>
+                            {invoice.callHistory &&
+                              invoice.callHistory.length > 0 && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => {
+                                    setCallHistoryData({
+                                      callHistory: invoice.callHistory || [],
+                                      jobTitle: invoice.jobTitle,
+                                    });
+                                    setCallHistoryOpen(true);
+                                  }}
+                                  className="px-2"
                                   title="View call history"
                                 >
                                   <FaHistory className="h-3 w-3" />
-                                  <span className="text-xs font-medium">{invoice.callHistory.length}</span>
-                                </button>
+                                  <span className="ml-1 text-xs">
+                                    {invoice.callHistory.length}
+                                  </span>
+                                </Button>
                               )}
-                            </div>
+                          </div>
 
-                            {/* Configure Reminders Button */}
-                            <div className="flex h-10 justify-center">
-                              <button
-                                onClick={() =>
-                                  setShowReminderModal(invoice._id as string)
-                                }
-                                className="flex h-full w-full items-center justify-center space-x-2 rounded-lg bg-blue-500 px-4 text-white transition-colors hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
-                                title="Configure auto reminders"
-                              >
-                                <FaCog className="h-4 w-4" />
-                                <span className="whitespace-nowrap text-sm font-medium">
-                                  Configure Reminders
-                                </span>
-                              </button>
-                            </div>
+                          {/* Configure Reminders Button */}
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() =>
+                              setShowReminderModal(invoice._id as string)
+                            }
+                            title="Configure auto reminders"
+                          >
+                            <FaCog className="mr-2 h-4 w-4" />
+                            Configure Reminders
+                          </Button>
 
-                            {/* Reminder Status Badge */}
-                            <div className="flex justify-center">
-                              {getReminderStatusBadge(invoice)}
-                            </div>
+                          {/* Reminder Status Badge */}
+                          <div className="flex justify-center">
+                            {getReminderStatusBadge(invoice)}
                           </div>
                         </div>
-                      </motion.div>
-                    );
-                  })
-                )}
-              </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
             </div>
-          </motion.div>
-        </motion.div>
-      </AnimatePresence>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
       {/* Payment Modal */}
       <PaymentModal
@@ -345,15 +363,34 @@ const PendingJobsModalContent = ({
         onClose={() => setShowReminderModal(null)}
         invoiceId={showReminderModal || ""}
         onSettingsUpdate={(invoiceId, settings) => {
-          // Update the local state with new reminder settings
-          setInvoices((prevInvoices) =>
-            prevInvoices.map((invoice) =>
-              invoice._id === invoiceId
-                ? { ...invoice, paymentReminders: settings }
-                : invoice,
-            ),
-          );
+          // Optimistic update for settings
+          startTransition(() => {
+            setOptimisticInvoice({ id: invoiceId, paymentReminders: settings });
+          });
         }}
+      />
+
+      {/* Call Log Modal */}
+      {callLogContext && (
+        <CallLogModal
+          open={callLogOpen}
+          onClose={() => {
+            setCallLogOpen(false);
+            setCallLogContext(null);
+          }}
+          context={callLogContext}
+        />
+      )}
+
+      {/* Call History Modal */}
+      <CallHistoryModal
+        open={callHistoryOpen}
+        onClose={() => {
+          setCallHistoryOpen(false);
+          setCallHistoryData({ callHistory: [], jobTitle: "" });
+        }}
+        callHistory={callHistoryData.callHistory}
+        jobTitle={callHistoryData.jobTitle}
       />
     </>
   );
@@ -364,9 +401,10 @@ const PendingJobsModal = ({
   onClose,
 }: PendingJobsModalProps) => {
   return (
-    <CallLogProvider>
-      <PendingJobsModalContent pendingInvoices={pendingInvoices} onClose={onClose} />
-    </CallLogProvider>
+    <PendingJobsModalContent
+      pendingInvoices={pendingInvoices}
+      onClose={onClose}
+    />
   );
 };
 

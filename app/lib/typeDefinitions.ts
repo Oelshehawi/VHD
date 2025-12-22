@@ -55,13 +55,13 @@ export interface ScheduleType {
 }
 
 export interface TechnicianLocationType {
-  technicianId: string,
-  latitude: number,
-  longitude: number,
-  timestamp: Date,
-  isActive: Boolean,
-  currentJobId: string | undefined,
-  accuracy: string | undefined
+  technicianId: string;
+  latitude: number;
+  longitude: number;
+  timestamp: Date;
+  isActive: Boolean;
+  currentJobId: string | undefined;
+  accuracy: string | undefined;
 }
 
 export interface AvailabilityType {
@@ -335,6 +335,10 @@ export interface DashboardSearchParams {
   urlName?: string;
   year?: string;
   salesYear?: string;
+  scheduled?: string;
+  actionsDateFrom?: string;
+  actionsDateTo?: string;
+  actionsSearch?: string;
   [key: string]: string | undefined;
 }
 
@@ -584,4 +588,3 @@ export interface NotificationType {
   createdAt?: Date;
   updatedAt?: Date;
 }
-

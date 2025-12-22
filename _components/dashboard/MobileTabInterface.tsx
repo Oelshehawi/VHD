@@ -1,66 +1,43 @@
 "use client";
 
-import { useState, Suspense } from "react";
 import ActionsFeed from "./ActionsFeed";
 import JobsDueContainer from "./JobsDueContainer";
-import { JobsDueContainerSkeleton } from "../Skeletons";
 import { DashboardSearchParams } from "../../app/lib/typeDefinitions";
+import { JobsDueDataType, DisplayAction } from "../../app/lib/dashboard.data";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 export default function MobileTabInterface({
   searchParams,
+  jobsDueData,
+  recentActions,
 }: {
   searchParams: DashboardSearchParams;
+  jobsDueData: JobsDueDataType;
+  recentActions: DisplayAction[];
 }) {
-  const [activeTab, setActiveTab] = useState<"jobs" | "activity">("jobs");
-
   return (
-    <div className="md:hidden flex flex-col h-full">
-      {/* Tab buttons */}
-      <div className="flex gap-2 mb-4 border-b border-gray-200">
-        <button
-          onClick={() => setActiveTab("jobs")}
-          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-            activeTab === "jobs"
-              ? "border-b-2 border-blue-500 text-blue-600"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Jobs Due
-        </button>
-        <button
-          onClick={() => setActiveTab("activity")}
-          className={`flex-1 py-3 px-4 text-sm font-medium transition-colors ${
-            activeTab === "activity"
-              ? "border-b-2 border-blue-500 text-blue-600"
-              : "text-gray-600 hover:text-gray-900"
-          }`}
-        >
-          Activity Feed
-        </button>
-      </div>
+    <div className="flex h-full flex-col lg:hidden">
+      <Tabs defaultValue="jobs" className="flex h-full w-full flex-col">
+        <TabsList className="mb-4 grid w-full grid-cols-2">
+          <TabsTrigger value="jobs">Jobs Due</TabsTrigger>
+          <TabsTrigger value="activity">Activity Feed</TabsTrigger>
+        </TabsList>
 
-      {/* Tab content */}
-      <div className="flex-1 overflow-hidden">
-        {activeTab === "jobs" && (
-          <Suspense fallback={<JobsDueContainerSkeleton />}>
+        <div className="flex-1 overflow-hidden">
+          <TabsContent value="jobs" className="mt-0 h-full border-0 p-0">
             <div className="h-full">
-              <JobsDueContainer searchParams={searchParams} />
+              <JobsDueContainer jobsDueData={jobsDueData} />
             </div>
-          </Suspense>
-        )}
+          </TabsContent>
 
-        {activeTab === "activity" && (
-          <Suspense
-            fallback={
-              <div className="rounded-xl bg-white p-8 shadow-lg border border-gray-200 h-full animate-pulse" />
-            }
-          >
-            <div className="h-full">
-              <ActionsFeed />
-            </div>
-          </Suspense>
-        )}
-      </div>
+          <TabsContent value="activity" className="mt-0 h-full border-0 p-0">
+            <ActionsFeed
+              searchParams={searchParams}
+              recentActions={recentActions}
+            />
+          </TabsContent>
+        </div>
+      </Tabs>
     </div>
   );
 }

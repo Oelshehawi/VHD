@@ -7,6 +7,7 @@ import Sorting from "../../../_components/database/Sorting";
 import Pagination from "../../../_components/database/Pagination";
 import { Suspense } from "react";
 import { TableContainerSkeleton } from "../../../_components/Skeletons";
+import { Card, CardContent } from "../../../_components/ui/card";
 
 const Database = async ({
   searchParams,
@@ -20,18 +21,35 @@ const Database = async ({
 
   if (!canManage)
     return (
-      <div className="flex min-h-screen items-center justify-center bg-gray-50">
-        <div className="rounded-xl bg-white p-8 shadow-xl border border-gray-200 max-w-md mx-4">
-          <div className="text-center">
-            <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-red-100 flex items-center justify-center border border-red-200">
-              <svg className="h-8 w-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" />
-              </svg>
+      <div className="bg-background flex items-center justify-center p-6">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-8">
+            <div className="text-center">
+              <div className="bg-destructive/10 border-destructive/20 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border">
+                <svg
+                  className="text-destructive h-8 w-8"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
+                  />
+                </svg>
+              </div>
+              <h2 className="text-foreground mb-2 text-2xl font-bold">
+                Access Denied
+              </h2>
+              <p className="text-muted-foreground">
+                You don&apos;t have the required permissions to access this
+                page.
+              </p>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h2>
-            <p className="text-gray-600">You don't have the required permissions to access this page.</p>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     );
 
@@ -44,20 +62,28 @@ const Database = async ({
 
   return (
     <Suspense fallback={<TableContainerSkeleton />}>
-      <div className="min-h-screen bg-gray-50 p-6">
-        <div className="w-full flex flex-col gap-8 min-h-[95vh] rounded-2xl bg-white p-8 shadow-xl border border-gray-200">
+      <div className="bg-background flex h-full flex-col">
+        <Card className="flex min-h-0 w-full flex-1 flex-col gap-8 p-8">
           <AddClient />
-          <div className="flex-1 space-y-8">
-            <div className="flex flex-col justify-between gap-6 md:flex-row lg:gap-8">
-              <Search placeholder="Search For Client..." />
-              <Sorting />
+          <div className="flex min-h-0 flex-1 flex-col space-y-6">
+            <div className="flex flex-col gap-3 md:flex-row">
+              <div className="flex-1">
+                <Search placeholder="Search For Client..." />
+              </div>
+              <div className="w-full md:w-48">
+                <Sorting />
+              </div>
             </div>
-            <div className="flex-1">
-              <ClientTable query={query} sort={sort} currentPage={currentPage} />
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <ClientTable
+                query={query}
+                sort={sort}
+                currentPage={currentPage}
+              />
             </div>
           </div>
           <Pagination totalPages={totalPages} />
-        </div>
+        </Card>
       </div>
     </Suspense>
   );

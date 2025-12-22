@@ -1,9 +1,9 @@
-import {clsx, type ClassValue} from "clsx";
+import { clsx, type ClassValue } from "clsx";
 import { format } from "date-fns-tz";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
+  return twMerge(clsx(inputs));
 }
 
 export const formatDate = (dateString: any) => {
@@ -22,84 +22,97 @@ export const formatDate = (dateString: any) => {
  */
 export const formatDateUTC = (dateInput: string | Date): string => {
   let dateString: string | undefined;
-  
+
   if (dateInput instanceof Date) {
     // Extract UTC date components directly without timezone conversion
     const year = dateInput.getUTCFullYear();
-    const month = String(dateInput.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(dateInput.getUTCDate()).padStart(2, '0');
+    const month = String(dateInput.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(dateInput.getUTCDate()).padStart(2, "0");
     dateString = `${year}-${month}-${day}`;
-  } else if (typeof dateInput === 'string') {
+  } else if (typeof dateInput === "string") {
     // If it's a string, extract just the date part (YYYY-MM-DD)
-    dateString = dateInput.includes('T') ? dateInput.split('T')[0] : dateInput;
+    dateString = dateInput.includes("T") ? dateInput.split("T")[0] : dateInput;
   } else {
-    console.warn('formatDateUTC received invalid input:', dateInput);
-    return 'Invalid Date';
+    console.warn("formatDateUTC received invalid input:", dateInput);
+    return "Invalid Date";
   }
-  
+
   // Use the existing formatDate function which works with YYYY-MM-DD strings
   return formatDate(dateString);
 };
 
 /**
  * Format a UTC date string in readable format exactly as stored (no timezone conversion)
- * @param dateInput - Date string in ISO format or Date object  
+ * @param dateInput - Date string in ISO format or Date object
  * @returns Formatted date string (e.g., "January 15, 2024")
  */
 
 // This is how to display date correctly from our database.
 export const formatDateStringUTC = (dateInput: string | Date): string => {
   let dateString: string | undefined;
-  
+
   if (dateInput instanceof Date) {
     // Extract UTC date components directly
     const year = dateInput.getUTCFullYear();
-    const month = String(dateInput.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(dateInput.getUTCDate()).padStart(2, '0');
+    const month = String(dateInput.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(dateInput.getUTCDate()).padStart(2, "0");
     dateString = `${year}-${month}-${day}`;
-  } else if (typeof dateInput === 'string') {
+  } else if (typeof dateInput === "string") {
     // Handle datetime strings like '3/5/2025, 12:00:00 AM'
-    if (dateInput.includes(',')) {
+    if (dateInput.includes(",")) {
       // Split by comma and take the date part
-      const datePart = dateInput.split(',')[0];
+      const datePart = dateInput.split(",")[0] || "";
       // Parse the date part (e.g., '3/5/2025')
       const date = new Date(datePart);
       if (!isNaN(date.getTime())) {
         const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
         dateString = `${year}-${month}-${day}`;
       }
-    } else if (dateInput.includes('T')) {
+    } else if (dateInput.includes("T")) {
       // Handle ISO format with T
-      dateString = dateInput.split('T')[0];
+      dateString = dateInput.split("T")[0];
     } else {
       // Handle other date formats
       dateString = dateInput;
     }
   } else {
-    console.warn('formatDateStringUTC received invalid input:', dateInput);
-    return 'Invalid Date';
+    console.warn("formatDateStringUTC received invalid input:", dateInput);
+    return "Invalid Date";
   }
-  
+
   if (!dateString) {
-    console.warn('formatDateStringUTC could not parse date:', dateInput);
-    return 'Invalid Date';
+    console.warn("formatDateStringUTC could not parse date:", dateInput);
+    return "Invalid Date";
   }
-  
+
   const dateParts = dateString.split("-");
   if (dateParts.length !== 3) {
-    console.warn('formatDateStringUTC received invalid date format:', dateString);
-    return 'Invalid Date';
+    console.warn(
+      "formatDateStringUTC received invalid date format:",
+      dateString,
+    );
+    return "Invalid Date";
   }
-  
+
   const year = dateParts[0]!;
   const month = dateParts[1]!;
   const day = dateParts[2]!;
 
   const monthNames = [
-    "January", "February", "March", "April", "May", "June",
-    "July", "August", "September", "October", "November", "December",
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
   ];
 
   const monthName = monthNames[parseInt(month, 10) - 1];
@@ -137,22 +150,22 @@ export const formatDateTime = (dateString: Date) => {
 
   const formattedDateTime: string = new Date(dateString).toLocaleString(
     "en-CA",
-    dateTimeOptions
+    dateTimeOptions,
   );
 
   const formattedDateDay: string = new Date(dateString).toLocaleString(
     "en-CA",
-    dateDayOptions
+    dateDayOptions,
   );
 
   const formattedDate: string = new Date(dateString).toLocaleString(
     "en-CA",
-    dateOptions
+    dateOptions,
   );
 
   const formattedTime: string = new Date(dateString).toLocaleString(
     "en-CA",
-    timeOptions
+    timeOptions,
   );
 
   return {
@@ -162,8 +175,6 @@ export const formatDateTime = (dateString: Date) => {
     timeOnly: formattedTime,
   };
 };
-
-
 
 export function formatAmount(amount: number): string {
   const formatter = new Intl.NumberFormat("en-CA", {
@@ -204,26 +215,29 @@ export const getTransactionStatus = (date: Date) => {
 
 export const formatDateToString = (dateInput: string | Date) => {
   // Handle both string and Date inputs
-  let dateString: string| undefined;
-  
+  let dateString: string | undefined;
+
   if (dateInput instanceof Date) {
     // Convert Date object to YYYY-MM-DD format
-    dateString = dateInput.toISOString().split('T')[0];
-  } else if (typeof dateInput === 'string') {
+    dateString = dateInput.toISOString().split("T")[0];
+  } else if (typeof dateInput === "string") {
     // If it's already a string, use it directly or extract date part if it's datetime
-    dateString = dateInput.includes('T') ? dateInput.split('T')[0] : dateInput;
+    dateString = dateInput.includes("T") ? dateInput.split("T")[0] : dateInput;
   } else {
     // Fallback for invalid input
-    console.warn('formatDateToString received invalid input:', dateInput);
-    return 'Invalid Date';
+    console.warn("formatDateToString received invalid input:", dateInput);
+    return "Invalid Date";
   }
 
   const dateParts = dateString!.split("-");
   if (dateParts.length !== 3) {
-    console.warn('formatDateToString received invalid date format:', dateString);
-    return 'Invalid Date';
+    console.warn(
+      "formatDateToString received invalid date format:",
+      dateString,
+    );
+    return "Invalid Date";
   }
-  
+
   const year = dateParts[0]!;
   const month = dateParts[1]!;
   const day = dateParts[2]!;
@@ -350,7 +364,6 @@ export const formatDateFns = (date: string | Date): string => {
   return format(parsedDate, "MMMM do, yyyy", { timeZone: "UTC" }); // e.g., "October 15th, 2024"
 };
 
-
 // Will take in a UTC date and keeep the date in the utc date
 export const formatDateFnsUTC = (date: string | Date): string => {
   return format(date, "MMMM do, yyyy", { timeZone: "UTC" }); // e.g., "October 15th, 2024"
@@ -362,21 +375,21 @@ export const formatDateFnsUTC = (date: string | Date): string => {
  * @returns Duration in minutes
  */
 export function calculateJobDurationFromPrice(totalPrice: number): number {
-  if (totalPrice <= 350) return 90;  // 1.5 hours
-  if (totalPrice < 600) return 150;  // 2.5 hours
+  if (totalPrice <= 350) return 90; // 1.5 hours
+  if (totalPrice < 600) return 150; // 2.5 hours
   if (totalPrice <= 800) return 180; // 3 hours
   if (totalPrice <= 1000) return 210; // 3.5 hours
   if (totalPrice <= 1500) return 240; // 4 hours
-  
+
   // For amounts over $1500, add 1 hour for every $300
   // Calculate how many $300 increments over $1500
   const overBase = totalPrice - 1500;
   const additionalHours = Math.ceil(overBase / 300);
   const totalHours = 4 + additionalHours;
-  
+
   // Cap at 8 hours maximum
   const cappedHours = Math.min(totalHours, 8);
-  
+
   return cappedHours * 60; // Convert to minutes
 }
 
@@ -396,7 +409,7 @@ export function convertMinutesToHours(durationInMinutes: number): number {
  */
 export function getEmailForPurpose(
   client: any,
-  purpose: "scheduling" | "accounting" | "primary"
+  purpose: "scheduling" | "accounting" | "primary",
 ): string | null {
   // Handle old structure (single email field)
   if (typeof client.email === "string" && !client.emails) {
@@ -407,9 +420,13 @@ export function getEmailForPurpose(
   if (client.emails) {
     switch (purpose) {
       case "accounting":
-        return client.emails.accounting || client.emails.primary || client.email;
+        return (
+          client.emails.accounting || client.emails.primary || client.email
+        );
       case "scheduling":
-        return client.emails.scheduling || client.emails.primary || client.email;
+        return (
+          client.emails.scheduling || client.emails.primary || client.email
+        );
       case "primary":
       default:
         return client.emails.primary || client.email;
@@ -426,7 +443,7 @@ export function getEmailForPurpose(
  */
 export function calculatePaymentDuration(
   dateIssued: Date | string,
-  datePaid?: Date | string
+  datePaid?: Date | string,
 ): { text: string; days: number | null } {
   if (!datePaid) {
     return { text: "Not paid yet", days: null };
@@ -437,30 +454,32 @@ export function calculatePaymentDuration(
   let paidDateStr: string;
 
   if (dateIssued instanceof Date) {
-    issuedDateStr = dateIssued.toISOString().split('T')[0]!;
+    issuedDateStr = dateIssued.toISOString().split("T")[0]!;
   } else {
-    issuedDateStr = dateIssued.includes('T') ? dateIssued.split('T')[0]! : dateIssued;
+    issuedDateStr = dateIssued.includes("T")
+      ? dateIssued.split("T")[0]!
+      : dateIssued;
   }
 
   if (datePaid instanceof Date) {
-    paidDateStr = datePaid.toISOString().split('T')[0]!;
+    paidDateStr = datePaid.toISOString().split("T")[0]!;
   } else {
-    paidDateStr = datePaid.includes('T') ? datePaid.split('T')[0]! : datePaid;
+    paidDateStr = datePaid.includes("T") ? datePaid.split("T")[0]! : datePaid;
   }
 
   // Parse dates as UTC (YYYY-MM-DD format)
-  const issuedParts = issuedDateStr.split('-');
-  const paidParts = paidDateStr.split('-');
-  
+  const issuedParts = issuedDateStr.split("-");
+  const paidParts = paidDateStr.split("-");
+
   if (issuedParts.length !== 3 || paidParts.length !== 3) {
-    console.warn('calculatePaymentDuration received invalid date format');
+    console.warn("calculatePaymentDuration received invalid date format");
     return { text: "Invalid dates", days: null };
   }
 
   const issuedYear = parseInt(issuedParts[0]!, 10);
   const issuedMonth = parseInt(issuedParts[1]!, 10);
   const issuedDay = parseInt(issuedParts[2]!, 10);
-  
+
   const paidYear = parseInt(paidParts[0]!, 10);
   const paidMonth = parseInt(paidParts[1]!, 10);
   const paidDay = parseInt(paidParts[2]!, 10);
@@ -501,7 +520,3 @@ export function getPaymentMethodDisplay(method: string): string {
       return method;
   }
 }
-
-
-
-

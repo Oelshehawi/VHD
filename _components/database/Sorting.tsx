@@ -2,6 +2,13 @@
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { useDebouncedCallback } from "use-debounce";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 const Sorting = () => {
   const searchParams = useSearchParams() ?? new URLSearchParams();
@@ -19,18 +26,21 @@ const Sorting = () => {
     replace(`${pathname}?${params.toString()}`);
   }, 300);
 
+  const currentSort = searchParams.get("sort") || "1";
+
   return (
-    <div className="flex flex-1 flex-col py-2 md:flex-row">
-      <select
-        id="clientSort"
-        name="clientSort"
-        onChange={(e) => handleSorting(e.target.value)}
-        className="h-10 w-full rounded-md border border-gray-300 px-2 py-0 tracking-wider text-gray-700 hover:cursor-pointer focus:border-darkGreen focus:ring-2 focus:ring-darkGreen md:px-3 md:py-1"
-      >
-        <option value={1}>Name A-Z</option>
-        <option value={-1}>Name Z-A</option>
-      </select>
-    </div>
+    <Select
+      value={currentSort}
+      onValueChange={(value) => handleSorting(value)}
+    >
+      <SelectTrigger className="w-full">
+        <SelectValue placeholder="Sort by" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="1">Name A-Z</SelectItem>
+        <SelectItem value="-1">Name Z-A</SelectItem>
+      </SelectContent>
+    </Select>
   );
 };
 export default Sorting;

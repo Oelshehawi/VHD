@@ -1,14 +1,38 @@
 "use client";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { FaPlus, FaTimes, FaUser, FaEnvelope, FaPhone, FaStickyNote, FaTag } from "react-icons/fa";
+import {
+  FaPlus,
+  FaUser,
+  FaEnvelope,
+  FaPhone,
+  FaStickyNote,
+  FaTag,
+} from "react-icons/fa";
 import { createClient } from "../../app/lib/actions/actions";
 import { isTextKey, isNumberKey } from "../../app/lib/utils";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
+import { useIsMobile } from "../../app/hooks/use-mobile";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "../ui/drawer";
+import { X, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const AddClient = () => {
   const [open, setOpen] = useState(false);
-
+  const isMobile = useIsMobile();
   const {
     register,
     handleSubmit,
@@ -29,12 +53,12 @@ const AddClient = () => {
         // Keep the old email field for backward compatibility
         email: values.primaryEmail,
       };
-      
+
       // Remove the individual email fields from the data
       delete clientData.primaryEmail;
       delete clientData.schedulingEmail;
       delete clientData.accountingEmail;
-      
+
       await createClient(clientData);
       setOpen(false);
       reset();
@@ -71,7 +95,8 @@ const AddClient = () => {
       placeholder: "client@example.com",
       isRequired: true,
       label: "Primary Email",
-      description: "Main email address for client portal access and communications",
+      description:
+        "Main email address for client portal access and communications",
       icon: FaEnvelope,
     },
     {
@@ -80,7 +105,8 @@ const AddClient = () => {
       placeholder: "accounting@example.com",
       isRequired: false,
       label: "Accounting Email",
-      description: "Dedicated email for payment reminders and invoices (optional)",
+      description:
+        "Dedicated email for payment reminders and invoices (optional)",
       icon: FaEnvelope,
     },
     {
@@ -89,7 +115,8 @@ const AddClient = () => {
       placeholder: "scheduling@example.com",
       isRequired: false,
       label: "Scheduling Email",
-      description: "Dedicated email for job scheduling notifications (optional)",
+      description:
+        "Dedicated email for job scheduling notifications (optional)",
       icon: FaEnvelope,
     },
     {
@@ -120,160 +147,173 @@ const AddClient = () => {
   return (
     <>
       {/* Header Section */}
-      <div className="mb-4 flex flex-row items-center justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-r from-darkGreen to-green-600 shadow-lg">
-            <FaUser className="h-5 w-5 text-white" />
+          <div className="bg-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-lg">
+            <FaUser className="text-primary-foreground h-5 w-5" />
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Clients</h1>
-            <p className="text-xs text-gray-600">Manage your client database</p>
+          <div className="min-w-0">
+            <h1 className="text-foreground truncate text-xl font-bold sm:text-2xl">
+              Clients
+            </h1>
+            <p className="text-muted-foreground text-xs">
+              Manage your client database
+            </p>
           </div>
         </div>
-        <button
-          onClick={() => setOpen(true)}
-          className="group flex items-center gap-2 rounded-xl bg-linear-to-r from-darkBlue to-blue-600 px-4 py-2 font-semibold text-white shadow-lg border border-blue-500/20 transition-all duration-300 hover:shadow-xl hover:scale-105 active:scale-95"
+        <Drawer
+          open={open}
+          onOpenChange={setOpen}
+          direction={isMobile ? "bottom" : "right"}
         >
-          <FaPlus className="h-3 w-3 transition-transform group-hover:rotate-90" />
-          Add Client
-        </button>
-      </div>
-      
-      {/* Background Overlay */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/70 backdrop-blur-md transition-all duration-300 ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        onClick={() => setOpen(false)}
-      ></div>
-
-      {/* Slide-out Panel */}
-      <div
-        className={`fixed right-0 top-0 z-50 flex h-screen w-full max-w-lg transition-transform duration-300 ease-out ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex w-full flex-col bg-white shadow-2xl">
-          {/* Header */}
-          <div className="flex w-full flex-row items-center justify-between bg-linear-to-r from-darkGreen to-green-600 p-4 shadow-lg">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-                <FaUser className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">Add New Client</h2>
-                <p className="text-xs text-green-100">Create a new client profile</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="group rounded-lg p-2 text-white hover:bg-white/20 transition-all duration-200 border border-white/20"
-            >
-              <FaTimes className="h-3 w-3 transition-transform group-hover:rotate-90" />
-            </button>
-          </div>
-
-          {/* Form */}
-          <form
-            onSubmit={handleSubmit(handleSave)}
-            className="flex-1 space-y-3 p-4 overflow-y-auto bg-gray-50"
-          >
-            {inputFields.map(
-              ({
-                name,
-                type,
-                placeholder,
-                isRequired,
-                maxLength,
-                minLength,
-                onKeyDown,
-                label,
-                description,
-                icon: Icon,
-              }) => (
-                <div key={name} className="group">
-                  <label className="mb-1 block text-xs font-semibold text-gray-800">
-                    {label}
-                    {isRequired && <span className="ml-1 text-red-500">*</span>}
-                  </label>
-                  {description && (
-                    <p className="mb-2 text-xs text-gray-500 leading-relaxed">{description}</p>
-                  )}
-                  <div className="relative">
-                    <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-darkGreen transition-colors">
-                      <Icon className="h-3 w-3" />
-                    </div>
-                    {type === "textarea" ? (
-                      <textarea
-                        {...register(name, { required: isRequired })}
-                        placeholder={placeholder}
-                        className={`w-full pl-10 pr-3 py-2 rounded-lg border text-gray-800 placeholder-gray-400 outline-none transition-all duration-200 resize-none h-20 text-sm ${
-                          errors[name]
-                            ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-1 focus:ring-red-200"
-                            : "border-gray-200 bg-white focus:border-darkGreen focus:ring-1 focus:ring-green-100 hover:border-gray-300"
-                        }`}
-                      />
-                    ) : (
-                      <input
-                        {...register(name, {
-                          required: isRequired,
-                          minLength: minLength as number,
-                          maxLength: maxLength as number,
-                        })}
-                        type={type}
-                        placeholder={placeholder}
-                        onKeyDown={onKeyDown}
-                        className={`w-full pl-10 pr-3 py-2 rounded-lg border text-gray-800 placeholder-gray-400 outline-none transition-all duration-200 text-sm ${
-                          name === "prefix" ? "uppercase tracking-wider font-mono" : ""
-                        } ${
-                          errors[name]
-                            ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-1 focus:ring-red-200"
-                            : "border-gray-200 bg-white focus:border-darkGreen focus:ring-1 focus:ring-green-100 hover:border-gray-300"
-                        }`}
-                      />
-                    )}
-                  </div>
-                  {errors[name] && (
-                    <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                      <div className="h-1 w-1 rounded-full bg-red-500"></div>
-                      {errors[name]?.type === "required" && `${label} is required`}
-                      {errors[name]?.type === "minLength" && `${label} must be at least ${minLength} characters`}
-                      {errors[name]?.type === "maxLength" && `${label} cannot exceed ${maxLength} characters`}
-                    </div>
-                  )}
-                </div>
-              ),
+          <DrawerTrigger asChild>
+            <Button className="w-full gap-2 sm:w-auto">
+              <FaPlus className="h-3 w-3" />
+              Add Client
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent
+            className={cn(
+              isMobile
+                ? "inset-x-0 bottom-0 max-h-[96vh] rounded-t-[10px]"
+                : "top-0 right-0 bottom-0 left-auto mt-0 h-full w-full max-w-lg rounded-none border-l",
             )}
-            
-            {/* Submit Button */}
-            <div className="sticky bottom-0 bg-gray-50 pt-4 -mx-4 px-4 border-t border-gray-200">
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className={`w-full rounded-lg bg-linear-to-r from-darkBlue to-blue-600 py-3 text-white font-bold border border-blue-500/20 transition-all duration-300 shadow-lg text-sm
-                  ${
-                    isProcessing
-                      ? "opacity-70 cursor-not-allowed"
-                      : "hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                  }`}
+          >
+            <DrawerHeader
+              className={cn(
+                "bg-primary text-primary-foreground",
+                isMobile && "text-center",
+              )}
+            >
+              <div
+                className={cn(
+                  "flex items-center",
+                  isMobile ? "flex-col gap-3" : "justify-between",
+                )}
               >
-                <div className="flex items-center justify-center gap-2">
-                  {isProcessing ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                      Adding Client...
-                    </>
-                  ) : (
-                    <>
-                      <FaPlus className="h-3 w-3" />
-                      Add Client
-                    </>
+                <div
+                  className={cn(
+                    "flex items-center gap-2",
+                    isMobile && "flex-col",
                   )}
+                >
+                  <div className="bg-primary-foreground/20 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                    <FaUser className="h-4 w-4" />
+                  </div>
+                  <div className={isMobile ? "text-center" : ""}>
+                    <DrawerTitle>Add New Client</DrawerTitle>
+                    <DrawerDescription className="text-primary-foreground/80">
+                      Create a new client profile
+                    </DrawerDescription>
+                  </div>
                 </div>
-              </button>
+                <DrawerClose asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-primary-foreground hover:bg-primary-foreground/20"
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                </DrawerClose>
+              </div>
+            </DrawerHeader>
+            <div className="bg-background flex-1 overflow-y-auto p-4 sm:p-6">
+              <form onSubmit={handleSubmit(handleSave)} className="space-y-4">
+                {inputFields.map(
+                  ({
+                    name,
+                    type,
+                    placeholder,
+                    isRequired,
+                    maxLength,
+                    minLength,
+                    onKeyDown,
+                    label,
+                    description,
+                    icon: Icon,
+                  }) => (
+                    <div key={name} className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Icon className="text-muted-foreground h-4 w-4" />
+                        <Label htmlFor={name} className="text-sm font-medium">
+                          {label}
+                          {isRequired && (
+                            <span className="text-destructive ml-1">*</span>
+                          )}
+                        </Label>
+                      </div>
+                      {description && (
+                        <p className="text-muted-foreground ml-6 text-xs">
+                          {description}
+                        </p>
+                      )}
+                      {type === "textarea" ? (
+                        <Textarea
+                          id={name}
+                          {...register(name, { required: isRequired })}
+                          placeholder={placeholder}
+                          className={cn(
+                            "min-h-[80px]",
+                            errors[name] &&
+                              "border-destructive focus-visible:ring-destructive",
+                          )}
+                        />
+                      ) : (
+                        <Input
+                          id={name}
+                          {...register(name, {
+                            required: isRequired,
+                            minLength: minLength as number,
+                            maxLength: maxLength as number,
+                          })}
+                          type={type}
+                          placeholder={placeholder}
+                          onKeyDown={onKeyDown}
+                          className={cn(
+                            name === "prefix" &&
+                              "font-mono tracking-wider uppercase",
+                            errors[name] &&
+                              "border-destructive focus-visible:ring-destructive",
+                          )}
+                        />
+                      )}
+                      {errors[name] && (
+                        <p className="text-destructive ml-6 text-xs">
+                          {errors[name]?.type === "required" &&
+                            `${label} is required`}
+                          {errors[name]?.type === "minLength" &&
+                            `${label} must be at least ${minLength} characters`}
+                          {errors[name]?.type === "maxLength" &&
+                            `${label} cannot exceed ${maxLength} characters`}
+                        </p>
+                      )}
+                    </div>
+                  ),
+                )}
+              </form>
             </div>
-          </form>
-        </div>
+            <DrawerFooter className="bg-background border-t">
+              <Button
+                onClick={handleSubmit(handleSave)}
+                disabled={isProcessing}
+                className="w-full"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Adding Client...
+                  </>
+                ) : (
+                  <>
+                    <FaPlus className="mr-2 h-3 w-3" />
+                    Add Client
+                  </>
+                )}
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       </div>
     </>
   );

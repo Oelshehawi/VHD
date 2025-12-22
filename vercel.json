@@ -2,7 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/process-reminders",
-      "schedule": "0 16 * * *"
+      "schedule": "0 17 * * *"
+    },
+    {
+      "path": "/api/cron/update-overdue-invoices",
+      "schedule": "0 0 * * *"
     }
   ]
 }

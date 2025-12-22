@@ -1,6 +1,7 @@
 "use client";
 
 import AccessLinkGenerator from "./AccessLinkGenerator";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 interface PortalAccessManagerProps {
   clientId: string;
@@ -12,9 +13,13 @@ export default function PortalAccessManager({
   clientName,
 }: PortalAccessManagerProps) {
   return (
-    <div className="rounded-lg border bg-white p-4 shadow">
-      <h3 className="mb-4 text-xl font-semibold">Client Portal Access</h3>
-      <AccessLinkGenerator clientId={clientId} clientName={clientName} />
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle>Client Portal Access</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <AccessLinkGenerator clientId={clientId} clientName={clientName} />
+      </CardContent>
+    </Card>
   );
 } 

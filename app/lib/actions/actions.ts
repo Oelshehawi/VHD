@@ -12,7 +12,6 @@ import { ClientType, InvoiceType } from "../typeDefinitions";
 import { calculateDueDate } from "../utils";
 import { CallLogEntry } from "../typeDefinitions";
 
-
 export async function updateInvoiceScheduleStatus(invoiceId: string) {
   await connectMongo();
 
@@ -109,7 +108,10 @@ export async function deleteInvoice(invoiceId: string) {
   revalidatePath("/dashboard");
 }
 
-export async function createInvoice(invoiceData: any, performedBy: string = "user") {
+export async function createInvoice(
+  invoiceData: any,
+  performedBy: string = "user",
+) {
   await connectMongo();
   try {
     // Trim all string fields to remove leading/trailing spaces
@@ -127,8 +129,10 @@ export async function createInvoice(invoiceData: any, performedBy: string = "use
     if (invoiceData.items && Array.isArray(invoiceData.items)) {
       invoiceData.items = invoiceData.items.map((item: any) => ({
         ...item,
-        description: item.description ? item.description.trim() : item.description,
-        details: item.details ? item.details.trim() : item.details
+        description: item.description
+          ? item.description.trim()
+          : item.description,
+        details: item.details ? item.details.trim() : item.details,
       }));
     }
 
@@ -143,7 +147,10 @@ export async function createInvoice(invoiceData: any, performedBy: string = "use
 
     if (latestInvoice) {
       // Extract the numeric part from the latest invoiceId
-      const latestNumber = parseInt(latestInvoice.invoiceId.split("-")[1] as string, 10);
+      const latestNumber = parseInt(
+        latestInvoice.invoiceId.split("-")[1] as string,
+        10,
+      );
       newInvoiceNumber = latestNumber + 1;
     }
 
@@ -191,16 +198,17 @@ export async function updateInvoice(invoiceId: any, formData: any) {
     if (formData.notes) {
       formData.notes = formData.notes.trim();
     }
-    
+
     // Also trim item descriptions and details if they exist
     if (formData.items && Array.isArray(formData.items)) {
       formData.items = formData.items.map((item: any) => ({
         ...item,
-        description: item.description ? item.description.trim() : item.description,
-        details: item.details ? item.details.trim() : item.details
+        description: item.description
+          ? item.description.trim()
+          : item.description,
+        details: item.details ? item.details.trim() : item.details,
       }));
     }
-    
 
     const currentInvoice = await Invoice.findById(invoiceId);
 
@@ -312,11 +320,13 @@ export async function logJobCall(invoiceId: string, callLog: CallLogEntry) {
           callHistory: {
             ...callLog,
             timestamp: new Date(callLog.timestamp),
-            followUpDate: callLog.followUpDate ? new Date(callLog.followUpDate) : undefined,
-          }
-        }
+            followUpDate: callLog.followUpDate
+              ? new Date(callLog.followUpDate)
+              : undefined,
+          },
+        },
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updatedJob) {
@@ -353,7 +363,10 @@ export async function logJobCall(invoiceId: string, callLog: CallLogEntry) {
   }
 }
 
-export async function logInvoicePaymentCall(invoiceId: string, callLog: CallLogEntry) {
+export async function logInvoicePaymentCall(
+  invoiceId: string,
+  callLog: CallLogEntry,
+) {
   await connectMongo();
   try {
     // Find the Invoice entry by _id and add call log to callHistory
@@ -364,11 +377,13 @@ export async function logInvoicePaymentCall(invoiceId: string, callLog: CallLogE
           callHistory: {
             ...callLog,
             timestamp: new Date(callLog.timestamp),
-            followUpDate: callLog.followUpDate ? new Date(callLog.followUpDate) : undefined,
-          }
-        }
+            followUpDate: callLog.followUpDate
+              ? new Date(callLog.followUpDate)
+              : undefined,
+          },
+        },
       },
-      { new: true, runValidators: true }
+      { new: true, runValidators: true },
     );
 
     if (!updatedInvoice) {
@@ -401,5 +416,52 @@ export async function logInvoicePaymentCall(invoiceId: string, callLog: CallLogE
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to log invoice payment call");
+  }
+}
+
+export async function checkAndProcessOverdueInvoices() {
+  await connectMongo();
+  try {
+    const now = new Date();
+    const twoWeeksAgo = new Date(now.getTime() - 14 * 24 * 60 * 60 * 1000);
+
+    // Find pending invoices that are older than 2 weeks from issue date
+    const overdueInvoices = await Invoice.find({
+      status: "pending",
+      dateIssued: { $lt: twoWeeksAgo },
+    });
+
+    if (overdueInvoices.length === 0) {
+      return { success: true, count: 0 };
+    }
+
+    // Update them to overdue
+    const result = await Invoice.updateMany(
+      { status: "pending", dateIssued: { $lt: twoWeeksAgo } },
+      { $set: { status: "overdue" } },
+    );
+
+    // Create audit log
+    if (result.modifiedCount > 0) {
+      await AuditLog.create({
+        action: "system_update_overdue",
+        timestamp: now,
+        performedBy: "system_cron",
+        details: {
+          count: result.modifiedCount,
+          invoiceIds: overdueInvoices.map((inv: any) => inv.invoiceId),
+          reason: "Auto-update of overdue invoices",
+        },
+        success: true,
+      });
+
+      revalidatePath("/dashboard");
+      revalidatePath("/invoices");
+    }
+
+    return { success: true, count: result.modifiedCount };
+  } catch (error) {
+    console.error("Error processing overdue invoices:", error);
+    throw new Error("Failed to process overdue invoices");
   }
 }

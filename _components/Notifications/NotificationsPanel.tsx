@@ -144,11 +144,11 @@ export default function NotificationsPanel({
   return (
     <div className="flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
         <div>
-          <h3 className="font-semibold text-gray-900">Notifications</h3>
+          <h3 className="font-semibold text-foreground">Notifications</h3>
           {unreadCount > 0 && (
-            <p className="text-xs text-gray-500">{unreadCount} unread</p>
+            <p className="text-xs text-muted-foreground">{unreadCount} unread</p>
           )}
         </div>
         {unreadCount > 0 && (
@@ -157,7 +157,7 @@ export default function NotificationsPanel({
             size="sm"
             onClick={() => markAllAsReadMutation.mutate()}
             disabled={markAllAsReadMutation.isPending}
-            className="text-xs text-blue-600 hover:text-blue-700"
+            className="text-xs text-primary hover:text-primary/90"
           >
             <CheckCheck className="mr-1 h-3 w-3" />
             Mark all read
@@ -169,10 +169,10 @@ export default function NotificationsPanel({
       <ScrollArea className="h-96">
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
           </div>
         ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-gray-500">
+          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <span className="text-4xl">🔔</span>
             <p className="mt-2 text-sm">No notifications yet</p>
           </div>
@@ -184,8 +184,8 @@ export default function NotificationsPanel({
                   <button
                     type="button"
                     onClick={() => handleNotificationClick(notification)}
-                    className={`w-full px-4 py-3 text-left transition-colors hover:bg-gray-50 ${
-                      !notification.readAt ? "bg-blue-50/50" : ""
+                    className={`w-full px-4 py-3 text-left transition-colors hover:bg-muted ${
+                      !notification.readAt ? "bg-primary/10" : ""
                     }`}
                   >
                     <div className="flex gap-3">
@@ -197,8 +197,8 @@ export default function NotificationsPanel({
                           <p
                             className={`text-sm ${
                               !notification.readAt
-                                ? "font-semibold text-gray-900"
-                                : "font-medium text-gray-700"
+                                ? "font-semibold text-foreground"
+                                : "font-medium text-foreground"
                             }`}
                           >
                             {notification.title}
@@ -206,15 +206,15 @@ export default function NotificationsPanel({
                           {!notification.readAt && (
                             <Badge
                               variant="default"
-                              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-blue-600 p-0"
+                              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary p-0"
                             />
                           )}
                         </div>
-                        <p className="mt-0.5 line-clamp-2 text-sm text-gray-600">
+                        <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
                           {notification.body}
                         </p>
                         <div className="mt-1 flex items-center gap-2">
-                          <span className="text-xs text-gray-400">
+                          <span className="text-xs text-muted-foreground">
                             {notification.createdAt
                               ? formatDistanceToNow(
                                   new Date(notification.createdAt),
@@ -225,7 +225,7 @@ export default function NotificationsPanel({
                               : ""}
                           </span>
                           {notification.metadata?.link && (
-                            <ExternalLink className="h-3 w-3 text-gray-400" />
+                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
                           )}
                         </div>
                       </div>
