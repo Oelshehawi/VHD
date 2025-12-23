@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { motion, AnimatePresence } from "framer-motion";
-import { createPortal } from "react-dom";
 import { ScheduleType, ReportType } from "../../app/lib/typeDefinitions";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -15,15 +13,20 @@ import GeneratePDF, { type PDFData } from "../pdf/GeneratePDF";
 import MediaDisplay from "../invoices/MediaDisplay";
 import { getReportByScheduleId } from "../../app/lib/actions/scheduleJobs.actions";
 import {
-  XMarkIcon,
-  ClockIcon,
-  MapPinIcon,
-  UserGroupIcon,
-  CameraIcon,
-  DocumentTextIcon,
-  PencilIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
+  X,
+  Clock,
+  MapPin,
+  Users,
+  Camera,
+  FileText,
+  Pencil,
+  Trash,
+} from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
+import { Badge } from "../ui/badge";
+import { Card, CardContent } from "../ui/card";
 import { format } from "date-fns-tz";
 
 interface JobDetailsModalProps {
@@ -192,241 +195,195 @@ export default function JobDetailsModal({
     onClose();
   };
 
-  const modalContent = (
-    <AnimatePresence>
-      <motion.div
-        key={`job-modal-${job._id}`}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={handleModalClose}
-        className="bg-black/60 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-      >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={(e) => e.stopPropagation()}
-          className="relative max-h-[90vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl"
+  return (
+    <Dialog open={isOpen} onOpenChange={handleModalClose}>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
+        <DialogHeader>
+          <div className="flex items-start justify-between">
+            <div className="min-w-0 flex-1">
+              <Link
+                href={`/invoices/${job.invoiceRef}`}
+                className="group block"
+              >
+                <DialogTitle className="group-hover:text-primary truncate transition-colors">
+                  {job.jobTitle}
+                </DialogTitle>
+              </Link>
+              <div className="text-muted-foreground mt-1 flex items-center text-sm">
+                <MapPin className="mr-1 h-4 w-4" />
+                <span className="truncate">{job.location}</span>
+              </div>
+            </div>
+          </div>
+        </DialogHeader>
+
+        {/* Tab Navigation */}
+        <Tabs
+          value={activeView}
+          onValueChange={(v) => setActiveView(v as ModalView)}
         >
-          {/* Header */}
-          <div className="sticky top-0 z-10 border-b border-gray-200 bg-white px-6 py-4">
-            <div className="flex items-start justify-between">
-              <div className="min-w-0 flex-1">
-                <Link
-                  href={`/invoices/${job.invoiceRef}`}
-                  className="group block"
-                >
-                  <h2 className="truncate text-xl font-semibold text-gray-900 transition-colors group-hover:text-blue-600">
-                    {job.jobTitle}
-                  </h2>
-                </Link>
-                <div className="mt-1 flex items-center text-sm text-gray-500">
-                  <MapPinIcon className="mr-1 h-4 w-4" />
-                  <span className="truncate">{job.location}</span>
+          <TabsList>
+            <TabsTrigger value="details">Details</TabsTrigger>
+            {hasMedia && (
+              <TabsTrigger value="media">
+                <Camera className="mr-1 h-4 w-4" />
+                Media
+              </TabsTrigger>
+            )}
+            <TabsTrigger value="report">
+              <FileText className="mr-1 h-4 w-4" />
+              Report
+            </TabsTrigger>
+          </TabsList>
+
+          <div className="max-h-[calc(90vh-200px)] overflow-y-auto">
+            <TabsContent value="details" className="space-y-6 p-6">
+              {/* Job Info */}
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                <div className="text-muted-foreground flex items-center text-sm">
+                  <Clock className="mr-2 h-4 w-4" />
+                  <span>
+                    {format(
+                      job.startDateTime,
+                      "EEEE, MMM d, yyyy 'at' h:mm a",
+                      {
+                        timeZone: "PST",
+                      },
+                    )}
+                  </span>
+                </div>
+
+                <div className="text-muted-foreground flex items-center text-sm">
+                  <Users className="mr-2 h-4 w-4" />
+                  <span>
+                    {job.assignedTechnicians.length > 0
+                      ? job.assignedTechnicians
+                          .map(
+                            (techId) =>
+                              technicians.find((tech) => tech.id === techId)
+                                ?.name,
+                          )
+                          .filter(Boolean)
+                          .join(", ")
+                      : "No technicians assigned"}
+                  </span>
                 </div>
               </div>
 
-              <button
-                onClick={handleModalClose}
-                className="ml-4 rounded-lg p-2 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Tab Navigation */}
-            <div className="mt-4 flex border-b border-gray-200">
-              <button
-                onClick={() => setActiveView("details")}
-                className={`border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                  activeView === "details"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                Details
-              </button>
-
-              {hasMedia && (
-                <button
-                  onClick={() => setActiveView("media")}
-                  className={`flex items-center border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                    activeView === "media"
-                      ? "border-blue-500 text-blue-600"
-                      : "border-transparent text-gray-500 hover:text-gray-700"
-                  }`}
-                >
-                  <CameraIcon className="mr-1 h-4 w-4" />
-                  Media
-                </button>
-              )}
-
-              <button
-                onClick={() => setActiveView("report")}
-                className={`flex items-center border-b-2 px-4 py-2 text-sm font-medium transition-colors ${
-                  activeView === "report"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <DocumentTextIcon className="mr-1 h-4 w-4" />
-                Report
-              </button>
-            </div>
-          </div>
-
-          {/* Content */}
-          <div className="max-h-[calc(90vh-140px)] overflow-y-auto">
-            {activeView === "details" && (
-              <div className="space-y-6 p-6">
-                {/* Job Info */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                  <div className="flex items-center text-sm text-gray-600">
-                    <ClockIcon className="mr-2 h-4 w-4" />
-                    <span>
-                      {format(
-                        job.startDateTime,
-                        "EEEE, MMM d, yyyy 'at' h:mm a",
-                        {
-                          timeZone: "PST",
-                        },
-                      )}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center text-sm text-gray-600">
-                    <UserGroupIcon className="mr-2 h-4 w-4" />
-                    <span>
-                      {job.assignedTechnicians.length > 0
-                        ? job.assignedTechnicians
-                            .map(
-                              (techId) =>
-                                technicians.find((tech) => tech.id === techId)
-                                  ?.name,
-                            )
-                            .filter(Boolean)
-                            .join(", ")
-                        : "No technicians assigned"}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div className="flex items-center justify-between rounded-lg bg-gray-50 p-4">
+              {/* Status */}
+              <Card>
+                <CardContent className="flex items-center justify-between p-4">
                   <div>
-                    <span className="text-sm font-medium text-gray-900">
+                    <span className="text-foreground text-sm font-medium">
                       Status
                     </span>
                     <div className="mt-1 flex items-center">
                       <div
                         className={`mr-2 h-2 w-2 rounded-full ${
-                          isConfirmed ? "bg-emerald-500" : "bg-rose-500"
+                          isConfirmed ? "bg-emerald-500" : "bg-destructive"
                         }`}
                       />
-                      <span className="text-sm text-gray-600">
+                      <span className="text-muted-foreground text-sm">
                         {isConfirmed ? "Confirmed" : "Unconfirmed"}
                       </span>
                     </div>
                   </div>
 
                   {canManage && (
-                    <button
+                    <Button
                       onClick={toggleConfirmedStatus}
                       disabled={isLoading}
-                      className={`rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
-                        isConfirmed
-                          ? "bg-rose-100 text-rose-700 hover:bg-rose-200"
-                          : "bg-emerald-100 text-emerald-700 hover:bg-emerald-200"
-                      }`}
+                      variant={isConfirmed ? "destructive" : "default"}
+                      size="sm"
                     >
                       {isLoading
                         ? "Updating..."
                         : isConfirmed
                           ? "Unconfirm"
                           : "Confirm"}
-                    </button>
+                    </Button>
                   )}
-                </div>
+                </CardContent>
+              </Card>
 
-                {/* Technician Notes */}
-                {job.technicianNotes && (
-                  <div className="rounded-lg bg-blue-50 p-4">
-                    <h4 className="mb-2 font-medium text-blue-900">
+              {/* Technician Notes */}
+              {job.technicianNotes && (
+                <Card className="bg-primary/5">
+                  <CardContent className="p-4">
+                    <h4 className="text-primary mb-2 font-medium">
                       Technician Notes
                     </h4>
-                    <p className="whitespace-pre-wrap text-sm text-blue-800">
+                    <p className="text-muted-foreground text-sm whitespace-pre-wrap">
                       {job.technicianNotes}
                     </p>
-                  </div>
-                )}
+                  </CardContent>
+                </Card>
+              )}
 
-                {/* Actions */}
-                {canManage && (
-                  <div className="flex flex-col gap-3 border-t border-gray-200 pt-4 sm:flex-row">
-                    <button
-                      onClick={() => setActiveView("edit")}
-                      className="flex items-center justify-center rounded-lg bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-200"
-                    >
-                      <PencilIcon className="mr-2 h-4 w-4" />
-                      Edit Job
-                    </button>
+              {/* Actions */}
+              {canManage && (
+                <div className="border-border flex flex-col gap-3 border-t pt-4 sm:flex-row">
+                  <Button
+                    onClick={() => setActiveView("edit")}
+                    variant="outline"
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit Job
+                  </Button>
 
-                    <DeleteModal
-                      deleteText="Are you sure you want to delete this job?"
-                      deleteDesc="This action cannot be undone."
-                      deletionId={job._id as string}
-                      deletingValue="job"
-                    />
-                  </div>
-                )}
-              </div>
-            )}
+                  <DeleteModal
+                    deleteText="Are you sure you want to delete this job?"
+                    deleteDesc="This action cannot be undone."
+                    deletionId={job._id as string}
+                    deletingValue="job"
+                  />
+                </div>
+              )}
+            </TabsContent>
 
-            {activeView === "media" && hasMedia && (
-              <div className="p-6">
+            <TabsContent value="media" className="p-6">
+              {hasMedia && (
                 <MediaDisplay
                   photos={job.photos || []}
                   signature={job.signature || null}
                 />
-              </div>
-            )}
+              )}
+            </TabsContent>
 
-            {activeView === "report" && (
-              <div className="space-y-4 p-6">
-                {isCheckingReport ? (
-                  <div className="py-8 text-center">
-                    <div className="mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-                    <p className="text-sm text-gray-600">
-                      Checking for existing report...
+            <TabsContent value="report" className="space-y-4 p-6">
+              {isCheckingReport ? (
+                <div className="py-8 text-center">
+                  <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2"></div>
+                  <p className="text-muted-foreground text-sm">
+                    Checking for existing report...
+                  </p>
+                </div>
+              ) : hasExistingReport && existingReportData ? (
+                // Show existing report details
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <FileText className="mx-auto mb-4 h-12 w-12 text-emerald-500" />
+                    <h3 className="text-foreground mb-2 text-lg font-medium">
+                      Kitchen Exhaust Cleaning Report
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Report completed on{" "}
+                      {new Date(
+                        existingReportData.dateCompleted,
+                      ).toLocaleDateString()}
                     </p>
                   </div>
-                ) : hasExistingReport && existingReportData ? (
-                  // Show existing report details
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <DocumentTextIcon className="mx-auto mb-4 h-12 w-12 text-green-500" />
-                      <h3 className="mb-2 text-lg font-medium text-gray-900">
-                        Kitchen Exhaust Cleaning Report
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Report completed on{" "}
-                        {new Date(
-                          existingReportData.dateCompleted,
-                        ).toLocaleDateString()}
-                      </p>
-                    </div>
 
-                    {/* Report Summary */}
-                    <div className="space-y-3 rounded-lg bg-gray-50 p-4">
-                      <h4 className="font-medium text-gray-900">
+                  {/* Report Summary */}
+                  <Card>
+                    <CardContent className="space-y-3 p-4">
+                      <h4 className="text-foreground font-medium">
                         Report Summary
                       </h4>
 
                       {existingReportData.fuelType && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">
+                          <span className="text-foreground font-medium">
                             Fuel Type:
                           </span>{" "}
                           {existingReportData.fuelType}
@@ -435,7 +392,7 @@ export default function JobDetailsModal({
 
                       {existingReportData.cookingVolume && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">
+                          <span className="text-foreground font-medium">
                             Cooking Volume:
                           </span>{" "}
                           {existingReportData.cookingVolume}
@@ -444,7 +401,7 @@ export default function JobDetailsModal({
 
                       {existingReportData.recommendedCleaningFrequency && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">
+                          <span className="text-foreground font-medium">
                             Recommended Frequency:
                           </span>{" "}
                           {existingReportData.recommendedCleaningFrequency}{" "}
@@ -454,10 +411,10 @@ export default function JobDetailsModal({
 
                       {existingReportData.recommendations && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">
+                          <span className="text-foreground font-medium">
                             Recommendations:
                           </span>
-                          <p className="mt-1 text-gray-600">
+                          <p className="text-muted-foreground mt-1">
                             {existingReportData.recommendations}
                           </p>
                         </div>
@@ -465,105 +422,103 @@ export default function JobDetailsModal({
 
                       {existingReportData.comments && (
                         <div className="text-sm">
-                          <span className="font-medium text-gray-700">
+                          <span className="text-foreground font-medium">
                             Comments:
                           </span>
-                          <p className="mt-1 text-gray-600">
+                          <p className="text-muted-foreground mt-1">
                             {existingReportData.comments}
                           </p>
                         </div>
                       )}
-                    </div>
+                    </CardContent>
+                  </Card>
 
-                    <div className="flex flex-col gap-3">
-                      <button
-                        onClick={() => setShowReportModal(true)}
-                        className="flex w-full items-center justify-center rounded-lg bg-blue-100 px-4 py-2 text-sm font-medium text-blue-700 transition-colors hover:bg-blue-200"
-                      >
-                        Edit Report
-                      </button>
-
-                      <GeneratePDF
-                        pdfData={createReportPDFData(existingReportData)}
-                        fileName={`Report - ${job.jobTitle}.pdf`}
-                        buttonText="Download Report PDF"
-                        className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
-                        showScaleSelector
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  // Show create new report interface
-                  <div className="space-y-4">
-                    <div className="text-center">
-                      <DocumentTextIcon className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-                      <h3 className="mb-2 text-lg font-medium text-gray-900">
-                        Kitchen Exhaust Cleaning Report
-                      </h3>
-                      <p className="text-sm text-gray-600">
-                        Create a detailed cleaning report for this job.
-                      </p>
-                    </div>
-
-                    <button
+                  <div className="flex flex-col gap-3">
+                    <Button
                       onClick={() => setShowReportModal(true)}
-                      className="flex w-full items-center justify-center rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-blue-700"
+                      variant="outline"
                     >
-                      Create New Report
-                    </button>
+                      Edit Report
+                    </Button>
+
+                    <GeneratePDF
+                      pdfData={createReportPDFData(existingReportData)}
+                      fileName={`Report - ${job.jobTitle}.pdf`}
+                      buttonText="Download Report PDF"
+                      className="w-full"
+                      showScaleSelector
+                    />
                   </div>
-                )}
-              </div>
-            )}
+                </div>
+              ) : (
+                // Show create new report interface
+                <div className="space-y-4">
+                  <div className="text-center">
+                    <FileText className="text-muted-foreground mx-auto mb-4 h-12 w-12" />
+                    <h3 className="text-foreground mb-2 text-lg font-medium">
+                      Kitchen Exhaust Cleaning Report
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Create a detailed cleaning report for this job.
+                    </p>
+                  </div>
 
-            {activeView === "edit" && (
-              <div className="p-6">
-                <EditJobModal
-                  job={job}
-                  onClose={() => setActiveView("details")}
-                  technicians={technicians}
-                />
-              </div>
-            )}
+                  <Button
+                    onClick={() => setShowReportModal(true)}
+                    className="w-full"
+                  >
+                    Create New Report
+                  </Button>
+                </div>
+              )}
+            </TabsContent>
+
+            <TabsContent value="edit" className="p-6">
+              <EditJobModal
+                job={job}
+                onClose={() => setActiveView("details")}
+                technicians={technicians}
+              />
+            </TabsContent>
           </div>
-        </motion.div>
-      </motion.div>
+        </Tabs>
 
-      {/* ReportModal - shown conditionally */}
-      {showReportModal && (
-        <ReportModal
-          key={`report-modal-${job._id}`}
-          schedule={job}
-          onClose={() => {
-            setShowReportModal(false);
-            // Refresh the report data after closing if we're on the report tab
-            if (activeView === "report") {
-              // Reset the report state to force a fresh check
-              setHasExistingReport(false);
-              setExistingReportData(null);
-              setIsCheckingReport(true);
+        {/* ReportModal - shown conditionally */}
+        {showReportModal && (
+          <ReportModal
+            key={`report-modal-${job._id}`}
+            schedule={job}
+            onClose={() => {
+              setShowReportModal(false);
+              // Refresh the report data after closing if we're on the report tab
+              if (activeView === "report") {
+                // Reset the report state to force a fresh check
+                setHasExistingReport(false);
+                setExistingReportData(null);
+                setIsCheckingReport(true);
 
-              // Trigger a re-check of the report
-              setTimeout(() => {
-                const checkForExistingReport = async () => {
-                  const [report] = await Promise.all([
-                    getReportByScheduleId(job._id.toString()).catch(() => null),
-                    new Promise((resolve) => setTimeout(resolve, 200)),
-                  ]);
+                // Trigger a re-check of the report
+                setTimeout(() => {
+                  const checkForExistingReport = async () => {
+                    const [report] = await Promise.all([
+                      getReportByScheduleId(job._id.toString()).catch(
+                        () => null,
+                      ),
+                      new Promise((resolve) => setTimeout(resolve, 200)),
+                    ]);
 
-                  setHasExistingReport(!!report);
-                  setExistingReportData(report);
-                  setIsCheckingReport(false);
-                };
-                checkForExistingReport();
-              }, 100);
-            }
-          }}
-          technicians={technicians}
-        />
-      )}
-    </AnimatePresence>
+                    setHasExistingReport(!!report);
+                    setExistingReportData(report);
+                    setIsCheckingReport(false);
+                  };
+                  checkForExistingReport();
+                }, 100);
+              }
+            }}
+            technicians={technicians}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

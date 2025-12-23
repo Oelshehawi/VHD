@@ -1,10 +1,14 @@
 "use client";
 import { useMemo } from "react";
 import { format } from "date-fns-tz";
-import { ScheduleType, InvoiceType, AvailabilityType } from "../../app/lib/typeDefinitions";
-import CalendarGrid from "./CalendarGrid";
+import {
+  ScheduleType,
+  InvoiceType,
+  AvailabilityType,
+} from "../../../app/lib/typeDefinitions";
+import CalendarGrid from "../CalendarGrid";
 
-const FullCalendar = ({
+const WeekCalendar = ({
   invoices,
   scheduledJobs,
   canManage,
@@ -28,27 +32,27 @@ const FullCalendar = ({
   // Group jobs by date with optimized performance
   const selectedDayJobsMap = useMemo(() => {
     const jobsMap: { [key: string]: ScheduleType[] } = {};
-    
+
     scheduledJobs.forEach((job) => {
       const jobDate = new Date(job.startDateTime);
       const jobDateKey = format(jobDate, "yyyy-MM-dd");
-      
+
       if (!jobsMap[jobDateKey]) {
         jobsMap[jobDateKey] = [];
       }
-      
+
       (jobsMap[jobDateKey] as ScheduleType[]).push(job);
     });
-    
+
     // Sort jobs by time within each day
-    Object.keys(jobsMap).forEach(dateKey => {
+    Object.keys(jobsMap).forEach((dateKey) => {
       (jobsMap[dateKey] as ScheduleType[]).sort((a, b) => {
         const timeA = new Date(a.startDateTime).getTime();
         const timeB = new Date(b.startDateTime).getTime();
         return timeA - timeB;
       });
     });
-    
+
     return jobsMap;
   }, [scheduledJobs]);
 
@@ -58,10 +62,9 @@ const FullCalendar = ({
   };
 
   return (
-    <div className="h-full bg-linear-to-br from-gray-50 to-white">
-
+    <div className="bg-background h-full">
       {/* Modern Calendar Container */}
-      <div className="h-full bg-white rounded-t-2xl shadow-xl border border-gray-200/50">
+      <div className="bg-card border-border h-full rounded-t-2xl border shadow-xl">
         <CalendarGrid
           invoices={invoices}
           week={currentWeek}
@@ -77,4 +80,4 @@ const FullCalendar = ({
   );
 };
 
-export default FullCalendar;
+export default WeekCalendar;

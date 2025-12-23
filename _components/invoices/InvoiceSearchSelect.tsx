@@ -12,19 +12,15 @@ import {
   CommandItem,
   CommandList,
 } from "../ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "../ui/popover";
-import { InvoiceType, ScheduleType } from "../../app/lib/typeDefinitions";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { InvoiceType } from "../../app/lib/typeDefinitions";
 import { formatDateToString } from "../../app/lib/utils";
 
 interface InvoiceSearchSelectProps {
   placeholder: string;
   data: InvoiceType[];
   className?: string;
-  onSelect: (invoice: ScheduleType) => void;
+  onSelect: (invoice: InvoiceType) => void;
   register: any;
   error: any;
 }
@@ -39,10 +35,12 @@ const InvoiceSearchSelect = ({
 }: InvoiceSearchSelectProps) => {
   const [open, setOpen] = React.useState(false);
   const [value, setValue] = React.useState("");
-  const { onChange, ...registerProps } = register("invoiceRef", { required: true });
+  const { onChange, ...registerProps } = register("invoiceRef", {
+    required: true,
+  });
 
   const selectedInvoice = data.find(
-    (invoice) => invoice._id?.toString() === value
+    (invoice) => invoice._id?.toString() === value,
   );
 
   const handleSelect = (invoice: InvoiceType) => {
@@ -51,7 +49,7 @@ const InvoiceSearchSelect = ({
     setOpen(false);
     // Trigger react-hook-form onChange
     onChange({ target: { value: invoiceId, name: "invoiceRef" } });
-    onSelect(invoice as unknown as any);
+    onSelect(invoice);
   };
 
   return (
@@ -64,7 +62,7 @@ const InvoiceSearchSelect = ({
             aria-expanded={open}
             className={cn(
               "w-full justify-between",
-              error && "border-destructive focus-visible:ring-destructive"
+              error && "border-destructive focus-visible:ring-destructive",
             )}
           >
             {selectedInvoice ? (
@@ -90,13 +88,17 @@ const InvoiceSearchSelect = ({
                     <CheckIcon
                       className={cn(
                         "mr-2 h-4 w-4",
-                        value === invoice._id?.toString() ? "opacity-100" : "opacity-0"
+                        value === invoice._id?.toString()
+                          ? "opacity-100"
+                          : "opacity-0",
                       )}
                     />
                     <div className="flex flex-1 items-center justify-between">
                       <span className="font-medium">{invoice.jobTitle}</span>
-                      <span className="text-xs text-muted-foreground ml-2">
-                        {formatDateToString(invoice.dateIssued as string | Date)}
+                      <span className="text-muted-foreground ml-2 text-xs">
+                        {formatDateToString(
+                          invoice.dateIssued as string | Date,
+                        )}
                       </span>
                     </div>
                   </CommandItem>
@@ -106,7 +108,12 @@ const InvoiceSearchSelect = ({
           </Command>
         </PopoverContent>
       </Popover>
-      <input type="hidden" {...registerProps} value={value} onChange={onChange} />
+      <input
+        type="hidden"
+        {...registerProps}
+        value={value}
+        onChange={onChange}
+      />
       {error && (
         <p className="text-destructive mt-1 text-xs">Invoice is required</p>
       )}

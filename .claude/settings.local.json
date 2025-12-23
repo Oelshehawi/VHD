@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "Bash(npm run lint:eslint:*)",
-      "Bash(npm run lint:types:*)"
+      "Bash(npm run lint:types:*)",
+      "Bash(npx tsc:*)"
     ],
     "deny": [],
     "ask": []

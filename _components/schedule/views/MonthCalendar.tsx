@@ -1,9 +1,9 @@
-// components/MiniCalendar.tsx
+// components/MonthCalendar.tsx
 "use client";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from "@heroicons/react/16/solid";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "../../ui/button";
+import { Badge } from "../../ui/badge";
+import { Card, CardContent } from "../../ui/card";
 import {
   add,
   eachDayOfInterval,
@@ -18,22 +18,18 @@ import {
   parse,
   startOfToday,
 } from "date-fns";
-import { useState, useEffect } from "react";
-import { ScheduleType, InvoiceType, AvailabilityType } from "../../app/lib/typeDefinitions";
-import { updateSchedule } from "../../app/lib/actions/scheduleJobs.actions";
-import DeleteModal from "../DeleteModal";
-import toast from "react-hot-toast";
-import Link from "next/link";
-import TechnicianPill from "./TechnicianPill";
-import JobDetailsModal from "./JobDetailsModal";
-import { getTechnicianUnavailabilityInfo } from "../../app/lib/utils/availabilityUtils";
-import { formatTimeRange12hr } from "../../app/lib/utils/timeFormatUtils";
+import { useState, useEffect, useMemo } from "react";
+import { ScheduleType, InvoiceType, AvailabilityType } from "../../../app/lib/typeDefinitions";
+import JobDetailsModal from "../JobDetailsModal";
+import { getTechnicianUnavailabilityInfo } from "../../../app/lib/utils/availabilityUtils";
+import { formatTimeRange12hr } from "../../../app/lib/utils/timeFormatUtils";
+import { cn } from "../../../app/lib/utils";
 
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
-export default function MiniCalendar({
+export default function MonthCalendar({
   scheduledJobs,
   canManage,
   technicians,
@@ -156,43 +152,45 @@ export default function MiniCalendar({
       syncStateWithURL();
     };
 
-    window.addEventListener('popstate', handlePopState);
+    window.addEventListener("popstate", handlePopState);
 
     return () => {
-      window.removeEventListener('popstate', handlePopState);
+      window.removeEventListener("popstate", handlePopState);
     };
   }, []);
 
   return (
     <>
-      <div className="py-3 px-2 sm:py-4 sm:px-4 md:py-6">
+      <CardContent className="py-3 px-2 sm:py-4 sm:px-4 md:py-6">
         <div className="mx-auto max-w-md sm:max-w-2xl md:max-w-4xl lg:max-w-6xl">
-          <div className="flex flex-col lg:grid lg:grid-cols-2 lg:divide-x lg:divide-gray-200 gap-6 lg:gap-0">
+          <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:divide-x lg:divide-border lg:gap-0">
             <div className="lg:pr-8 xl:pr-14">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-base font-bold text-gray-900 sm:text-lg md:text-xl">
+                <h2 className="text-base font-bold text-foreground sm:text-lg md:text-xl">
                   {format(firstDayCurrentMonth, "MMMM yyyy")}
                 </h2>
                 <div className="flex items-center gap-1">
-                  <button
+                  <Button
                     type="button"
                     onClick={previousMonth}
-                    className="flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors touch-manipulation"
+                    variant="ghost"
+                    size="icon"
                     aria-label="Previous month"
                   >
-                    <ChevronLeftIcon className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
-                  </button>
-                  <button
+                    <ChevronLeft className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+                  </Button>
+                  <Button
                     onClick={nextMonth}
                     type="button"
-                    className="flex items-center justify-center p-2 rounded-lg text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors touch-manipulation"
+                    variant="ghost"
+                    size="icon"
                     aria-label="Next month"
                   >
-                    <ChevronRightIcon className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
-                  </button>
+                    <ChevronRight className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+                  </Button>
                 </div>
               </div>
-              <div className="mt-6 md:mt-10 grid grid-cols-7 text-center text-xs leading-6 text-gray-500 font-semibold">
+              <div className="mt-6 md:mt-10 grid grid-cols-7 text-center text-xs leading-6 text-muted-foreground font-semibold">
                 <div className="py-2">S</div>
                 <div className="py-2">M</div>
                 <div className="py-2">T</div>
@@ -201,7 +199,7 @@ export default function MiniCalendar({
                 <div className="py-2">F</div>
                 <div className="py-2">S</div>
               </div>
-              <div className="mt-3 grid grid-cols-7 gap-px text-sm bg-gray-200 rounded-lg overflow-hidden shadow-sm">
+              <div className="mt-3 grid grid-cols-7 gap-px text-sm bg-muted rounded-lg overflow-hidden shadow-sm">
                 {days.map((day, dayIdx) => {
                   const jobCount = scheduledJobs.filter((job) =>
                     isSameDay(new Date(job.startDateTime), day)
@@ -226,7 +224,7 @@ export default function MiniCalendar({
                       key={day.toString()}
                       className={classNames(
                         dayIdx === 0 && colStartClasses[getDay(day)],
-                        "relative bg-white",
+                        "relative bg-card",
                       )}
                       title={tooltipText || undefined}
                     >
@@ -235,29 +233,29 @@ export default function MiniCalendar({
                         onClick={() => handleDaySelect(day)}
                         className={classNames(
                           "group relative w-full py-2 sm:py-3 md:py-4 transition-all duration-200 touch-manipulation",
-                          isEqual(day, selectedDay) && "text-white z-10",
+                          isEqual(day, selectedDay) && "text-primary-foreground z-10",
                           !isEqual(day, selectedDay) &&
                             isToday(day) &&
-                            "text-blue-600 font-bold",
+                            "text-primary font-bold",
                           !isEqual(day, selectedDay) &&
                             !isToday(day) &&
                             isSameMonth(day, firstDayCurrentMonth) &&
-                            "text-gray-900",
+                            "text-foreground",
                           !isEqual(day, selectedDay) &&
                             !isToday(day) &&
                             !isSameMonth(day, firstDayCurrentMonth) &&
-                            "text-gray-400",
+                            "text-muted-foreground",
                           isEqual(day, selectedDay) &&
                             isToday(day) &&
-                            "bg-blue-600 shadow-lg",
+                            "bg-primary shadow-lg",
                           isEqual(day, selectedDay) &&
                             !isToday(day) &&
-                            "bg-gray-900 shadow-lg",
-                          !isEqual(day, selectedDay) && "hover:bg-gray-50",
+                            "bg-foreground shadow-lg",
+                          !isEqual(day, selectedDay) && "hover:bg-muted",
                           (isEqual(day, selectedDay) || isToday(day)) &&
                             "font-semibold",
                           showAvailability && unavailabilityInfoList.length > 0 && !isEqual(day, selectedDay) &&
-                            "border-2 border-red-400 hover:bg-red-50/30",
+                            "border-2 border-destructive hover:bg-destructive/10",
                         )}
                       >
                         {/* Date number */}
@@ -271,31 +269,28 @@ export default function MiniCalendar({
                         {/* Job count badge */}
                         {jobCount > 0 && (
                           <div className="absolute bottom-0.5 sm:bottom-1 left-1/2 transform -translate-x-1/2">
-                            <span
+                            <Badge
+                              variant={isEqual(day, selectedDay) ? "secondary" : isToday(day) ? "default" : "secondary"}
                               className={classNames(
-                                "inline-flex items-center justify-center rounded-full text-[9px] sm:text-[10px] font-medium min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] px-1",
-                                isEqual(day, selectedDay)
-                                  ? "bg-white/30 text-white"
-                                  : isToday(day)
-                                  ? "bg-blue-100 text-blue-700"
-                                  : "bg-green-100 text-green-700"
+                                "text-[9px] sm:text-[10px] font-medium min-w-[16px] sm:min-w-[18px] h-[16px] sm:h-[18px] px-1",
+                                isEqual(day, selectedDay) && "bg-primary-foreground/30 text-primary-foreground"
                               )}
                             >
                               {jobCount}
-                            </span>
+                            </Badge>
                           </div>
                         )}
 
                         {/* Unavailability indicator dot */}
                         {showAvailability && unavailabilityInfoList.length > 0 && (
                           <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
-                            <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-red-500 shadow-sm" />
+                            <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full bg-destructive shadow-sm" />
                           </div>
                         )}
 
                         {/* Today indicator ring */}
                         {isToday(day) && !isEqual(day, selectedDay) && (
-                          <div className="absolute inset-0 rounded-lg border-2 border-blue-600 pointer-events-none"></div>
+                          <div className="absolute inset-0 rounded-lg border-2 border-primary pointer-events-none"></div>
                         )}
                       </button>
                     </div>
@@ -316,43 +311,45 @@ export default function MiniCalendar({
                     .filter(item => item.info.isUnavailable === true);
 
                   return dayUnavailability.length > 0 ? (
-                    <div className="mb-3 rounded-lg border-l-4 border-l-red-500 bg-red-50 p-3 shadow-sm">
-                      <h3 className="text-xs font-semibold text-red-900 mb-2">⚠️ Unavailability</h3>
-                      <div className="space-y-1">
-                        {dayUnavailability.map(({ tech, info }) => (
-                          <div key={tech.id} className="text-xs text-red-800">
-                            <span className="font-medium">{tech.name}</span>
-                            {info.type === "full-day" ? (
-                              <span className="ml-2 text-red-700">- All day</span>
-                            ) : (
-                              <span className="ml-2 text-red-700">
-                                - {formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <Card className="mb-3 border-l-4 border-l-destructive bg-destructive/10">
+                      <CardContent className="p-3">
+                        <h3 className="text-xs font-semibold text-destructive-foreground mb-2">⚠️ Unavailability</h3>
+                        <div className="space-y-1">
+                          {dayUnavailability.map(({ tech, info }) => (
+                            <div key={tech.id} className="text-xs text-destructive-foreground">
+                              <span className="font-medium">{tech.name}</span>
+                              {info.type === "full-day" ? (
+                                <span className="ml-2 text-destructive/80">- All day</span>
+                              ) : (
+                                <span className="ml-2 text-destructive/80">
+                                  - {formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
                   ) : null;
                 })()}
 
-                <div className="bg-white pb-3 mb-3 border-b border-gray-200">
-                <h2 className="text-sm font-semibold text-gray-900 sm:text-base md:text-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                <div className="bg-card pb-3 mb-3 border-b border-border">
+                <h2 className="text-sm font-semibold text-foreground sm:text-base md:text-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <span className="flex-1">
                     Schedule for{" "}
-                    <time dateTime={format(selectedDay, "yyyy-MM-dd")} className="text-blue-600 block sm:inline mt-1 sm:mt-0">
+                    <time dateTime={format(selectedDay, "yyyy-MM-dd")} className="text-primary block sm:inline mt-1 sm:mt-0">
                       {format(selectedDay, "MMM dd, yyyy")}
                     </time>
                   </span>
                   {selectedDayJobs.length > 0 && (
-                    <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-xs sm:text-sm font-medium text-blue-800 self-start sm:self-auto">
+                    <Badge variant="default" className="self-start sm:self-auto">
                       {selectedDayJobs.length} {selectedDayJobs.length === 1 ? 'job' : 'jobs'}
-                    </span>
+                    </Badge>
                   )}
                 </h2>
               </div>
               </div>
-              <ol className="flex flex-col gap-3 sm:gap-4 text-xs leading-6 text-gray-500 md:text-sm">
+              <ul className="flex flex-col gap-2 sm:gap-3">
                 {selectedDayJobs.length > 0 ? (
                   selectedDayJobs.map((job) => (
                     <Job
@@ -366,7 +363,7 @@ export default function MiniCalendar({
                 ) : (
                   <div className="text-center py-8">
                     <svg
-                      className="mx-auto h-12 w-12 text-gray-400"
+                      className="mx-auto h-12 w-12 text-muted-foreground"
                       fill="none"
                       viewBox="0 0 24 24"
                       stroke="currentColor"
@@ -379,14 +376,14 @@ export default function MiniCalendar({
                         d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5"
                       />
                     </svg>
-                    <p className="mt-2 text-sm text-gray-500">No jobs scheduled for this day</p>
+                    <p className="mt-2 text-sm text-muted-foreground">No jobs scheduled for this day</p>
                   </div>
                 )}
-              </ol>
+              </ul>
             </section>
           </div>
         </div>
-      </div>
+      </CardContent>
 
       {/* Job Details Modal */}
       <JobDetailsModal
@@ -402,7 +399,6 @@ export default function MiniCalendar({
 
 export function Job({
   job,
-  canManage,
   technicians,
   onJobClick,
 }: {
@@ -411,102 +407,65 @@ export function Job({
   technicians: { id: string; name: string }[];
   onJobClick?: (job: ScheduleType) => void;
 }) {
-  let startDateTime = new Date(job.startDateTime);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isConfirmed, setConfirmed] = useState(() => job.confirmed);
+  const startDateTime = new Date(job.startDateTime);
 
-  const toggleConfirmedStatus = async () => {
-    setIsLoading(true);
-    if (!canManage) {
-      toast.error("You do not have permission to perform this action");
-      setIsLoading(false);
-      return;
-    }
-    const newStatus = !isConfirmed;
-    try {
-      await updateSchedule({
-        scheduleId: job._id.toString(),
-        confirmed: newStatus,
-      });
+  // Memoize technician names
+  const techNames = useMemo(() => {
+    return job.assignedTechnicians.map(
+      (techId) =>
+        technicians.find((tech) => tech.id === techId)?.name.split(" ")[0] || "Unknown"
+    );
+  }, [job.assignedTechnicians, technicians]);
 
-      toast.success(
-        `Job ${newStatus ? "confirmed" : "unconfirmed"} successfully`,
-      );
-      setConfirmed(newStatus);
-      setIsLoading(false);
-    } catch (error) {
-      console.error("Failed to update the job:", error);
-      toast.error("Failed to update the job status");
-      setIsLoading(false);
-    }
-  };
-
-  const techNames = job.assignedTechnicians.map(
-    (techId) =>
-      technicians.find((tech) => tech.id === techId)?.name || "Unknown",
-  );
+  // Status-based styling (matching JobItem pattern)
+  const statusClasses = job.confirmed
+    ? "bg-emerald-500/10 hover:bg-emerald-500/20 border-l-2 border-emerald-500"
+    : "bg-destructive/10 hover:bg-destructive/20 border-l-2 border-destructive";
 
   return (
-    <li className="group relative rounded-xl bg-darkGreen p-3 text-white shadow-md hover:shadow-lg transition-all duration-200 border border-green-900/20 md:p-4">
+    <li
+      className={cn(
+        "rounded-md px-3 py-2.5 cursor-pointer transition-colors",
+        statusClasses
+      )}
+      onClick={() => onJobClick?.(job)}
+    >
+      <div className="flex flex-col gap-1">
+        {/* Job Title */}
+        <span className="text-sm font-medium text-foreground leading-tight">
+          {job.jobTitle}
+        </span>
 
-      <div className="flex items-start justify-between gap-3">
-        <div
-          className="flex-auto cursor-pointer"
-          onClick={() => onJobClick?.(job)}
-        >
-          <div className="flex items-start justify-between gap-2 mb-2">
-            <p className="text-sm font-semibold hover:underline md:text-base leading-tight">
-              {job.jobTitle}
-            </p>
-          </div>
+        {/* Location */}
+        <span className="text-xs text-muted-foreground truncate">
+          {job.location}
+        </span>
 
-          <div className="flex items-center gap-2 text-green-100 mb-2">
-            <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <p className="text-xs md:text-sm font-medium">{format(startDateTime, "h:mm a")}</p>
-          </div>
+        {/* Time */}
+        <span className="text-xs font-medium text-muted-foreground">
+          {format(startDateTime, "h:mm a")}
+        </span>
 
-          {techNames.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 md:gap-2">
-              {techNames.map((tech, index) => (
-                <TechnicianPill key={index} name={tech} />
-              ))}
-            </div>
-          )}
-        </div>
-
-        {canManage && (
-          <div className="flex flex-col items-end gap-2 shrink-0">
-            <button
-              className={`rounded-lg px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
-                isConfirmed
-                  ? "bg-red-500 hover:bg-red-600"
-                  : "bg-green-500 hover:bg-green-600"
-              } text-white shadow-sm hover:shadow min-w-[80px]`}
-              onClick={toggleConfirmedStatus}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <span className="inline-flex items-center">
-                  <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  ...
-                </span>
-              ) : isConfirmed ? (
-                "Unconfirm"
-              ) : (
-                "Confirm"
-              )}
-            </button>
-            <DeleteModal
-              deleteText={"Are you sure you want to delete this Job?"}
-              deleteDesc={""}
-              deletionId={job._id as string}
-              deletingValue="job"
-            />
+        {/* Technician Pills */}
+        {techNames.length > 0 && (
+          <div className="flex gap-1 flex-wrap mt-1">
+            {techNames.slice(0, 3).map((tech, index) => (
+              <Badge
+                key={index}
+                variant="secondary"
+                className="text-[10px] px-1.5 py-0 h-4"
+              >
+                {tech}
+              </Badge>
+            ))}
+            {techNames.length > 3 && (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 h-4"
+              >
+                +{techNames.length - 3}
+              </Badge>
+            )}
           </div>
         )}
       </div>
@@ -523,3 +482,4 @@ let colStartClasses = [
   "col-start-6",
   "col-start-7",
 ];
+

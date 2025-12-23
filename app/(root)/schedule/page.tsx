@@ -1,4 +1,8 @@
-import { fetchAllInvoices, fetchHolidays, fetchTechnicianAvailability } from "../../lib/data";
+import {
+  fetchAllInvoices,
+  fetchHolidays,
+  fetchTechnicianAvailability,
+} from "../../lib/data";
 import { fetchAllScheduledJobsWithShifts } from "../../lib/scheduleAndShifts";
 import { auth } from "@clerk/nextjs/server";
 import {
@@ -18,17 +22,32 @@ const Schedule = async ({
     date?: string;
   }>;
 }) => {
-  const invoices: InvoiceType[] = (await fetchAllInvoices()) ?? [];
-  let scheduledJobs: ScheduleType[] = await fetchAllScheduledJobsWithShifts();
-  const holidays = await fetchHolidays();
-  const availability: AvailabilityType[] = await fetchTechnicianAvailability();
-  const { sessionClaims, userId }: any = await auth();
-  const canManage = (sessionClaims as any)?.isManager?.isManager === true ? true : false;
-  const technicians: TechnicianType[] = await getTechnicians();
-
   const resolvedSearchParams = await searchParams;
   const view = resolvedSearchParams?.view || "week";
   const date = resolvedSearchParams?.date || null;
+
+  // Fetch all data in parallel for better performance
+  const [
+    invoicesResult,
+    scheduledJobsResult,
+    holidays,
+    availability,
+    authResult,
+    technicians,
+  ] = await Promise.all([
+    fetchAllInvoices(),
+    fetchAllScheduledJobsWithShifts(),
+    fetchHolidays(),
+    fetchTechnicianAvailability(),
+    auth(),
+    getTechnicians(),
+  ]);
+
+  const invoices: InvoiceType[] = invoicesResult ?? [];
+  let scheduledJobs: ScheduleType[] = scheduledJobsResult;
+  const { sessionClaims, userId }: any = authResult;
+  const canManage =
+    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 
   if (!canManage) {
     scheduledJobs = scheduledJobs.filter((job) =>

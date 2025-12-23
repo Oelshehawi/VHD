@@ -1,10 +1,10 @@
 "use client";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { format, isSameDay } from "date-fns";
 import { Holiday, ScheduleType, InvoiceType, AvailabilityType } from "../../app/lib/typeDefinitions";
 import JobItem from "./JobItem";
 import JobDetailsModal from "./JobDetailsModal";
-import { calculateJobDurationFromPrice, convertMinutesToHours } from "../../app/lib/utils";
+import { calculateJobDurationFromPrice, convertMinutesToHours, cn } from "../../app/lib/utils";
 import { isTechnicianUnavailable } from "../../app/lib/utils/availabilityUtils";
 
 const parseDate = (dateString: string): Date => {
@@ -13,26 +13,6 @@ const parseDate = (dateString: string): Date => {
 };
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-
-const getHolidayStyles = (type?: "statutory" | "observance") => {
-  switch (type) {
-    case "statutory":
-      return {
-        container: "border-red-200/50 bg-red-50/90",
-        text: "text-red-800 font-semibold",
-      };
-    case "observance":
-      return {
-        container: "border-purple-200/50 bg-purple-50/90",
-        text: "text-purple-800",
-      };
-    default:
-      return {
-        container: "border-yellow-200/50 bg-yellow-50/90",
-        text: "text-yellow-800",
-      };
-  }
-};
 
 const CalendarColumn = ({
   invoices,
@@ -58,16 +38,21 @@ const CalendarColumn = ({
 }) => {
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const holiday = holidays.find((holiday) =>
-    isSameDay(parseDate(holiday.date), day),
+
+  // Memoize holiday lookup
+  const holiday = useMemo(
+    () => holidays.find((h) => isSameDay(parseDate(h.date), day)),
+    [holidays, day]
   );
 
-  const holidayStyles = getHolidayStyles(holiday?.type);
-
-  // Sort jobs by start time
-  const sortedJobs = jobs.sort(
-    (a, b) =>
-      new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime(),
+  // Memoize sorted jobs
+  const sortedJobs = useMemo(
+    () =>
+      [...jobs].sort(
+        (a, b) =>
+          new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+      ),
+    [jobs]
   );
 
   // Get hour and minutes from job's start time
@@ -92,116 +77,95 @@ const CalendarColumn = ({
   };
 
   return (
-    <div
-      className={`relative z-0 h-full transition-colors ${
-        isToday
-          ? "bg-blue-50/90 shadow-[inset_0_0_0_1px_rgba(59,130,246,0.1)]"
-          : "bg-white hover:bg-gray-50/50"
-      }`}
-    >
-      {/* Day indicator for today */}
-      {isToday && (
-        <div className="absolute -top-13 left-1/2 flex -translate-x-1/2 items-center justify-center">
-          <div className="relative">
-            {/* Outer glow effect */}
-            <div className="absolute inset-0 rounded-full bg-blue-200/50 blur-sm" />
-            {/* White ring */}
-            <div className="absolute -inset-1 rounded-full bg-white shadow-lg" />
-            {/* Blue circle with number */}
-            <div className="relative flex h-9 w-9 items-center justify-center rounded-full bg-blue-600 font-semibold text-white shadow-md">
-              {format(day, "d")}
-            </div>
-          </div>
-        </div>
-      )}
-
+    <div className="relative h-full">
       {/* Holiday banner */}
       {holiday && (
         <div
-          className={`absolute inset-x-0 top-0 z-30 border-y ${holidayStyles.container} px-2 py-1.5 shadow-sm backdrop-blur-[2px]`}
+          className={cn(
+            "absolute inset-x-0 top-0 z-20 px-2 py-1 text-center",
+            holiday.type === "statutory"
+              ? "bg-red-500/20 text-red-700 dark:text-red-300"
+              : "bg-purple-500/20 text-purple-700 dark:text-purple-300"
+          )}
         >
-          <p className={`text-center text-xs ${holidayStyles.text}`}>
+          <span className="text-xs font-medium">
             {holiday.nameEn}
             {holiday.type === "observance" && (
-              <span className="ml-1 text-[10px] opacity-75">(Observance)</span>
+              <span className="ml-1 opacity-70">(Observance)</span>
             )}
-          </p>
+          </span>
         </div>
       )}
 
       {/* Time slots */}
       <div className="relative h-full">
         {HOURS.map((hour) => {
-          // Check for unavailable technicians at this hour
-          const unavailableTechs = technicians.filter(tech =>
-            isTechnicianUnavailable(availability, tech.id, day, `${String(hour).padStart(2, '0')}:00`, `${String(hour + 1).padStart(2, '0')}:00`)
-          );
+          // Only check unavailability when toggle is on
+          const isUnavailableHour =
+            showAvailability &&
+            technicians.some((tech) =>
+              isTechnicianUnavailable(
+                availability,
+                tech.id,
+                day,
+                `${String(hour).padStart(2, "0")}:00`,
+                `${String(hour + 1).padStart(2, "0")}:00`
+              )
+            );
 
           return (
-          <div
-            key={hour}
-            className={`relative h-[50px] sm:h-[60px] border-b border-gray-100 last:border-b-0 transition-colors ${
-              showAvailability && unavailableTechs.length > 0
-                ? "bg-red-200/50 hover:bg-red-200/70"
-                : ""
-            }`}
-          >
-            {/* Hour marker line */}
-            <div className="absolute inset-x-0 top-0 h-px bg-gray-100" />
+            <div
+              key={hour}
+              className={cn(
+                "relative h-[50px] border-b border-border/30 sm:h-[60px]",
+                isUnavailableHour && "bg-destructive/10"
+              )}
+            >
+              {/* Jobs that start at this hour */}
+              {sortedJobs
+                .filter((job) => getJobTime(job).hour === hour)
+                .map((job) => {
+                  const { minutes } = getJobTime(job);
+                  const topOffset = (minutes / 60) * 100;
 
-            {/* Unavailable technician indicator */}
-            {showAvailability && unavailableTechs.length > 0 && (
-              <div className="absolute right-0.5 top-0.5 text-[10px] font-semibold text-red-700 px-1 py-0.5 rounded bg-red-300/90 z-5 pointer-events-none">
-                {unavailableTechs.length} unavailable
-              </div>
-            )}
-
-            {/* Regular jobs that start at this hour */}
-            {sortedJobs
-              .filter((job) => getJobTime(job).hour === hour)
-              .map((job) => {
-                const { minutes } = getJobTime(job);
-                const topOffset = (minutes / 60) * 100;
-                
-                // Calculate job height based on duration from invoice price
-                let jobDuration = job.hours || 2.5; // Default fallback
-                
-                // Try to find invoice and calculate from price
-                const invoice = invoices.find(inv => 
-                  inv._id.toString() === job.invoiceRef.toString()
-                );
-                
-                if (invoice && invoice.items) {
-                  const totalPrice = invoice.items.reduce(
-                    (sum, item) => sum + (item.price || 0),
-                    0
+                  // Calculate job height based on duration
+                  let jobDuration = job.hours || 2.5;
+                  const invoice = invoices.find(
+                    (inv) => inv._id.toString() === job.invoiceRef.toString()
                   );
-                  const durationInMinutes = calculateJobDurationFromPrice(totalPrice);
-                  jobDuration = convertMinutesToHours(durationInMinutes);
-                }
-                
-                const heightInPixels = Math.max(60, jobDuration * 50); // 50px per hour on mobile, 60px on desktop, minimum 60px for UI elements
 
-                return (
-                  <div
-                    key={job._id as string}
-                    className="absolute inset-x-0.5 sm:inset-x-1 z-10"
-                    style={{
-                      top: `${topOffset}%`,
-                      height: `${heightInPixels}px`
-                    }}
-                  >
-                    <JobItem
-                      invoices={invoices}
-                      job={job}
-                      canManage={canManage}
-                      technicians={technicians}
-                      onJobClick={handleJobClick}
-                    />
-                  </div>
-                );
-              })}
-          </div>
+                  if (invoice?.items) {
+                    const totalPrice = invoice.items.reduce(
+                      (sum, item) => sum + (item.price || 0),
+                      0
+                    );
+                    const durationInMinutes = calculateJobDurationFromPrice(totalPrice);
+                    jobDuration = convertMinutesToHours(durationInMinutes);
+                  }
+
+                  // 50px per hour on mobile, 60px on desktop
+                  const heightInPixels = Math.max(60, jobDuration * 50);
+
+                  return (
+                    <div
+                      key={job._id as string}
+                      className="absolute inset-x-1 z-10 sm:inset-x-1.5"
+                      style={{
+                        top: `${topOffset}%`,
+                        height: `${heightInPixels}px`,
+                      }}
+                    >
+                      <JobItem
+                        invoices={invoices}
+                        job={job}
+                        canManage={canManage}
+                        technicians={technicians}
+                        onJobClick={handleJobClick}
+                      />
+                    </div>
+                  );
+                })}
+            </div>
           );
         })}
       </div>

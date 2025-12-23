@@ -1,10 +1,11 @@
 "use client";
-import { FaSearch } from "react-icons/fa";
+import { Search, Calendar } from "lucide-react";
 import clsx from "clsx";
 import { ScheduleType, TechnicianType } from "../../app/lib/typeDefinitions";
-import { CalendarIcon } from "@heroicons/react/24/solid";
 import { useState } from "react";
 import JobDetailsModal from "./JobDetailsModal";
+import { Input } from "../ui/input";
+import { Card } from "../ui/card";
 
 const JobSearchSelect = ({
   placeholder,
@@ -52,18 +53,18 @@ const JobSearchSelect = ({
         className,
       )}
     >
-      <div className="group flex w-full rounded-lg border border-gray-200 bg-white shadow-sm hover:shadow-md transition-shadow">
-        <FaSearch className="h-10 w-10 p-2 text-gray-400 group-focus-within:text-gray-600" />
-        <input
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Input
           type="text"
           placeholder={placeholder}
           onChange={handleSearch}
-          className="h-10 w-full rounded-r-lg pl-2 pr-4 focus:outline-none text-sm"
+          className="pl-9"
         />
       </div>
       {openDropdown && filteredJobs?.length > 0 && (
-        <div className="absolute left-0 top-full z-50 mt-1 w-full rounded-xl bg-white shadow-xl border border-gray-200">
-          <ul className="max-h-60 overflow-y-auto rounded-xl">
+        <Card className="absolute left-0 top-full z-50 mt-1 w-full shadow-xl">
+          <ul className="max-h-60 overflow-y-auto">
             {filteredJobs.map((job: ScheduleType) => {
               const jobDate = new Date(job.startDateTime);
               const isCurrentYear =
@@ -84,25 +85,25 @@ const JobSearchSelect = ({
               return (
                 <li
                   key={job._id.toString()}
-                  className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-blue-50 transition-colors first:rounded-t-xl last:rounded-b-xl border-b border-gray-100 last:border-b-0"
+                  className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-muted transition-colors first:rounded-t-xl last:rounded-b-xl border-b border-border last:border-b-0"
                   onClick={() => handleClick(job)}
                 >
                   <div className="flex items-center gap-3">
-                    <CalendarIcon className="h-8 w-8 text-blue-600 shrink-0" />
+                    <Calendar className="h-8 w-8 text-primary shrink-0" />
                     <div>
-                      <div className="font-medium text-gray-900">{job.jobTitle}</div>
-                      <div className="text-sm text-gray-500">{job.location}</div>
+                      <div className="font-medium text-foreground">{job.jobTitle}</div>
+                      <div className="text-sm text-muted-foreground">{job.location}</div>
                     </div>
                   </div>
                   <div className="text-right text-sm">
-                    <div className="font-medium text-gray-900">{formattedDate}</div>
-                    <div className="text-gray-500">{formattedTime}</div>
+                    <div className="font-medium text-foreground">{formattedDate}</div>
+                    <div className="text-muted-foreground">{formattedTime}</div>
                   </div>
                 </li>
               );
             })}
           </ul>
-        </div>
+        </Card>
       )}
       {selectedJob && (
         <JobDetailsModal

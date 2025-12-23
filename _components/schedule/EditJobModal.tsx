@@ -7,7 +7,11 @@ import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
 import { formatLocalDateTime } from "../../app/lib/utils";
 import TechnicianSelect from "./TechnicianSelect";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 interface EditJobModalProps {
   job: ScheduleType;
@@ -83,76 +87,67 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
   };
 
   return (
-    <div className="relative bg-white rounded-lg shadow-xl border border-gray-200">
-      {/* Header */}
-      <div className="mb-6 flex items-start justify-between p-6 border-b border-gray-200">
-        <h2 className="text-xl font-semibold text-gray-900">Edit Job</h2>
-        <button
-          onClick={onClose}
-          className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-        >
-          <XMarkIcon className="h-6 w-6" />
-        </button>
-      </div>
-
-      <div className="px-6 pb-6">
+    <Card>
+      <CardHeader>
+        <CardTitle>Edit Job</CardTitle>
+      </CardHeader>
+      <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Job Title */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Job Title</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="jobTitle">
+              Job Title <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="jobTitle"
               type="text"
               {...register("jobTitle", { required: "Job Title is required" })}
-              className={`w-full rounded-lg border px-3 py-2 text-gray-900 placeholder-gray-500 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                errors.jobTitle ? "border-red-500" : "border-gray-300"
-              }`}
+              className={errors.jobTitle ? "border-destructive" : ""}
             />
             {errors.jobTitle && (
-              <p className="text-sm text-red-600">{errors.jobTitle.message}</p>
+              <p className="text-sm text-destructive">{errors.jobTitle.message}</p>
             )}
           </div>
 
           {/* Location */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Location</label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="location">
+              Location <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="location"
               type="text"
               {...register("location", { required: "Location is required" })}
-              className={`w-full rounded-lg border px-3 py-2 text-gray-900 placeholder-gray-500 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                errors.location ? "border-red-500" : "border-gray-300"
-              }`}
+              className={errors.location ? "border-destructive" : ""}
             />
             {errors.location && (
-              <p className="text-sm text-red-600">{errors.location.message}</p>
+              <p className="text-sm text-destructive">{errors.location.message}</p>
             )}
           </div>
 
           {/* Start Date & Time */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
-              Start Date & Time
-            </label>
-            <input
+          <div className="space-y-2">
+            <Label htmlFor="startDateTime">
+              Start Date & Time <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="startDateTime"
               type="datetime-local"
               {...register("startDateTime", {
                 required: "Start Date & Time is required",
               })}
-              className={`w-full rounded-lg border px-3 py-2 text-gray-900 placeholder-gray-500 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 ${
-                errors.startDateTime ? "border-red-500" : "border-gray-300"
-              }`}
+              className={errors.startDateTime ? "border-destructive" : ""}
             />
             {errors.startDateTime && (
-              <p className="text-sm text-red-600">
+              <p className="text-sm text-destructive">
                 {errors.startDateTime.message}
               </p>
             )}
           </div>
 
           {/* Assigned Technicians */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
-              Assign Technicians
-            </label>
+          <div className="space-y-2">
+            <Label htmlFor="technicians">Assign Technicians</Label>
             <TechnicianSelect
               control={control}
               name="assignedTechnicians"
@@ -164,63 +159,35 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
           </div>
 
           {/* Technician Notes */}
-          <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">
-              Technician Notes
-            </label>
-            <textarea
+          <div className="space-y-2">
+            <Label htmlFor="technicianNotes">Technician Notes</Label>
+            <Textarea
+              id="technicianNotes"
               {...register("technicianNotes")}
               rows={4}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 placeholder-gray-500 shadow-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Enter any notes about this job (equipment, access instructions, etc.)"
-            ></textarea>
+            />
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <button
+          <div className="flex justify-end gap-3 pt-4 border-t border-border">
+            <Button
               type="button"
-              className="rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-200"
+              variant="outline"
               onClick={onClose}
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className={`inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-medium text-white transition-colors ${
-                isLoading
-                  ? "cursor-not-allowed bg-gray-400"
-                  : "bg-blue-600 hover:bg-blue-700 active:bg-blue-800"
-              }`}
               disabled={isLoading}
             >
-              {isLoading ? (
-                <>
-                  <svg className="mr-2 h-4 w-4 animate-spin" viewBox="0 0 24 24">
-                    <circle
-                      className="opacity-25"
-                      cx="12"
-                      cy="12"
-                      r="10"
-                      stroke="currentColor"
-                      strokeWidth="4"
-                    />
-                    <path
-                      className="opacity-75"
-                      fill="currentColor"
-                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                    />
-                  </svg>
-                  Saving...
-                </>
-              ) : (
-                "Save Changes"
-              )}
-            </button>
+              {isLoading ? "Saving..." : "Save Changes"}
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 
