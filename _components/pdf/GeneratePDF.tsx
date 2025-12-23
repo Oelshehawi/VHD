@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { FaPrint } from "react-icons/fa";
+import React, { useState } from "react";
+import { Printer, Loader2 } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
 import toast from "react-hot-toast";
 import InvoicePdfDocument, { type InvoiceData } from "./InvoicePdfDocument";
@@ -11,6 +11,15 @@ import ReportPdfDocument, {
   type ReportData,
   type TechnicianData,
 } from "./ReportPdfDocument";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Label } from "../ui/label";
+import { Button } from "../ui/button";
 
 // Union type for all possible PDF data types
 type PDFData =
@@ -35,23 +44,18 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
   pdfData,
   fileName,
   buttonText = "Generate PDF",
-  className = "inline-flex items-center rounded bg-darkBlue px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50",
+  className,
   showScaleSelector = false,
 }) => {
-  const [isClient, setIsClient] = useState(false);
   const [scale, setScale] = useState(100); // Default 100%
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   // Handle undefined pdfData
   if (!pdfData) {
     return (
-      <button className={className} disabled>
-        <FaPrint className="lg:mr-2" />
+      <Button disabled variant="outline">
+        <Printer className="mr-2 h-4 w-4" />
         <span>No Data</span>
-      </button>
+      </Button>
     );
   }
 
@@ -107,23 +111,13 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
     }
   };
 
-  // Show loading button during SSR and initial client render
-  if (!isClient) {
-    return (
-      <button className={className} disabled>
-        <FaPrint className="lg:mr-2" />
-        <span>Loading...</span>
-      </button>
-    );
-  }
-
   const document = generateDocument();
   if (!document) {
     return (
-      <button className={className} disabled>
-        <FaPrint className="lg:mr-2" />
+      <Button disabled variant="outline">
+        <Printer className="mr-2 h-4 w-4" />
         <span>Error</span>
-      </button>
+      </Button>
     );
   }
 
@@ -144,56 +138,57 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
     <div className="flex flex-wrap items-center gap-2">
       {showScaleSelector &&
         (pdfData.type === "estimate" ||
-        pdfData.type === "invoice" ||
+          pdfData.type === "invoice" ||
           pdfData.type === "clientInvoice" ||
           pdfData.type === "report") && (
           <div className="flex items-center gap-2">
-            <label
-              htmlFor="pdf-scale"
-              className="text-sm font-medium text-gray-700"
-            >
+            <Label htmlFor="pdf-scale" className="text-sm font-medium">
               Size:
-            </label>
-            <select
-              id="pdf-scale"
-              value={scale}
-              onChange={(e) => setScale(Number(e.target.value))}
-              className="min-w-27.5 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+            </Label>
+            <Select
+              value={scale.toString()}
+              onValueChange={(value) => setScale(Number(value))}
             >
-              <option value={70}>70%</option>
-              <option value={75}>75%</option>
-              <option value={80}>80%</option>
-              <option value={85}>85%</option>
-              <option value={90}>90%</option>
-              <option value={95}>95%</option>
-              <option value={100}>100%</option>
-              <option value={105}>105%</option>
-              <option value={110}>110%</option>
-              <option value={115}>115%</option>
-              <option value={120}>120%</option>
-            </select>
+              <SelectTrigger id="pdf-scale" className="w-24">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="70">70%</SelectItem>
+                <SelectItem value="75">75%</SelectItem>
+                <SelectItem value="80">80%</SelectItem>
+                <SelectItem value="85">85%</SelectItem>
+                <SelectItem value="90">90%</SelectItem>
+                <SelectItem value="95">95%</SelectItem>
+                <SelectItem value="100">100%</SelectItem>
+                <SelectItem value="105">105%</SelectItem>
+                <SelectItem value="110">110%</SelectItem>
+                <SelectItem value="115">115%</SelectItem>
+                <SelectItem value="120">120%</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
         )}
 
       <PDFDownloadLink document={document} fileName={generateFileName()}>
-        {({ loading, error }) => (
-          <button
-            className={className}
+        {({ loading }) => (
+          <Button
+            variant="default"
             disabled={loading}
             onClick={handleDownloadClick}
+            className={className}
           >
             {loading ? (
               <>
-                <FaPrint className="lg:mr-2" />
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 <span>Generating...</span>
               </>
             ) : (
               <>
-                <FaPrint className="lg:mr-2" />
+                <Printer className="mr-2 h-4 w-4" />
                 <span>{buttonText}</span>
               </>
             )}
-          </button>
+          </Button>
         )}
       </PDFDownloadLink>
     </div>

@@ -21,7 +21,7 @@ const Database = async ({
 
   if (!canManage)
     return (
-      <div className="bg-background flex items-center justify-center p-6">
+      <div className="bg-background flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardContent className="p-8">
             <div className="text-center">
@@ -62,8 +62,8 @@ const Database = async ({
 
   return (
     <Suspense fallback={<TableContainerSkeleton />}>
-      <div className="bg-background flex h-full flex-col">
-        <Card className="flex min-h-0 w-full flex-1 flex-col gap-8 p-8">
+      <div className="bg-background flex items-center justify-center">
+        <Card className="flex min-h-0 w-full max-w-7xl flex-1 flex-col gap-8 p-4 sm:p-6 lg:p-8">
           <AddClient />
           <div className="flex min-h-0 flex-1 flex-col space-y-6">
             <div className="flex flex-col gap-3 md:flex-row">

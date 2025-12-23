@@ -253,6 +253,7 @@ const AddClient = () => {
                           id={name}
                           {...register(name, { required: isRequired })}
                           placeholder={placeholder}
+                          data-vaul-no-drag
                           className={cn(
                             "min-h-[80px]",
                             errors[name] &&
@@ -270,6 +271,7 @@ const AddClient = () => {
                           type={type}
                           placeholder={placeholder}
                           onKeyDown={onKeyDown}
+                          data-vaul-no-drag
                           className={cn(
                             name === "prefix" &&
                               "font-mono tracking-wider uppercase",

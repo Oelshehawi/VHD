@@ -1,7 +1,7 @@
 "use client";
 import { usePathname, useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { FaSearch } from "react-icons/fa";
+import { Search as SearchIcon } from "lucide-react";
 import { useDebouncedCallback } from "use-debounce";
 import { useState } from "react";
 import { Input } from "../ui/input";
@@ -36,19 +36,19 @@ const Search = ({ placeholder }: { placeholder: string }) => {
           handleSearch(e.target.value);
         }}
         defaultValue={searchParams.get("query")?.toString()}
-        className="pr-10"
+        className="pr-20"
       />
       {isSearching && (
-        <div className="absolute right-12 top-1/2 -translate-y-1/2">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+        <div className="absolute right-14 top-1/2 -translate-y-1/2">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
         </div>
       )}
       <Button
         type="submit"
         className="absolute right-0 top-0 h-full rounded-l-none"
-        size="icon"
+        size="default"
       >
-        <FaSearch className="h-4 w-4" />
+        <SearchIcon className="h-5 w-5" />
       </Button>
     </div>
   );

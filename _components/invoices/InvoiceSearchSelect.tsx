@@ -1,8 +1,33 @@
-import { useState, useEffect } from "react";
-import { clsx } from "clsx";
+"use client";
+
+import * as React from "react";
+import { CheckIcon, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Button } from "../ui/button";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "../ui/command";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../ui/popover";
 import { InvoiceType, ScheduleType } from "../../app/lib/typeDefinitions";
-import { FaSearch } from "react-icons/fa";
 import { formatDateToString } from "../../app/lib/utils";
+
+interface InvoiceSearchSelectProps {
+  placeholder: string;
+  data: InvoiceType[];
+  className?: string;
+  onSelect: (invoice: ScheduleType) => void;
+  register: any;
+  error: any;
+}
 
 const InvoiceSearchSelect = ({
   placeholder,
@@ -11,84 +36,79 @@ const InvoiceSearchSelect = ({
   onSelect,
   register,
   error,
-}: {
-  placeholder: string;
-  data: InvoiceType[];
-  className?: string;
-  onSelect: (invoice: ScheduleType) => void;
-  register: any;
-  error: any;
-}) => {
-  const [filteredData, setFilteredData] = useState<InvoiceType[]>([]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [OpenDropdown, setOpenDropdown] = useState(false);
+}: InvoiceSearchSelectProps) => {
+  const [open, setOpen] = React.useState(false);
+  const [value, setValue] = React.useState("");
+  const { onChange, ...registerProps } = register("invoiceRef", { required: true });
 
-  const handleSearch = (term: string) => {
-    setSearchTerm(term);
-    setOpenDropdown(true);
-    if (term) {
-      const filtered = data.filter(
-        (invoice) =>
-          invoice.jobTitle.toLowerCase().includes(term.toLowerCase()) ||
-          invoice.dateIssued
-            .toString()
-            .toLowerCase()
-            .includes(term.toLowerCase()),
-      );
-      setFilteredData(filtered);
-    } else {
-      setOpenDropdown(false);
-    }
-  };
+  const selectedInvoice = data.find(
+    (invoice) => invoice._id?.toString() === value
+  );
 
-  const handleSelect = (invoice: ScheduleType) => {
-    setSearchTerm(invoice.jobTitle as string);
-    setOpenDropdown(false);
-    onSelect(invoice);
+  const handleSelect = (invoice: InvoiceType) => {
+    const invoiceId = invoice._id?.toString() || "";
+    setValue(invoiceId);
+    setOpen(false);
+    // Trigger react-hook-form onChange
+    onChange({ target: { value: invoiceId, name: "invoiceRef" } });
+    onSelect(invoice as unknown as any);
   };
 
   return (
-    <div
-      className={clsx("relative flex w-full flex-col gap-3 py-2", className)}
-    >
-      <div className="group flex w-full rounded-lg shadow-custom">
-        <FaSearch className="size-10 rounded-l-lg bg-black-2 p-2 text-gray-400 group-focus-within:text-gray-600" />
-        <input
-          type="text"
-          placeholder={placeholder}
-          value={searchTerm}
-          {...register("invoiceRef", { required: true })}
-          onChange={(e) => {
-            register("invoiceRef").onChange(e);
-            handleSearch(e.target.value);
-          }}
-          className="h-10 w-full grow rounded-e-lg pl-5 focus:outline-none "
-        />
-      </div>
+    <div className={cn("flex w-full flex-col gap-3 py-2", className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            role="combobox"
+            aria-expanded={open}
+            className={cn(
+              "w-full justify-between",
+              error && "border-destructive focus-visible:ring-destructive"
+            )}
+          >
+            {selectedInvoice ? (
+              <span className="truncate">{selectedInvoice.jobTitle}</span>
+            ) : (
+              <span className="text-muted-foreground">{placeholder}</span>
+            )}
+            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-full p-0" align="start">
+          <Command>
+            <CommandInput placeholder="Search invoices..." />
+            <CommandList>
+              <CommandEmpty>No invoice found.</CommandEmpty>
+              <CommandGroup>
+                {data.map((invoice) => (
+                  <CommandItem
+                    key={invoice._id?.toString()}
+                    value={`${invoice.jobTitle} ${formatDateToString(invoice.dateIssued as string | Date)}`}
+                    onSelect={() => handleSelect(invoice)}
+                  >
+                    <CheckIcon
+                      className={cn(
+                        "mr-2 h-4 w-4",
+                        value === invoice._id?.toString() ? "opacity-100" : "opacity-0"
+                      )}
+                    />
+                    <div className="flex flex-1 items-center justify-between">
+                      <span className="font-medium">{invoice.jobTitle}</span>
+                      <span className="text-xs text-muted-foreground ml-2">
+                        {formatDateToString(invoice.dateIssued as string | Date)}
+                      </span>
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+      </Popover>
+      <input type="hidden" {...registerProps} value={value} onChange={onChange} />
       {error && (
-        <p className="mt-1 text-xs text-red-500">Invoice is required</p>
-      )}
-      {OpenDropdown && (
-        <div className="absolute left-0 top-full z-10 mt-1 w-full rounded-md bg-white shadow-lg">
-          <ul className="max-h-60 overflow-y-auto">
-            {filteredData.map((invoice: any) => {
-              return (
-                <li
-                  key={invoice._id.toString()}
-                  className="flex cursor-pointer items-center justify-between gap-2 px-4 py-2 hover:border-s-2 hover:border-darkGreen hover:bg-gray-200"
-                  onClick={() => handleSelect(invoice)}
-                >
-                  <div className="flex items-center gap-2">
-                    <span>{invoice.jobTitle}</span>
-                  </div>
-                  <div className="text-right">
-                    <span>{formatDateToString(invoice.dateIssued)}</span>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <p className="text-destructive mt-1 text-xs">Invoice is required</p>
       )}
     </div>
   );

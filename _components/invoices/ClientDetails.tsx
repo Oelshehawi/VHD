@@ -1,7 +1,12 @@
+"use client";
+
 import Link from "next/link";
-import { FaPhone, FaEnvelope, FaUser, FaExternalLinkAlt } from "react-icons/fa";
+import { Phone, Mail, User, ExternalLink } from "lucide-react";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import { getEmailForPurpose } from "../../app/lib/utils";
+import { Card, CardContent, CardHeader } from "../ui/card";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 
 const ClientDetails = ({
   client,
@@ -16,46 +21,45 @@ const ClientDetails = ({
   const schedulingEmail = getEmailForPurpose(client, "scheduling");
 
   return (
-    <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-      <div className="border-b border-gray-200 px-4 py-3">
-        <div className="flex items-center">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100">
-            <FaUser className="h-4 w-4 text-blue-600" />
+    <Card>
+      <CardHeader className="border-b">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+            <User className="text-primary h-4 w-4" />
           </div>
-          <h3 className="ml-3 text-base font-semibold text-gray-900">Client Information</h3>
+          <h3 className="text-foreground text-base font-semibold">Client Information</h3>
         </div>
-      </div>
+      </CardHeader>
       
-      <div className="p-4">
-        <div className="space-y-3">
+      <CardContent className="p-4">
+        <div className="space-y-4">
           {/* Client Name */}
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <FaUser className="mr-3 h-4 w-4 text-gray-400" />
+            <div className="flex items-center gap-3">
+              <User className="text-muted-foreground h-4 w-4" />
               <div>
-                <p className="text-xs font-medium text-gray-500">Client Name</p>
-                <p className="text-sm font-semibold text-gray-900">{client.clientName}</p>
+                <p className="text-muted-foreground text-xs font-medium">Client Name</p>
+                <p className="text-foreground text-sm font-semibold">{client.clientName}</p>
               </div>
             </div>
             {canManage && (
-              <Link
-                href={`/database/${client._id}`}
-                className="inline-flex items-center rounded-lg bg-gray-100 px-2 py-1 text-xs font-medium text-gray-700 transition-colors hover:bg-gray-200"
-              >
-                <span className="mr-1">View Details</span>
-                <FaExternalLinkAlt className="h-2 w-2" />
-              </Link>
+              <Button variant="outline" size="sm" asChild>
+                <Link href={`/database/${client._id}`}>
+                  <span className="mr-1">View Details</span>
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              </Button>
             )}
           </div>
 
           {/* Primary Email */}
-          <div className="flex items-center">
-            <FaEnvelope className="mr-3 h-4 w-4 text-gray-400" />
+          <div className="flex items-center gap-3">
+            <Mail className="text-muted-foreground h-4 w-4" />
             <div>
-              <p className="text-xs font-medium text-gray-500">Primary Email</p>
+              <p className="text-muted-foreground text-xs font-medium">Primary Email</p>
               <a 
                 href={`mailto:${primaryEmail}`}
-                className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
+                className="text-primary text-sm hover:underline transition-colors"
               >
                 {primaryEmail}
               </a>
@@ -64,18 +68,18 @@ const ClientDetails = ({
 
           {/* Accounting Email - Always show if different from primary */}
           {accountingEmail && accountingEmail !== primaryEmail && (
-            <div className="flex items-center">
-              <FaEnvelope className="mr-3 h-4 w-4 text-gray-400" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs font-medium text-gray-500">Accounting Email</p>
-                  <span className="inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
+            <div className="flex items-center gap-3">
+              <Mail className="text-muted-foreground h-4 w-4" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-muted-foreground text-xs font-medium">Accounting Email</p>
+                  <Badge variant="secondary" className="text-xs">
                     Billing
-                  </span>
+                  </Badge>
                 </div>
                 <a 
                   href={`mailto:${accountingEmail}`}
-                  className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
+                  className="text-primary text-sm hover:underline transition-colors"
                 >
                   {accountingEmail}
                 </a>
@@ -85,18 +89,18 @@ const ClientDetails = ({
 
           {/* Scheduling Email - Only show if different from both primary and accounting */}
           {schedulingEmail && schedulingEmail !== primaryEmail && schedulingEmail !== accountingEmail && (
-            <div className="flex items-center">
-              <FaEnvelope className="mr-3 h-4 w-4 text-gray-400" />
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-xs font-medium text-gray-500">Scheduling Email</p>
-                  <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-800">
+            <div className="flex items-center gap-3">
+              <Mail className="text-muted-foreground h-4 w-4" />
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <p className="text-muted-foreground text-xs font-medium">Scheduling Email</p>
+                  <Badge variant="outline" className="text-xs">
                     Scheduling
-                  </span>
+                  </Badge>
                 </div>
                 <a 
                   href={`mailto:${schedulingEmail}`}
-                  className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
+                  className="text-primary text-sm hover:underline transition-colors"
                 >
                   {schedulingEmail}
                 </a>
@@ -105,13 +109,13 @@ const ClientDetails = ({
           )}
 
           {/* Phone Number */}
-          <div className="flex items-center">
-            <FaPhone className="mr-3 h-4 w-4 text-gray-400" />
+          <div className="flex items-center gap-3">
+            <Phone className="text-muted-foreground h-4 w-4" />
             <div>
-              <p className="text-xs font-medium text-gray-500">Phone Number</p>
+              <p className="text-muted-foreground text-xs font-medium">Phone Number</p>
               <a 
                 href={`tel:${client.phoneNumber}`}
-                className="text-sm text-blue-600 hover:text-blue-500 transition-colors"
+                className="text-primary text-sm hover:underline transition-colors"
               >
                 {client.phoneNumber}
               </a>
@@ -120,16 +124,16 @@ const ClientDetails = ({
 
           {/* Notes */}
           {client.notes && (
-            <div className="border-t border-gray-200 pt-3">
-              <p className="text-xs font-medium text-gray-500 mb-1">Notes</p>
-              <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-lg">
+            <div className="border-t pt-4">
+              <p className="text-muted-foreground mb-2 text-xs font-medium">Notes</p>
+              <p className="text-muted-foreground bg-muted text-xs rounded-lg p-2">
                 {client.notes}
               </p>
             </div>
           )}
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 };
 

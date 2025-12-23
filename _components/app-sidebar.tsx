@@ -46,8 +46,8 @@ export function AppSidebar({
   const items = canManage
     ? [
         { title: "Dashboard", url: "/dashboard", icon: Home },
-        { title: "Database", url: "/database", icon: Database },
         { title: "Estimates", url: "/estimates", icon: FileText },
+        { title: "Database", url: "/database", icon: Database },
         { title: "Invoices", url: "/invoices", icon: File },
         { title: "Schedule", url: "/schedule", icon: Calendar },
         {
@@ -91,7 +91,7 @@ export function AppSidebar({
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
                       {item.badge ? (
-                        <span className="ml-auto flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px]">
+                        <span className="bg-destructive text-destructive-foreground ml-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px]">
                           {item.badge}
                         </span>
                       ) : null}

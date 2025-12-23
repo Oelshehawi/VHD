@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { useMemo } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { JobsDueDataType } from "../../app/lib/dashboard.data";
 import InvoiceRow from "./InvoiceRow";
@@ -62,10 +62,6 @@ const JobsDueContainer = ({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Track if component has mounted to prevent URL updates on initial mount
-  const isInitialMount = useRef(true);
-  const hasUserInteracted = useRef(false);
-
   // Calculate current date at render time
   const currentDate = new Date();
   const currentMonth = MONTHS[currentDate.getMonth()];
@@ -80,19 +76,8 @@ const JobsDueContainer = ({
   const month = (monthParam || currentMonth) as string;
   const year: number = yearParam ? parseInt(yearParam) : currentYear;
 
-  // Mark as mounted after first render
-  useEffect(() => {
-    isInitialMount.current = false;
-  }, []);
-
-  // Update URL using router.replace() - only when user explicitly changes values
+  // Update URL using router.replace() - only fires when user explicitly changes values
   const updateUrl = (newMonth: string, newYear: number) => {
-    // Don't update URL on initial mount
-    if (isInitialMount.current && !hasUserInteracted.current) {
-      return;
-    }
-
-    hasUserInteracted.current = true;
     const params = new URLSearchParams(searchParams?.toString() || "");
     params.set("month", newMonth);
     params.set("year", newYear.toString());

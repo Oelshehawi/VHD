@@ -4,6 +4,10 @@ import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { updateInvoice } from "../../app/lib/actions/actions";
 import { FaPen, FaPlus, FaTrash, FaCalculator, FaSave, FaTimes } from "react-icons/fa";
+import { Card, CardContent, CardHeader } from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
 
 const PriceBreakdown = ({ invoice }: { invoice: any }) => {
   const updateInvoiceWithId = updateInvoice.bind(null, invoice._id);
@@ -57,101 +61,106 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
   const total = calculateTotal(items);
 
   return (
-    <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-      <div className="border-b border-gray-200 px-6 py-4">
+    <Card>
+      <CardHeader className="border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-purple-100">
-              <FaCalculator className="h-5 w-5 text-purple-600" />
+            <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+              <FaCalculator className="text-primary h-5 w-5" />
             </div>
             <div className="ml-3">
-              <h3 className="text-lg font-semibold text-gray-900">Price Breakdown</h3>
-              <p className="text-sm text-gray-500">
+              <h3 className="text-foreground text-lg font-semibold">Price Breakdown</h3>
+              <p className="text-muted-foreground text-sm">
                 {items.length} {items.length === 1 ? 'item' : 'items'}
               </p>
             </div>
           </div>
-          <button
+          <Button
             onClick={toggleEdit}
-            className="inline-flex items-center rounded-lg bg-purple-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            size="sm"
           >
             <FaPen className="mr-2 h-4 w-4" />
             {isEditingAmount ? 'Cancel' : 'Edit'}
-          </button>
+          </Button>
         </div>
-      </div>
+      </CardHeader>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="p-6">
-        <div className="space-y-4">
+      <CardContent className="p-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Items List */}
           <div className="space-y-3">
-            {items.map((item: any, index: number  ) => (
+            {items.map((item: any, index: number) => (
               <div
                 key={index}
                 className={`rounded-lg border p-4 transition-all duration-200 ${
-                  isEditingAmount ? 'border-purple-200 bg-purple-50' : 'border-gray-200 bg-gray-50'
+                  isEditingAmount ? 'bg-muted border-border' : 'bg-muted/50 border-border'
                 }`}
               >
                 {isEditingAmount ? (
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3">
                       <div className="flex-1">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <Label htmlFor={`description-${index}`} className="text-xs">
                           Description
-                        </label>
-                        <input
+                        </Label>
+                        <Input
+                          id={`description-${index}`}
                           {...register(`items[${index}].description`)}
                           defaultValue={item.description}
                           placeholder="Enter description"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          className="mt-1"
                         />
                       </div>
                       <div className="w-32">
-                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                        <Label htmlFor={`price-${index}`} className="text-xs">
                           Price
-                        </label>
-                        <input
+                        </Label>
+                        <Input
+                          id={`price-${index}`}
                           {...register(`items[${index}].price`)}
                           defaultValue={item.price}
                           placeholder="0.00"
                           type="number"
                           step="0.01"
-                          className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                          className="mt-1"
                         />
                       </div>
-                      <button
+                      <Button
                         type="button"
                         onClick={() => deleteItem(index)}
                         disabled={items.length <= 1}
-                        className="mt-6 flex h-10 w-10 items-center justify-center rounded-lg bg-red-100 text-red-600 transition-colors hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                        variant="destructive"
+                        size="icon"
+                        className="mt-6"
                         title={items.length <= 1 ? "Cannot delete the last item" : "Delete item"}
                       >
                         <FaTrash className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </div>
                     <div className="flex-1">
-                      <label className="block text-xs font-medium text-gray-700 mb-1">
+                      <Label htmlFor={`details-${index}`} className="text-xs">
                         System Details
-                      </label>
-                      <input
+                      </Label>
+                      <Input
+                        id={`details-${index}`}
                         {...register(`items[${index}].details`)}
                         defaultValue={item.details || ""}
                         placeholder="System specifications (e.g., 2 hoods 17 filters)"
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                        className="mt-1"
                       />
                     </div>
                   </div>
                 ) : (
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <span className="text-gray-900 font-medium">{item.description}</span>
+                      <span className="text-foreground font-medium">{item.description}</span>
                       {item.details && (
-                        <div className="text-sm text-gray-600 mt-1">
+                        <div className="text-muted-foreground mt-1 text-sm">
                           {item.details}
                         </div>
                       )}
                     </div>
-                    <span className="text-gray-900 font-semibold">
+                    <span className="text-foreground font-semibold">
                       ${parseFloat(item.price).toFixed(2)}
                     </span>
                   </div>
@@ -162,27 +171,28 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
 
           {/* Add Item Button (Edit Mode Only) */}
           {isEditingAmount && (
-            <button
+            <Button
               type="button"
               onClick={addItem}
-              className="flex w-full items-center justify-center rounded-lg border-2 border-dashed border-purple-300 py-3 text-purple-600 transition-colors hover:border-purple-400 hover:bg-purple-50"
+              variant="outline"
+              className="border-primary/30 text-primary hover:bg-primary/10 w-full border-2 border-dashed"
             >
               <FaPlus className="mr-2 h-4 w-4" />
               Add Item
-            </button>
+            </Button>
           )}
 
           {/* Totals Section */}
-          <div className="border-t border-gray-200 pt-4 space-y-2">
-            <div className="flex justify-between text-sm text-gray-600">
+          <div className="border-border space-y-2 border-t pt-4">
+            <div className="text-muted-foreground flex justify-between text-sm">
               <span>Subtotal:</span>
               <span>${subtotal.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between text-sm text-gray-600">
+            <div className="text-muted-foreground flex justify-between text-sm">
               <span>GST (5%):</span>
               <span>${gst.toFixed(2)}</span>
             </div>
-            <div className="flex justify-between border-t border-gray-200 pt-2 text-lg font-semibold text-gray-900">
+            <div className="text-foreground border-border flex justify-between border-t pt-2 text-lg font-semibold">
               <span>Total:</span>
               <span>${total.toFixed(2)}</span>
             </div>
@@ -191,26 +201,27 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
           {/* Action Buttons (Edit Mode Only) */}
           {isEditingAmount && (
             <div className="flex space-x-3 pt-4">
-              <button
+              <Button
                 type="submit"
-                className="flex-1 inline-flex items-center justify-center rounded-lg bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                className="flex-1"
               >
                 <FaSave className="mr-2 h-4 w-4" />
                 Save Changes
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
                 onClick={toggleEdit}
-                className="flex-1 inline-flex items-center justify-center rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                variant="outline"
+                className="flex-1"
               >
                 <FaTimes className="mr-2 h-4 w-4" />
                 Cancel
-              </button>
+              </Button>
             </div>
           )}
-        </div>
-      </form>
-    </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 

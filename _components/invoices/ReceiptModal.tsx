@@ -1,10 +1,26 @@
 "use client";
 
 import React, { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { FaReceipt } from "react-icons/fa";
 import GeneratePDF, { type ReceiptData } from "../pdf/GeneratePDF";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Label } from "../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Input } from "../ui/input";
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -61,128 +77,100 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
     setPaymentDate(`${year}-${month}-${day}`);
   };
 
-  if (!isOpen) return null;
-
   return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={handleClose}
-        className="bg-black/60 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.2 }}
-          className="relative w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-gray-200 px-6 py-4">
-            <div className="flex items-center">
-              <FaReceipt className="mr-3 h-5 w-5 text-green-600" />
-              <h2 className="text-lg font-semibold text-gray-900">
-                Generate Receipt
-              </h2>
-            </div>
-            <button
-              onClick={handleClose}
-              className="rounded-full p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
-            >
-              <XMarkIcon className="h-6 w-6" />
-            </button>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader className="border-b pb-4">
+          <div className="flex items-center">
+            <FaReceipt className="text-primary mr-3 h-5 w-5" />
+            <DialogTitle className="text-lg">Generate Receipt</DialogTitle>
+          </div>
+        </DialogHeader>
+
+        {/* Content */}
+        <div className="space-y-4 py-4">
+          <div>
+            <p className="text-muted-foreground text-sm">
+              Please provide payment details to generate the receipt for:
+            </p>
+            <p className="text-foreground mt-1 font-medium">
+              {receiptData.jobTitle}
+            </p>
+            <p className="text-muted-foreground text-sm">{receiptData.location}</p>
           </div>
 
-          {/* Content */}
-          <div className="p-6">
-            <div className="mb-6">
-              <p className="text-sm text-gray-600">
-                Please provide payment details to generate the receipt for:
-              </p>
-              <p className="mt-1 font-medium text-gray-900">
-                {receiptData.jobTitle}
-              </p>
-              <p className="text-sm text-gray-500">{receiptData.location}</p>
-            </div>
+          {/* Payment Method */}
+          <div>
+            <Label htmlFor="payment-method" className="mb-2">
+              Payment Method
+            </Label>
+            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+              <SelectTrigger id="payment-method">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Cash">Cash</SelectItem>
+                <SelectItem value="Check">Check</SelectItem>
+                <SelectItem value="Credit Card">Credit Card</SelectItem>
+                <SelectItem value="Debit Card">Debit Card</SelectItem>
+                <SelectItem value="E-Transfer">E-Transfer</SelectItem>
+                <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                <SelectItem value="Online Payment">Online Payment</SelectItem>
+                <SelectItem value="Other">Other</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-            {/* Payment Method */}
-            <div className="mb-4">
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Payment Method
-              </label>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-              >
-                <option value="Cash">Cash</option>
-                <option value="Check">Check</option>
-                <option value="Credit Card">Credit Card</option>
-                <option value="Debit Card">Debit Card</option>
-                <option value="E-Transfer">E-Transfer</option>
-                <option value="Bank Transfer">Bank Transfer</option>
-                <option value="Online Payment">Online Payment</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
+          {/* Payment Date */}
+          <div>
+            <Label htmlFor="payment-date" className="mb-2">
+              Payment Date
+            </Label>
+            <Input
+              id="payment-date"
+              type="date"
+              value={paymentDate}
+              onChange={(e) => setPaymentDate(e.target.value)}
+            />
+          </div>
 
-            {/* Payment Date */}
-            <div className="mb-6">
-              <label className="mb-2 block text-sm font-medium text-gray-700">
-                Payment Date
-              </label>
-              <input
-                type="date"
-                value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-3 py-2 text-gray-900 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
-              />
+          {/* Amount Summary */}
+          <div className="bg-muted rounded-lg p-4">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Subtotal:</span>
+              <span className="text-foreground">
+                ${receiptData.subtotal.toFixed(2)}
+              </span>
             </div>
-
-            {/* Amount Summary */}
-            <div className="mb-6 rounded-lg bg-gray-50 p-4">
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">Subtotal:</span>
-                <span className="text-gray-900">
-                  ${receiptData.subtotal.toFixed(2)}
-                </span>
-              </div>
-              <div className="flex justify-between text-sm">
-                <span className="text-gray-600">GST (5%):</span>
-                <span className="text-gray-900">
-                  ${receiptData.gst.toFixed(2)}
-                </span>
-              </div>
-              <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 font-medium">
-                <span className="text-gray-900">Total Amount:</span>
-                <span className="text-green-600">
-                  ${receiptData.totalAmount.toFixed(2)} CAD
-                </span>
-              </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">GST (5%):</span>
+              <span className="text-foreground">
+                ${receiptData.gst.toFixed(2)}
+              </span>
             </div>
-
-            {/* Buttons */}
-            <div className="flex space-x-3">
-              <button
-                onClick={handleClose}
-                className="flex-1 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-              >
-                Cancel
-              </button>
-              <GeneratePDF
-                pdfData={{ type: "receipt", data: completeReceiptData }}
-                fileName={`Receipt - ${receiptData.jobTitle}.pdf`}
-                buttonText="Generate Receipt"
-                className="inline-flex flex-1 items-center justify-center rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50"
-              />
+            <div className="border-border text-foreground mt-2 flex justify-between border-t pt-2 font-medium">
+              <span>Total Amount:</span>
+              <span className="text-primary">
+                ${receiptData.totalAmount.toFixed(2)} CAD
+              </span>
             </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </div>
+
+        {/* Footer */}
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button onClick={handleClose} variant="outline" type="button">
+            Cancel
+          </Button>
+          <GeneratePDF
+            pdfData={{ type: "receipt", data: completeReceiptData }}
+            fileName={`Receipt - ${receiptData.jobTitle}.pdf`}
+            buttonText="Generate Receipt"
+            className="inline-flex items-center justify-center"
+          />
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -1,9 +1,20 @@
 import Link from "next/link";
-import { FaPenSquare, FaFileInvoice, FaTrash } from "react-icons/fa";
+import { FaPenSquare, FaFileInvoice } from "react-icons/fa";
 import DeleteModal from "../DeleteModal";
 import { fetchFilteredInvoices } from "../../app/lib/data";
 import { InvoiceType } from "../../app/lib/typeDefinitions";
 import { formatDateStringUTC } from "../../app/lib/utils";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { Card } from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
 
 const InvoiceTable = async ({
   query,
@@ -25,131 +36,139 @@ const InvoiceTable = async ({
 
   if (!invoiceData.length) {
     return (
-      <div className="flex min-h-[70vh] items-center justify-center rounded-xl bg-darkGray border border-borderGreen">
-        <div className="text-center">
-          <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-darkGreen flex items-center justify-center border border-borderGreen">
-            <FaFileInvoice className="h-8 w-8 text-lightGray" />
+      <Card className="flex min-h-[70vh] items-center justify-center">
+        <div className="p-8 text-center">
+          <div className="bg-primary/10 border-primary/20 mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full border">
+            <FaFileInvoice className="text-primary h-8 w-8" />
           </div>
-          <p className="text-xl font-semibold text-white mb-2">No invoices found</p>
-          <p className="text-lightGray">Try adjusting your search or filters</p>
+          <p className="text-foreground mb-2 text-xl font-semibold">
+            No invoices found
+          </p>
+          <p className="text-muted-foreground">
+            Try adjusting your search or filters
+          </p>
         </div>
-      </div>
+      </Card>
     );
   }
 
-  return (
-    <div className="overflow-hidden rounded-xl border border-borderGreen bg-darkGreen shadow-lg">
-      {/* Table Container */}
-      <div className="overflow-auto">
-        <table className="w-full">
-          <thead className="bg-darkBlue border-b border-borderGreen">
-            <tr>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                Invoice #
-              </th>
-              <th className="px-6 py-4 text-left text-sm font-semibold text-white">
-                Job Title
-              </th>
-              <th className="hidden px-6 py-4 text-left text-sm font-semibold text-white md:table-cell">
-                Issued Date
-              </th>
-              <th className="hidden px-6 py-4 text-left text-sm font-semibold text-white md:table-cell">
-                Status
-              </th>
-              <th className="hidden px-6 py-4 text-left text-sm font-semibold text-white md:table-cell">
-                Amount
-              </th>
-              <th className="px-6 py-4 text-center text-sm font-semibold text-white">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-borderGreen">
-            {invoiceData.map((invoice: InvoiceType, index: number) => {
-              const subtotal = invoice.items.reduce(
-                (total, item) => total + item.price,
-                0,
-              );
-              const tax = subtotal * 0.05;
-              const totalAmount = (subtotal + tax).toFixed(2);
+  const getStatusVariant = (status: string) => {
+    switch (status) {
+      case "paid":
+        return "default";
+      case "overdue":
+        return "destructive";
+      default:
+        return "secondary";
+    }
+  };
 
-              return (
-                <tr
-                  key={invoice._id as string}
-                  className="bg-darkGreen/70 transition-all duration-200 hover:bg-darkGreen"
-                >
-                  <td className="px-6 py-4">
-                    <div className="font-semibold text-white">{invoice.invoiceId}</div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="font-medium text-white mb-1">{invoice.jobTitle}</div>
-                      <div className="md:hidden space-y-2">
-                        <div className="text-sm text-lightGray">
-                          {formatDateStringUTC(invoice.dateIssued as string)}
+  return (
+    <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-auto">
+        <div className="min-w-full md:min-w-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="min-w-[120px]">Invoice #</TableHead>
+                <TableHead className="min-w-[200px]">Job Title</TableHead>
+                <TableHead className="hidden min-w-[140px] lg:table-cell">
+                  Issued Date
+                </TableHead>
+                <TableHead className="hidden min-w-[100px] lg:table-cell">
+                  Status
+                </TableHead>
+                <TableHead className="hidden min-w-[100px] lg:table-cell">
+                  Amount
+                </TableHead>
+                <TableHead className="w-[100px] text-center">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoiceData.map((invoice: InvoiceType) => {
+                const subtotal = invoice.items.reduce(
+                  (total, item) => total + item.price,
+                  0,
+                );
+                const tax = subtotal * 0.05;
+                const totalAmount = (subtotal + tax).toFixed(2);
+
+                return (
+                  <TableRow key={invoice._id as string}>
+                    <TableCell className="min-w-[120px]">
+                      <div className="text-foreground truncate font-semibold">
+                        {invoice.invoiceId}
+                      </div>
+                    </TableCell>
+                    <TableCell className="min-w-[200px]">
+                      <div>
+                        <div className="text-foreground truncate font-medium">
+                          {invoice.jobTitle}
                         </div>
-                        <div className="flex items-center gap-3">
-                          <span
-                            className={`inline-flex rounded-full px-2.5 py-1 text-xs font-medium border ${
-                              invoice.status === "paid"
-                                ? "bg-darkGreen border-green-400 text-green-300"
-                                : invoice.status === "pending"
-                                  ? "bg-darkBlue border-yellow-400 text-yellow-300"
-                                  : "bg-red-900/50 border-red-400 text-red-300"
-                            }`}
-                          >
-                            {invoice.status.toUpperCase()}
-                          </span>
-                          <span className="text-sm font-medium text-white">${totalAmount}</span>
+                        <div className="space-y-2 lg:hidden">
+                          <div className="text-muted-foreground text-sm">
+                            {formatDateStringUTC(invoice.dateIssued as string)}
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge
+                              variant={getStatusVariant(invoice.status)}
+                              className="shrink-0 capitalize"
+                            >
+                              {invoice.status}
+                            </Badge>
+                            <span className="text-foreground text-sm font-medium">
+                              ${totalAmount}
+                            </span>
+                          </div>
                         </div>
                       </div>
-                    </div>
-                  </td>
-                  <td className="hidden px-6 py-4 text-sm text-lightGray md:table-cell">
-                    {formatDateStringUTC(invoice.dateIssued as string)}
-                  </td>
-                  <td className="hidden px-6 py-4 md:table-cell">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-medium border ${
-                        invoice.status === "paid"
-                          ? "bg-darkGreen border-green-400 text-green-300"
-                          : invoice.status === "pending"
-                            ? "bg-darkBlue border-yellow-400 text-yellow-300"
-                            : "bg-red-900/50 border-red-400 text-red-300"
-                      }`}
-                    >
-                      {invoice.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="hidden px-6 py-4 text-sm font-semibold text-white md:table-cell">
-                    ${totalAmount}
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-3">
-                      <Link
-                        href={`/invoices/${invoice._id}`}
-                        className="flex h-9 w-9 items-center justify-center rounded-lg bg-darkBlue border border-borderGreen text-lightGray transition-all duration-200 hover:bg-darkGreen hover:scale-110"
-                        title="Edit Invoice"
+                    </TableCell>
+                    <TableCell className="text-muted-foreground hidden min-w-[140px] text-sm lg:table-cell">
+                      <div className="truncate">
+                        {formatDateStringUTC(invoice.dateIssued as string)}
+                      </div>
+                    </TableCell>
+                    <TableCell className="hidden min-w-[100px] lg:table-cell">
+                      <Badge
+                        variant={getStatusVariant(invoice.status)}
+                        className="capitalize"
                       >
-                        <FaPenSquare className="h-4 w-4" />
-                      </Link>
-                      <div className="hidden md:block">
-                        <DeleteModal
-                          deleteText="Are you sure you want to delete this invoice?"
-                          deleteDesc="This action cannot be undone!"
-                          deletionId={invoice._id.toString()}
-                          deletingValue="invoice"
-                        />
+                        {invoice.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-foreground hidden min-w-[100px] text-sm font-semibold lg:table-cell">
+                      <div>${totalAmount}</div>
+                    </TableCell>
+                    <TableCell className="w-[100px]">
+                      <div className="flex items-center justify-center gap-3">
+                        <Link href={`/invoices/${invoice._id}`}>
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="h-9 w-9 shrink-0"
+                            title="Edit Invoice"
+                          >
+                            <FaPenSquare className="h-4 w-4" />
+                          </Button>
+                        </Link>
+                        <div className="hidden lg:block">
+                          <DeleteModal
+                            deleteText="Are you sure you want to delete this invoice?"
+                            deleteDesc="This action cannot be undone!"
+                            deletionId={invoice._id.toString()}
+                            deletingValue="invoice"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       </div>
-    </div>
+    </Card>
   );
 };
 

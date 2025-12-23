@@ -1,19 +1,46 @@
 "use client";
 import { useState, useEffect } from "react";
 import { useForm, SubmitHandler } from "react-hook-form";
-import { FaTrash, FaPlus, FaTimes, FaFileInvoice, FaBriefcase, FaCalendarCheck, FaMapMarkerAlt, FaStickyNote, FaList, FaDollarSign } from "react-icons/fa";
+import {
+  FaTrash,
+  FaPlus,
+  FaFileInvoice,
+  FaBriefcase,
+  FaMapMarkerAlt,
+  FaStickyNote,
+  FaList,
+  FaDollarSign,
+} from "react-icons/fa";
+import { X, Loader2 } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { calculateDueDate } from "../../app/lib/utils";
 import {
   createInvoice,
-  getMostRecentInvoice,
   getClientInvoicesForAutofill,
 } from "../../app/lib/actions/actions";
 import { ClientType } from "../../app/lib/typeDefinitions";
-import ClientSearchSelect from "./ClientSearchSelect";
+import { ClientCombobox } from "./ClientCombobox";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
 import { toast } from "react-hot-toast";
 import InvoiceSelectionModal from "./InvoiceSelectionModal";
+import { useIsMobile } from "../../app/hooks/use-mobile";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import { DatePicker } from "../ui/date-picker";
+import {
+  Drawer,
+  DrawerClose,
+  DrawerContent,
+  DrawerDescription,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerTrigger,
+} from "../ui/drawer";
+import { cn } from "@/lib/utils";
+import { format } from "date-fns";
 
 interface AddInvoiceProps {
   clients: ClientType[];
@@ -32,7 +59,10 @@ interface InvoiceFormValues {
 
 const AddInvoice = ({ clients }: AddInvoiceProps) => {
   const { user } = useUser();
-  const [items, setItems] = useState([{ description: "", details: "", price: 0 }]);
+  const isMobile = useIsMobile();
+  const [items, setItems] = useState([
+    { description: "", details: "", price: 0 },
+  ]);
   const [open, setOpen] = useState(false);
   const [resetKey, setResetKey] = useState(0);
   const [isAutoFilling, setIsAutoFilling] = useState(false);
@@ -40,6 +70,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
   const [clientInvoices, setClientInvoices] = useState<any[]>([]);
   const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [showInvoiceSelector, setShowInvoiceSelector] = useState(false);
+  const [dateIssuedValue, setDateIssuedValue] = useState<Date | undefined>();
 
   const {
     register,
@@ -92,7 +123,6 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
     setAutoFilledFields([]);
 
     try {
-      // Fetch all invoices for the client
       const invoices = await getClientInvoicesForAutofill(client._id as string);
 
       if (invoices.length > 0) {
@@ -140,6 +170,15 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
     toast.success(`Form auto-filled from invoice ${invoice.invoiceId}`);
   };
 
+  const handleDateIssuedChange = (date: Date | undefined) => {
+    setDateIssuedValue(date);
+    if (date) {
+      const formattedDate = format(date, "yyyy-MM-dd");
+      setValue("dateIssued", formattedDate);
+      clearErrors("dateIssued");
+    }
+  };
+
   const { isProcessing, debouncedSubmit } = useDebounceSubmit({
     onSubmit: async (data: InvoiceFormValues) => {
       const userName = user?.fullName || user?.firstName || "User";
@@ -147,74 +186,11 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
       setOpen(false);
       setResetKey((prev) => prev + 1);
       setItems([{ description: "", details: "", price: 0 }]);
+      setDateIssuedValue(undefined);
       reset();
     },
     successMessage: "Invoice has been successfully added",
   });
-
-  const inputFields = [
-    {
-      name: "jobTitle",
-      type: "text",
-      placeholder: "Enter job title or description",
-      isRequired: true,
-      icon: FaBriefcase,
-      label: "Job Title",
-      description: "Brief description of the work to be performed",
-    },
-    {
-      name: "frequency",
-      type: "number",
-      placeholder: "1",
-      isRequired: true,
-      minLength: 1,
-      maxLength: 1,
-      icon: FaCalendarCheck,
-      label: "Frequency (per year)",
-      description: "How many times per year this job occurs",
-    },
-    {
-      name: "location",
-      type: "text",
-      placeholder: "Job location or property address",
-      isRequired: true,
-      icon: FaMapMarkerAlt,
-      label: "Location",
-      description: "Where the work will be performed",
-    },
-    {
-      name: "dateIssued",
-      type: "date",
-      placeholder: "Date Issued",
-      isRequired: true,
-      icon: FaCalendarCheck,
-      label: "Date Issued",
-      description: "When this invoice is being created",
-    },
-    {
-      name: "dateDue",
-      type: "text",
-      placeholder: "Date Due",
-      isRequired: true,
-      readOnly: true,
-      icon: FaCalendarCheck,
-      label: "Date Due",
-      description: "Automatically calculated based on issue date and frequency",
-    },
-    {
-      name: "notes",
-      type: "textarea",
-      placeholder: "Additional notes, special instructions, or important details...",
-      isRequired: false,
-      icon: FaStickyNote,
-      label: "Additional Notes",
-      description: "Optional notes about this job or invoice",
-    },
-  ];
-
-  const handleSave: SubmitHandler<InvoiceFormValues> = (data) => {
-    debouncedSubmit(data);
-  };
 
   const calculateTotal = () => {
     return items.reduce((total, item) => total + (item.price || 0), 0);
@@ -222,320 +198,421 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
 
   return (
     <>
-      {/* Background Overlay */}
-      <div
-        className={`fixed inset-0 z-40 bg-black/70 backdrop-blur-md transition-all duration-300 ${
-          open ? "opacity-100" : "pointer-events-none opacity-0"
-        }`}
-        onClick={() => setOpen(false)}
-      ></div>
-      
-      {/* Modal Content */}
-      <div
-        className={`fixed right-0 top-0 z-50 flex h-screen w-full max-w-2xl transition-transform duration-300 ease-out ${
-          open ? "translate-x-0" : "translate-x-full"
-        }`}
-      >
-        <div className="flex w-full flex-col bg-white shadow-2xl">
-          {/* Header */}
-          <div className="flex w-full flex-row items-center justify-between bg-linear-to-r from-darkGreen to-green-600 p-4 shadow-lg">
-            <div className="flex items-center gap-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
-                <FaFileInvoice className="h-4 w-4 text-white" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold text-white">Create New Invoice</h2>
-                <p className="text-xs text-green-100">Generate invoice for client services</p>
-              </div>
-            </div>
-            <button
-              onClick={() => setOpen(false)}
-              className="group rounded-lg p-2 text-white hover:bg-white/20 transition-all duration-200 border border-white/20"
-            >
-              <FaTimes className="h-3 w-3 transition-transform group-hover:rotate-90" />
-            </button>
+      {/* Header Section */}
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="bg-primary flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-lg">
+            <FaFileInvoice className="text-primary-foreground h-5 w-5" />
           </div>
-          
-          <form
-            onSubmit={handleSubmit(handleSave)}
-            className="flex-1 overflow-auto bg-gray-50"
+          <div className="min-w-0">
+            <h1 className="text-foreground truncate text-xl font-bold sm:text-2xl">
+              Invoices
+            </h1>
+            <p className="text-muted-foreground text-xs">
+              Create and manage client invoices
+            </p>
+          </div>
+        </div>
+        <Drawer
+          open={open}
+          onOpenChange={setOpen}
+          direction={isMobile ? "bottom" : "right"}
+        >
+          <DrawerTrigger asChild>
+            <Button className="w-full gap-2 sm:w-auto">
+              <FaPlus className="h-3 w-3" />
+              Add Invoice
+            </Button>
+          </DrawerTrigger>
+          <DrawerContent
+            className={cn(
+              isMobile
+                ? "inset-x-0 bottom-0 max-h-[96vh] rounded-t-[10px]"
+                : "top-0 right-0 bottom-0 left-auto mt-0 h-full w-full max-w-2xl rounded-none border-l",
+            )}
           >
-            <div className="space-y-3 p-4">
-              {/* Auto-fill Status */}
-              {isAutoFilling && (
-                <div className="flex items-center justify-center bg-blue-50 p-3 rounded-lg border border-blue-200">
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-400 border-t-transparent"></div>
-                  <span className="ml-2 text-xs font-medium text-blue-700">
-                    Loading client data...
-                  </span>
-                </div>
+            <DrawerHeader
+              className={cn(
+                "bg-primary text-primary-foreground shrink-0",
+                isMobile && "text-center",
               )}
-
-              {/* Client Selection */}
-              <div className="group">
-                <label className="mb-1 block text-xs font-semibold text-gray-800">
-                  Select Client <span className="ml-1 text-red-500">*</span>
-                </label>
-                <p className="mb-2 text-xs text-gray-500 leading-relaxed">
-                  Choose the client for this invoice
-                </p>
-                <ClientSearchSelect
-                  placeholder="Search and select a client..."
-                  data={clients}
-                  onSelect={handleClientSelect}
-                  register={register}
-                  error={errors.clientId}
-                  resetKey={resetKey}
-                />
-              </div>
-
-              {/* Invoice Selection Modal */}
-              <InvoiceSelectionModal
-                invoices={clientInvoices}
-                isOpen={showInvoiceSelector}
-                onClose={() => setShowInvoiceSelector(false)}
-                onSelect={handleInvoiceSelect}
-              />
-
-              {/* Input Fields */}
-              {inputFields.map(
-                ({
-                  name,
-                  type,
-                  placeholder,
-                  isRequired,
-                  minLength,
-                  maxLength,
-                  readOnly,
-                  icon: Icon,
-                  label,
-                  description,
-                }) => (
-                  <div key={name} className="group">
-                    <label className="mb-1 block text-xs font-semibold text-gray-800">
-                      {label}
-                      {isRequired && <span className="ml-1 text-red-500">*</span>}
-                    </label>
-                    {description && (
-                      <p className="mb-2 text-xs text-gray-500 leading-relaxed">{description}</p>
-                    )}
-                    <div className="relative">
-                      <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-darkGreen transition-colors">
-                        <Icon className="h-3 w-3" />
-                      </div>
-                      {type === "textarea" ? (
-                        <textarea
-                          {...register(name as keyof InvoiceFormValues, {
-                            required: isRequired,
-                          })}
-                          placeholder={placeholder}
-                          className={`w-full pl-10 pr-3 py-2 rounded-lg border text-gray-800 placeholder-gray-400 outline-none transition-all duration-200 resize-none h-20 text-sm ${
-                            autoFilledFields.includes(name)
-                              ? "border-green-400 bg-green-50 ring-1 ring-green-100"
-                              : errors[name as keyof InvoiceFormValues]
-                              ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-1 focus:ring-red-200"
-                              : "border-gray-200 bg-white focus:border-darkGreen focus:ring-1 focus:ring-green-100 hover:border-gray-300"
-                          }`}
-                        />
-                      ) : (
-                        <input
-                          {...register(name as keyof InvoiceFormValues, {
-                            required: isRequired,
-                            minLength: minLength,
-                            maxLength: maxLength,
-                          })}
-                          type={type}
-                          placeholder={placeholder}
-                          readOnly={readOnly}
-                          className={`w-full pl-10 pr-3 py-2 rounded-lg border text-gray-800 placeholder-gray-400 outline-none transition-all duration-200 text-sm ${
-                            readOnly ? "bg-gray-100 cursor-not-allowed" : ""
-                          } ${
-                            autoFilledFields.includes(name)
-                              ? "border-green-400 bg-green-50 ring-1 ring-green-100"
-                              : errors[name as keyof InvoiceFormValues]
-                              ? "border-red-300 bg-red-50 focus:border-red-500 focus:ring-1 focus:ring-red-200"
-                              : "border-gray-200 bg-white focus:border-darkGreen focus:ring-1 focus:ring-green-100 hover:border-gray-300"
-                          }`}
-                        />
-                      )}
-                    </div>
-                    {errors[name as keyof InvoiceFormValues] && (
-                      <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                        <div className="h-1 w-1 rounded-full bg-red-500"></div>
-                        {errors[name as keyof InvoiceFormValues]?.type === "required" && `${label} is required`}
-                        {errors[name as keyof InvoiceFormValues]?.type === "minLength" && `${label} must be at least ${minLength} character${minLength !== 1 ? 's' : ''}`}
-                        {errors[name as keyof InvoiceFormValues]?.type === "maxLength" && `${label} cannot exceed ${maxLength} character${maxLength !== 1 ? 's' : ''}`}
-                      </div>
-                    )}
+            >
+              <div
+                className={cn(
+                  "flex items-center",
+                  isMobile ? "flex-col gap-3" : "justify-between",
+                )}
+              >
+                <div
+                  className={cn(
+                    "flex items-center gap-2",
+                    isMobile && "flex-col",
+                  )}
+                >
+                  <div className="bg-primary-foreground/20 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg">
+                    <FaFileInvoice className="h-4 w-4" />
                   </div>
-                ),
-              )}
-
-              {/* Invoice Items Section */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-linear-to-r from-darkBlue to-blue-600">
-                    <FaList className="h-3 w-3 text-white" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-bold text-gray-800">Invoice Items</h3>
-                    <p className="text-xs text-gray-600">Add services and their costs</p>
+                  <div className={isMobile ? "text-center" : ""}>
+                    <DrawerTitle>Create New Invoice</DrawerTitle>
+                    <DrawerDescription className="text-primary-foreground/80">
+                      Generate invoice for client services
+                    </DrawerDescription>
                   </div>
                 </div>
-                
-                {items.map((item, index) => (
-                  <div
-                    key={index}
-                    className={`p-3 rounded-lg border transition-all duration-200 ${
-                      autoFilledFields.includes("items")
-                        ? "border-green-400 bg-green-50 ring-1 ring-green-100"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    }`}
+                <DrawerClose asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="text-primary-foreground hover:bg-primary-foreground/20"
                   >
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 space-y-2">
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <FaList className="h-3 w-3" />
-                          </div>
-                          <input
+                    <X className="h-4 w-4" />
+                  </Button>
+                </DrawerClose>
+              </div>
+            </DrawerHeader>
+            <div className="bg-background flex-1 overflow-y-auto p-4 sm:p-6">
+              <form
+                onSubmit={handleSubmit((data) => debouncedSubmit(data))}
+                className="space-y-4"
+              >
+                {/* Auto-fill Status */}
+                {isAutoFilling && (
+                  <div className="bg-muted border-border flex items-center justify-center rounded-lg border p-3">
+                    <Loader2 className="text-muted-foreground mr-2 h-4 w-4 animate-spin" />
+                    <span className="text-muted-foreground text-xs font-medium">
+                      Loading client data...
+                    </span>
+                  </div>
+                )}
+
+                {/* Client Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="client" className="text-sm font-medium">
+                    Select Client{" "}
+                    <span className="text-destructive ml-1">*</span>
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Choose the client for this invoice
+                  </p>
+                  <ClientCombobox
+                    clients={clients}
+                    onSelect={handleClientSelect}
+                    error={errors.clientId}
+                    resetKey={resetKey}
+                  />
+                  {errors.clientId && (
+                    <p className="text-destructive text-xs">
+                      Client is required
+                    </p>
+                  )}
+                </div>
+
+                {/* Invoice Selection Modal */}
+                <InvoiceSelectionModal
+                  invoices={clientInvoices}
+                  isOpen={showInvoiceSelector}
+                  onClose={() => setShowInvoiceSelector(false)}
+                  onSelect={handleInvoiceSelect}
+                />
+
+                {/* Job Title */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FaBriefcase className="text-muted-foreground h-4 w-4" />
+                    <Label htmlFor="jobTitle" className="text-sm font-medium">
+                      Job Title <span className="text-destructive ml-1">*</span>
+                    </Label>
+                  </div>
+                  <p className="text-muted-foreground ml-6 text-xs">
+                    Brief description of the work to be performed
+                  </p>
+                  <Input
+                    id="jobTitle"
+                    {...register("jobTitle", { required: true })}
+                    placeholder="Enter job title or description"
+                    data-vaul-no-drag
+                    className={cn(
+                      autoFilledFields.includes("jobTitle") &&
+                        "border-primary/50 bg-primary/5",
+                      errors.jobTitle &&
+                        "border-destructive focus-visible:ring-destructive",
+                    )}
+                  />
+                  {errors.jobTitle && (
+                    <p className="text-destructive ml-6 text-xs">
+                      Job Title is required
+                    </p>
+                  )}
+                </div>
+
+                {/* Frequency */}
+                <div className="space-y-2">
+                  <Label htmlFor="frequency" className="text-sm font-medium">
+                    Frequency (per year){" "}
+                    <span className="text-destructive ml-1">*</span>
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    How many times per year this job occurs
+                  </p>
+                  <Input
+                    id="frequency"
+                    {...register("frequency", { required: true, min: 1 })}
+                    type="number"
+                    placeholder="1"
+                    data-vaul-no-drag
+                    className={cn(
+                      autoFilledFields.includes("frequency") &&
+                        "border-primary/50 bg-primary/5",
+                      errors.frequency &&
+                        "border-destructive focus-visible:ring-destructive",
+                    )}
+                  />
+                  {errors.frequency && (
+                    <p className="text-destructive text-xs">
+                      Frequency is required
+                    </p>
+                  )}
+                </div>
+
+                {/* Location */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FaMapMarkerAlt className="text-muted-foreground h-4 w-4" />
+                    <Label htmlFor="location" className="text-sm font-medium">
+                      Location <span className="text-destructive ml-1">*</span>
+                    </Label>
+                  </div>
+                  <p className="text-muted-foreground ml-6 text-xs">
+                    Where the work will be performed
+                  </p>
+                  <Input
+                    id="location"
+                    {...register("location", { required: true })}
+                    placeholder="Job location or property address"
+                    data-vaul-no-drag
+                    className={cn(
+                      autoFilledFields.includes("location") &&
+                        "border-primary/50 bg-primary/5",
+                      errors.location &&
+                        "border-destructive focus-visible:ring-destructive",
+                    )}
+                  />
+                  {errors.location && (
+                    <p className="text-destructive ml-6 text-xs">
+                      Location is required
+                    </p>
+                  )}
+                </div>
+
+                {/* Date Issued */}
+                <div className="space-y-2">
+                  <Label htmlFor="dateIssued" className="text-sm font-medium">
+                    Date Issued <span className="text-destructive ml-1">*</span>
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    When this invoice is being created
+                  </p>
+                  <div data-vaul-no-drag>
+                    <DatePicker
+                      id="dateIssued"
+                      date={dateIssuedValue}
+                      onSelect={handleDateIssuedChange}
+                      placeholder="Select date issued"
+                      className={cn(
+                        errors.dateIssued &&
+                          "border-destructive focus-visible:ring-destructive",
+                      )}
+                    />
+                  </div>
+                  {errors.dateIssued && (
+                    <p className="text-destructive text-xs">
+                      Date Issued is required
+                    </p>
+                  )}
+                </div>
+
+                {/* Date Due (Read-only) */}
+                <div className="space-y-2">
+                  <Label htmlFor="dateDue" className="text-sm font-medium">
+                    Date Due <span className="text-destructive ml-1">*</span>
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    Automatically calculated based on issue date and frequency
+                  </p>
+                  <Input
+                    id="dateDue"
+                    {...register("dateDue", { required: true })}
+                    readOnly
+                    data-vaul-no-drag
+                    className="bg-muted cursor-not-allowed"
+                  />
+                </div>
+
+                {/* Notes */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <FaStickyNote className="text-muted-foreground h-4 w-4" />
+                    <Label htmlFor="notes" className="text-sm font-medium">
+                      Additional Notes
+                    </Label>
+                  </div>
+                  <p className="text-muted-foreground ml-6 text-xs">
+                    Optional notes about this job or invoice
+                  </p>
+                  <Textarea
+                    id="notes"
+                    {...register("notes")}
+                    placeholder="Additional notes, special instructions, or important details..."
+                    data-vaul-no-drag
+                    className={cn(
+                      "min-h-[80px]",
+                      autoFilledFields.includes("notes") &&
+                        "border-primary/50 bg-primary/5",
+                    )}
+                  />
+                </div>
+
+                {/* Invoice Items Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary flex h-6 w-6 shrink-0 items-center justify-center rounded-lg">
+                      <FaList className="text-primary-foreground h-3 w-3" />
+                    </div>
+                    <div>
+                      <h3 className="text-foreground text-sm font-bold">
+                        Invoice Items
+                      </h3>
+                      <p className="text-muted-foreground text-xs">
+                        Add services and their costs
+                      </p>
+                    </div>
+                  </div>
+
+                  {items.map((item, index) => (
+                    <div
+                      key={index}
+                      className={cn(
+                        "border-border rounded-lg border p-3 transition-all",
+                        autoFilledFields.includes("items") &&
+                          "border-primary/50 bg-primary/5",
+                      )}
+                    >
+                      <div className="flex items-start gap-2">
+                        <div className="flex-1 space-y-2">
+                          <Input
                             {...register(`items[${index}].description` as any, {
                               required: "Item description is required",
                               onChange: (e) =>
-                                handleItemChange(index, "description", e.target.value),
+                                handleItemChange(
+                                  index,
+                                  "description",
+                                  e.target.value,
+                                ),
                             })}
                             defaultValue={item.description}
                             placeholder="Service description (e.g., Hood Cleaning, Vent Maintenance)"
-                            className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 outline-none focus:border-darkGreen focus:ring-1 focus:ring-green-100 text-sm"
+                            data-vaul-no-drag
                           />
-                        </div>
-                        <div className="relative">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <FaStickyNote className="h-3 w-3" />
-                          </div>
-                          <input
+                          <Input
                             {...register(`items[${index}].details` as any, {
                               onChange: (e) =>
-                                handleItemChange(index, "details", e.target.value),
+                                handleItemChange(
+                                  index,
+                                  "details",
+                                  e.target.value,
+                                ),
                             })}
                             defaultValue={item.details || ""}
                             placeholder="System details (e.g., 2 hoods 17 filters)"
-                            className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 outline-none focus:border-darkGreen focus:ring-1 focus:ring-green-100 text-sm"
+                            data-vaul-no-drag
                           />
-                        </div>
-                        <div className="relative w-24">
-                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                            <FaDollarSign className="h-3 w-3" />
-                          </div>
-                          <input
+                          <Input
                             {...register(`items[${index}].price` as any, {
                               required: "Price is required",
                               valueAsNumber: true,
                               onChange: (e) =>
-                                handleItemChange(index, "price", parseFloat(e.target.value) || 0),
+                                handleItemChange(
+                                  index,
+                                  "price",
+                                  parseFloat(e.target.value) || 0,
+                                ),
                             })}
                             defaultValue={item.price}
                             placeholder="0.00"
                             type="number"
                             step="0.01"
                             min="0"
-                            className="w-full pl-10 pr-3 py-2 rounded-lg border border-gray-200 bg-white text-gray-800 placeholder-gray-400 outline-none focus:border-darkGreen focus:ring-1 focus:ring-green-100 text-sm"
+                            data-vaul-no-drag
+                            className="w-32"
                           />
                         </div>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => deleteItem(index)}
+                          disabled={items.length === 1}
+                        >
+                          <FaTrash className="h-3 w-3" />
+                        </Button>
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => deleteItem(index)}
-                        disabled={items.length === 1}
-                        className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 border border-red-200 text-red-500 hover:bg-red-100 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <FaTrash className="h-3 w-3" />
-                      </button>
                     </div>
-                  </div>
-                ))}
-                
-                {errors.items && (
-                  <div className="mt-1 flex items-center gap-1 text-xs text-red-600">
-                    <div className="h-1 w-1 rounded-full bg-red-500"></div>
-                    All items require description and price
-                  </div>
-                )}
-                
-                <button
-                  type="button"
-                  onClick={addItem}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-gray-100 border border-dashed border-gray-300 px-3 py-2 font-medium text-gray-600 transition-all duration-200 hover:bg-gray-200 hover:border-gray-400 text-sm"
-                >
-                  <FaPlus className="h-3 w-3" />
-                  Add Another Item
-                </button>
+                  ))}
 
-                {/* Total Display */}
-                {items.length > 0 && items.some(item => item.price > 0) && (
-                  <div className="flex items-center justify-between rounded-lg bg-darkGreen/10 border border-darkGreen/20 p-3">
-                    <span className="font-semibold text-gray-800 text-sm">Total Amount:</span>
-                    <span className="text-lg font-bold text-darkGreen">
-                      ${calculateTotal().toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            {/* Submit Button */}
-            <div className="sticky bottom-0 bg-white border-t border-gray-200 p-4">
-              <button
-                type="submit"
-                disabled={isProcessing}
-                className={`w-full rounded-lg bg-linear-to-r from-darkBlue to-blue-600 py-3 text-white font-bold border border-blue-500/20 transition-all duration-300 shadow-lg text-sm
-                  ${
-                    isProcessing
-                      ? "opacity-70 cursor-not-allowed"
-                      : "hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
-                  }`}
-              >
-                <div className="flex items-center justify-center gap-2">
-                  {isProcessing ? (
-                    <>
-                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/20 border-t-white"></div>
-                      Creating Invoice...
-                    </>
-                  ) : (
-                    <>
-                      <FaFileInvoice className="h-3 w-3" />
-                      Create Invoice
-                    </>
+                  {errors.items && (
+                    <p className="text-destructive text-xs">
+                      All items require description and price
+                    </p>
+                  )}
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full border-dashed"
+                    onClick={addItem}
+                  >
+                    <FaPlus className="mr-2 h-3 w-3" />
+                    Add Another Item
+                  </Button>
+
+                  {/* Total Display */}
+                  {items.length > 0 && items.some((item) => item.price > 0) && (
+                    <div className="bg-primary/10 border-primary/20 flex items-center justify-between rounded-lg border p-3">
+                      <span className="text-foreground text-sm font-semibold">
+                        Total Amount:
+                      </span>
+                      <span className="text-primary text-lg font-bold">
+                        ${calculateTotal().toFixed(2)}
+                      </span>
+                    </div>
                   )}
                 </div>
-              </button>
+              </form>
             </div>
-          </form>
-        </div>
-      </div>
-      
-      {/* Header Section */}
-      <div className="mb-4 flex flex-row items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-linear-to-r from-darkGreen to-green-600 shadow-lg">
-            <FaFileInvoice className="h-5 w-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Invoices</h1>
-            <p className="text-xs text-gray-600">Create and manage client invoices</p>
-          </div>
-        </div>
-        <button
-          onClick={() => setOpen(true)}
-          className="group flex items-center gap-2 rounded-xl bg-linear-to-r from-darkBlue to-blue-600 px-4 py-2 font-semibold text-white shadow-lg border border-blue-500/20 transition-all duration-300 hover:shadow-xl hover:scale-105 active:scale-95"
-        >
-          <FaPlus className="h-3 w-3 transition-transform group-hover:rotate-90" />
-          Add Invoice
-        </button>
+            <DrawerFooter className="bg-background shrink-0 border-t">
+              <Button
+                onClick={handleSubmit((data) => debouncedSubmit(data))}
+                disabled={isProcessing}
+                className="w-full"
+              >
+                {isProcessing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating Invoice...
+                  </>
+                ) : (
+                  <>
+                    <FaFileInvoice className="mr-2 h-3 w-3" />
+                    Create Invoice
+                  </>
+                )}
+              </Button>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
       </div>
     </>
   );
 };
 
 export default AddInvoice;
-

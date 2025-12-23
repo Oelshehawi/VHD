@@ -9,6 +9,19 @@ import { calculateDueDate } from "../../app/lib/utils";
 import { FaArrowCircleRight, FaCreditCard, FaCalendar, FaClock, FaFileInvoice, FaMapMarkerAlt, FaSave, FaTimes } from "react-icons/fa";
 import { InvoiceType, PaymentInfo } from "../../app/lib/typeDefinitions";
 import PaymentModal from "../payments/PaymentModal";
+import { Card, CardContent, CardHeader } from "../ui/card";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
+import { Label } from "../ui/label";
+import { Badge } from "../ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 const InlineEditInvoice = ({
   invoice,
@@ -80,7 +93,7 @@ const InlineEditInvoice = ({
     setIsUpdatingStatus(true);
     try {
       const updateData: any = { status: newStatus };
-      
+
       // Add payment info if provided
       if (paymentInfo && newStatus === "paid") {
         updateData.paymentInfo = {
@@ -174,26 +187,26 @@ const InlineEditInvoice = ({
   const renderField = (field: any) => (
     <div key={field.name} className="space-y-1">
       <div className="flex items-center">
-        <field.icon className="mr-2 h-4 w-4 text-gray-400" />
-        <label className="block text-sm font-medium text-gray-700">
+        <field.icon className="text-muted-foreground mr-2 h-4 w-4" />
+        <Label className="text-sm font-medium">
           {field.label}
-          {field.isRequired && <span className="text-red-500 ml-1">*</span>}
-        </label>
+          {field.isRequired && <span className="text-destructive ml-1">*</span>}
+        </Label>
       </div>
 
       {isEditing ? (
         <div className="ml-6">
           {field.type === "textarea" ? (
-            <textarea
+            <Textarea
               {...register(field.name, { required: field.isRequired })}
               placeholder={field.label}
               defaultValue={invoice[field.name]}
               readOnly={field.readOnly}
               rows={2}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:bg-gray-50 disabled:text-gray-500"
+              disabled={field.readOnly}
             />
           ) : (
-            <input
+            <Input
               {...register(field.name, {
                 required: field.isRequired,
                 minLength: field.minLength as number,
@@ -203,18 +216,18 @@ const InlineEditInvoice = ({
               placeholder={field.label}
               defaultValue={invoice[field.name]}
               readOnly={field.readOnly}
-              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500 disabled:bg-gray-50 disabled:text-gray-500"
+              disabled={field.readOnly}
             />
           )}
           {errors[field.name] && errors[field.name]?.type === "required" && (
-            <p className="mt-1 text-xs text-red-500">
+            <p className="text-destructive mt-1 text-xs">
               {field.label} is required
             </p>
           )}
         </div>
       ) : (
         <div className="ml-6">
-          <div className="rounded-lg bg-gray-50 px-3 py-2 text-sm text-gray-900">
+          <div className="bg-muted text-foreground rounded-lg px-3 py-2 text-sm">
             {field.name === "dateDue" || field.name === "dateIssued" ? (
               formatDateToString(invoice[field.name])
             ) : field.name === "location" ? (
@@ -225,7 +238,7 @@ const InlineEditInvoice = ({
                     href={`https://www.google.com/maps/place/${encodeURI(invoice[field.name])}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="ml-2 text-blue-500 hover:text-blue-700 transition-colors"
+                    className="text-primary hover:text-primary/80 ml-2 transition-colors"
                     title="View on Google Maps"
                   >
                     <FaArrowCircleRight className="h-4 w-4" />
@@ -234,7 +247,7 @@ const InlineEditInvoice = ({
               </div>
             ) : (
               invoice[field.name] || (
-                <span className="text-gray-400 italic">Not provided</span>
+                <span className="text-muted-foreground italic">Not provided</span>
               )
             )}
           </div>
@@ -245,16 +258,16 @@ const InlineEditInvoice = ({
 
   return (
     <>
-      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
-        <div className="border-b border-gray-200 px-4 py-3">
+      <Card>
+        <CardHeader className="border-b">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-100">
-                <FaFileInvoice className="h-4 w-4 text-green-600" />
+              <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                <FaFileInvoice className="text-primary h-4 w-4" />
               </div>
               <div className="ml-3">
-                <h3 className="text-base font-semibold text-gray-900">Invoice Information</h3>
-                <p className="text-xs text-gray-500">
+                <h3 className="text-foreground text-base font-semibold">Invoice Information</h3>
+                <p className="text-muted-foreground text-xs">
                   {isEditing ? "Edit invoice details" : "View invoice information"}
                 </p>
               </div>
@@ -267,87 +280,90 @@ const InlineEditInvoice = ({
               />
             )}
           </div>
-        </div>
+        </CardHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="p-4">
-          {/* Two-column layout */}
-          <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-            <div className="space-y-4">
-              {leftColumnFields.map(renderField)}
-            </div>
-            <div className="space-y-4">
-              {rightColumnFields.map(renderField)}
-            </div>
-          </div>
-
-          {/* Payment Information Section - Only show if invoice is paid */}
-          {invoice.status === "paid" && invoice.paymentInfo && (
-            <div className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3">
-              <h3 className="mb-2 flex items-center text-sm font-semibold text-green-800">
-                <FaCreditCard className="mr-2" />
-                Payment Information
-              </h3>
-              <div className="space-y-2">
-                <div className="flex items-center">
-                  <FaCreditCard className="mr-2 h-3 w-3 text-green-600" />
-                  <span className="text-xs font-medium text-green-700">Payment Method:</span>
-                  <span className="ml-2 inline-flex items-center rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-800">
-                    {getPaymentMethodDisplay(invoice.paymentInfo.method)}
-                  </span>
-                </div>
-                <div className="flex items-center">
-                  <FaCalendar className="mr-2 h-3 w-3 text-green-600" />
-                  <span className="text-xs font-medium text-green-700">Date Paid:</span>
-                  <span className="ml-2 text-xs text-green-800">
-                    {formatDateToString(invoice.paymentInfo.datePaid)}
-                  </span>
-                </div>
-                {paymentDuration && (
-                  <div className="flex items-center">
-                    <FaClock className="mr-2 h-3 w-3 text-green-600" />
-                    <span className="text-xs font-medium text-green-700">Payment Duration:</span>
-                    <span className={`ml-2 text-xs font-semibold ${
-                      paymentDuration.days !== null && paymentDuration.days <= 0 
-                        ? "text-green-700" 
-                        : paymentDuration.days !== null && paymentDuration.days <= 30 
-                        ? "text-blue-700" 
-                        : "text-orange-700"
-                    }`}>
-                      {paymentDuration.text}
-                    </span>
-                  </div>
-                )}
-                {invoice.paymentInfo.notes && (
-                  <div className="rounded-lg bg-white p-2 border border-green-200">
-                    <span className="text-xs font-medium text-green-700">Notes:</span>
-                    <p className="mt-1 text-xs text-green-800">{invoice.paymentInfo.notes}</p>
-                  </div>
-                )}
+        <CardContent className="p-4">
+          <form onSubmit={handleSubmit(onSubmit)}>
+            {/* Two-column layout */}
+            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+              <div className="space-y-4">
+                {leftColumnFields.map(renderField)}
+              </div>
+              <div className="space-y-4">
+                {rightColumnFields.map(renderField)}
               </div>
             </div>
-          )}
 
-          {isEditing && (
-            <div className="mt-4 flex space-x-3 border-t border-gray-200 pt-4">
-              <button
-                type="submit"
-                className="flex-1 inline-flex items-center justify-center rounded-lg bg-green-600 px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-              >
-                <FaSave className="mr-2 h-3 w-3" />
-                Save Changes
-              </button>
-              <button
-                type="button"
-                onClick={toggleEdit}
-                className="flex-1 inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
-              >
-                <FaTimes className="mr-2 h-3 w-3" />
-                Cancel
-              </button>
-            </div>
-          )}
-        </form>
-      </div>
+            {/* Payment Information Section - Only show if invoice is paid */}
+            {invoice.status === "paid" && invoice.paymentInfo && (
+              <div className="bg-primary/10 border-primary/20 mt-4 rounded-lg border p-3">
+                <h3 className="text-primary mb-2 flex items-center text-sm font-semibold">
+                  <FaCreditCard className="mr-2" />
+                  Payment Information
+                </h3>
+                <div className="space-y-2">
+                  <div className="flex items-center">
+                    <FaCreditCard className="text-primary mr-2 h-3 w-3" />
+                    <span className="text-foreground text-xs font-medium">Payment Method:</span>
+                    <Badge variant="secondary" className="ml-2">
+                      {getPaymentMethodDisplay(invoice.paymentInfo.method)}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center">
+                    <FaCalendar className="text-primary mr-2 h-3 w-3" />
+                    <span className="text-foreground text-xs font-medium">Date Paid:</span>
+                    <span className="text-foreground ml-2 text-xs">
+                      {formatDateToString(invoice.paymentInfo.datePaid)}
+                    </span>
+                  </div>
+                  {paymentDuration && (
+                    <div className="flex items-center">
+                      <FaClock className="text-primary mr-2 h-3 w-3" />
+                      <span className="text-foreground text-xs font-medium">Payment Duration:</span>
+                      <span className={`ml-2 text-xs font-semibold ${
+                        paymentDuration.days !== null && paymentDuration.days <= 0
+                          ? "text-primary"
+                          : paymentDuration.days !== null && paymentDuration.days <= 30
+                          ? "text-blue-700"
+                          : "text-orange-700"
+                      }`}>
+                        {paymentDuration.text}
+                      </span>
+                    </div>
+                  )}
+                  {invoice.paymentInfo.notes && (
+                    <div className="bg-background border-border rounded-lg border p-2">
+                      <span className="text-foreground text-xs font-medium">Notes:</span>
+                      <p className="text-muted-foreground mt-1 text-xs">{invoice.paymentInfo.notes}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {isEditing && (
+              <div className="border-border mt-4 flex space-x-3 border-t pt-4">
+                <Button
+                  type="submit"
+                  className="flex-1"
+                >
+                  <FaSave className="mr-2 h-3 w-3" />
+                  Save Changes
+                </Button>
+                <Button
+                  type="button"
+                  onClick={toggleEdit}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <FaTimes className="mr-2 h-3 w-3" />
+                  Cancel
+                </Button>
+              </div>
+            )}
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Payment Modal */}
       <PaymentModal
@@ -360,53 +376,50 @@ const InlineEditInvoice = ({
   );
 };
 
-const InvoiceStatusUpdate = ({ 
-  onStatusChange, 
-  invoiceStatus, 
-  isLoading 
-}: { 
-  onStatusChange: (status: string) => void, 
-  invoiceStatus: string, 
-  isLoading?: boolean 
+const InvoiceStatusUpdate = ({
+  onStatusChange,
+  invoiceStatus,
+  isLoading
+}: {
+  onStatusChange: (status: string) => void,
+  invoiceStatus: string,
+  isLoading?: boolean
 }) => {
   const { register, setValue } = useForm();
   const [status, setStatus] = useState(invoiceStatus);
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+  const handleChange = (value: string) => {
     if (isLoading) return;
-    
-    const selectedStatus = e.target.value;
-    setStatus(selectedStatus);
-    setValue("status", selectedStatus);
-    onStatusChange(selectedStatus);
+
+    setStatus(value);
+    setValue("status", value);
+    onStatusChange(value);
   };
 
-  const getStatusStyles = (status: string) => {
+  const getStatusVariant = (status: string) => {
     switch (status) {
       case "paid":
-        return "bg-green-100 text-green-800 ring-green-600/20";
+        return "default";
       case "overdue":
-        return "bg-red-100 text-red-800 ring-red-600/20";
+        return "destructive";
       default:
-        return "bg-yellow-100 text-yellow-800 ring-yellow-600/20";
+        return "secondary";
     }
   };
 
   return (
-    <form className="flex items-center">
-      <select
-        id="status"
-        {...register("status")}
-        onChange={handleChange}
-        disabled={isLoading}
-        className={`rounded-lg border-0 px-3 py-2 text-xs font-medium ring-1 ring-inset transition-colors hover:cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed ${getStatusStyles(status)}`}
-        defaultValue={invoiceStatus}
-      >
-        <option value="paid">Paid</option>
-        <option value="overdue">Overdue</option>
-        <option value="pending">Pending</option>
-      </select>
-    </form>
+    <Select value={status} onValueChange={handleChange} disabled={isLoading}>
+      <SelectTrigger className="w-32">
+        <Badge variant={getStatusVariant(status)} className="capitalize">
+          <SelectValue />
+        </Badge>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="paid">Paid</SelectItem>
+        <SelectItem value="overdue">Overdue</SelectItem>
+        <SelectItem value="pending">Pending</SelectItem>
+      </SelectContent>
+    </Select>
   );
 };
 
