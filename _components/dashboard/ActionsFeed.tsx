@@ -215,7 +215,7 @@ export default function ActionsFeed({
   }, [recentActions, selectedCategory]);
 
   return (
-    <Card className="flex h-full max-h-[calc(100vh-120px)] min-h-0 flex-col overflow-hidden shadow-sm">
+    <Card className="flex h-full max-h-[calc(100vh-120px)] min-h-0 flex-col gap-0 overflow-hidden py-0 shadow-sm">
       <CardHeader className="bg-muted/40 shrink-0 border-b p-3 pb-3 sm:p-4 sm:pb-4 lg:p-6 lg:pb-4">
         {/* Title Section - Compact on mobile */}
         <div className="mb-3 sm:mb-4">
@@ -242,7 +242,7 @@ export default function ActionsFeed({
           </div>
 
           {/* Category and Date Picker - Side by side on tablet+, stacked on mobile */}
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:gap-2 lg:gap-3">
+          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:gap-2 lg:gap-3">
             <Select
               value={selectedCategory}
               onValueChange={setSelectedCategory}

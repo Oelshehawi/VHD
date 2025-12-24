@@ -1,7 +1,11 @@
 "use client";
 
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
-import { calculateSubtotal, calculateGST, getEmailForPurpose } from "../../app/lib/utils";
+import {
+  calculateSubtotal,
+  calculateGST,
+  getEmailForPurpose,
+} from "../../app/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -111,14 +115,16 @@ export default function InvoiceConfirmationModal({
           {/* Confirmation Message */}
           <div className="bg-muted border-border rounded-lg border p-4">
             <p className="text-foreground text-sm">
-              This will send the invoice to <span className="font-semibold">{client.clientName}</span> at{" "}
-              <span className="font-semibold">{clientEmail}</span> and create an audit log entry.
+              This will send the invoice to{" "}
+              <span className="font-semibold">{client.clientName}</span> at{" "}
+              <span className="font-semibold">{clientEmail}</span> and create an
+              audit log entry.
             </p>
           </div>
         </div>
 
         {/* Footer */}
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2">
           <Button
             onClick={onCancel}
             disabled={isLoading}
@@ -127,11 +133,7 @@ export default function InvoiceConfirmationModal({
           >
             Cancel
           </Button>
-          <Button
-            onClick={onConfirm}
-            disabled={isLoading}
-            type="button"
-          >
+          <Button onClick={onConfirm} disabled={isLoading} type="button">
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

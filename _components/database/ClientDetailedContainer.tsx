@@ -1,12 +1,10 @@
 "use client";
 import { useState } from "react";
-import { FaPenSquare } from "react-icons/fa";
 import TransactionHistory from "./TransactionHistory";
 import InlineEditClient from "./EditClientModal";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import ClientPortalAccess from "../client-portal/ClientPortalAccess";
 import { Card, CardContent } from "../ui/card";
-import { Button } from "../ui/button";
 import { User } from "lucide-react";
 
 const ClientDetailedContainer = ({
@@ -24,7 +22,7 @@ const ClientDetailedContainer = ({
   return (
     <div className="space-y-6">
       {/* Action Bar */}
-      <Card>
+      <Card className="">
         <CardContent className="flex items-center justify-between p-6">
           <div className="flex items-center space-x-4">
             <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-lg">
@@ -39,19 +37,10 @@ const ClientDetailedContainer = ({
               </p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <ClientPortalAccess
-              clientId={client._id as string}
-              clientName={client.clientName}
-            />
-            <Button
-              onClick={toggleEdit}
-              variant={isEditing ? "outline" : "default"}
-            >
-              <FaPenSquare className="mr-2 h-4 w-4" />
-              {isEditing ? "Cancel Edit" : "Edit Client"}
-            </Button>
-          </div>
+          <ClientPortalAccess
+            clientId={client._id as string}
+            clientName={client.clientName}
+          />
         </CardContent>
       </Card>
 

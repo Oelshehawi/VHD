@@ -3,7 +3,14 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
 import { updateInvoice } from "../../app/lib/actions/actions";
-import { FaPen, FaPlus, FaTrash, FaCalculator, FaSave, FaTimes } from "react-icons/fa";
+import {
+  FaPen,
+  FaPlus,
+  FaTrash,
+  FaCalculator,
+  FaSave,
+  FaTimes,
+} from "react-icons/fa";
 import { Card, CardContent, CardHeader } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -43,7 +50,10 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
   };
 
   const calculateSubtotal = (items: any) => {
-    return items.reduce((acc: number, item: { price: number }) => acc + Number(item.price), 0);
+    return items.reduce(
+      (acc: number, item: { price: number }) => acc + Number(item.price),
+      0,
+    );
   };
 
   const calculateGST = (subtotal: number) => {
@@ -61,7 +71,7 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
   const total = calculateTotal(items);
 
   return (
-    <Card>
+    <Card >
       <CardHeader className="border-b">
         <div className="flex items-center justify-between">
           <div className="flex items-center">
@@ -69,18 +79,17 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
               <FaCalculator className="text-primary h-5 w-5" />
             </div>
             <div className="ml-3">
-              <h3 className="text-foreground text-lg font-semibold">Price Breakdown</h3>
+              <h3 className="text-foreground text-lg font-semibold">
+                Price Breakdown
+              </h3>
               <p className="text-muted-foreground text-sm">
-                {items.length} {items.length === 1 ? 'item' : 'items'}
+                {items.length} {items.length === 1 ? "item" : "items"}
               </p>
             </div>
           </div>
-          <Button
-            onClick={toggleEdit}
-            size="sm"
-          >
+          <Button onClick={toggleEdit} size="sm">
             <FaPen className="mr-2 h-4 w-4" />
-            {isEditingAmount ? 'Cancel' : 'Edit'}
+            {isEditingAmount ? "Cancel" : "Edit"}
           </Button>
         </div>
       </CardHeader>
@@ -93,14 +102,19 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
               <div
                 key={index}
                 className={`rounded-lg border p-4 transition-all duration-200 ${
-                  isEditingAmount ? 'bg-muted border-border' : 'bg-muted/50 border-border'
+                  isEditingAmount
+                    ? "bg-muted border-border"
+                    : "bg-muted/50 border-border"
                 }`}
               >
                 {isEditingAmount ? (
                   <div className="space-y-3">
                     <div className="flex items-center space-x-3">
                       <div className="flex-1">
-                        <Label htmlFor={`description-${index}`} className="text-xs">
+                        <Label
+                          htmlFor={`description-${index}`}
+                          className="text-xs"
+                        >
                           Description
                         </Label>
                         <Input
@@ -132,7 +146,11 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
                         variant="destructive"
                         size="icon"
                         className="mt-6"
-                        title={items.length <= 1 ? "Cannot delete the last item" : "Delete item"}
+                        title={
+                          items.length <= 1
+                            ? "Cannot delete the last item"
+                            : "Delete item"
+                        }
                       >
                         <FaTrash className="h-4 w-4" />
                       </Button>
@@ -153,7 +171,9 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
                 ) : (
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <span className="text-foreground font-medium">{item.description}</span>
+                      <span className="text-foreground font-medium">
+                        {item.description}
+                      </span>
                       {item.details && (
                         <div className="text-muted-foreground mt-1 text-sm">
                           {item.details}
@@ -201,10 +221,7 @@ const PriceBreakdown = ({ invoice }: { invoice: any }) => {
           {/* Action Buttons (Edit Mode Only) */}
           {isEditingAmount && (
             <div className="flex space-x-3 pt-4">
-              <Button
-                type="submit"
-                className="flex-1"
-              >
+              <Button type="submit" className="flex-1">
                 <FaSave className="mr-2 h-4 w-4" />
                 Save Changes
               </Button>

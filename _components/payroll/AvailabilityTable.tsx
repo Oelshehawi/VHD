@@ -7,11 +7,8 @@ import { format } from "date-fns";
 import { formatTimeRange12hr } from "../../app/lib/utils/timeFormatUtils";
 import DeleteModal from "../DeleteModal";
 import toast from "react-hot-toast";
-import {
-  TrashIcon,
-  CalendarIcon,
-  ArrowPathIcon,
-} from "@heroicons/react/24/outline";
+import { Trash2, Calendar, RefreshCw } from "lucide-react";
+import { Button } from "../ui/button";
 
 interface AvailabilityTableProps {
   availability: AvailabilityType[];
@@ -33,42 +30,22 @@ export function AvailabilityTable({
   technicians = {},
 }: AvailabilityTableProps) {
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedForDeletion, setSelectedForDeletion] = useState<AvailabilityType | null>(null);
+  const [selectedForDeletion, setSelectedForDeletion] =
+    useState<AvailabilityType | null>(null);
 
   const handleDeleteClick = (entry: AvailabilityType) => {
     setSelectedForDeletion(entry);
     setDeleteModalOpen(true);
   };
 
-  const handleConfirmDelete = async () => {
-    if (!selectedForDeletion?._id) return;
-
-    setLoading(true);
-    setError("");
-
-    try {
-      const result = await deleteAvailability(selectedForDeletion._id as string);
-      if (!result.success) {
-        toast.error(result.message || "Failed to delete availability");
-      } else {
-        toast.success("Availability deleted successfully");
-        setDeleteModalOpen(false);
-        setSelectedForDeletion(null);
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete availability");
-    } finally {
-      setLoading(false);
-    }
-  };
-
   if (availability.length === 0) {
     return (
-      <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-        <CalendarIcon className="h-12 w-12 text-gray-400 mx-auto mb-3" />
-        <p className="text-gray-500 font-medium">No availability entries yet</p>
+      <div className="bg-muted/50 rounded-lg border py-12 text-center">
+        <Calendar className="text-muted-foreground mx-auto mb-3 h-12 w-12" />
+        <p className="text-muted-foreground font-medium">
+          No availability entries yet
+        </p>
       </div>
     );
   }
@@ -83,33 +60,44 @@ export function AvailabilityTable({
         {/* Recurring Entries */}
         {recurringEntries.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <ArrowPathIcon className="h-4 w-4 text-indigo-600" />
-              <h3 className="text-sm font-semibold text-gray-800">Recurring</h3>
-              <span className="text-xs font-medium text-gray-600">({recurringEntries.length})</span>
+            <div className="mb-3 flex items-center gap-2">
+              <RefreshCw className="text-primary h-4 w-4" />
+              <h3 className="text-foreground text-sm font-semibold">
+                Recurring
+              </h3>
+              <span className="text-muted-foreground text-xs font-medium">
+                ({recurringEntries.length})
+              </span>
             </div>
             <div className="space-y-1.5">
               {recurringEntries.map((entry) => (
                 <div
                   key={entry._id?.toString() || ""}
-                  className="bg-indigo-50 border border-indigo-200 rounded p-2 hover:shadow-sm transition-shadow flex items-center justify-between gap-2"
+                  className="bg-primary/5 border-primary/20 flex items-center justify-between gap-2 rounded border p-2 transition-shadow hover:shadow-sm"
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-700">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-foreground text-xs font-semibold">
                       {technicians[entry.technicianId] || entry.technicianId}
                     </p>
-                    <p className="text-xs text-gray-600 mt-0.5">
-                      {DAYS_OF_WEEK[entry.dayOfWeek || 0]} • {entry.isFullDay ? "All day" : formatTimeRange12hr(entry.startTime || "00:00", entry.endTime || "23:59")}
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {DAYS_OF_WEEK[entry.dayOfWeek || 0]} •{" "}
+                      {entry.isFullDay
+                        ? "All day"
+                        : formatTimeRange12hr(
+                            entry.startTime || "00:00",
+                            entry.endTime || "23:59",
+                          )}
                     </p>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleDeleteClick(entry)}
                     disabled={loading}
-                    className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                    title="Delete"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                   >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -119,33 +107,49 @@ export function AvailabilityTable({
         {/* One-Time Entries */}
         {oneTimeEntries.length > 0 && (
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <CalendarIcon className="h-4 w-4 text-orange-600" />
-              <h3 className="text-sm font-semibold text-gray-800">One-Time</h3>
-              <span className="text-xs font-medium text-gray-600">({oneTimeEntries.length})</span>
+            <div className="mb-3 flex items-center gap-2">
+              <Calendar className="text-warning h-4 w-4" />
+              <h3 className="text-foreground text-sm font-semibold">
+                One-Time
+              </h3>
+              <span className="text-muted-foreground text-xs font-medium">
+                ({oneTimeEntries.length})
+              </span>
             </div>
             <div className="space-y-1.5">
               {oneTimeEntries.map((entry) => (
                 <div
                   key={entry._id?.toString() || ""}
-                  className="bg-orange-50 border border-orange-200 rounded p-2 hover:shadow-sm transition-shadow flex items-center justify-between gap-2"
+                  className="bg-warning/5 border-warning/20 flex items-center justify-between gap-2 rounded border p-2 transition-shadow hover:shadow-sm"
                 >
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-semibold text-gray-700">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-foreground text-xs font-semibold">
                       {technicians[entry.technicianId] || entry.technicianId}
                     </p>
-                    <p className="text-xs text-gray-600 mt-0.5">
-                      {entry.specificDate && format(new Date(entry.specificDate), "MMM d, yyyy")} • {entry.isFullDay ? "All day" : formatTimeRange12hr(entry.startTime || "00:00", entry.endTime || "23:59")}
+                    <p className="text-muted-foreground mt-0.5 text-xs">
+                      {entry.specificDate &&
+                        format(
+                          new Date(entry.specificDate),
+                          "MMM d, yyyy",
+                        )}{" "}
+                      •{" "}
+                      {entry.isFullDay
+                        ? "All day"
+                        : formatTimeRange12hr(
+                            entry.startTime || "00:00",
+                            entry.endTime || "23:59",
+                          )}
                     </p>
                   </div>
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={() => handleDeleteClick(entry)}
                     disabled={loading}
-                    className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                    title="Delete"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 w-8"
                   >
-                    <TrashIcon className="h-4 w-4" />
-                  </button>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
             </div>
@@ -161,7 +165,10 @@ export function AvailabilityTable({
         }}
         deleteText="Delete Availability Entry"
         deleteDesc={`Are you sure you want to delete this availability entry for ${
-          selectedForDeletion ? technicians[selectedForDeletion.technicianId] || selectedForDeletion.technicianId : ""
+          selectedForDeletion
+            ? technicians[selectedForDeletion.technicianId] ||
+              selectedForDeletion.technicianId
+            : ""
         }? This action cannot be undone.`}
         deletionId={selectedForDeletion?._id?.toString() || ""}
         deletingValue="availability"

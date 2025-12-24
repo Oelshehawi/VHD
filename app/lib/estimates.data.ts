@@ -80,12 +80,36 @@ export async function fetchFilteredEstimates(
     if (dateFrom || dateTo) {
       matchQuery.createdDate = {};
       if (dateFrom) {
-        // Convert YYYY-MM-DD to start of day UTC
-        matchQuery.createdDate.$gte = new Date(dateFrom + "T00:00:00.000Z");
+        // Handle both ISO strings and YYYY-MM-DD format
+        let fromDate: Date;
+        if (dateFrom.includes('T')) {
+          // Already an ISO string
+          fromDate = new Date(dateFrom);
+        } else {
+          // YYYY-MM-DD format, convert to start of day UTC
+          fromDate = new Date(dateFrom + "T00:00:00.000Z");
+        }
+        // Validate date before using
+        if (!isNaN(fromDate.getTime())) {
+          matchQuery.createdDate.$gte = fromDate;
+        }
       }
       if (dateTo) {
-        // Convert YYYY-MM-DD to end of day UTC
-        matchQuery.createdDate.$lte = new Date(dateTo + "T23:59:59.999Z");
+        // Handle both ISO strings and YYYY-MM-DD format
+        let toDate: Date;
+        if (dateTo.includes('T')) {
+          // Already an ISO string, set to end of day
+          const date = new Date(dateTo);
+          date.setHours(23, 59, 59, 999);
+          toDate = date;
+        } else {
+          // YYYY-MM-DD format, convert to end of day UTC
+          toDate = new Date(dateTo + "T23:59:59.999Z");
+        }
+        // Validate date before using
+        if (!isNaN(toDate.getTime())) {
+          matchQuery.createdDate.$lte = toDate;
+        }
       }
     }
 
@@ -147,12 +171,36 @@ export async function fetchEstimatesPages(
     if (dateFrom || dateTo) {
       matchQuery.createdDate = {};
       if (dateFrom) {
-        // Convert YYYY-MM-DD to start of day UTC
-        matchQuery.createdDate.$gte = new Date(dateFrom + "T00:00:00.000Z");
+        // Handle both ISO strings and YYYY-MM-DD format
+        let fromDate: Date;
+        if (dateFrom.includes('T')) {
+          // Already an ISO string
+          fromDate = new Date(dateFrom);
+        } else {
+          // YYYY-MM-DD format, convert to start of day UTC
+          fromDate = new Date(dateFrom + "T00:00:00.000Z");
+        }
+        // Validate date before using
+        if (!isNaN(fromDate.getTime())) {
+          matchQuery.createdDate.$gte = fromDate;
+        }
       }
       if (dateTo) {
-        // Convert YYYY-MM-DD to end of day UTC
-        matchQuery.createdDate.$lte = new Date(dateTo + "T23:59:59.999Z");
+        // Handle both ISO strings and YYYY-MM-DD format
+        let toDate: Date;
+        if (dateTo.includes('T')) {
+          // Already an ISO string, set to end of day
+          const date = new Date(dateTo);
+          date.setHours(23, 59, 59, 999);
+          toDate = date;
+        } else {
+          // YYYY-MM-DD format, convert to end of day UTC
+          toDate = new Date(dateTo + "T23:59:59.999Z");
+        }
+        // Validate date before using
+        if (!isNaN(toDate.getTime())) {
+          matchQuery.createdDate.$lte = toDate;
+        }
       }
     }
 

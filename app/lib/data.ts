@@ -1,6 +1,6 @@
 import connectMongo from "./connect";
 import { Client, Invoice, Availability, TimeOffRequest } from "../../models/reactDataSchema";
-import { formatPhoneNumber } from "./utils";
+import { formatPhoneNumber, escapeRegex } from "./utils";
 import { ClientType, Holiday, HolidayResponse, OBSERVANCES, InvoiceType, AvailabilityType, TimeOffRequestType } from "./typeDefinitions";
 
 export const fetchAllClients = async () => {
@@ -180,12 +180,13 @@ export async function fetchFilteredClients(
   sort: 1 | -1,
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const escapedQuery = escapeRegex(query);
   let matchQuery = {
     $or: [
-      { clientName: { $regex: query, $options: "i" } },
-      { email: { $regex: query, $options: "i" } },
-      { phoneNumber: { $regex: query, $options: "i" } },
-      { notes: { $regex: query, $options: "i" } },
+      { clientName: { $regex: escapedQuery, $options: "i" } },
+      { email: { $regex: escapedQuery, $options: "i" } },
+      { phoneNumber: { $regex: escapedQuery, $options: "i" } },
+      { notes: { $regex: escapedQuery, $options: "i" } },
     ],
   };
 
@@ -210,12 +211,13 @@ export async function fetchFilteredClients(
 export async function fetchClientsPages(query: string) {
   await connectMongo();
   try {
+    const escapedQuery = escapeRegex(query);
     const matchQuery = {
       $or: [
-        { clientName: { $regex: query, $options: "i" } },
-        { email: { $regex: query, $options: "i" } },
-        { phoneNumber: { $regex: query, $options: "i" } },
-        { notes: { $regex: query, $options: "i" } },
+        { clientName: { $regex: escapedQuery, $options: "i" } },
+        { email: { $regex: escapedQuery, $options: "i" } },
+        { phoneNumber: { $regex: escapedQuery, $options: "i" } },
+        { notes: { $regex: escapedQuery, $options: "i" } },
       ],
     };
 
@@ -242,11 +244,12 @@ export async function fetchFilteredInvoices(
 ) {
   await connectMongo();
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
+  const escapedQuery = escapeRegex(query);
 
   let matchQuery: any = {
     $or: [
-      { invoiceId: { $regex: query, $options: "i" } },
-      { jobTitle: { $regex: query, $options: "i" } },
+      { invoiceId: { $regex: escapedQuery, $options: "i" } },
+      { jobTitle: { $regex: escapedQuery, $options: "i" } },
     ],
   };
 
@@ -285,10 +288,11 @@ export async function fetchInvoicesPages(
 ) {
   await connectMongo();
   try {
+    const escapedQuery = escapeRegex(query);
     let matchQuery: any = {
       $or: [
-        { invoiceId: { $regex: query, $options: "i" } },
-        { jobTitle: { $regex: query, $options: "i" } },
+        { invoiceId: { $regex: escapedQuery, $options: "i" } },
+        { jobTitle: { $regex: escapedQuery, $options: "i" } },
       ],
     };
 

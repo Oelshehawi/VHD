@@ -1,12 +1,46 @@
 "use client";
 import { useState } from "react";
-import { FaChevronRight, FaFileInvoice, FaUser, FaCalculator, FaPenSquare } from "react-icons/fa";
-import Link from "next/link";
-import InlineEditEstimate from "./InlineEditEstimate";
-import GeneratePDF from "../pdf/GeneratePDF";
+import dynamic from "next/dynamic";
+import {
+  FaFileInvoice,
+  FaPenSquare,
+  FaUser,
+  FaCalendar,
+  FaDollarSign,
+  FaUserPlus,
+  FaClipboardList,
+  FaStickyNote,
+} from "react-icons/fa";
 import { type EstimateData } from "../pdf/EstimatePdfDocument";
 import { EstimateType, ClientType } from "../../app/lib/typeDefinitions";
 import { formatDateStringUTC } from "../../app/lib/utils";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "../ui/card";
+import { Badge } from "../ui/badge";
+import { Button } from "../ui/button";
+import { SetBreadcrumbName } from "../layout/SetBreadcrumbName";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { Separator } from "../ui/separator";
+import EditEstimateDetailsDialog from "./EditEstimateDetailsDialog";
+import EditItemsTotalsDialog from "./EditItemsTotalsDialog";
+import ConvertToClientInvoiceDialog from "./ConvertToClientInvoiceDialog";
+
+// Dynamically import GeneratePDF with SSR disabled to avoid PDF rendering issues
+const GeneratePDF = dynamic(() => import("../pdf/GeneratePDF"), {
+  ssr: false,
+});
 
 interface EstimateDetailsContainerProps {
   estimate: EstimateType;
@@ -21,21 +55,24 @@ const EstimateDetailsContainer = ({
   canManage,
   estimateId,
 }: EstimateDetailsContainerProps) => {
-  const [isEditing, setIsEditing] = useState(false);
-
-  const toggleEdit = () => {
-    setIsEditing(!isEditing);
-  };
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
+  const [isItemsDialogOpen, setIsItemsDialogOpen] = useState(false);
+  const [isConvertDialogOpen, setIsConvertDialogOpen] = useState(false);
 
   // Calculate totals from items with proper rounding
-  const subtotal = Math.round(estimate.items.reduce((sum, item) => sum + item.price, 0) * 100) / 100;
+  const subtotal =
+    Math.round(
+      estimate.items.reduce((sum, item) => sum + item.price, 0) * 100,
+    ) / 100;
   const gst = Math.round(subtotal * 0.05 * 100) / 100; // 5% GST
   const total = Math.round((subtotal + gst) * 100) / 100;
 
-  // Get client name
+  // Get client name from prospect info
   const clientName = estimate.prospectInfo?.businessName || "Unknown Client";
 
   // Prepare estimate data for PDF generation
+  // Use a unique key to force PDF regeneration when estimate changes
+  const pdfKey = `${estimate._id}-${estimate.prospectInfo?.businessName}-${estimate.items.length}-${total}`;
   const estimateData: EstimateData = {
     estimateNumber: estimate.estimateNumber,
     createdDate: new Date(estimate.createdDate).toLocaleDateString(),
@@ -53,33 +90,50 @@ const EstimateDetailsContainer = ({
     subtotal,
     gst,
     total,
-    services: estimate.services && estimate.services.length > 0
-      ? estimate.services
-      : [
-          "Hood from inside and outside",
-          "All filters",
-          "Access panels to duct work (accessible area only)",
-          "Rooftop fan (If safe access)",
-          "Fire wall behind equipment",
-          "ASTTBC Sticker",
-          "Fire Dept Report",
-          "Before/After pictures",
-        ],
+    services:
+      estimate.services && estimate.services.length > 0
+        ? estimate.services
+        : [
+            "Hood from inside and outside",
+            "All filters",
+            "Access panels to duct work (accessible area only)",
+            "Rooftop fan (If safe access)",
+            "Fire wall behind equipment",
+            "ASTTBC Sticker",
+            "Fire Dept Report",
+            "Before/After pictures",
+          ],
     terms: estimate.terms,
   };
 
-  // Status styling helper
-  const getStatusStyles = (status: string) => {
+  // Status badge variant helper
+  const getStatusVariant = (
+    status: string,
+  ): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
       case "approved":
-        return "bg-green-100 text-green-800 ring-green-600/20";
+        return "default";
       case "rejected":
-        return "bg-red-100 text-red-800 ring-red-600/20";
+        return "destructive";
       case "sent":
-        return "bg-yellow-100 text-yellow-800 ring-yellow-600/20";
+        return "secondary";
       case "draft":
       default:
-        return "bg-gray-100 text-gray-800 ring-gray-600/20";
+        return "outline";
+    }
+  };
+
+  const getStatusBadgeClassName = (status: string): string => {
+    switch (status) {
+      case "approved":
+        return "bg-green-500/10 text-green-700 dark:text-green-300 border-green-200";
+      case "rejected":
+        return "";
+      case "sent":
+        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-200";
+      case "draft":
+      default:
+        return "";
     }
   };
 
@@ -97,114 +151,342 @@ const EstimateDetailsContainer = ({
     }
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-      <div className="mx-auto max-w-7xl h-full">
-        {/* Header Section */}
-        <div className="bg-white shadow-sm border-b border-gray-200 rounded-t-xl">
-          <div className="px-4 sm:px-6 lg:px-8">
-            {/* Breadcrumb Navigation */}
-            <nav className="flex items-center space-x-2 py-3 text-sm" aria-label="Breadcrumb">
-              <Link 
-                href="/estimates" 
-                className="flex items-center text-gray-500 hover:text-gray-700 transition-colors duration-200"
-              >
-                <FaCalculator className="mr-1 h-4 w-4" />
-                Estimates
-              </Link>
-              <FaChevronRight className="h-3 w-3 text-gray-400" />
-              <span className="flex items-center text-gray-500">
-                <FaUser className="mr-1 h-4 w-4" />
-                {estimate.prospectInfo?.businessName || "Prospect"}
-              </span>
-              <FaChevronRight className="h-3 w-3 text-gray-400" />
-              <span className="flex items-center font-medium text-gray-900">
-                <FaFileInvoice className="mr-1 h-4 w-4" />
-                {estimate.estimateNumber}
-              </span>
-            </nav>
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-CA", {
+      style: "currency",
+      currency: "CAD",
+    }).format(amount);
+  };
 
-            {/* Page Header */}
-            <div className="pb-4 pt-2">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center">
-                    <h1 className="text-xl font-bold leading-7 text-gray-900 sm:truncate sm:text-2xl">
+  // Check if conversion is available
+  const canConvert =
+    estimate.status === "approved" && !estimate.convertedToInvoice;
+
+  return (
+    <>
+      <SetBreadcrumbName name={`Estimate ${estimate.estimateNumber}`} />
+      <div className="bg-background min-h-screen p-4 sm:p-6 lg:p-8">
+        <div className="mx-auto max-w-7xl">
+          {/* Header Card */}
+          <Card className="mb-6">
+            <CardHeader>
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3">
+                    <CardTitle className="text-xl sm:text-2xl">
                       Estimate {estimate.estimateNumber}
-                    </h1>
-                    <span className={`ml-3 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ring-1 ring-inset ${getStatusStyles(estimate.status)}`}>
+                    </CardTitle>
+                    <Badge
+                      variant={getStatusVariant(estimate.status)}
+                      className={getStatusBadgeClassName(estimate.status)}
+                    >
                       {getStatusText(estimate.status)}
+                    </Badge>
+                  </div>
+                  <CardDescription className="flex flex-col gap-1 sm:flex-row sm:gap-4">
+                    <span className="flex items-center gap-2">
+                      <FaUser className="h-3 w-3" />
+                      {estimate.prospectInfo?.businessName || "N/A"}
                     </span>
-                  </div>
-                  <div className="mt-1 flex flex-col sm:mt-0 sm:flex-row sm:flex-wrap sm:space-x-6">
-                    <div className="mt-2 flex items-center text-sm text-gray-500">
-                      <span className="font-medium">Business:</span>
-                      <span className="ml-1 truncate">{estimate.prospectInfo?.businessName || "N/A"}</span>
-                    </div>
-                    <div className="mt-2 flex items-center text-sm text-gray-500">
-                      <span className="font-medium">Type:</span>
-                      <span className="ml-1 text-gray-500">
-                        {estimate.clientId ? "Existing Client" : "Prospect"}
-                      </span>
-                    </div>
-                    <div className="mt-2 flex items-center text-sm text-gray-500">
-                      <span className="font-medium">Created:</span>
-                      <span className="ml-1">
-                        {formatDateStringUTC(estimate.createdDate)}
-                      </span>
-                    </div>
+                    <span className="flex items-center gap-2">
+                      <FaCalendar className="h-3 w-3" />
+                      {formatDateStringUTC(estimate.createdDate)}
+                    </span>
                     {estimate.convertedToInvoice && (
-                      <div className="mt-2 flex items-center text-sm text-purple-600">
-                        <span className="font-medium">Converted to Invoice</span>
-                      </div>
+                      <Badge
+                        variant="secondary"
+                        className="bg-purple-500/10 text-purple-700 dark:text-purple-300"
+                      >
+                        Converted to Invoice
+                      </Badge>
                     )}
-                  </div>
+                  </CardDescription>
                 </div>
-                
-                {/* Action Buttons */}
                 {canManage && (
-                  <div className="mt-4 sm:mt-0 flex gap-3">
-                    <button
-                      onClick={toggleEdit}
-                      className="inline-flex items-center rounded-lg bg-gray-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <Button
+                      variant="secondary"
+                      onClick={() => setIsDetailsDialogOpen(true)}
                     >
                       <FaPenSquare className="mr-2 h-4 w-4" />
-                      <span>{isEditing ? 'Cancel Edit' : 'Edit Estimate'}</span>
-                    </button>
-                    <GeneratePDF
-                      pdfData={{ type: "estimate", data: estimateData }}
-                      fileName={`${estimateData.clientName} - Estimate.pdf`}
-                      buttonText="Download PDF"
-                      className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                      showScaleSelector={true}
-                    />
+                      Edit Details
+                    </Button>
+                    {canConvert && (
+                      <Button
+                        variant="default"
+                        className="bg-green-600 hover:bg-green-700"
+                        onClick={() => setIsConvertDialogOpen(true)}
+                      >
+                        <FaUserPlus className="mr-2 h-4 w-4" />
+                        Create Client & Invoice
+                      </Button>
+                    )}
+                    {/* Use key to force remount when data changes */}
+                    <div key={pdfKey}>
+                      <GeneratePDF
+                        pdfData={{ type: "estimate", data: estimateData }}
+                        fileName={`${estimateData.clientName} - Estimate.pdf`}
+                        buttonText="Download PDF"
+                        className="inline-flex items-center px-4 py-2"
+                        showScaleSelector={true}
+                      />
+                    </div>
                   </div>
                 )}
               </div>
+            </CardHeader>
+          </Card>
+
+          {/* Main Grid: 2/3 Details + 1/3 Items/Totals Sidebar */}
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+            {/* Left Column: Estimate Details (2/3) */}
+            <div className="space-y-6 lg:col-span-2">
+              {/* Prospect Information Card */}
+              <Card className="">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                        <FaUser className="text-primary h-4 w-4" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-lg">
+                          Prospect Information
+                        </CardTitle>
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-muted-foreground text-sm">
+                        Business Name
+                      </p>
+                      <p className="font-medium">
+                        {estimate.prospectInfo?.businessName || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">
+                        Contact Person
+                      </p>
+                      <p className="font-medium">
+                        {estimate.prospectInfo?.contactPerson || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">Email</p>
+                      <p className="font-medium">
+                        {estimate.prospectInfo?.email || "—"}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground text-sm">Phone</p>
+                      <p className="font-medium">
+                        {estimate.prospectInfo?.phone || "—"}
+                      </p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-muted-foreground text-sm">Address</p>
+                      <p className="font-medium">
+                        {estimate.prospectInfo?.address || "—"}
+                      </p>
+                    </div>
+                    <div className="md:col-span-2">
+                      <p className="text-muted-foreground text-sm">
+                        Project Location
+                      </p>
+                      <p className="font-medium">
+                        {estimate.prospectInfo?.projectLocation || "—"}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Services Card */}
+              <Card className="">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                      <FaClipboardList className="text-primary h-4 w-4" />
+                    </div>
+                    <CardTitle className="text-lg">Services Included</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {estimate.services && estimate.services.length > 0 ? (
+                    <div className="flex flex-wrap gap-2">
+                      {estimate.services.map((service, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="text-xs"
+                        >
+                          {service}
+                        </Badge>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground italic">
+                      Default services apply
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Notes & Terms Card */}
+              <Card className="">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                      <FaStickyNote className="text-primary h-4 w-4" />
+                    </div>
+                    <CardTitle className="text-lg">Notes & Terms</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                      <p className="text-muted-foreground mb-1 text-sm">
+                        Notes
+                      </p>
+                      <p className="text-sm">{estimate.notes || "—"}</p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground mb-1 text-sm">
+                        Terms & Conditions
+                      </p>
+                      <p className="text-sm whitespace-pre-wrap">
+                        {estimate.terms || "—"}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
-          </div>
-        </div>
 
-        {/* Main Content */}
-        <div className="bg-white rounded-b-xl shadow-lg h-[calc(100vh-200px)] overflow-hidden">
-          <div className="p-4 sm:p-6 lg:p-8 h-full overflow-y-auto">
-            <div className="space-y-6">
-              {/* Estimate Details */}
-              <InlineEditEstimate
-                estimate={estimate}
-                isEditing={isEditing}
-                toggleEdit={toggleEdit}
-                canManage={canManage}
-                clients={clients}
-              />
+            {/* Right Column: Items & Totals Sidebar (1/3) */}
+            <div className="space-y-6 lg:sticky lg:top-6 lg:self-start">
+              {/* Items Card */}
+              <Card className="">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+                        <FaFileInvoice className="text-primary h-4 w-4" />
+                      </div>
+                      <CardTitle className="text-lg">Items</CardTitle>
+                    </div>
+                    {canManage && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsItemsDialogOpen(true)}
+                      >
+                        <FaPenSquare className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {estimate.items && estimate.items.length > 0 ? (
+                    <div className="space-y-3">
+                      {estimate.items.map((item, index) => (
+                        <div
+                          key={index}
+                          className="border-b pb-3 last:border-0 last:pb-0"
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium">
+                                {item.description}
+                              </p>
+                              {item.details && (
+                                <p className="text-muted-foreground text-xs">
+                                  {item.details}
+                                </p>
+                              )}
+                            </div>
+                            <p className="ml-2 text-sm font-medium">
+                              {formatCurrency(item.price)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground py-4 text-center">
+                      No items
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
 
-
+              {/* Totals Card */}
+              <Card className="">
+                <CardHeader>
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/10">
+                      <FaDollarSign className="h-4 w-4 text-green-600" />
+                    </div>
+                    <CardTitle className="text-lg">Totals</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">
+                        Subtotal:
+                      </span>
+                      <span className="text-foreground text-sm font-medium">
+                        {formatCurrency(subtotal)}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground text-sm">
+                        GST (5%):
+                      </span>
+                      <span className="text-foreground text-sm font-medium">
+                        {formatCurrency(gst)}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex items-center justify-between">
+                      <span className="text-foreground text-base font-semibold">
+                        Total:
+                      </span>
+                      <span className="text-foreground text-lg font-bold">
+                        {formatCurrency(total)}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </div>
         </div>
       </div>
-    </div>
+
+      {/* Dialogs */}
+      <EditEstimateDetailsDialog
+        isOpen={isDetailsDialogOpen}
+        onClose={() => setIsDetailsDialogOpen(false)}
+        estimate={estimate}
+      />
+      <EditItemsTotalsDialog
+        isOpen={isItemsDialogOpen}
+        onClose={() => setIsItemsDialogOpen(false)}
+        estimate={estimate}
+      />
+      <ConvertToClientInvoiceDialog
+        isOpen={isConvertDialogOpen}
+        onClose={() => setIsConvertDialogOpen(false)}
+        estimate={estimate}
+      />
+    </>
   );
 };
 
-export default EstimateDetailsContainer; 
+export default EstimateDetailsContainer;

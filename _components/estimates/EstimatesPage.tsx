@@ -5,11 +5,11 @@ import { EstimateType, ClientType } from "../../app/lib/typeDefinitions";
 import EstimatesList from "./EstimatesList";
 import EstimateFilters from "./EstimateFilters";
 import Pagination from "../database/Pagination";
-import { FaTimes, FaEdit, FaTrash } from "react-icons/fa";
 import DeleteModal from "../DeleteModal";
 import { toast } from "react-hot-toast";
 import { updateEstimateStatus } from "../../app/lib/actions/estimates.actions";
 import AddEstimate from "./AddEstimate";
+import { Badge } from "../ui/badge";
 
 interface EstimatesPageProps {
   query: string;
@@ -40,7 +40,9 @@ export function EstimatesPage({
   statusCounts,
 }: EstimatesPageProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [deletingEstimate, setDeletingEstimate] = useState<EstimateType | null>(null);
+  const [deletingEstimate, setDeletingEstimate] = useState<EstimateType | null>(
+    null,
+  );
   const [loading, setLoading] = useState<string | null>(null);
 
   const handleDelete = (estimate: EstimateType) => {
@@ -55,7 +57,7 @@ export function EstimatesPage({
 
   const handleStatusChange = async (newStatus: EstimateType["status"]) => {
     if (!deletingEstimate) return;
-    
+
     setLoading("status");
     try {
       await updateEstimateStatus(deletingEstimate._id.toString(), newStatus);
@@ -73,26 +75,31 @@ export function EstimatesPage({
       {/* Header with Status Indicators */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
-          <h1 className="text-xl font-bold text-gray-900 md:text-2xl">
+          <h1 className="text-foreground text-xl font-bold md:text-2xl">
             Estimates
           </h1>
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 rounded-md bg-gray-50 px-2 py-1">
-              <div className="text-sm font-semibold text-gray-600">{statusCounts.draft}</div>
-              <div className="text-xs text-gray-500">Draft</div>
-            </div>
-            <div className="flex items-center gap-1 rounded-md bg-blue-50 px-2 py-1">
-              <div className="text-sm font-semibold text-blue-600">{statusCounts.sent}</div>
-              <div className="text-xs text-blue-500">Sent</div>
-            </div>
-            <div className="flex items-center gap-1 rounded-md bg-green-50 px-2 py-1">
-              <div className="text-sm font-semibold text-green-600">{statusCounts.approved}</div>
-              <div className="text-xs text-green-500">Approved</div>
-            </div>
-            <div className="flex items-center gap-1 rounded-md bg-red-50 px-2 py-1">
-              <div className="text-sm font-semibold text-red-600">{statusCounts.rejected}</div>
-              <div className="text-xs text-red-500">Rejected</div>
-            </div>
+            <Badge variant="secondary" className="bg-muted">
+              Draft
+            </Badge>
+            <Badge
+              variant="secondary"
+              className="bg-blue-500/10 text-blue-700 dark:text-blue-300"
+            >
+              Sent
+            </Badge>
+            <Badge
+              variant="secondary"
+              className="bg-green-500/10 text-green-700 dark:text-green-300"
+            >
+              Approved
+            </Badge>
+            <Badge
+              variant="destructive"
+              className="border-red-200 bg-red-500/10 text-red-700 dark:text-red-300"
+            >
+              Rejected
+            </Badge>
           </div>
         </div>
         <AddEstimate clients={clients} />
@@ -108,7 +115,7 @@ export function EstimatesPage({
       />
 
       {/* Estimates List */}
-      <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="min-h-0 flex-1 overflow-hidden">
         <div className="h-full overflow-y-auto">
           <EstimatesList
             estimates={estimates}
@@ -122,7 +129,7 @@ export function EstimatesPage({
 
       {/* Pagination */}
       {totalPages > 1 && (
-        <div className="shrink-0 flex justify-center">
+        <div className="flex shrink-0 justify-center">
           <Pagination totalPages={totalPages} />
         </div>
       )}

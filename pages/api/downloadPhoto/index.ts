@@ -108,7 +108,7 @@ export default async function handler(
           targetSchedule.photos
         ) {
           const photo = targetSchedule.photos.find(
-            (p) => p._id.toString() === cleanId && p.type === type,
+            (p: any) => p._id.toString() === cleanId && p.type === type,
           );
           if (photo) {
             foundUrl = photo.url;
@@ -121,7 +121,7 @@ export default async function handler(
         // Check photos
         if (targetSchedule.photos) {
           const photo = targetSchedule.photos.find(
-            (p) => p._id.toString() === cleanId,
+            (p: any) => p._id.toString() === cleanId,
           );
           if (photo) {
             foundUrl = photo.url;
@@ -156,7 +156,7 @@ export default async function handler(
       // Find which collection had the photo and get its URL
       if (scheduleWithPhoto && scheduleWithPhoto.photos) {
         const photo = scheduleWithPhoto.photos.find(
-          (p) => p._id.toString() === cleanId,
+          (p: any) => p._id.toString() === cleanId,
         );
         if (photo) {
           foundUrl = photo.url;

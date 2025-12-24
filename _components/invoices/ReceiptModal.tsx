@@ -96,7 +96,9 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <p className="text-foreground mt-1 font-medium">
               {receiptData.jobTitle}
             </p>
-            <p className="text-muted-foreground text-sm">{receiptData.location}</p>
+            <p className="text-muted-foreground text-sm">
+              {receiptData.location}
+            </p>
           </div>
 
           {/* Payment Method */}
@@ -158,7 +160,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </div>
 
         {/* Footer */}
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2">
           <Button onClick={handleClose} variant="outline" type="button">
             Cancel
           </Button>

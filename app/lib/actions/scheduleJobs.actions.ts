@@ -23,7 +23,10 @@ import { InvoiceType } from "../typeDefinitions";
  * @param {number} days - Number of days to add.
  * @returns {Date} - The new date.
  */
-const addDays: (date: Date, days: number) => Date = (date: Date, days: number): Date => {
+const addDays: (date: Date, days: number) => Date = (
+  date: Date,
+  days: number,
+): Date => {
   const result = new Date(date);
   result.setUTCDate(result.getUTCDate() + days);
   result.setUTCHours(0, 0, 0, 0); // Reset to start of day (UTC)
@@ -105,7 +108,10 @@ export const findOrCreatePayrollPeriod = async (
   return payrollPeriod;
 };
 
-export async function createSchedule(scheduleData: ScheduleType, performedBy: string = "system") {
+export async function createSchedule(
+  scheduleData: ScheduleType,
+  performedBy: string = "system",
+) {
   try {
     await connectMongo();
 
@@ -124,21 +130,28 @@ export async function createSchedule(scheduleData: ScheduleType, performedBy: st
     if (!scheduleData.hours || scheduleData.hours === 4) {
       try {
         // Fetch the invoice to get the total price
-        const invoice = await Invoice.findById(scheduleData.invoiceRef).lean<InvoiceType>();
+        const invoice = await Invoice.findById(
+          scheduleData.invoiceRef,
+        ).lean<InvoiceType>();
         if (invoice && invoice.items) {
           const totalPrice = invoice.items.reduce(
             (sum: number, item: any) => sum + (item.price || 0),
             0,
           );
-          
+
           // Calculate duration in minutes and convert to hours
           const durationInMinutes = calculateJobDurationFromPrice(totalPrice);
           scheduleData.hours = convertMinutesToHours(durationInMinutes);
-          
-          console.log(`Calculated job duration: $${totalPrice} → ${durationInMinutes} minutes → ${scheduleData.hours} hours`);
+
+          console.log(
+            `Calculated job duration: $${totalPrice} → ${durationInMinutes} minutes → ${scheduleData.hours} hours`,
+          );
         }
       } catch (error) {
-        console.warn("Could not calculate duration from invoice price, using default:", error);
+        console.warn(
+          "Could not calculate duration from invoice price, using default:",
+          error,
+        );
         // Fall back to default 2.5 hours if calculation fails
         scheduleData.hours = 2.5;
       }
@@ -156,7 +169,9 @@ export async function createSchedule(scheduleData: ScheduleType, performedBy: st
     await newSchedule.save();
 
     // Fetch the invoice to get the invoiceId for audit logging
-    const invoice = await Invoice.findById(scheduleData.invoiceRef).lean<InvoiceType>();
+    const invoice = await Invoice.findById(
+      scheduleData.invoiceRef,
+    ).lean<InvoiceType>();
 
     // Create audit log entry for schedule creation
     if (invoice) {
@@ -203,27 +218,51 @@ export const deleteJob = async (jobId: string) => {
 export const updateSchedule = async ({
   scheduleId,
   confirmed,
+  deadRun,
   performedBy = "system",
 }: {
   scheduleId: string;
-  confirmed: boolean;
+  confirmed?: boolean;
+  deadRun?: boolean;
   performedBy?: string;
 }) => {
   await connectMongo();
   try {
+    // Build update object with only provided fields
+    const updateFields: { confirmed?: boolean; deadRun?: boolean } = {};
+    if (confirmed !== undefined) updateFields.confirmed = confirmed;
+    if (deadRun !== undefined) updateFields.deadRun = deadRun;
+
     // Fetch the schedule to get job details for audit logging
     const schedule = await Schedule.findByIdAndUpdate(
       scheduleId,
-      { confirmed },
-      { new: true }
+      updateFields,
+      { new: true },
     );
 
     if (schedule) {
       // Create audit log entry for schedule confirmation/unconfirmation
-      const invoice = await Invoice.findById(schedule.invoiceRef).lean<InvoiceType>();
+      const invoice = await Invoice.findById(
+        schedule.invoiceRef,
+      ).lean<InvoiceType>();
 
       if (invoice) {
-        const action = confirmed ? "schedule_confirmed" : "schedule_unconfirmed";
+        // Determine action type based on what was updated
+        let action: string;
+        let reason: string;
+        if (confirmed !== undefined) {
+          action = confirmed ? "schedule_confirmed" : "schedule_unconfirmed";
+          reason = `Schedule ${confirmed ? "confirmed" : "unconfirmed"}`;
+        } else if (deadRun !== undefined) {
+          action = deadRun
+            ? "schedule_dead_run_marked"
+            : "schedule_dead_run_cleared";
+          reason = `Schedule ${deadRun ? "marked as dead run" : "dead run cleared"}`;
+        } else {
+          action = "schedule_updated";
+          reason = "Schedule updated";
+        }
+
         await AuditLog.create({
           invoiceId: invoice.invoiceId,
           action,
@@ -234,9 +273,9 @@ export const updateSchedule = async ({
               jobTitle: schedule.jobTitle,
               location: schedule.location,
               startDateTime: schedule.startDateTime,
-              confirmed,
+              ...updateFields,
             },
-            reason: `Schedule ${confirmed ? "confirmed" : "unconfirmed"}`,
+            reason,
             metadata: {
               clientId: invoice.clientId,
             },
@@ -277,6 +316,12 @@ export const updateJob = async ({
     // Find or create the appropriate payroll period
     const payrollPeriod = await findOrCreatePayrollPeriod(updatedStartDate);
 
+    // Get the current schedule to access invoiceRef
+    const schedule = await Schedule.findById(scheduleId);
+    if (!schedule) {
+      throw new Error("Schedule not found");
+    }
+
     // Update the schedule with the new details and payroll period
     await Schedule.findByIdAndUpdate(
       scheduleId,
@@ -291,6 +336,23 @@ export const updateJob = async ({
       { new: true },
     );
 
+    // Sync invoice dateIssued if this is the only schedule linked to the invoice
+    if (schedule.invoiceRef) {
+      const schedulesForInvoice = await Schedule.countDocuments({
+        invoiceRef: schedule.invoiceRef,
+      });
+
+      if (schedulesForInvoice === 1) {
+        // Extract date only (without time) from startDateTime for invoice dateIssued
+        const dateOnlyStr = updatedStartDate.toISOString().split("T")[0];
+        const dateIssuedValue = new Date(dateOnlyStr + "T00:00:00.000Z");
+
+        await Invoice.findByIdAndUpdate(schedule.invoiceRef, {
+          dateIssued: dateIssuedValue,
+        });
+      }
+    }
+
     revalidatePath("/schedule");
   } catch (error) {
     console.error("Database Error:", error);
@@ -304,8 +366,9 @@ export async function getTechnicians() {
     limit: 100,
   });
 
-
-  const technicians = userList.data.filter((user: any) => user.publicMetadata.isTechnician === true);
+  const technicians = userList.data.filter(
+    (user: any) => user.publicMetadata.isTechnician === true,
+  );
   return technicians.map((user: any) => ({
     id: user.id,
     name: user.fullName,
@@ -313,27 +376,37 @@ export async function getTechnicians() {
   }));
 }
 
-export const updateShiftHours = async ({
-  scheduleId,
-  hoursWorked,
-}: {
-  scheduleId: string;
-  hoursWorked: number;
-}) => {
+export const updateShiftHoursBatch = async (
+  updates: { scheduleId: string; hoursWorked: number }[],
+) => {
   await connectMongo();
   try {
-    const schedule = await Schedule.findOne({ _id: scheduleId });
-    if (!schedule) {
-      throw new Error("Job not found");
+    if (updates.length === 0) {
+      return;
     }
-    schedule.hours = hoursWorked;
-    await schedule.save();
+
+    // Use bulkWrite for efficient batch updates
+    const bulkOps = updates.map((update) => ({
+      updateOne: {
+        filter: { _id: update.scheduleId },
+        update: { $set: { hours: update.hoursWorked } },
+      },
+    }));
+
+    const result = await Schedule.bulkWrite(bulkOps);
+
+    // Check if all updates were successful
+    if (result.modifiedCount !== updates.length) {
+      console.warn(
+        `Expected to update ${updates.length} shifts, but only ${result.modifiedCount} were modified`,
+      );
+    }
+
+    revalidatePath("/payroll");
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to update shift hours");
   }
-
-  revalidatePath("/payroll");
 };
 
 export const updateDeadRun = async ({
@@ -406,7 +479,10 @@ export const getReportByScheduleId = async (scheduleId: string) => {
   }
 };
 
-export const getReportsByJobNameAndLocation = async (jobTitle: string, location: string) => {
+export const getReportsByJobNameAndLocation = async (
+  jobTitle: string,
+  location: string,
+) => {
   await connectMongo();
   try {
     // First, find schedules with similar job titles and locations
@@ -414,17 +490,17 @@ export const getReportsByJobNameAndLocation = async (jobTitle: string, location:
       $and: [
         {
           $or: [
-            { jobTitle: { $regex: jobTitle, $options: 'i' } }, // Case-insensitive match
+            { jobTitle: { $regex: jobTitle, $options: "i" } }, // Case-insensitive match
             { jobTitle: jobTitle }, // Exact match
-          ]
+          ],
         },
         {
           $or: [
-            { location: { $regex: location, $options: 'i' } }, // Case-insensitive match
+            { location: { $regex: location, $options: "i" } }, // Case-insensitive match
             { location: location }, // Exact match
-          ]
-        }
-      ]
+          ],
+        },
+      ],
     })
       .sort({ startDateTime: -1 })
       .limit(10) // Get last 10 similar schedules
@@ -435,7 +511,9 @@ export const getReportsByJobNameAndLocation = async (jobTitle: string, location:
     }
 
     // Get all reports for these schedules
-    const scheduleIds = schedules.map((schedule: any) => schedule._id?.toString());
+    const scheduleIds = schedules.map((schedule: any) =>
+      schedule._id?.toString(),
+    );
     const reports = await Report.find({ scheduleId: { $in: scheduleIds } })
       .sort({ dateCompleted: -1 })
       .lean();
@@ -446,8 +524,9 @@ export const getReportsByJobNameAndLocation = async (jobTitle: string, location:
 
     // Map reports with schedule information for better context and ensure proper serialization
     return reports.map((report: any) => {
-      const relatedSchedule = schedules.find((schedule: any) =>
-        schedule._id?.toString() === report.scheduleId?.toString()
+      const relatedSchedule = schedules.find(
+        (schedule: any) =>
+          schedule._id?.toString() === report.scheduleId?.toString(),
       );
 
       return {
@@ -455,9 +534,10 @@ export const getReportsByJobNameAndLocation = async (jobTitle: string, location:
         scheduleId: report.scheduleId.toString(),
         jobTitle: report.jobTitle || relatedSchedule?.jobTitle || "",
         location: report.location || relatedSchedule?.location || "",
-        dateCompleted: report.dateCompleted instanceof Date
-          ? report.dateCompleted.toISOString()
-          : report.dateCompleted,
+        dateCompleted:
+          report.dateCompleted instanceof Date
+            ? report.dateCompleted.toISOString()
+            : report.dateCompleted,
         technicianId: report.technicianId || "",
         fuelType: report.fuelType || "",
         cookingVolume: report.cookingVolume || "",
@@ -468,9 +548,10 @@ export const getReportsByJobNameAndLocation = async (jobTitle: string, location:
         recommendedCleaningFrequency: report.recommendedCleaningFrequency || 0,
         comments: report.comments || "",
         recommendations: report.recommendations || "",
-        lastServiceDate: report.lastServiceDate instanceof Date
-          ? report.lastServiceDate.toISOString()
-          : report.lastServiceDate,
+        lastServiceDate:
+          report.lastServiceDate instanceof Date
+            ? report.lastServiceDate.toISOString()
+            : report.lastServiceDate,
       };
     });
   } catch (error) {

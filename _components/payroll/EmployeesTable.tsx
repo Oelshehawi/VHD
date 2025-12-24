@@ -7,8 +7,17 @@ import {
   ScheduleType,
   TechnicianType,
 } from "../../app/lib/typeDefinitions";
-import { motion } from "framer-motion";
 import { useMemo } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { Button } from "../ui/button";
 
 interface EmployeesTableProps {
   schedules: ScheduleType[];
@@ -28,10 +37,7 @@ const EmployeesTable = ({
   schedules,
   technicians,
   onViewShifts,
-  payrollPeriod,
 }: EmployeesTableProps) => {
-  // Define hourly rates based on technician names
-
   // Calculate payroll data for each technician
   const employeeData: EmployeePayrollData[] = useMemo(() => {
     return technicians
@@ -59,82 +65,59 @@ const EmployeesTable = ({
   }, [technicians, schedules]);
 
   return (
-    <motion.div
-      className="mb-6 rounded bg-white p-4 shadow-md"
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-    >
-      <h3 className="mb-4 text-lg font-semibold">
-        Employees Payroll Breakdown
-      </h3>
-      <div className="overflow-x-scroll">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Employee
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Hours Worked
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Hourly Rate ($)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Gross Pay (CAD)
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Actions
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                Shifts
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200 bg-white">
-            {employeeData.map(
-              ({ technician, totalHours, hourlyRate, grossPay }) => (
-                <tr key={technician.id}>
-                  <td className="whitespace-nowrap px-6 py-4">
-                    <div className="flex items-center">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {technician.name}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                    {totalHours}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                    ${hourlyRate.toFixed(2)}
-                  </td>
-                  <td className="whitespace-nowrap px-6 py-4 text-sm text-gray-500">
-                    $
-                    {grossPay.toLocaleString(undefined, {
-                      minimumFractionDigits: 2,
-                      maximumFractionDigits: 2,
-                    })}
-                  </td>
-                  <td className="flex justify-start whitespace-nowrap px-6 py-4 text-sm font-medium">
-                    {/* Paystub generation moved to server-side */}
-                    <span className="text-gray-400">-</span>
-                  </td>
-                  <td
-                    onClick={() => onViewShifts(technician)}
-                    className="text-md whitespace-nowrap px-6 py-4 font-medium text-blue-500 hover:cursor-pointer hover:text-blue-700 "
-                  >
-                    View Shifts
-                  </td>
-                </tr>
-              ),
-            )}
-          </tbody>
-        </table>
-      </div>
-    </motion.div>
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="text-lg">Employees Payroll Breakdown</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Employee</TableHead>
+                <TableHead>Hours Worked</TableHead>
+                <TableHead>Hourly Rate ($)</TableHead>
+                <TableHead>Gross Pay (CAD)</TableHead>
+                <TableHead>Actions</TableHead>
+                <TableHead>Shifts</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {employeeData.map(
+                ({ technician, totalHours, hourlyRate, grossPay }) => (
+                  <TableRow key={technician.id}>
+                    <TableCell className="font-medium">
+                      {technician.name}
+                    </TableCell>
+                    <TableCell>{totalHours}</TableCell>
+                    <TableCell>${hourlyRate.toFixed(2)}</TableCell>
+                    <TableCell>
+                      $
+                      {grossPay.toLocaleString(undefined, {
+                        minimumFractionDigits: 2,
+                        maximumFractionDigits: 2,
+                      })}
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground">-</span>
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="link"
+                        className="h-auto p-0"
+                        onClick={() => onViewShifts(technician)}
+                      >
+                        View Shifts
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ),
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </CardContent>
+    </Card>
   );
 };
 

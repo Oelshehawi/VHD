@@ -284,10 +284,10 @@ const CalendarOptions = ({
         canManage={canManage}
       />
 
-      <main className="bg-background flex-1 overflow-y-auto">
+      <main className="bg-background min-w-0 flex-1 overflow-y-auto">
         {currentView === "month" ? (
-          <div className="flex h-full items-start justify-center p-2 md:items-center md:p-4">
-            <Card className="w-full max-w-4xl">
+          <div className="flex h-full min-w-0 items-start justify-center p-2 md:items-center md:p-4">
+            <Card className="flex h-full w-full flex-col">
               <MonthCalendar
                 key={currentDate}
                 invoices={invoices}
@@ -325,6 +325,12 @@ const CalendarOptions = ({
               technicians={technicians}
               availability={availability}
               showAvailability={showAvailability}
+              onDateSelect={(date: Date | undefined) => {
+                if (date) {
+                  setCurrentDay(startOfDay(date));
+                  updateURLInstant("day", date);
+                }
+              }}
             />
           </div>
         )}
@@ -396,12 +402,12 @@ const Header = ({
   };
 
   return (
-    <div className="border-b border-border bg-card">
+    <div className="border-border bg-card rounded-t-lg border-b">
       <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
-        {/* Row 1: Search + Add Job (Left) | Navigation (Center/Right) */}
-        <div className="flex items-center gap-3">
+        {/* Row 1: Search + Add Job */}
+        <div className="flex min-w-0 flex-1 items-center gap-2">
           {/* Search */}
-          <div className="w-48 sm:w-64 lg:w-80">
+          <div className="w-32 min-w-0 flex-1 sm:w-48 md:w-64 lg:w-80 lg:flex-none">
             <SearchSelect
               scheduledJobs={scheduledJobs}
               placeholder="Search jobs..."
@@ -412,16 +418,20 @@ const Header = ({
 
           {/* Add Job Button */}
           {canManage && (
-            <Button onClick={() => setOpen(!open)} size="sm">
+            <Button
+              onClick={() => setOpen(!open)}
+              size="sm"
+              className="flex-shrink-0"
+            >
               <Plus className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Add Job</span>
             </Button>
           )}
         </div>
 
-        {/* Navigation Controls (Day/Week views) */}
+        {/* Navigation Controls (Day/Week views) - Only on desktop */}
         {(currentView === "day" || currentView === "week") && (
-          <div className="flex items-center gap-2">
+          <div className="hidden flex-shrink-0 items-center gap-2 lg:flex">
             <Button
               onClick={() => handleNavigation("prev")}
               variant="ghost"
@@ -439,7 +449,7 @@ const Header = ({
               <ChevronRight className="h-4 w-4" />
             </Button>
 
-            <span className="text-sm font-medium text-foreground min-w-[140px] sm:min-w-[200px] text-center">
+            <span className="text-foreground min-w-[140px] text-center text-sm font-medium sm:min-w-[200px]">
               {getNavigationLabel()}
             </span>
 
@@ -455,37 +465,37 @@ const Header = ({
         )}
 
         {/* Right Section: Actions + View Tabs */}
-        <div className="flex items-center gap-2">
-          {/* Today Button - Month view only */}
+        <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2 lg:flex-nowrap lg:justify-start">
+          {/* Today Button - Month view only, show on mobile too */}
           {currentView === "month" && (
             <Button
               onClick={goToToday}
               variant="outline"
               size="sm"
-              className="h-8"
+              className="h-8 flex-shrink-0"
             >
               Today
             </Button>
           )}
 
-          {/* Optimize Button */}
+          {/* Optimize Button - Hide on small screens */}
           {canManage && (
             <Button
               onClick={() => setIsOptimizationModalOpen(true)}
               size="sm"
-              className="hidden h-8 md:flex"
+              className="hidden h-8 flex-shrink-0 lg:flex"
             >
               <BarChart3 className="h-4 w-4 sm:mr-1.5" />
               <span className="hidden sm:inline">Optimize</span>
             </Button>
           )}
 
-          {/* Availability Toggle */}
+          {/* Availability Toggle - Icon only on small screens */}
           <Button
             onClick={() => setShowAvailability(!showAvailability)}
             variant={showAvailability ? "secondary" : "outline"}
             size="sm"
-            className="h-8"
+            className="h-8 flex-shrink-0"
             title={showAvailability ? "Hide availability" : "Show availability"}
           >
             {showAvailability ? (
@@ -493,25 +503,29 @@ const Header = ({
             ) : (
               <EyeOff className="h-4 w-4" />
             )}
-            <span className="ml-1.5 hidden sm:inline">
+            <span className="ml-1.5 hidden lg:inline">
               {showAvailability ? "Availability On" : "Availability Off"}
             </span>
           </Button>
 
-          {/* View Tabs */}
+          {/* View Tabs - Hide on mobile, show Week only on desktop */}
           {!isMobile && (
             <Tabs
               value={currentView}
               onValueChange={(v) => onViewChange(v as "day" | "week" | "month")}
+              className="flex-shrink-0"
             >
               <TabsList className="h-8">
-                <TabsTrigger value="day" className="text-xs px-3">
+                <TabsTrigger value="day" className="px-2 text-xs sm:px-3">
                   Day
                 </TabsTrigger>
-                <TabsTrigger value="week" className="text-xs px-3">
+                <TabsTrigger
+                  value="week"
+                  className="hidden px-2 text-xs sm:px-3 lg:inline-flex"
+                >
                   Week
                 </TabsTrigger>
-                <TabsTrigger value="month" className="text-xs px-3">
+                <TabsTrigger value="month" className="px-2 text-xs sm:px-3">
                   Month
                 </TabsTrigger>
               </TabsList>

@@ -344,7 +344,12 @@ export const getPendingInvoiceAmount = async () => {
     );
 
     const result = await Invoice.aggregate([
-      { $match: { status: "pending", dateIssued: { $lte: today } } },
+      {
+        $match: {
+          status: { $in: ["pending", "overdue"] },
+          dateIssued: { $lte: today },
+        },
+      },
       { $unwind: "$items" },
       { $group: { _id: null, totalAmount: { $sum: "$items.price" } } },
     ]);
@@ -374,7 +379,12 @@ export const getPendingInvoices = async () => {
     );
 
     const pendingInvoices = await Invoice.aggregate([
-      { $match: { status: "pending", dateIssued: { $lte: today } } },
+      {
+        $match: {
+          status: { $in: ["pending", "overdue"] },
+          dateIssued: { $lte: today },
+        },
+      },
       {
         $lookup: {
           from: "clients",
@@ -1049,6 +1059,7 @@ export const getUnscheduledJobs = async () => {
       dateDue:
         job.dateDue instanceof Date ? job.dateDue.toISOString() : job.dateDue,
       isScheduled: job.isScheduled,
+      invoiceRef: job.invoiceRef,
     }));
   } catch (error) {
     console.error("Error fetching unscheduled jobs:", error);

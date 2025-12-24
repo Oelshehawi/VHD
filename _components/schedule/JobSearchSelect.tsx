@@ -39,22 +39,22 @@ const JobSearchSelect = ({
       setOpenDropdown(false);
     }
   };
-  const filteredJobs = scheduledJobs.filter((job) => {
-    return job?.jobTitle?.toLowerCase().includes(query.toLowerCase());
-  }).sort((a, b) => {
-    // Sort by startDateTime descending (latest first)
-    return new Date(b.startDateTime).getTime() - new Date(a.startDateTime).getTime();
-  });
+  const filteredJobs = scheduledJobs
+    .filter((job) => {
+      return job?.jobTitle?.toLowerCase().includes(query.toLowerCase());
+    })
+    .sort((a, b) => {
+      // Sort by startDateTime descending (latest first)
+      return (
+        new Date(b.startDateTime).getTime() -
+        new Date(a.startDateTime).getTime()
+      );
+    });
 
   return (
-    <div
-      className={clsx(
-        "relative flex w-full flex-col",
-        className,
-      )}
-    >
+    <div className={clsx("relative flex w-full flex-col", className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
         <Input
           type="text"
           placeholder={placeholder}
@@ -63,7 +63,7 @@ const JobSearchSelect = ({
         />
       </div>
       {openDropdown && filteredJobs?.length > 0 && (
-        <Card className="absolute left-0 top-full z-50 mt-1 w-full shadow-xl">
+        <Card className="absolute top-full left-0 z-50 mt-1 w-full gap-0 py-0 shadow-xl">
           <ul className="max-h-60 overflow-y-auto">
             {filteredJobs.map((job: ScheduleType) => {
               const jobDate = new Date(job.startDateTime);
@@ -85,18 +85,24 @@ const JobSearchSelect = ({
               return (
                 <li
                   key={job._id.toString()}
-                  className="flex cursor-pointer items-center justify-between gap-3 px-4 py-3 hover:bg-muted transition-colors first:rounded-t-xl last:rounded-b-xl border-b border-border last:border-b-0"
+                  className="hover:bg-muted border-border flex cursor-pointer items-center justify-between gap-3 border-b px-4 py-3 transition-colors first:rounded-t-xl last:rounded-b-xl last:border-b-0"
                   onClick={() => handleClick(job)}
                 >
                   <div className="flex items-center gap-3">
-                    <Calendar className="h-8 w-8 text-primary shrink-0" />
+                    <Calendar className="text-primary h-8 w-8 shrink-0" />
                     <div>
-                      <div className="font-medium text-foreground">{job.jobTitle}</div>
-                      <div className="text-sm text-muted-foreground">{job.location}</div>
+                      <div className="text-foreground font-medium">
+                        {job.jobTitle}
+                      </div>
+                      <div className="text-muted-foreground text-sm">
+                        {job.location}
+                      </div>
                     </div>
                   </div>
                   <div className="text-right text-sm">
-                    <div className="font-medium text-foreground">{formattedDate}</div>
+                    <div className="text-foreground font-medium">
+                      {formattedDate}
+                    </div>
                     <div className="text-muted-foreground">{formattedTime}</div>
                   </div>
                 </li>

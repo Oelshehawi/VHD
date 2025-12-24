@@ -2,6 +2,14 @@ import { EstimateType } from "../../app/lib/typeDefinitions";
 import { useState } from "react";
 import { updateEstimateStatus } from "../../app/lib/actions/estimates.actions";
 import { toast } from "react-hot-toast";
+import { Badge } from "../ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 interface EstimateStatusBadgeProps {
   status: EstimateType["status"];
@@ -19,37 +27,50 @@ export default function EstimateStatusBadge({
   onStatusChange,
 }: EstimateStatusBadgeProps) {
   const [isUpdating, setIsUpdating] = useState(false);
-  const getStatusConfig = (status: EstimateType["status"]) => {
+
+  const getStatusVariant = (
+    status: EstimateType["status"],
+  ): "default" | "secondary" | "destructive" | "outline" => {
     switch (status) {
-      case "draft":
-        return {
-          label: "Draft",
-          className: "bg-gray-100 text-gray-700 border-gray-200",
-        };
-      case "sent":
-        return {
-          label: "Sent",
-          className: "bg-blue-100 text-blue-700 border-blue-200",
-        };
       case "approved":
-        return {
-          label: "Approved",
-          className: "bg-green-100 text-green-700 border-green-200",
-        };
+        return "default";
       case "rejected":
-        return {
-          label: "Rejected",
-          className: "bg-red-100 text-red-700 border-red-200",
-        };
+        return "destructive";
+      case "sent":
+        return "secondary";
+      case "draft":
       default:
-        return {
-          label: "Unknown",
-          className: "bg-gray-100 text-gray-700 border-gray-200",
-        };
+        return "outline";
     }
   };
 
-  const config = getStatusConfig(status);
+  const getStatusBadgeClassName = (status: EstimateType["status"]): string => {
+    switch (status) {
+      case "approved":
+        return "bg-green-500/10 text-green-700 dark:text-green-300 border-green-200";
+      case "rejected":
+        return "";
+      case "sent":
+        return "bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 border-yellow-200";
+      case "draft":
+      default:
+        return "";
+    }
+  };
+
+  const getStatusLabel = (status: EstimateType["status"]) => {
+    switch (status) {
+      case "approved":
+        return "Approved";
+      case "rejected":
+        return "Rejected";
+      case "sent":
+        return "Sent";
+      case "draft":
+      default:
+        return "Draft";
+    }
+  };
 
   const handleStatusChange = async (newStatus: EstimateType["status"]) => {
     if (!estimateId || isUpdating) return;
@@ -69,32 +90,39 @@ export default function EstimateStatusBadge({
 
   if (!editable) {
     return (
-      <span
-        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium md:px-2.5 md:text-sm ${config.className} ${className}`}
+      <Badge
+        variant={getStatusVariant(status)}
+        className={`${getStatusBadgeClassName(status)} ${className}`}
       >
-        {config.label}
-      </span>
+        {getStatusLabel(status)}
+      </Badge>
     );
   }
 
   return (
-    <div className="relative inline-block">
-      <select
-        value={status}
-        onChange={(e) => handleStatusChange(e.target.value as EstimateType["status"])}
-        disabled={isUpdating}
-        className={`appearance-none cursor-pointer rounded-full border px-2 py-0.5 text-xs font-medium md:px-2.5 md:text-sm pr-6 ${config.className} ${className} ${isUpdating ? 'opacity-50 cursor-not-allowed' : ''}`}
+    <Select
+      value={status}
+      onValueChange={(value) =>
+        handleStatusChange(value as EstimateType["status"])
+      }
+      disabled={isUpdating}
+    >
+      <SelectTrigger
+        className={`h-auto w-auto border-none p-0 shadow-none focus:ring-0 [&>svg]:hidden ${className}`}
       >
-        <option value="draft">Draft</option>
-        <option value="sent">Sent</option>
-        <option value="approved">Approved</option>
-        <option value="rejected">Rejected</option>
-      </select>
-      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-1">
-        <svg className="h-3 w-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
-    </div>
+        <Badge
+          variant={getStatusVariant(status)}
+          className={`cursor-pointer ${getStatusBadgeClassName(status)} ${isUpdating ? "opacity-50" : ""}`}
+        >
+          {getStatusLabel(status)}
+        </Badge>
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value="draft">Draft</SelectItem>
+        <SelectItem value="sent">Sent</SelectItem>
+        <SelectItem value="approved">Approved</SelectItem>
+        <SelectItem value="rejected">Rejected</SelectItem>
+      </SelectContent>
+    </Select>
   );
 }

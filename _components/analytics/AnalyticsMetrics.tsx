@@ -1,42 +1,26 @@
 "use client";
 
-import { FaDollarSign, FaClock, FaCheckCircle, FaExclamationTriangle, FaUsers, FaFileInvoice } from "react-icons/fa";
+import {
+  DollarSign,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Users,
+  FileText,
+} from "lucide-react";
+import { Card, CardContent } from "../ui/card";
 import { AnalyticsMetrics as AnalyticsMetricsType } from "../../app/lib/dashboard.data";
 
 interface MetricCard {
   label: string;
   value: string | number;
   icon: React.ReactNode;
-  color: "blue" | "green" | "yellow" | "red" | "purple";
+  variant: "success" | "warning" | "destructive" | "primary" | "muted";
 }
 
 interface AnalyticsMetricsProps {
   metrics: AnalyticsMetricsType;
 }
-
-const colorClasses = {
-  blue: "bg-blue-50 border-blue-200",
-  green: "bg-green-50 border-green-200",
-  yellow: "bg-yellow-50 border-yellow-200",
-  red: "bg-red-50 border-red-200",
-  purple: "bg-purple-50 border-purple-200",
-};
-
-const iconColorClasses = {
-  blue: "from-blue-500 to-blue-600",
-  green: "from-green-500 to-green-600",
-  yellow: "from-yellow-500 to-yellow-600",
-  red: "from-red-500 to-red-600",
-  purple: "from-purple-500 to-purple-600",
-};
-
-const badgeColorClasses = {
-  blue: "text-blue-800",
-  green: "text-green-800",
-  yellow: "text-yellow-800",
-  red: "text-red-800",
-  purple: "text-purple-800",
-};
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-US", {
@@ -48,70 +32,99 @@ function formatCurrency(value: number): string {
 }
 
 export default function AnalyticsMetrics({ metrics }: AnalyticsMetricsProps) {
-
   const cards: MetricCard[] = [
     {
       label: "Total Revenue",
       value: formatCurrency(metrics.totalRevenue),
-      icon: <FaDollarSign className="h-6 w-6" />,
-      color: "green",
+      icon: <DollarSign className="h-5 w-5" />,
+      variant: "success",
     },
     {
       label: "Pending Invoices",
       value: metrics.pendingCount,
-      icon: <FaClock className="h-6 w-6" />,
-      color: "yellow",
+      icon: <Clock className="h-5 w-5" />,
+      variant: "warning",
     },
     {
       label: "Overdue Invoices",
       value: metrics.overdueCount,
-      icon: <FaExclamationTriangle className="h-6 w-6" />,
-      color: "red",
+      icon: <AlertTriangle className="h-5 w-5" />,
+      variant: "destructive",
     },
     {
       label: "Paid Invoices",
       value: metrics.paidCount,
-      icon: <FaCheckCircle className="h-6 w-6" />,
-      color: "green",
+      icon: <CheckCircle className="h-5 w-5" />,
+      variant: "success",
     },
     {
       label: "Active Clients",
       value: metrics.activeClientCount,
-      icon: <FaUsers className="h-6 w-6" />,
-      color: "blue",
+      icon: <Users className="h-5 w-5" />,
+      variant: "primary",
     },
     {
       label: "Jobs Due (Next 30 Days)",
       value: metrics.jobsDueSoon,
-      icon: <FaFileInvoice className="h-6 w-6" />,
-      color: "purple",
+      icon: <FileText className="h-5 w-5" />,
+      variant: "muted",
     },
   ];
 
+  const variantStyles = {
+    success: {
+      card: "border-success/20 bg-success/5",
+      icon: "bg-success text-success-foreground",
+      text: "text-success",
+    },
+    warning: {
+      card: "border-warning/20 bg-warning/5",
+      icon: "bg-warning text-warning-foreground",
+      text: "text-warning",
+    },
+    destructive: {
+      card: "border-destructive/20 bg-destructive/5",
+      icon: "bg-destructive text-destructive-foreground",
+      text: "text-destructive",
+    },
+    primary: {
+      card: "border-primary/20 bg-primary/5",
+      icon: "bg-primary text-primary-foreground",
+      text: "text-primary",
+    },
+    muted: {
+      card: "border-border bg-muted/50",
+      icon: "bg-muted-foreground text-background",
+      text: "text-muted-foreground",
+    },
+  };
+
   return (
-    <div className="flex flex-col gap-4 h-full">
-      {cards.map((card, index) => (
-        <div
-          key={index}
-          className={`flex-1 rounded-xl border shadow-md p-4 ${colorClasses[card.color]}`}
-        >
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex-1 min-w-0">
-              <p className="text-xs font-medium text-gray-600 mb-1">
-                {card.label}
-              </p>
-              <p className={`text-2xl font-bold ${badgeColorClasses[card.color]} truncate`}>
-                {card.value}
-              </p>
-            </div>
-            <div
-              className={`bg-linear-to-r ${iconColorClasses[card.color]} p-2.5 rounded-lg shadow-md shrink-0`}
-            >
-              <div className="text-white text-lg">{card.icon}</div>
-            </div>
-          </div>
-        </div>
-      ))}
+    <div className="flex h-full flex-col gap-4">
+      {cards.map((card, index) => {
+        const styles = variantStyles[card.variant];
+        return (
+          <Card key={index} className={`flex-1 ${styles.card}`}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-muted-foreground mb-1 text-xs font-medium">
+                    {card.label}
+                  </p>
+                  <p className={`text-2xl font-bold ${styles.text} truncate`}>
+                    {card.value}
+                  </p>
+                </div>
+                <div
+                  className={`${styles.icon} shrink-0 rounded-lg p-2.5 shadow-sm`}
+                >
+                  {card.icon}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 }

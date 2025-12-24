@@ -3,6 +3,7 @@ import { fetchEstimateById } from "../../../lib/estimates.data";
 import { fetchAllClients } from "../../../lib/data";
 import { notFound } from "next/navigation";
 import EstimateDetailsContainer from "../../../../_components/estimates/EstimateDetailsContainer";
+import { Skeleton } from "../../../../_components/ui/skeleton";
 // @ts-ignore
 import { auth } from "@clerk/nextjs/server";
 
@@ -32,17 +33,11 @@ const EstimateDetailed = async ({
     return (
       <Suspense 
         fallback={
-          <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto max-w-7xl">
-              <div className="space-y-4">
-                <div className="animate-pulse">
-                  <div className="h-6 bg-gray-200 rounded w-1/4 mb-3"></div>
-                  <div className="space-y-2">
-                    <div className="h-4 bg-gray-200 rounded"></div>
-                    <div className="h-4 bg-gray-200 rounded w-5/6"></div>
-                  </div>
-                </div>
-              </div>
+          <div className="min-h-screen bg-background p-4 sm:p-6 lg:p-8">
+            <div className="mx-auto max-w-7xl space-y-4">
+              <Skeleton className="h-10 w-1/3" />
+              <Skeleton className="h-32 w-full" />
+              <Skeleton className="h-64 w-full" />
             </div>
           </div>
         }

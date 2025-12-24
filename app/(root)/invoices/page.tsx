@@ -2,9 +2,8 @@ import { auth } from "@clerk/nextjs/server";
 import AddInvoice from "../../../_components/invoices/AddInvoice";
 import InvoiceTable from "../../../_components/invoices/InvoiceTable";
 import { fetchAllClients, fetchInvoicesPages } from "../../lib/data";
-import Search from "../../../_components/database/Search";
 import Pagination from "../../../_components/database/Pagination";
-import InvoiceSorting from "../../../_components/invoices/InvoiceSorting";
+import InvoiceSearchBar from "../../../_components/invoices/InvoiceSearchBar";
 import { ClientType } from "../../lib/typeDefinitions";
 import { Suspense } from "react";
 import { TableContainerSkeleton } from "../../../_components/Skeletons";
@@ -71,11 +70,8 @@ const Invoice = async ({
       <div className="flex items-center justify-center">
         <Card className="flex w-full max-w-7xl flex-col gap-8 p-8">
           <AddInvoice clients={clients} />
-          <div className="flex-1 space-y-8">
-            <div className="flex flex-col justify-between gap-6 md:flex-row lg:gap-8">
-              <Search placeholder="Search For Invoice..." />
-              <InvoiceSorting />
-            </div>
+          <div className="flex-1 space-y-6">
+            <InvoiceSearchBar />
             <div className="min-w-0 flex-1">
               <InvoiceTable
                 query={query}

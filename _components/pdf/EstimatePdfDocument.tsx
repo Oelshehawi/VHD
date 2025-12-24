@@ -497,7 +497,10 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
       <Page size="A4" style={scaledStyles.page}>
         {/* Logo Watermark */}
         <View style={scaledStyles.logoContainer}>
-          <Image src="/images/logo.png" style={{ width: "100%", height: "100%" }} />
+          <Image
+            src="/images/logo.png"
+            style={{ width: "100%", height: "100%" }}
+          />
         </View>
 
         {/* Header */}
@@ -507,11 +510,15 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
         </View>
 
         {/* Estimate Details & Client Information */}
-        <Text style={scaledStyles.sectionTitle}>Estimate Details & Client Information</Text>
+        <Text style={scaledStyles.sectionTitle}>
+          Estimate Details & Client Information
+        </Text>
         <View style={scaledStyles.row}>
           <View style={scaledStyles.col50}>
             <Text style={scaledStyles.label}>Estimate No:</Text>
-            <Text style={scaledStyles.value}>{estimateData.estimateNumber}</Text>
+            <Text style={scaledStyles.value}>
+              {estimateData.estimateNumber}
+            </Text>
             <View style={{ marginTop: s(7) }}>
               <Text style={scaledStyles.label}>Date:</Text>
               <Text style={scaledStyles.value}>{estimateData.createdDate}</Text>
@@ -522,7 +529,9 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
             <Text style={scaledStyles.value}>{estimateData.clientName}</Text>
             <View style={{ marginTop: s(7) }}>
               <Text style={scaledStyles.label}>Contact Person:</Text>
-              <Text style={scaledStyles.value}>{estimateData.contactPerson || ""}</Text>
+              <Text style={scaledStyles.value}>
+                {estimateData.contactPerson || ""}
+              </Text>
             </View>
           </View>
         </View>
@@ -531,12 +540,10 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
             <Text style={scaledStyles.label}>Street Address:</Text>
             <Text style={scaledStyles.value}>{estimateData.address || ""}</Text>
           </View>
-          {estimateData.phone && (
-            <View style={scaledStyles.col50}>
-              <Text style={scaledStyles.label}>Phone:</Text>
-              <Text style={scaledStyles.value}>{estimateData.phone}</Text>
-            </View>
-          )}
+          <View style={scaledStyles.col50}>
+            <Text style={scaledStyles.label}>Phone:</Text>
+            <Text style={scaledStyles.value}>{estimateData.phone || "—"}</Text>
+          </View>
         </View>
         {estimateData.email && (
           <View style={scaledStyles.row}>
@@ -547,14 +554,16 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
           </View>
         )}
 
-        {estimateData.projectLocation && (
-          <View style={scaledStyles.row}>
-            <View style={{ width: "100%" }}>
-              <Text style={scaledStyles.label}>Project Location (if different from address above):</Text>
-              <Text style={scaledStyles.value}>{estimateData.projectLocation}</Text>
-            </View>
+        <View style={scaledStyles.row}>
+          <View style={{ width: "100%" }}>
+            <Text style={scaledStyles.label}>
+              Project Location (if different from address above):
+            </Text>
+            <Text style={scaledStyles.value}>
+              {estimateData.projectLocation || "—"}
+            </Text>
           </View>
-        )}
+        </View>
 
         {/* Estimated Costs */}
         <Text style={scaledStyles.sectionTitle}>Estimated Costs</Text>
@@ -586,23 +595,31 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
           <View style={scaledStyles.totalsSection}>
             <View style={scaledStyles.totalRow}>
               <Text style={scaledStyles.totalsLabel}>Subtotal:</Text>
-              <Text style={scaledStyles.totalsValue}>${estimateData.subtotal.toFixed(2)}</Text>
+              <Text style={scaledStyles.totalsValue}>
+                ${estimateData.subtotal.toFixed(2)}
+              </Text>
             </View>
             <View style={scaledStyles.gstRow}>
               <Text style={scaledStyles.gstNumber}>GST# 814301065</Text>
               <Text style={scaledStyles.gstRate}>GST (5%):</Text>
-              <Text style={scaledStyles.gstAmount}>${estimateData.gst.toFixed(2)}</Text>
+              <Text style={scaledStyles.gstAmount}>
+                ${estimateData.gst.toFixed(2)}
+              </Text>
             </View>
             <View style={scaledStyles.finalTotalRow}>
               <Text style={scaledStyles.totalsLabel}>Total Estimate:</Text>
-              <Text style={scaledStyles.totalsValue}>${estimateData.total.toFixed(2)}</Text>
+              <Text style={scaledStyles.totalsValue}>
+                ${estimateData.total.toFixed(2)}
+              </Text>
             </View>
           </View>
         </View>
 
         {/* Services Section */}
         <View style={scaledStyles.servicesSection}>
-          <Text style={scaledStyles.servicesTitle}>Our vent cleaning service includes:</Text>
+          <Text style={scaledStyles.servicesTitle}>
+            Our vent cleaning service includes:
+          </Text>
           <View style={scaledStyles.servicesGrid}>
             {estimateData.services.map((service, index) => (
               <Text key={index} style={scaledStyles.serviceItem}>
@@ -614,20 +631,36 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
 
         {/* Client Portal Section */}
         <View style={scaledStyles.clientPortalSection}>
-          <Text style={scaledStyles.clientPortalTitle}>CLIENT PORTAL ACCESS</Text>
+          <Text style={scaledStyles.clientPortalTitle}>
+            CLIENT PORTAL ACCESS
+          </Text>
           <Text style={scaledStyles.clientPortalText}>
-            Once you approve this estimate, you'll receive access to our client portal where you can:
+            Once you approve this estimate, you'll receive access to our client
+            portal where you can:
           </Text>
           <View style={scaledStyles.clientPortalGrid}>
-            <Text style={scaledStyles.clientPortalItem}>• See Upcoming Services</Text>
-            <Text style={scaledStyles.clientPortalItem}>• View before/after photos</Text>
-            <Text style={scaledStyles.clientPortalItem}>• Keep system up to date</Text>
-            <Text style={scaledStyles.clientPortalItem}>• Review service history</Text>
-            <Text style={scaledStyles.clientPortalItem}>• Download invoices and reports</Text>
-            <Text style={scaledStyles.clientPortalItem}>• Schedule future services</Text>
+            <Text style={scaledStyles.clientPortalItem}>
+              • See Upcoming Services
+            </Text>
+            <Text style={scaledStyles.clientPortalItem}>
+              • View before/after photos
+            </Text>
+            <Text style={scaledStyles.clientPortalItem}>
+              • Keep system up to date
+            </Text>
+            <Text style={scaledStyles.clientPortalItem}>
+              • Review service history
+            </Text>
+            <Text style={scaledStyles.clientPortalItem}>
+              • Download invoices and reports
+            </Text>
+            <Text style={scaledStyles.clientPortalItem}>
+              • Schedule future services
+            </Text>
           </View>
           <Text style={scaledStyles.clientPortalFooter}>
-            Stay connected with your vent cleaning service every step of the way!
+            Stay connected with your vent cleaning service every step of the
+            way!
           </Text>
         </View>
 
@@ -638,7 +671,8 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
         <View style={scaledStyles.termsSection}>
           <Text style={scaledStyles.termsTitle}>TERMS & CONDITIONS</Text>
           <Text style={scaledStyles.termsText}>
-            {estimateData.terms || "Payment is due upon completion of service. Prices subject to change if scope of work differs from initial assessment."}
+            {estimateData.terms ||
+              "Payment is due upon completion of service. Prices subject to change if scope of work differs from initial assessment."}
           </Text>
         </View>
       </Page>

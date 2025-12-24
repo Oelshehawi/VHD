@@ -441,20 +441,7 @@ export async function checkAndProcessOverdueInvoices() {
       { $set: { status: "overdue" } },
     );
 
-    // Create audit log
     if (result.modifiedCount > 0) {
-      await AuditLog.create({
-        action: "system_update_overdue",
-        timestamp: now,
-        performedBy: "system_cron",
-        details: {
-          count: result.modifiedCount,
-          invoiceIds: overdueInvoices.map((inv: any) => inv.invoiceId),
-          reason: "Auto-update of overdue invoices",
-        },
-        success: true,
-      });
-
       revalidatePath("/dashboard");
       revalidatePath("/invoices");
     }

@@ -276,6 +276,7 @@ const PendingJobsModalContent = ({
                             <SelectContent>
                               <SelectItem value="pending">Pending</SelectItem>
                               <SelectItem value="paid">Paid</SelectItem>
+                              <SelectItem value="overdue">Overdue</SelectItem>
                             </SelectContent>
                           </Select>
 

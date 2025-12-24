@@ -10,6 +10,7 @@ import {
   FaStickyNote,
   FaSave,
   FaTimes,
+  FaPenSquare,
 } from "react-icons/fa";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import {
@@ -230,17 +231,28 @@ const InlineEditClient = ({
 
   return (
     <Card>
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
-            <FaUser className="text-primary h-4 w-4" />
+      <CardHeader className="border-b">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
+              <FaUser className="text-primary h-4 w-4" />
+            </div>
+            <div>
+              <CardTitle>Client Information</CardTitle>
+              <CardDescription>
+                {isEditing ? "Edit client details" : "View client information"}
+              </CardDescription>
+            </div>
           </div>
-          <div>
-            <CardTitle>Client Information</CardTitle>
-            <CardDescription>
-              {isEditing ? "Edit client details" : "View client information"}
-            </CardDescription>
-          </div>
+          <Button onClick={toggleEdit} variant={isEditing ? "outline" : "default"} size="sm">
+            <FaPenSquare className="h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">
+              {isEditing ? "Cancel Edit" : "Edit Client"}
+            </span>
+            <span className="sm:hidden">
+              {isEditing ? "Cancel" : "Edit"}
+            </span>
+          </Button>
         </div>
       </CardHeader>
       <CardContent>

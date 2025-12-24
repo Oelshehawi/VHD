@@ -149,7 +149,7 @@ const JobsDueContainer = ({
   }, [jobsDueData, scheduledParam]);
 
   return (
-    <Card className="flex h-full max-h-[calc(100vh-120px)] w-full flex-col shadow-sm">
+    <Card className="flex h-full max-h-[calc(100vh-120px)] w-full flex-col gap-0 py-0 shadow-sm">
       <CardHeader className="bg-muted/40 border-border border-b p-4 pb-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

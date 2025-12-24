@@ -39,6 +39,13 @@ import {
   DrawerTitle,
   DrawerTrigger,
 } from "../ui/drawer";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -80,7 +87,11 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
     clearErrors,
     watch,
     formState: { errors },
-  } = useForm<InvoiceFormValues>();
+  } = useForm<InvoiceFormValues>({
+    defaultValues: {
+      frequency: 2, // Default to semi-annual (2x/year)
+    },
+  });
 
   const dateIssued = watch("dateIssued");
   const frequency = watch("frequency");
@@ -348,25 +359,38 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                 {/* Frequency */}
                 <div className="space-y-2">
                   <Label htmlFor="frequency" className="text-sm font-medium">
-                    Frequency (per year){" "}
+                    Service Frequency{" "}
                     <span className="text-destructive ml-1">*</span>
                   </Label>
                   <p className="text-muted-foreground text-xs">
-                    How many times per year this job occurs
+                    How often this service is needed
                   </p>
-                  <Input
-                    id="frequency"
-                    {...register("frequency", { required: true, min: 1 })}
-                    type="number"
-                    placeholder="1"
-                    data-vaul-no-drag
-                    className={cn(
-                      autoFilledFields.includes("frequency") &&
-                        "border-primary/50 bg-primary/5",
-                      errors.frequency &&
-                        "border-destructive focus-visible:ring-destructive",
-                    )}
-                  />
+                  <Select
+                    value={frequency?.toString() || "2"}
+                    onValueChange={(value) =>
+                      setValue("frequency", Number(value))
+                    }
+                  >
+                    <SelectTrigger
+                      data-vaul-no-drag
+                      className={cn(
+                        autoFilledFields.includes("frequency") &&
+                          "border-primary/50 bg-primary/5",
+                        errors.frequency &&
+                          "border-destructive focus-visible:ring-destructive",
+                      )}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="12">Monthly (12x/year)</SelectItem>
+                      <SelectItem value="6">Bi-Monthly (6x/year)</SelectItem>
+                      <SelectItem value="4">Quarterly (4x/year)</SelectItem>
+                      <SelectItem value="3">Tri-Annual (3x/year)</SelectItem>
+                      <SelectItem value="2">Semi-Annual (2x/year)</SelectItem>
+                      <SelectItem value="1">Annual (1x/year)</SelectItem>
+                    </SelectContent>
+                  </Select>
                   {errors.frequency && (
                     <p className="text-destructive text-xs">
                       Frequency is required

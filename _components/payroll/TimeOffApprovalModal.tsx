@@ -1,15 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { createPortal } from "react-dom";
 import {
   approvePendingTimeOff,
   rejectPendingTimeOff,
 } from "../../app/lib/actions/availability.actions";
 import { TimeOffRequestType } from "../../app/lib/typeDefinitions";
-import { XMarkIcon, CheckCircleIcon, XCircleIcon } from "@heroicons/react/24/outline";
+import { X, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import toast from "react-hot-toast";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
+import { Label } from "../ui/label";
+import { Alert, AlertDescription } from "../ui/alert";
 
 interface TimeOffApprovalModalProps {
   request: TimeOffRequestType | null;
@@ -54,7 +57,9 @@ export function TimeOffApprovalModal({
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to approve request");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to approve request",
+      );
     } finally {
       setLoading(false);
     }
@@ -72,10 +77,7 @@ export function TimeOffApprovalModal({
     setError("");
 
     try {
-      const result = await rejectPendingTimeOff(
-        request._id as string,
-        notes,
-      );
+      const result = await rejectPendingTimeOff(request._id as string, notes);
 
       if (!result.success) {
         toast.error(result.message || "Failed to reject request");
@@ -88,7 +90,9 @@ export function TimeOffApprovalModal({
       onSuccess?.();
       onClose();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to reject request");
+      toast.error(
+        err instanceof Error ? err.message : "Failed to reject request",
+      );
     } finally {
       setLoading(false);
     }
@@ -101,7 +105,7 @@ export function TimeOffApprovalModal({
     onClose();
   };
 
-  if (!isOpen || !request) return null;
+  if (!request) return null;
 
   const startDate = new Date(request.startDate).toLocaleDateString("en-US", {
     month: "short",
@@ -114,148 +118,145 @@ export function TimeOffApprovalModal({
     year: "numeric",
   });
 
-  const modalContent = (
-    <AnimatePresence>
-      <motion.div
-        key="timeoff-modal-overlay"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        onClick={handleModalClose}
-        className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm"
-      >
-        <motion.div
-          initial={{ scale: 0.95, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.95, opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          onClick={(e) => e.stopPropagation()}
-          className="relative w-full max-w-sm rounded-2xl bg-white shadow-2xl overflow-hidden"
-        >
-          {/* Header */}
-          <div className="sticky top-0 z-10 bg-white border-b border-gray-200 px-6 py-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-bold text-gray-900">Review Time-Off Request</h2>
-              <button
-                onClick={handleModalClose}
-                disabled={loading}
-                className="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <XMarkIcon className="h-5 w-5" />
-              </button>
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && handleModalClose()}>
+      <DialogContent className="max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Review Time-Off Request</DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          {/* Compact Info Grid */}
+          <div className="bg-muted grid grid-cols-2 gap-3 rounded-lg p-4">
+            <div>
+              <p className="text-muted-foreground text-xs font-semibold uppercase">
+                Technician
+              </p>
+              <p className="text-foreground mt-0.5 text-sm font-medium">
+                {technicianName || request.technicianId}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs font-semibold uppercase">
+                Duration
+              </p>
+              <p className="text-foreground mt-0.5 text-sm font-medium">
+                {Math.ceil(
+                  (new Date(request.endDate).getTime() -
+                    new Date(request.startDate).getTime()) /
+                    (1000 * 60 * 60 * 24),
+                ) + 1}{" "}
+                days
+              </p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-muted-foreground text-xs font-semibold uppercase">
+                Date Range
+              </p>
+              <p className="text-foreground mt-0.5 text-sm font-medium">
+                {startDate} – {endDate}
+              </p>
+            </div>
+            <div className="col-span-2">
+              <p className="text-muted-foreground text-xs font-semibold uppercase">
+                Reason
+              </p>
+              <p className="text-foreground mt-0.5 line-clamp-2 text-sm font-medium">
+                {request.reason}
+              </p>
             </div>
           </div>
 
-          {/* Content */}
-          <div className="p-6 space-y-4">
-            {error && (
-              <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm font-medium flex items-start gap-2">
-                <XCircleIcon className="h-4 w-4 shrink-0 mt-0.5" />
-                <span>{error}</span>
-              </div>
-            )}
-
-            {/* Compact Info Grid */}
-            <div className="grid grid-cols-2 gap-3 bg-gray-50 rounded-lg p-4">
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase">Technician</p>
-                <p className="text-sm font-medium text-gray-900 mt-0.5">
-                  {technicianName || request.technicianId}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-gray-500 uppercase">Duration</p>
-                <p className="text-sm font-medium text-gray-900 mt-0.5">
-                  {Math.ceil(
-                    (new Date(request.endDate).getTime() - new Date(request.startDate).getTime()) /
-                      (1000 * 60 * 60 * 24)
-                  ) + 1} days
-                </p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase">Date Range</p>
-                <p className="text-sm font-medium text-gray-900 mt-0.5">
-                  {startDate} – {endDate}
-                </p>
-              </div>
-              <div className="col-span-2">
-                <p className="text-xs font-semibold text-gray-500 uppercase">Reason</p>
-                <p className="text-sm font-medium text-gray-900 mt-0.5 line-clamp-2">
-                  {request.reason}
-                </p>
-              </div>
+          {/* Notes textarea */}
+          {action && (
+            <div>
+              <Label className="mb-2 text-xs font-semibold uppercase">
+                {action === "approve"
+                  ? "Approval Notes (Optional)"
+                  : "Rejection Reason (Required)"}
+              </Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder={
+                  action === "reject"
+                    ? "Explain rejection reason..."
+                    : "Add notes..."
+                }
+                rows={2}
+              />
             </div>
+          )}
 
-            {/* Notes textarea */}
-            {action && (
-              <div>
-                <label className="block text-xs font-semibold text-gray-700 uppercase mb-2">
-                  {action === "approve" ? "Approval Notes (Optional)" : "Rejection Reason (Required)"}
-                </label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  placeholder={action === "reject" ? "Explain rejection reason..." : "Add notes..."}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none"
-                  rows={2}
-                />
-              </div>
+          {/* Action Buttons */}
+          <div className="flex gap-2 pt-2">
+            {!action ? (
+              <>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={handleModalClose}
+                  disabled={loading}
+                >
+                  Close
+                </Button>
+                <Button
+                  variant="destructive"
+                  className="flex-1"
+                  onClick={() => setAction("reject")}
+                  disabled={loading}
+                >
+                  Reject
+                </Button>
+                <Button
+                  className="bg-success hover:bg-success/90 flex-1"
+                  onClick={() => setAction("approve")}
+                  disabled={loading}
+                >
+                  Approve
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  variant="outline"
+                  className="flex-1"
+                  onClick={() => setAction(null)}
+                  disabled={loading}
+                >
+                  Back
+                </Button>
+                <Button
+                  className={`flex-1 ${
+                    action === "approve" ? "bg-success hover:bg-success/90" : ""
+                  }`}
+                  variant={action === "reject" ? "destructive" : "default"}
+                  onClick={action === "approve" ? handleApprove : handleReject}
+                  disabled={loading || (action === "reject" && !notes.trim())}
+                >
+                  {loading ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Processing...
+                    </>
+                  ) : action === "approve" ? (
+                    "Confirm"
+                  ) : (
+                    "Reject"
+                  )}
+                </Button>
+              </>
             )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-2 pt-2">
-              {!action ? (
-                <>
-                  <button
-                    onClick={handleModalClose}
-                    disabled={loading}
-                    className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Close
-                  </button>
-                  <button
-                    onClick={() => setAction("reject")}
-                    disabled={loading}
-                    className="flex-1 px-3 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Reject
-                  </button>
-                  <button
-                    onClick={() => setAction("approve")}
-                    disabled={loading}
-                    className="flex-1 px-3 py-2 text-sm font-medium text-white bg-green-500 hover:bg-green-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Approve
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    onClick={() => setAction(null)}
-                    disabled={loading}
-                    className="flex-1 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Back
-                  </button>
-                  <button
-                    onClick={action === "approve" ? handleApprove : handleReject}
-                    disabled={loading || (action === "reject" && !notes.trim())}
-                    className={`flex-1 px-3 py-2 text-sm font-medium text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                      action === "approve"
-                        ? "bg-green-500 hover:bg-green-600"
-                        : "bg-red-500 hover:bg-red-600"
-                    }`}
-                  >
-                    {loading ? "Processing..." : action === "approve" ? "Confirm" : "Reject"}
-                  </button>
-                </>
-              )}
-            </div>
           </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
-
-  return createPortal(modalContent, document.body);
 }

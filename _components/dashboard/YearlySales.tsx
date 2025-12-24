@@ -1,26 +1,26 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  CategoryScale,
-} from 'chart.js';
-import { YearlySalesData } from '../../app/lib/typeDefinitions';
-import { FaChartBar, FaCalendarAlt, FaArrowLeft, FaArrowRight } from 'react-icons/fa';
+"use client";
 
-ChartJS.register(
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  CategoryScale
-);
+import { useMemo, useState, useEffect } from "react";
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
+import { YearlySalesData } from "../../app/lib/typeDefinitions";
+import { BarChart3, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "../ui/button";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+  ChartLegend,
+  ChartLegendContent,
+  type ChartConfig,
+} from "../ui/chart";
 
 interface YearlySalesProps {
   salesData: YearlySalesData[];
@@ -29,220 +29,189 @@ interface YearlySalesProps {
   isLoading?: boolean;
 }
 
-interface ChartData {
-  labels: string[];
-  datasets: {
-    label: string;
-    data: number[];
-    backgroundColor: string;
-    borderColor: string;
-    borderWidth: number;
-    borderRadius: number;
-  }[];
-}
+const YearlySales = ({
+  salesData,
+  currentYear,
+  onYearChange,
+}: YearlySalesProps) => {
+  const [isMobile, setIsMobile] = useState(false);
 
-interface ChartOptions {
-  plugins: {
-    legend: {
-      position: 'top';
-      labels: {
-        usePointStyle: boolean;
-        padding: number;
-        color: string;
-        font: {
-          size: number;
-        };
-      };
-    };
-    title: {
-      display: boolean;
-      text: string;
-      color: string;
-              font: {
-          size: number;
-          weight: 'normal' | 'bold' | 'lighter' | 'bolder';
-        };
-    };
-  };
-  maintainAspectRatio: boolean;
-  responsive: boolean;
-  scales: {
-    x: {
-      grid: {
-        color: string;
-      };
-      ticks: {
-        color: string;
-        font: {
-          size: number;
-        };
-      };
-    };
-    y: {
-      grid: {
-        color: string;
-      };
-      ticks: {
-        color: string;
-        font: {
-          size: number;
-        };
-      };
-    };
-  };
-}
-
-const YearlySales = ({ salesData, currentYear, onYearChange, isLoading }: YearlySalesProps) => {
-  const [chartOptions, setChartOptions] = useState<ChartOptions>({
-    plugins: {
-      legend: {
-        position: 'top',
-        labels: {
-          usePointStyle: true,
-          padding: 20,
-          color: '#374151',
-          font: {
-            size: 12,
-          },
-        },
-      },
-      title: {
-        display: true,
-        text: `Monthly Sales Overview - ${currentYear} vs ${currentYear - 1}`,
-        color: '#374151',
-        font: {
-          size: 16,
-          weight: 'bold',
-        },
-      },
-    },
-    maintainAspectRatio: false,
-    responsive: true,
-    scales: {
-      x: {
-        grid: {
-          color: '#e5e7eb',
-        },
-        ticks: {
-          color: '#6b7280',
-          font: {
-            size: 11,
-          },
-        },
-      },
-      y: {
-        grid: {
-          color: '#e5e7eb',
-        },
-        ticks: {
-          color: '#6b7280',
-          font: {
-            size: 11,
-          },
-        },
-      },
-    },
-  });
-  const [chartData, setChartData] = useState<ChartData>({
-    labels: [],
-    datasets: [],
-  });
-
+  // Detect mobile screen size
   useEffect(() => {
-    const dataCurrentYear = salesData.map((item) => item['Current Year']);
-    const dataPreviousYear = salesData.map((item) => item['Previous Year']);
-    const labels = salesData.map((item) => item.date.split(' ')[0]);
+    const checkMobile = () => setIsMobile(window.innerWidth < 640);
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
 
-    setChartData({
-      labels: labels.filter(Boolean) as string[],
-      datasets: [
-        {
+  // Dynamic chart config with actual year labels
+  const chartConfig = useMemo(
+    () =>
+      ({
+        currentYear: {
           label: `${currentYear}`,
-          data: dataCurrentYear,
-          backgroundColor: '#10b981',
-          borderColor: '#059669',
-          borderWidth: 2,
-          borderRadius: 6,
+          color: "var(--chart-1)",
         },
-        {
+        previousYear: {
           label: `${currentYear - 1}`,
-          data: dataPreviousYear,
-          backgroundColor: '#3b82f6',
-          borderColor: '#2563eb',
-          borderWidth: 2,
-          borderRadius: 6,
+          color: "var(--chart-2)",
         },
-      ],
-    });
+      }) satisfies ChartConfig,
+    [currentYear],
+  );
 
-    setChartOptions((prev) => ({
-      ...prev,
-      plugins: {
-        ...prev.plugins,
-        title: {
-          ...prev.plugins.title,
-          text: `Monthly Sales Overview - ${currentYear} vs ${currentYear - 1}`,
-        },
-      },
+  // Transform data for Recharts format
+  const chartData = useMemo(() => {
+    return salesData.map((item) => ({
+      month: item.date.split(" ")[0],
+      currentYear: item["Current Year"],
+      previousYear: item["Previous Year"],
     }));
-  }, [salesData, currentYear]);
+  }, [salesData]);
 
-  const handleYearChange = (direction: 'next' | 'previous') => {
-    const newYear = direction === 'next' ? currentYear + 1 : currentYear - 1;
+  const handleYearChange = (direction: "next" | "previous") => {
+    const newYear = direction === "next" ? currentYear + 1 : currentYear - 1;
 
-    if (newYear > new Date().getFullYear()) return; // Don't allow future years
+    if (newYear > new Date().getFullYear()) return;
 
     if (onYearChange) {
       onYearChange(newYear);
     }
   };
 
+  const tooltipContent = (
+    <ChartTooltipContent
+      formatter={(value, name) => {
+        const yearLabel =
+          name === "currentYear" ? currentYear : currentYear - 1;
+        return (
+          <span className="font-medium">
+            {yearLabel}: ${Number(value).toLocaleString()}
+          </span>
+        );
+      }}
+    />
+  );
+
   return (
-    <div className="flex flex-col h-full">
-      {/* Chart Container */}
-      <div className="flex-1 rounded-xl border border-gray-200 bg-white p-3 sm:p-6 shadow-lg transition-all hover:shadow-xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-6">
-          <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl bg-linear-to-r from-darkGreen to-green-600 shadow-lg">
-            <FaChartBar className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-gray-900 sm:text-xl">Sales Analytics</h3>
-            <p className="text-xs text-gray-600 sm:text-sm">Monthly performance comparison</p>
-          </div>
+    <div className="flex h-full flex-col">
+      {/* Header */}
+      <div className="mb-4 flex items-center gap-3">
+        <div className="bg-primary flex h-10 w-10 items-center justify-center rounded-lg shadow-sm">
+          <BarChart3 className="text-primary-foreground h-5 w-5" />
         </div>
-        
-        {/* Chart - Takes remaining space */}
-        <div className="flex-1 rounded-xl bg-gray-50 p-2 sm:p-4 border border-gray-200 min-h-0">
-          <Bar data={chartData} options={chartOptions} />
+        <div>
+          <h3 className="text-foreground text-lg font-bold">Sales Analytics</h3>
+          <p className="text-muted-foreground text-sm">
+            Monthly performance comparison
+          </p>
         </div>
       </div>
-      
+
+      {/* Chart - Takes remaining space */}
+      <div className="min-h-0 flex-1">
+        <ChartContainer config={chartConfig} className="h-full w-full">
+          {isMobile ? (
+            // Line chart for mobile - better for narrow screens
+            <LineChart data={chartData} accessibilityLayer>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="month"
+                tickLine={false}
+                tickMargin={8}
+                axisLine={false}
+                fontSize={10}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                fontSize={10}
+                width={40}
+              />
+              <ChartTooltip content={tooltipContent} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Line
+                type="monotone"
+                dataKey="currentYear"
+                stroke="var(--color-currentYear)"
+                strokeWidth={2}
+                dot={{ fill: "var(--color-currentYear)", r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+              <Line
+                type="monotone"
+                dataKey="previousYear"
+                stroke="var(--color-previousYear)"
+                strokeWidth={2}
+                dot={{ fill: "var(--color-previousYear)", r: 3 }}
+                activeDot={{ r: 5 }}
+              />
+            </LineChart>
+          ) : (
+            // Bar chart for desktop
+            <BarChart data={chartData} accessibilityLayer>
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="month"
+                tickLine={false}
+                tickMargin={10}
+                axisLine={false}
+                fontSize={12}
+              />
+              <YAxis
+                tickLine={false}
+                axisLine={false}
+                tickFormatter={(value) => `$${(value / 1000).toFixed(0)}k`}
+                fontSize={12}
+                width={50}
+              />
+              <ChartTooltip content={tooltipContent} />
+              <ChartLegend content={<ChartLegendContent />} />
+              <Bar
+                dataKey="currentYear"
+                fill="var(--color-currentYear)"
+                radius={[4, 4, 0, 0]}
+              />
+              <Bar
+                dataKey="previousYear"
+                fill="var(--color-previousYear)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          )}
+        </ChartContainer>
+      </div>
+
       {/* Controls */}
-      <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 pt-4 sm:pt-6">
-        <button
-          className="flex items-center gap-2 sm:gap-3 rounded-xl bg-linear-to-r from-darkBlue to-blue-600 px-3 py-2 sm:px-4 sm:py-2.5 text-white font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 text-sm sm:text-base"
-          onClick={() => handleYearChange('previous')}
+      <div className="flex items-center justify-center gap-4 pt-4">
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => handleYearChange("previous")}
+          className="gap-2"
         >
-          <FaArrowLeft className="h-3 w-3" />
+          <ChevronLeft className="h-4 w-4" />
           <span className="hidden sm:inline">Previous Year</span>
           <span className="sm:hidden">Prev</span>
-        </button>
-        
-        <div className="flex items-center gap-2 sm:gap-3 rounded-xl bg-white px-3 py-2 sm:px-4 sm:py-2.5 border border-gray-200 shadow-lg">
-          <FaCalendarAlt className="h-3 w-3 sm:h-4 sm:w-4 text-gray-600" />
-          <span className="font-bold text-gray-900 text-sm sm:text-base">{currentYear}</span>
+        </Button>
+
+        <div className="bg-muted flex items-center gap-2 rounded-lg border px-4 py-2">
+          <Calendar className="text-muted-foreground h-4 w-4" />
+          <span className="text-foreground font-bold">{currentYear}</span>
         </div>
-        
-        <button
-          className="flex items-center gap-2 sm:gap-3 rounded-xl bg-linear-to-r from-darkBlue to-blue-600 px-3 py-2 sm:px-4 sm:py-2.5 text-white font-medium shadow-lg transition-all hover:shadow-xl hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-sm sm:text-base"
-          onClick={() => handleYearChange('next')}
+
+        <Button
+          variant="default"
+          size="sm"
+          onClick={() => handleYearChange("next")}
           disabled={currentYear === new Date().getFullYear()}
+          className="gap-2"
         >
           <span className="hidden sm:inline">Next Year</span>
           <span className="sm:hidden">Next</span>
-          <FaArrowRight className="h-3 w-3" />
-        </button>
+          <ChevronRight className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

@@ -16,7 +16,8 @@ const ClientDetails = ({
   canManage: boolean;
 }) => {
   // Get the primary email or fallback to the old email field
-  const primaryEmail = getEmailForPurpose(client, "primary") || client.email || "";
+  const primaryEmail =
+    getEmailForPurpose(client, "primary") || client.email || "";
   const accountingEmail = getEmailForPurpose(client, "accounting");
   const schedulingEmail = getEmailForPurpose(client, "scheduling");
 
@@ -27,10 +28,12 @@ const ClientDetails = ({
           <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
             <User className="text-primary h-4 w-4" />
           </div>
-          <h3 className="text-foreground text-base font-semibold">Client Information</h3>
+          <h3 className="text-foreground text-base font-semibold">
+            Client Information
+          </h3>
         </div>
       </CardHeader>
-      
+
       <CardContent className="p-4">
         <div className="space-y-4">
           {/* Client Name */}
@@ -38,8 +41,12 @@ const ClientDetails = ({
             <div className="flex items-center gap-3">
               <User className="text-muted-foreground h-4 w-4" />
               <div>
-                <p className="text-muted-foreground text-xs font-medium">Client Name</p>
-                <p className="text-foreground text-sm font-semibold">{client.clientName}</p>
+                <p className="text-muted-foreground text-xs font-medium">
+                  Client Name
+                </p>
+                <p className="text-foreground text-sm font-semibold">
+                  {client.clientName}
+                </p>
               </div>
             </div>
             {canManage && (
@@ -56,10 +63,12 @@ const ClientDetails = ({
           <div className="flex items-center gap-3">
             <Mail className="text-muted-foreground h-4 w-4" />
             <div>
-              <p className="text-muted-foreground text-xs font-medium">Primary Email</p>
-              <a 
+              <p className="text-muted-foreground text-xs font-medium">
+                Primary Email
+              </p>
+              <a
                 href={`mailto:${primaryEmail}`}
-                className="text-primary text-sm hover:underline transition-colors"
+                className="text-primary text-sm transition-colors hover:underline"
               >
                 {primaryEmail}
               </a>
@@ -71,15 +80,17 @@ const ClientDetails = ({
             <div className="flex items-center gap-3">
               <Mail className="text-muted-foreground h-4 w-4" />
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-muted-foreground text-xs font-medium">Accounting Email</p>
+                <div className="mb-1 flex items-center gap-2">
+                  <p className="text-muted-foreground text-xs font-medium">
+                    Accounting Email
+                  </p>
                   <Badge variant="secondary" className="text-xs">
                     Billing
                   </Badge>
                 </div>
-                <a 
+                <a
                   href={`mailto:${accountingEmail}`}
-                  className="text-primary text-sm hover:underline transition-colors"
+                  className="text-primary text-sm transition-colors hover:underline"
                 >
                   {accountingEmail}
                 </a>
@@ -88,34 +99,40 @@ const ClientDetails = ({
           )}
 
           {/* Scheduling Email - Only show if different from both primary and accounting */}
-          {schedulingEmail && schedulingEmail !== primaryEmail && schedulingEmail !== accountingEmail && (
-            <div className="flex items-center gap-3">
-              <Mail className="text-muted-foreground h-4 w-4" />
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-muted-foreground text-xs font-medium">Scheduling Email</p>
-                  <Badge variant="outline" className="text-xs">
-                    Scheduling
-                  </Badge>
+          {schedulingEmail &&
+            schedulingEmail !== primaryEmail &&
+            schedulingEmail !== accountingEmail && (
+              <div className="flex items-center gap-3">
+                <Mail className="text-muted-foreground h-4 w-4" />
+                <div className="flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      Scheduling Email
+                    </p>
+                    <Badge variant="outline" className="text-xs">
+                      Scheduling
+                    </Badge>
+                  </div>
+                  <a
+                    href={`mailto:${schedulingEmail}`}
+                    className="text-primary text-sm transition-colors hover:underline"
+                  >
+                    {schedulingEmail}
+                  </a>
                 </div>
-                <a 
-                  href={`mailto:${schedulingEmail}`}
-                  className="text-primary text-sm hover:underline transition-colors"
-                >
-                  {schedulingEmail}
-                </a>
               </div>
-            </div>
-          )}
+            )}
 
           {/* Phone Number */}
           <div className="flex items-center gap-3">
             <Phone className="text-muted-foreground h-4 w-4" />
             <div>
-              <p className="text-muted-foreground text-xs font-medium">Phone Number</p>
-              <a 
+              <p className="text-muted-foreground text-xs font-medium">
+                Phone Number
+              </p>
+              <a
                 href={`tel:${client.phoneNumber}`}
-                className="text-primary text-sm hover:underline transition-colors"
+                className="text-primary text-sm transition-colors hover:underline"
               >
                 {client.phoneNumber}
               </a>
@@ -125,8 +142,10 @@ const ClientDetails = ({
           {/* Notes */}
           {client.notes && (
             <div className="border-t pt-4">
-              <p className="text-muted-foreground mb-2 text-xs font-medium">Notes</p>
-              <p className="text-muted-foreground bg-muted text-xs rounded-lg p-2">
+              <p className="text-muted-foreground mb-2 text-xs font-medium">
+                Notes
+              </p>
+              <p className="text-muted-foreground bg-muted rounded-lg p-2 text-xs">
                 {client.notes}
               </p>
             </div>

@@ -2,17 +2,11 @@
 
 import { TimeOffRequestType } from "../../app/lib/typeDefinitions";
 import { TimeOffApprovalModal } from "./TimeOffApprovalModal";
-import { deleteTimeOffRequest } from "../../app/lib/actions/availability.actions";
 import { useState } from "react";
 import { format } from "date-fns";
-import {
-  CheckCircleIcon,
-  XCircleIcon,
-  ClockIcon,
-  TrashIcon,
-} from "@heroicons/react/24/outline";
-import DeleteModal from "../DeleteModal";
-import toast from "react-hot-toast";
+import { CheckCircle, XCircle, Clock } from "lucide-react";
+import { Button } from "../ui/button";
+import { Badge } from "../ui/badge";
 
 interface TimeOffRequestsTableProps {
   requests: TimeOffRequestType[];
@@ -22,24 +16,24 @@ interface TimeOffRequestsTableProps {
 
 const STATUS_CONFIG = {
   pending: {
-    bgColor: "bg-amber-50",
-    textColor: "text-amber-700",
-    badgeColor: "bg-amber-100 text-amber-700",
-    icon: ClockIcon,
+    bgColor: "bg-warning/5",
+    borderColor: "border-warning/20",
+    badgeVariant: "warning" as const,
+    icon: Clock,
     label: "Pending",
   },
   approved: {
-    bgColor: "bg-green-50",
-    textColor: "text-green-700",
-    badgeColor: "bg-green-100 text-green-700",
-    icon: CheckCircleIcon,
+    bgColor: "bg-success/5",
+    borderColor: "border-success/20",
+    badgeVariant: "success" as const,
+    icon: CheckCircle,
     label: "Approved",
   },
   rejected: {
-    bgColor: "bg-red-50",
-    textColor: "text-red-700",
-    badgeColor: "bg-red-100 text-red-700",
-    icon: XCircleIcon,
+    bgColor: "bg-destructive/5",
+    borderColor: "border-destructive/20",
+    badgeVariant: "destructive" as const,
+    icon: XCircle,
     label: "Rejected",
   },
 };
@@ -49,7 +43,8 @@ export function TimeOffRequestsTable({
   technicians = {},
   onRefresh,
 }: TimeOffRequestsTableProps) {
-  const [selectedRequest, setSelectedRequest] = useState<TimeOffRequestType | null>(null);
+  const [selectedRequest, setSelectedRequest] =
+    useState<TimeOffRequestType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleOpenModal = (request: TimeOffRequestType) => {
@@ -79,7 +74,8 @@ export function TimeOffRequestsTable({
   const calculateDays = (startDate: string | Date, endDate: string | Date) => {
     const start = new Date(startDate);
     const end = new Date(endDate);
-    const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    const days =
+      Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
     return days;
   };
 
@@ -95,15 +91,32 @@ export function TimeOffRequestsTable({
     if (sectionRequests.length === 0) return null;
 
     const config = STATUS_CONFIG[status];
+    const Icon = config.icon;
 
     return (
       <div className="mb-8">
-        <div className="flex items-center gap-3 mb-4">
-          <config.icon className={`h-5 w-5 ${config.textColor}`} />
-          <h3 className={`text-lg font-semibold ${config.textColor}`}>
+        <div className="mb-4 flex items-center gap-3">
+          <Icon
+            className={`h-5 w-5 ${
+              status === "pending"
+                ? "text-warning"
+                : status === "approved"
+                  ? "text-success"
+                  : "text-destructive"
+            }`}
+          />
+          <h3
+            className={`text-lg font-semibold ${
+              status === "pending"
+                ? "text-warning"
+                : status === "approved"
+                  ? "text-success"
+                  : "text-destructive"
+            }`}
+          >
             {config.label} Requests
           </h3>
-          <span className="ml-auto text-sm font-medium text-gray-600">
+          <span className="text-muted-foreground ml-auto text-sm font-medium">
             {sectionRequests.length}
           </span>
         </div>
@@ -112,30 +125,46 @@ export function TimeOffRequestsTable({
           {sectionRequests.map((request) => (
             <div
               key={request._id?.toString() || ""}
-              className={`${config.bgColor} border border-gray-200 rounded-lg p-3 hover:shadow-sm transition-shadow`}
+              className={`${config.bgColor} border ${config.borderColor} rounded-lg p-3 transition-shadow hover:shadow-sm`}
             >
               <div className="flex items-center justify-between gap-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="text-sm font-semibold text-gray-900">
-                      {technicians[request.technicianId] || request.technicianId}
+                <div className="min-w-0 flex-1">
+                  <div className="mb-1 flex items-center gap-2">
+                    <p className="text-foreground text-sm font-semibold">
+                      {technicians[request.technicianId] ||
+                        request.technicianId}
                     </p>
-                    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-white ${config.textColor}`}>
-                      <config.icon className="h-3 w-3" />
+                    <Badge
+                      variant={
+                        status === "pending"
+                          ? "outline"
+                          : status === "approved"
+                            ? "default"
+                            : "destructive"
+                      }
+                      className={`text-xs ${
+                        status === "pending"
+                          ? "border-warning text-warning"
+                          : status === "approved"
+                            ? "bg-success hover:bg-success"
+                            : ""
+                      }`}
+                    >
+                      <Icon className="mr-1 h-3 w-3" />
                       {config.label}
-                    </span>
+                    </Badge>
                   </div>
-                  <p className="text-xs text-gray-600">
-                    {formatDate(request.startDate)} – {formatDate(request.endDate)} ({calculateDays(request.startDate, request.endDate)}d) • {request.reason}
+                  <p className="text-muted-foreground text-xs">
+                    {formatDate(request.startDate)} –{" "}
+                    {formatDate(request.endDate)} (
+                    {calculateDays(request.startDate, request.endDate)}d) •{" "}
+                    {request.reason}
                   </p>
                 </div>
                 {status === "pending" && (
-                  <button
-                    onClick={() => handleOpenModal(request)}
-                    className="px-3 py-1.5 bg-indigo-600 text-white rounded text-xs font-semibold hover:bg-indigo-700 transition-colors whitespace-nowrap shrink-0"
-                  >
+                  <Button size="sm" onClick={() => handleOpenModal(request)}>
                     Review
-                  </button>
+                  </Button>
                 )}
               </div>
             </div>
@@ -150,8 +179,8 @@ export function TimeOffRequestsTable({
       {pendingRequests.length === 0 &&
       approvedRequests.length === 0 &&
       rejectedRequests.length === 0 ? (
-        <div className="text-center py-8 bg-gray-50 rounded-lg">
-          <p className="text-gray-500">No time-off requests yet</p>
+        <div className="bg-muted/50 rounded-lg border py-8 text-center">
+          <p className="text-muted-foreground">No time-off requests yet</p>
         </div>
       ) : (
         <>

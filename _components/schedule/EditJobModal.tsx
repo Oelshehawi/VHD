@@ -1,17 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { updateJob } from "../../app/lib/actions/scheduleJobs.actions";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
 import toast from "react-hot-toast";
 import { useForm } from "react-hook-form";
-import { formatLocalDateTime } from "../../app/lib/utils";
 import TechnicianSelect from "./TechnicianSelect";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
+import { DatePickerWithTime } from "../ui/date-picker-with-time";
 
 interface EditJobModalProps {
   job: ScheduleType;
@@ -20,27 +21,47 @@ interface EditJobModalProps {
 }
 
 const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
+  const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+
+  // Parse the initial date
+  const getInitialDate = (): Date | undefined => {
+    if (!job.startDateTime) return undefined;
+    const date = new Date(job.startDateTime);
+    return isNaN(date.getTime()) ? undefined : date;
+  };
 
   const {
     register,
     handleSubmit,
     control,
+    watch,
+    setValue,
+    clearErrors,
     formState: { errors },
   } = useForm({
     defaultValues: {
       jobTitle: job.jobTitle,
       location: job.location,
-      startDateTime: formatLocalDateTime(job.startDateTime as string),
+      startDateTime: getInitialDate(),
       assignedTechnicians: job.assignedTechnicians,
       technicianNotes: job.technicianNotes || "",
     },
   });
 
+  const startDateTime = watch("startDateTime");
+
   const onSubmit = async (data: any) => {
     setIsLoading(true);
 
     try {
+      // Validate required fields
+      if (!data.startDateTime) {
+        toast.error("Please select a start date and time.");
+        setIsLoading(false);
+        return;
+      }
+
       // Trim all string fields to remove leading/trailing spaces
       const trimmedData = { ...data };
       if (trimmedData.jobTitle) {
@@ -53,19 +74,21 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
         trimmedData.technicianNotes = trimmedData.technicianNotes.trim();
       }
 
-      if (typeof trimmedData.startDateTime === "string") {
-        const localDate = new Date(trimmedData.startDateTime);
-        trimmedData.startDateTime = new Date(
-          Date.UTC(
-            localDate.getFullYear(),
-            localDate.getMonth(),
-            localDate.getDate(),
-            localDate.getHours(),
-            localDate.getMinutes(),
-            localDate.getSeconds(),
-          ),
-        );
-      }
+      // Ensure startDateTime is a Date object and convert to UTC
+      const dateValue =
+        trimmedData.startDateTime instanceof Date
+          ? trimmedData.startDateTime
+          : new Date(trimmedData.startDateTime);
+      trimmedData.startDateTime = new Date(
+        Date.UTC(
+          dateValue.getFullYear(),
+          dateValue.getMonth(),
+          dateValue.getDate(),
+          dateValue.getHours(),
+          dateValue.getMinutes(),
+          dateValue.getSeconds(),
+        ),
+      );
 
       await updateJob({
         scheduleId: job._id as string,
@@ -75,6 +98,9 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
         assignedTechnicians: trimmedData.assignedTechnicians,
         technicianNotes: trimmedData.technicianNotes,
       });
+
+      // Refresh the server component to get fresh data
+      router.refresh();
 
       toast.success("Job updated successfully");
       onClose();
@@ -105,7 +131,9 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
               className={errors.jobTitle ? "border-destructive" : ""}
             />
             {errors.jobTitle && (
-              <p className="text-sm text-destructive">{errors.jobTitle.message}</p>
+              <p className="text-destructive text-sm">
+                {errors.jobTitle.message}
+              </p>
             )}
           </div>
 
@@ -121,7 +149,9 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
               className={errors.location ? "border-destructive" : ""}
             />
             {errors.location && (
-              <p className="text-sm text-destructive">{errors.location.message}</p>
+              <p className="text-destructive text-sm">
+                {errors.location.message}
+              </p>
             )}
           </div>
 
@@ -130,17 +160,28 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
             <Label htmlFor="startDateTime">
               Start Date & Time <span className="text-destructive">*</span>
             </Label>
-            <Input
-              id="startDateTime"
-              type="datetime-local"
-              {...register("startDateTime", {
-                required: "Start Date & Time is required",
-              })}
-              className={errors.startDateTime ? "border-destructive" : ""}
+            <DatePickerWithTime
+              date={
+                startDateTime instanceof Date
+                  ? startDateTime
+                  : startDateTime
+                    ? new Date(startDateTime as string)
+                    : undefined
+              }
+              onSelect={(date) => {
+                if (date) {
+                  setValue("startDateTime", date, { shouldValidate: true });
+                  clearErrors("startDateTime");
+                }
+              }}
+              datePlaceholder="Select date"
+              timePlaceholder="Select time"
+              dateId="startDate"
+              timeId="startTime"
             />
             {errors.startDateTime && (
-              <p className="text-sm text-destructive">
-                {errors.startDateTime.message}
+              <p className="text-destructive text-sm">
+                Start Date & Time is required
               </p>
             )}
           </div>
@@ -170,18 +211,11 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-border">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-            >
+          <div className="border-border flex justify-end gap-3 border-t pt-4">
+            <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button
-              type="submit"
-              disabled={isLoading}
-            >
+            <Button type="submit" disabled={isLoading}>
               {isLoading ? "Saving..." : "Save Changes"}
             </Button>
           </div>

@@ -91,7 +91,7 @@ export default async function handler(
     // For photo uploads, check if the URL already exists to prevent duplicates
     if (type !== "signature" && schedule.photos && schedule.photos.length > 0) {
       const urlExists = schedule.photos.some(
-        (photo) => photo.url === cloudinaryUrl,
+        (photo: any) => photo.url === cloudinaryUrl,
       );
 
       if (urlExists) {

@@ -1,12 +1,12 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
-import { FaPenSquare, FaReceipt, FaPaperPlane } from "react-icons/fa";
+import { FaReceipt, FaPaperPlane } from "react-icons/fa";
 import { Loader2, FileText, Settings } from "lucide-react";
 import InlineEditInvoice from "./EditInvoiceModal";
 import ClientDetails from "./ClientDetails";
 import PriceBreakdown from "./PriceBreakdown";
-import GeneratePDF, { type ReceiptData } from "../pdf/GeneratePDF";
+import { type ReceiptData } from "../pdf/GeneratePDF";
 import ReceiptModal from "./ReceiptModal";
 import InvoiceConfirmationModal from "./InvoiceConfirmationModal";
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
@@ -23,6 +23,9 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import dynamic from "next/dynamic";
+
+const GeneratePDF = dynamic(() => import("../pdf/GeneratePDF"), { ssr: false });
 
 const InvoiceDetailsContainer = ({
   invoice,
@@ -229,7 +232,7 @@ const InvoiceDetailsContainer = ({
     <div className="space-y-4 sm:space-y-6">
       {/* Action Bar - Only show if user can manage */}
       {canManage && (
-        <Card className="p-4 sm:p-6">
+        <Card className="gap-0 p-4 py-0 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12">
@@ -244,7 +247,7 @@ const InvoiceDetailsContainer = ({
                 </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+            <div className="flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3 sm:overflow-x-auto">
               <Button
                 onClick={handleSendInvoice}
                 disabled={isSendingEmail}
@@ -455,15 +458,6 @@ const InvoiceDetailsContainer = ({
                 <FaReceipt className="h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
                 <span className="hidden sm:inline">Receipt PDF</span>
                 <span className="sm:hidden">Receipt</span>
-              </Button>
-              <Button onClick={toggleEdit} variant="outline" size="sm">
-                <FaPenSquare className="h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
-                <span className="hidden sm:inline">
-                  {isEditing ? "Cancel Edit" : "Edit Invoice"}
-                </span>
-                <span className="sm:hidden">
-                  {isEditing ? "Cancel" : "Edit"}
-                </span>
               </Button>
             </div>
           </div>

@@ -27,9 +27,9 @@ const JobItem = ({
     );
   }, [job.assignedTechnicians, technicians]);
 
-  // Status-based styling (charlietlamb/calendar pattern)
+  // Status-based styling using theme-aware CSS variables
   const statusClasses = job.confirmed
-    ? "bg-emerald-500/10 hover:bg-emerald-500/20 border-l-2 border-emerald-500"
+    ? "bg-job-confirmed-bg hover:bg-job-confirmed-hover border-l-2 border-job-confirmed"
     : "bg-destructive/10 hover:bg-destructive/20 border-l-2 border-destructive";
 
   return (

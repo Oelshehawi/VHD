@@ -1,11 +1,8 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { motion } from "framer-motion";
-import {
-  TechnicianType,
-  ScheduleType,
-} from "../../app/lib/typeDefinitions";
+import { TechnicianType, ScheduleType } from "../../app/lib/typeDefinitions";
+import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
 interface PayrollBreakdownProps {
   technicians: TechnicianType[];
@@ -19,7 +16,8 @@ const PayrollBreakdown = ({
   // Filter out Ziad and Omar
   const validTechnicians = useMemo(() => {
     return technicians.filter(
-      (tech) => tech.name !== "Ziad" && tech.name !== "Omar" && tech.name !== "Migo",
+      (tech) =>
+        tech.name !== "Ziad" && tech.name !== "Omar" && tech.name !== "Migo",
     );
   }, [technicians]);
 
@@ -34,12 +32,12 @@ const PayrollBreakdown = ({
 
     validTechnicians.forEach((tech) => {
       const techSchedules = schedules.filter((schedule) =>
-        schedule.assignedTechnicians.includes(tech.id)
+        schedule.assignedTechnicians.includes(tech.id),
       );
 
       const totalHours = techSchedules.reduce(
         (acc, schedule) => acc + (schedule.hours || 0),
-        0
+        0,
       );
 
       const rate = tech.hourlyRate || 0;
@@ -59,36 +57,39 @@ const PayrollBreakdown = ({
   const totalEmployees = validTechnicians.length;
   const totalHours = technicianBreakdown.reduce(
     (acc, tech) => acc + tech.totalHours,
-    0
+    0,
   );
   const grossPay = technicianBreakdown.reduce(
     (acc, tech) => acc + tech.grossPay,
-    0
+    0,
   );
 
   return (
-    <motion.div
-      className="mb-6 rounded bg-linear-to-r from-green-400 to-blue-500 p-4 text-white shadow-md"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.5 }}
-    >
-      <h3 className="mb-4 text-lg font-semibold">Payroll Breakdown - Canada</h3>
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-        <div className="rounded bg-white bg-opacity-20 p-4">
-          <p className="text-sm">Total Employees</p>
-          <p className="text-2xl font-bold">{totalEmployees}</p>
+    <Card className="bg-primary text-primary-foreground mb-6">
+      <CardHeader className="pb-2">
+        <CardTitle className="text-lg">Payroll Breakdown - Canada</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <div className="bg-primary-foreground/10 rounded-lg p-4">
+            <p className="text-primary-foreground/80 text-sm">
+              Total Employees
+            </p>
+            <p className="text-2xl font-bold">{totalEmployees}</p>
+          </div>
+          <div className="bg-primary-foreground/10 rounded-lg p-4">
+            <p className="text-primary-foreground/80 text-sm">
+              Total Hours Worked
+            </p>
+            <p className="text-2xl font-bold">{totalHours}</p>
+          </div>
+          <div className="bg-primary-foreground/10 rounded-lg p-4">
+            <p className="text-primary-foreground/80 text-sm">Gross Pay</p>
+            <p className="text-2xl font-bold">${grossPay.toLocaleString()}</p>
+          </div>
         </div>
-        <div className="rounded bg-white bg-opacity-20 p-4">
-          <p className="text-sm">Total Hours Worked</p>
-          <p className="text-2xl font-bold">{totalHours}</p>
-        </div>
-        <div className="rounded bg-white bg-opacity-20 p-4">
-          <p className="text-sm">Gross Pay</p>
-          <p className="text-2xl font-bold">${grossPay.toLocaleString()}</p>
-        </div>
-      </div>
-    </motion.div>
+      </CardContent>
+    </Card>
   );
 };
 

@@ -20,12 +20,10 @@ import {
   Camera,
   FileText,
   Pencil,
-  Trash,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
-import { Badge } from "../ui/badge";
 import { Card, CardContent } from "../ui/card";
 import { format } from "date-fns-tz";
 
@@ -50,6 +48,7 @@ export default function JobDetailsModal({
   const [activeView, setActiveView] = useState<ModalView>("details");
   const [isLoading, setIsLoading] = useState(false);
   const [isConfirmed, setConfirmed] = useState(false);
+  const [isDeadRun, setIsDeadRun] = useState(false);
   const [hasExistingReport, setHasExistingReport] = useState(false);
   const [existingReportData, setExistingReportData] =
     useState<ReportType | null>(null);
@@ -60,6 +59,7 @@ export default function JobDetailsModal({
   useEffect(() => {
     if (job) {
       setConfirmed(job.confirmed);
+      setIsDeadRun(job.deadRun ?? false);
       setActiveView("details"); // Always start with details view
       setHasExistingReport(false);
       setExistingReportData(null);
@@ -126,9 +126,37 @@ export default function JobDetailsModal({
     }
   };
 
-  const assignedTechnicians = technicians.filter((tech) =>
-    job?.assignedTechnicians.includes(tech.id),
-  );
+  const toggleDeadRunStatus = async () => {
+    if (!job || isLoading || !canManage) {
+      if (!canManage) {
+        toast.error("You do not have permission to perform this action");
+      }
+      return;
+    }
+
+    setIsLoading(true);
+    const newStatus = !isDeadRun;
+
+    try {
+      const performedBy = user?.fullName || user?.firstName || "user";
+
+      await updateSchedule({
+        scheduleId: job._id.toString(),
+        deadRun: newStatus,
+        performedBy,
+      });
+
+      toast.success(
+        `Job ${newStatus ? "marked as dead run" : "cleared dead run status"} successfully`,
+      );
+      setIsDeadRun(newStatus);
+    } catch (error) {
+      console.error("Failed to update the job:", error);
+      toast.error("Failed to update the dead run status");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const hasBeforePhotos = job?.photos?.some((photo) => photo.type === "before");
   const hasAfterPhotos = job?.photos?.some((photo) => photo.type === "after");
@@ -185,18 +213,20 @@ export default function JobDetailsModal({
     }
   };
 
-  if (!isOpen || !job) return null;
+  if (!job) return null;
 
   // Cleanup function when modal closes
-  const handleModalClose = () => {
-    setShowReportModal(false);
-    setIsCheckingReport(false);
-    setActiveView("details");
-    onClose();
+  const handleModalClose = (open: boolean) => {
+    if (!open) {
+      setShowReportModal(false);
+      setIsCheckingReport(false);
+      setActiveView("details");
+      onClose();
+    }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={handleModalClose}>
+    <Dialog open={isOpen && !!job} onOpenChange={handleModalClose}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
         <DialogHeader>
           <div className="flex items-start justify-between">
@@ -271,7 +301,7 @@ export default function JobDetailsModal({
               </div>
 
               {/* Status */}
-              <Card>
+              <Card className="gap-0 py-0">
                 <CardContent className="flex items-center justify-between p-4">
                   <div>
                     <span className="text-foreground text-sm font-medium">
@@ -280,7 +310,7 @@ export default function JobDetailsModal({
                     <div className="mt-1 flex items-center">
                       <div
                         className={`mr-2 h-2 w-2 rounded-full ${
-                          isConfirmed ? "bg-emerald-500" : "bg-destructive"
+                          isConfirmed ? "bg-job-confirmed" : "bg-destructive"
                         }`}
                       />
                       <span className="text-muted-foreground text-sm">
@@ -306,9 +336,45 @@ export default function JobDetailsModal({
                 </CardContent>
               </Card>
 
+              {/* Dead Run */}
+              <Card className="gap-0 py-0">
+                <CardContent className="flex items-center justify-between p-4">
+                  <div>
+                    <span className="text-foreground text-sm font-medium">
+                      Dead Run
+                    </span>
+                    <div className="mt-1 flex items-center">
+                      <div
+                        className={`mr-2 h-2 w-2 rounded-full ${
+                          isDeadRun ? "bg-job-deadrun" : "bg-muted"
+                        }`}
+                      />
+                      <span className="text-muted-foreground text-sm">
+                        {isDeadRun ? "Yes - Customer unavailable" : "No"}
+                      </span>
+                    </div>
+                  </div>
+
+                  {canManage && (
+                    <Button
+                      onClick={toggleDeadRunStatus}
+                      disabled={isLoading}
+                      variant="outline"
+                      size="sm"
+                    >
+                      {isLoading
+                        ? "Updating..."
+                        : isDeadRun
+                          ? "Clear Dead Run"
+                          : "Mark Dead Run"}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Technician Notes */}
               {job.technicianNotes && (
-                <Card className="bg-primary/5">
+                <Card className="bg-primary/5 gap-0 py-0">
                   <CardContent className="p-4">
                     <h4 className="text-primary mb-2 font-medium">
                       Technician Notes
@@ -362,7 +428,7 @@ export default function JobDetailsModal({
                 // Show existing report details
                 <div className="space-y-4">
                   <div className="text-center">
-                    <FileText className="mx-auto mb-4 h-12 w-12 text-emerald-500" />
+                    <FileText className="text-job-confirmed mx-auto mb-4 h-12 w-12" />
                     <h3 className="text-foreground mb-2 text-lg font-medium">
                       Kitchen Exhaust Cleaning Report
                     </h3>
@@ -375,7 +441,7 @@ export default function JobDetailsModal({
                   </div>
 
                   {/* Report Summary */}
-                  <Card>
+                  <Card className="gap-0 py-0">
                     <CardContent className="space-y-3 p-4">
                       <h4 className="text-foreground font-medium">
                         Report Summary

@@ -134,7 +134,6 @@ export function DatePickerWithTime({
                 if (maxDate && date > maxDate) return true;
                 return false;
               }}
-              captionLayout="dropdown"
             />
           </PopoverContent>
         </Popover>

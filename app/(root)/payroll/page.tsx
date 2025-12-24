@@ -90,13 +90,13 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
 
   if (!canManage)
     return (
-      <div className="flex min-h-screen items-center justify-center text-3xl font-bold">
+      <div className="text-foreground flex min-h-screen items-center justify-center text-3xl font-bold">
         You don't have correct permissions to access this page!
       </div>
     );
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="bg-background min-h-screen">
       <div className="p-6">
         <PayrollPageTabs
           payrollPeriods={payrollPeriods}

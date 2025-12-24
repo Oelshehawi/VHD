@@ -70,10 +70,12 @@ const CalendarColumn = ({
     setIsModalOpen(true);
   };
 
-  // Handle closing modal
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedJob(null);
+  const handleModalOpenChange = (open: boolean) => {
+    setIsModalOpen(open);
+    if (!open) {
+      // Clear selectedJob after animation completes
+      setTimeout(() => setSelectedJob(null), 150);
+    }
   };
 
   return (
@@ -174,7 +176,7 @@ const CalendarColumn = ({
       <JobDetailsModal
         job={selectedJob}
         isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        onClose={() => setIsModalOpen(false)}
         canManage={canManage}
         technicians={technicians}
       />

@@ -1,10 +1,12 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import YearlySales from '../dashboard/YearlySales';
-import { YearlySalesSkeleton } from '../Skeletons';
-import { fetchYearlySalesData } from '../../app/lib/dashboard.data';
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import YearlySales from "../dashboard/YearlySales";
+import { YearlySalesSkeleton } from "../Skeletons";
+import { fetchYearlySalesData } from "../../app/lib/dashboard.data";
+import { Card, CardContent } from "../ui/card";
+import { AlertTriangle } from "lucide-react";
 
 interface YearlySalesContainerProps {
   initialYear?: number;
@@ -14,11 +16,15 @@ export default function YearlySalesContainer({
   initialYear,
 }: YearlySalesContainerProps) {
   const [selectedYear, setSelectedYear] = useState(
-    initialYear || new Date().getFullYear()
+    initialYear || new Date().getFullYear(),
   );
 
-  const { data: salesData, isLoading, error } = useQuery({
-    queryKey: ['yearlySalesData', selectedYear],
+  const {
+    data: salesData,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["yearlySalesData", selectedYear],
     queryFn: async () => {
       return await fetchYearlySalesData(selectedYear);
     },
@@ -30,27 +36,34 @@ export default function YearlySalesContainer({
 
   if (error) {
     return (
-      <div className="flex h-96 items-center justify-center rounded-xl border border-red-200 bg-red-50 p-6">
-        <div className="text-center">
-          <p className="text-red-600 font-medium">Failed to load sales data</p>
-          <p className="text-red-500 text-sm mt-1">Please try again</p>
-        </div>
-      </div>
+      <Card className="border-destructive/20 bg-destructive/5 h-96">
+        <CardContent className="flex h-full items-center justify-center p-6">
+          <div className="text-center">
+            <AlertTriangle className="text-destructive mx-auto mb-2 h-8 w-8" />
+            <p className="text-destructive font-medium">
+              Failed to load sales data
+            </p>
+            <p className="text-destructive/70 mt-1 text-sm">Please try again</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="h-full rounded-xl border border-gray-200 bg-white p-6 shadow-lg">
-      {isLoading ? (
-        <YearlySalesSkeleton />
-      ) : (
-        <YearlySales
-          salesData={salesData || []}
-          currentYear={selectedYear}
-          onYearChange={handleYearChange}
-          isLoading={isLoading}
-        />
-      )}
-    </div>
+    <Card className="h-full">
+      <CardContent className="h-full p-6">
+        {isLoading ? (
+          <YearlySalesSkeleton />
+        ) : (
+          <YearlySales
+            salesData={salesData || []}
+            currentYear={selectedYear}
+            onYearChange={handleYearChange}
+            isLoading={isLoading}
+          />
+        )}
+      </CardContent>
+    </Card>
   );
 }

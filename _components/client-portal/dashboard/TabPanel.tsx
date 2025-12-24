@@ -141,7 +141,7 @@ const TabPanel = ({
           "Please report any and all cleaning inquiries within 5 business days.",
       };
 
-      return { type: "invoice", data: invoiceData };
+      return { type: "invoice", data: invoiceData as any };
     } catch (error) {
       console.error("Error creating invoice PDF data:", error);
       return undefined;

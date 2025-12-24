@@ -58,7 +58,7 @@
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.625rem;
 
   /* shadcn/ui colors - OKLCH format */
   --background: oklch(1 0 0);
@@ -97,6 +97,12 @@
   --chart-4: oklch(0.828 0.189 84.429);
   --chart-5: oklch(0.769 0.188 70.08);
 
+  /* Semantic status colors */
+  --success: oklch(0.55 0.15 145);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.75 0.15 85);
+  --warning-foreground: oklch(0.15 0 0);
+
   /* Sidebar - Dark green theme */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -113,6 +119,13 @@
   --darkGray: #222a27;
   --lightGray: #dde2e0;
   --darkBlue: #0a003e;
+
+  /* Job status colors - theme-aware */
+  --job-confirmed: oklch(0.55 0.15 160);
+  --job-confirmed-bg: oklch(0.55 0.15 160 / 10%);
+  --job-confirmed-hover: oklch(0.55 0.15 160 / 20%);
+  --job-deadrun: oklch(0.7 0.15 85);
+  --job-deadrun-bg: oklch(0.7 0.15 85 / 10%);
 
   /* Custom shadow */
   --shadow-custom:
@@ -144,7 +157,7 @@
   --accent-foreground: oklch(0.985 0 0);
 
   /* Destructive - Lighter red for dark mode (visible on dark backgrounds) */
-  --destructive: oklch(0.65 0.2 25);
+  --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.985 0 0);
 
   --border: oklch(1 0 0 / 10%);
@@ -157,6 +170,12 @@
   --chart-4: oklch(0.627 0.265 303.9);
   --chart-5: oklch(0.645 0.246 16.439);
 
+  /* Semantic status colors - brighter in dark mode */
+  --success: oklch(0.7 0.17 145);
+  --success-foreground: oklch(0.985 0 0);
+  --warning: oklch(0.8 0.15 85);
+  --warning-foreground: oklch(0.15 0 0);
+
   /* Sidebar - Green accent for dark mode */
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
@@ -166,6 +185,13 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+
+  /* Job status colors - brighter in dark mode */
+  --job-confirmed: oklch(0.7 0.17 160);
+  --job-confirmed-bg: oklch(0.7 0.17 160 / 10%);
+  --job-confirmed-hover: oklch(0.7 0.17 160 / 20%);
+  --job-deadrun: oklch(0.75 0.15 85);
+  --job-deadrun-bg: oklch(0.75 0.15 85 / 10%);
 }
 
 @theme inline {
@@ -194,6 +220,10 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
 
   /* sidebar color references */
   --color-sidebar: var(--sidebar);
@@ -211,6 +241,20 @@
   --color-darkGray: var(--darkGray);
   --color-lightGray: var(--lightGray);
   --color-darkBlue: var(--darkBlue);
+
+  /* job status color references */
+  --color-job-confirmed: var(--job-confirmed);
+  --color-job-confirmed-bg: var(--job-confirmed-bg);
+  --color-job-confirmed-hover: var(--job-confirmed-hover);
+  --color-job-deadrun: var(--job-deadrun);
+  --color-job-deadrun-bg: var(--job-deadrun-bg);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
 }
 
 @layer base {
@@ -220,46 +264,4 @@
   body {
     @apply bg-background text-foreground;
   }
-}
-
-/* DayPicker Calendar Styles */
-.rdp-root {
-  /* Light mode - using dark green primary (#003e29) */
-  --rdp-accent-color: #003e29;
-  --rdp-accent-background-color: #f0f0f0;
-  --rdp-day-height: 2rem;
-  --rdp-day-width: 2rem;
-  --rdp-day_button-height: 2rem;
-  --rdp-day_button-width: 2rem;
-  --rdp-day_button-border-radius: calc(var(--radius) - 2px);
-  --rdp-today-color: #003e29;
-  --rdp-selected-border: 2px solid #003e29;
-  --rdp-disabled-opacity: 0.5;
-  --rdp-outside-opacity: 0.5;
-  --rdp-nav_button-height: 2rem;
-  --rdp-nav_button-width: 2rem;
-  --rdp-nav-height: 2rem;
-  --rdp-range_middle-background-color: #f0f0f0;
-  --rdp-range_middle-color: #1a1a1a;
-  --rdp-range_start-background: #003e29;
-  --rdp-range_start-color: #ffffff;
-  --rdp-range_end-background: #003e29;
-  --rdp-range_end-color: #ffffff;
-}
-
-/* Dark mode styles for DayPicker */
-.dark .rdp-root {
-  /* Dark mode - using lighter green primary for better visibility */
-  --rdp-accent-color: #4ade80;
-  --rdp-accent-background-color: rgba(255, 255, 255, 0.1);
-  --rdp-today-color: #4ade80;
-  --rdp-selected-border: 2px solid #4ade80;
-  --rdp-disabled-opacity: 0.3;
-  --rdp-outside-opacity: 0.4;
-  --rdp-range_middle-background-color: rgba(74, 222, 128, 0.2);
-  --rdp-range_middle-color: #ffffff;
-  --rdp-range_start-background: #4ade80;
-  --rdp-range_start-color: #000000;
-  --rdp-range_end-background: #4ade80;
-  --rdp-range_end-color: #000000;
 }

@@ -3,10 +3,24 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { updateInvoice } from "../../app/lib/actions/actions";
-import { formatDateToString, calculatePaymentDuration, getPaymentMethodDisplay } from "../../app/lib/utils";
+import {
+  formatDateToString,
+  calculatePaymentDuration,
+  getPaymentMethodDisplay,
+} from "../../app/lib/utils";
 import { toast } from "react-hot-toast";
 import { calculateDueDate } from "../../app/lib/utils";
-import { FaArrowCircleRight, FaCreditCard, FaCalendar, FaClock, FaFileInvoice, FaMapMarkerAlt, FaSave, FaTimes } from "react-icons/fa";
+import {
+  FaArrowCircleRight,
+  FaCreditCard,
+  FaCalendar,
+  FaClock,
+  FaFileInvoice,
+  FaMapMarkerAlt,
+  FaSave,
+  FaTimes,
+  FaPenSquare,
+} from "react-icons/fa";
 import { InvoiceType, PaymentInfo } from "../../app/lib/typeDefinitions";
 import PaymentModal from "../payments/PaymentModal";
 import { Card, CardContent, CardHeader } from "../ui/card";
@@ -22,6 +36,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { DatePicker } from "../ui/date-picker";
+import { format } from "date-fns";
 
 const InlineEditInvoice = ({
   invoice,
@@ -37,6 +53,21 @@ const InlineEditInvoice = ({
   const updateInvoiceWithId = updateInvoice.bind(null, invoice._id);
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [dateIssuedValue, setDateIssuedValue] = useState<Date | undefined>(
+    () => {
+      if (invoice.dateIssued) {
+        // Parse as local date to avoid timezone conversion issues
+        const dateString =
+          typeof invoice.dateIssued === "string"
+            ? invoice.dateIssued.split("T")[0]
+            : invoice.dateIssued;
+        const [year, month, day] = String(dateString).split("-").map(Number);
+        const date = new Date(year, month - 1, day);
+        return isNaN(date.getTime()) ? undefined : date;
+      }
+      return undefined;
+    },
+  );
 
   const {
     register,
@@ -44,7 +75,17 @@ const InlineEditInvoice = ({
     setValue,
     watch,
     formState: { errors },
-  } = useForm();
+  } = useForm({
+    defaultValues: {
+      invoiceId: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+      dateIssued: invoice.dateIssued,
+      dateDue: invoice.dateDue,
+      frequency: invoice.frequency,
+      location: invoice.location,
+      notes: invoice.notes,
+    },
+  });
 
   const dateIssued = watch("dateIssued");
   const frequency = watch("frequency");
@@ -119,6 +160,19 @@ const InlineEditInvoice = ({
     updateStatus("paid", paymentData);
   };
 
+  // Helper function to display frequency in human-readable format
+  const getFrequencyDisplay = (frequency: number): string => {
+    const frequencyMap: Record<number, string> = {
+      12: "Monthly (12x/year)",
+      6: "Bi-Monthly (6x/year)",
+      4: "Quarterly (4x/year)",
+      3: "Tri-Annual (3x/year)",
+      2: "Semi-Annual (2x/year)",
+      1: "Annual (1x/year)",
+    };
+    return frequencyMap[frequency] || `${frequency}x/year`;
+  };
+
   // Split fields into two columns for better layout
   const leftColumnFields = [
     {
@@ -157,7 +211,7 @@ const InlineEditInvoice = ({
     {
       name: "frequency",
       type: "number",
-      label: "Frequency (months)",
+      label: "Frequency",
       isRequired: true,
       minLength: 1,
       maxLength: 1,
@@ -180,9 +234,13 @@ const InlineEditInvoice = ({
   ];
 
   // Calculate payment duration if invoice is paid
-  const paymentDuration = invoice.status === "paid" && invoice.paymentInfo?.datePaid
-    ? calculatePaymentDuration(invoice.dateIssued, invoice.paymentInfo.datePaid)
-    : null;
+  const paymentDuration =
+    invoice.status === "paid" && invoice.paymentInfo?.datePaid
+      ? calculatePaymentDuration(
+          invoice.dateIssued,
+          invoice.paymentInfo.datePaid,
+        )
+      : null;
 
   const renderField = (field: any) => (
     <div key={field.name} className="space-y-1">
@@ -196,7 +254,43 @@ const InlineEditInvoice = ({
 
       {isEditing ? (
         <div className="ml-6">
-          {field.type === "textarea" ? (
+          {field.name === "frequency" ? (
+            <Select
+              value={frequency?.toString() || "6"}
+              className="w-full"
+              onValueChange={(value) => setValue("frequency", Number(value))}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="12">Monthly (12x/year)</SelectItem>
+                <SelectItem value="6">Bi-Monthly (6x/year)</SelectItem>
+                <SelectItem value="4">Quarterly (4x/year)</SelectItem>
+                <SelectItem value="3">Tri-Annual (3x/year)</SelectItem>
+                <SelectItem value="2">Semi-Annual (2x/year)</SelectItem>
+                <SelectItem value="1">Annual (1x/year)</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : field.name === "dateDue" ? (
+            // dateDue is always calculated/read-only, so display formatted value instead of Input
+            <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
+              {formatDateToString(watch("dateDue"))}
+            </div>
+          ) : field.name === "dateIssued" ? (
+            <DatePicker
+              id="dateIssued"
+              date={dateIssuedValue}
+              onSelect={(date) => {
+                setDateIssuedValue(date);
+                if (date) {
+                  const formattedDate = format(date, "yyyy-MM-dd");
+                  setValue("dateIssued", formattedDate);
+                }
+              }}
+              placeholder="Select date issued"
+            />
+          ) : field.type === "textarea" ? (
             <Textarea
               {...register(field.name, { required: field.isRequired })}
               placeholder={field.label}
@@ -214,7 +308,11 @@ const InlineEditInvoice = ({
               })}
               type={field.type}
               placeholder={field.label}
-              defaultValue={invoice[field.name]}
+              defaultValue={
+                field.name === "dateDue"
+                  ? formatDateToString(invoice[field.name])
+                  : invoice[field.name]
+              }
               readOnly={field.readOnly}
               disabled={field.readOnly}
             />
@@ -230,6 +328,8 @@ const InlineEditInvoice = ({
           <div className="bg-muted text-foreground rounded-lg px-3 py-2 text-sm">
             {field.name === "dateDue" || field.name === "dateIssued" ? (
               formatDateToString(invoice[field.name])
+            ) : field.name === "frequency" ? (
+              getFrequencyDisplay(invoice.frequency)
             ) : field.name === "location" ? (
               <div className="flex items-center justify-between">
                 <span>{invoice[field.name]}</span>
@@ -247,7 +347,9 @@ const InlineEditInvoice = ({
               </div>
             ) : (
               invoice[field.name] || (
-                <span className="text-muted-foreground italic">Not provided</span>
+                <span className="text-muted-foreground italic">
+                  Not provided
+                </span>
               )
             )}
           </div>
@@ -266,18 +368,37 @@ const InlineEditInvoice = ({
                 <FaFileInvoice className="text-primary h-4 w-4" />
               </div>
               <div className="ml-3">
-                <h3 className="text-foreground text-base font-semibold">Invoice Information</h3>
+                <h3 className="text-foreground text-base font-semibold">
+                  Invoice Information
+                </h3>
                 <p className="text-muted-foreground text-xs">
-                  {isEditing ? "Edit invoice details" : "View invoice information"}
+                  {isEditing
+                    ? "Edit invoice details"
+                    : "View invoice information"}
                 </p>
               </div>
             </div>
             {canManage && (
-              <InvoiceStatusUpdate
-                onStatusChange={handleStatusChange}
-                invoiceStatus={invoice.status}
-                isLoading={isUpdatingStatus}
-              />
+              <div className="flex items-center gap-3">
+                <InvoiceStatusUpdate
+                  onStatusChange={handleStatusChange}
+                  invoiceStatus={invoice.status}
+                  isLoading={isUpdatingStatus}
+                />
+                <Button
+                  onClick={toggleEdit}
+                  variant={isEditing ? "outline" : "default"}
+                  size="sm"
+                >
+                  <FaPenSquare className="h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">
+                    {isEditing ? "Cancel Edit" : "Edit Invoice"}
+                  </span>
+                  <span className="sm:hidden">
+                    {isEditing ? "Cancel" : "Edit"}
+                  </span>
+                </Button>
+              </div>
             )}
           </div>
         </CardHeader>
@@ -304,14 +425,18 @@ const InlineEditInvoice = ({
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <FaCreditCard className="text-primary mr-2 h-3 w-3" />
-                    <span className="text-foreground text-xs font-medium">Payment Method:</span>
+                    <span className="text-foreground text-xs font-medium">
+                      Payment Method:
+                    </span>
                     <Badge variant="secondary" className="ml-2">
                       {getPaymentMethodDisplay(invoice.paymentInfo.method)}
                     </Badge>
                   </div>
                   <div className="flex items-center">
                     <FaCalendar className="text-primary mr-2 h-3 w-3" />
-                    <span className="text-foreground text-xs font-medium">Date Paid:</span>
+                    <span className="text-foreground text-xs font-medium">
+                      Date Paid:
+                    </span>
                     <span className="text-foreground ml-2 text-xs">
                       {formatDateToString(invoice.paymentInfo.datePaid)}
                     </span>
@@ -319,22 +444,32 @@ const InlineEditInvoice = ({
                   {paymentDuration && (
                     <div className="flex items-center">
                       <FaClock className="text-primary mr-2 h-3 w-3" />
-                      <span className="text-foreground text-xs font-medium">Payment Duration:</span>
-                      <span className={`ml-2 text-xs font-semibold ${
-                        paymentDuration.days !== null && paymentDuration.days <= 0
-                          ? "text-primary"
-                          : paymentDuration.days !== null && paymentDuration.days <= 30
-                          ? "text-blue-700"
-                          : "text-orange-700"
-                      }`}>
+                      <span className="text-foreground text-xs font-medium">
+                        Payment Duration:
+                      </span>
+                      <span
+                        className={`ml-2 text-xs font-semibold ${
+                          paymentDuration.days !== null &&
+                          paymentDuration.days <= 0
+                            ? "text-primary"
+                            : paymentDuration.days !== null &&
+                                paymentDuration.days <= 30
+                              ? "text-blue-700"
+                              : "text-orange-700"
+                        }`}
+                      >
                         {paymentDuration.text}
                       </span>
                     </div>
                   )}
                   {invoice.paymentInfo.notes && (
                     <div className="bg-background border-border rounded-lg border p-2">
-                      <span className="text-foreground text-xs font-medium">Notes:</span>
-                      <p className="text-muted-foreground mt-1 text-xs">{invoice.paymentInfo.notes}</p>
+                      <span className="text-foreground text-xs font-medium">
+                        Notes:
+                      </span>
+                      <p className="text-muted-foreground mt-1 text-xs">
+                        {invoice.paymentInfo.notes}
+                      </p>
                     </div>
                   )}
                 </div>
@@ -343,10 +478,7 @@ const InlineEditInvoice = ({
 
             {isEditing && (
               <div className="border-border mt-4 flex space-x-3 border-t pt-4">
-                <Button
-                  type="submit"
-                  className="flex-1"
-                >
+                <Button type="submit" className="flex-1">
                   <FaSave className="mr-2 h-3 w-3" />
                   Save Changes
                 </Button>
@@ -379,11 +511,11 @@ const InlineEditInvoice = ({
 const InvoiceStatusUpdate = ({
   onStatusChange,
   invoiceStatus,
-  isLoading
+  isLoading,
 }: {
-  onStatusChange: (status: string) => void,
-  invoiceStatus: string,
-  isLoading?: boolean
+  onStatusChange: (status: string) => void;
+  invoiceStatus: string;
+  isLoading?: boolean;
 }) => {
   const { register, setValue } = useForm();
   const [status, setStatus] = useState(invoiceStatus);

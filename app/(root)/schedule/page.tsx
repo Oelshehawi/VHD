@@ -8,8 +8,6 @@ import { auth } from "@clerk/nextjs/server";
 import {
   InvoiceType,
   ScheduleType,
-  TechnicianType,
-  AvailabilityType,
 } from "../../../app/lib/typeDefinitions";
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
@@ -64,8 +62,8 @@ const Schedule = async ({
   });
 
   return (
-    <div className="flex min-h-screen w-full flex-col bg-gray-50">
-      <div className="flex-1">
+    <div className="flex h-full w-full flex-col bg-gray-50 min-w-0">
+      <div className="flex-1 min-w-0">
         <CalendarOptions
           invoices={sortedInvoices}
           scheduledJobs={scheduledJobs}

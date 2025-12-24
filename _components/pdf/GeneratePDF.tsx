@@ -21,6 +21,7 @@ import {
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 
+
 // Union type for all possible PDF data types
 type PDFData =
   | { type: "invoice"; data: InvoiceData }

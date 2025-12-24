@@ -32,7 +32,7 @@ export default function OptimizationUnscheduled({
                   <p className="text-sm text-gray-600">{job.location || 'No location'}</p>
                   <p className="text-xs text-gray-500">Client: {job.clientName || 'Unknown Client'}</p>
                   <div className="text-xs text-gray-500 mt-1">
-                    Estimated Duration: {job.estimatedDuration}min • Priority: {job.priority || 1}/10
+                    Estimated Duration: {job.estimatedDuration}min 
                   </div>
                 </div>
                 <div className="text-right">

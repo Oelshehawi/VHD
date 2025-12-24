@@ -6,6 +6,15 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+/**
+ * Escapes special regex characters in a string to make it safe for MongoDB $regex queries
+ * @param str - The string to escape
+ * @returns Escaped string safe for use in regex patterns
+ */
+export function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export const formatDate = (dateString: any) => {
   const parts = dateString.split("-");
   const year = parts[0];

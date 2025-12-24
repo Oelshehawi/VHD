@@ -44,7 +44,7 @@ const ClientTable = async ({
   }
 
   return (
-    <Card className="flex h-full min-h-0 flex-col overflow-hidden">
+    <Card className="flex h-full min-h-0 flex-col gap-0 overflow-hidden py-0">
       <div className="min-h-0 flex-1 overflow-auto">
         <div className="min-w-full md:min-w-0">
           <Table>

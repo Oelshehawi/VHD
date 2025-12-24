@@ -6,7 +6,6 @@ import { AlertTriangle, Clock, CalendarX, Search } from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
-import { ScrollArea } from "../ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -69,7 +68,7 @@ export default function UrgentAttention({
           title: job.jobTitle,
           subtitle: job.clientId ? "Client Linked" : "No Client",
           badge: `Due: ${formatDateStringUTC(job.dateDue)}`,
-          href: `/database/jobs/${job._id}`,
+          href: `/invoices/${job.invoiceId}`,
         });
       });
     }
@@ -98,17 +97,17 @@ export default function UrgentAttention({
         className="border-destructive/30 bg-destructive/10 hover:bg-destructive/20 cursor-pointer shadow-lg transition-colors"
         onClick={() => setIsDialogOpen(true)}
       >
-        <CardContent className="p-2 sm:p-3">
-          <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-2">
-              <div className="shrink-0 border-destructive/20 bg-destructive/20 rounded-lg border p-1.5">
-                <AlertTriangle className="text-destructive h-4 w-4 sm:h-5 sm:w-5" />
+        <CardContent className="p-1.5 sm:p-2">
+          <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <div className="border-destructive/20 bg-destructive/20 shrink-0 rounded-lg border p-1">
+                <AlertTriangle className="text-destructive h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </div>
               <div className="min-w-0">
-                <h2 className="truncate text-destructive-foreground text-base font-bold sm:text-lg">
+                <h2 className="text-destructive-foreground text-sm font-bold sm:text-base">
                   Urgent Attention
                 </h2>
-                <p className="truncate text-destructive-foreground/70 text-xs sm:text-sm">
+                <p className="text-destructive-foreground/70 text-[10px] sm:text-xs">
                   {overdueInvoices.length > 0 &&
                     `${overdueInvoices.length} overdue`}
                   {overdueInvoices.length > 0 &&
@@ -120,14 +119,14 @@ export default function UrgentAttention({
               </div>
             </div>
             <div className="shrink-0 text-center sm:text-right">
-              <div className="border-destructive/20 bg-destructive/20 rounded-lg border p-2 text-center">
-                <div className="truncate text-destructive text-xl font-bold sm:text-2xl">
+              <div className="border-destructive/20 bg-destructive/20 rounded-md border p-1.5 text-center">
+                <div className="text-destructive truncate text-lg font-bold sm:text-xl">
                   {totalUrgent}
                 </div>
               </div>
               <div className="mt-1 flex items-center justify-center gap-1 sm:justify-end">
                 <Clock className="text-destructive-foreground/70 h-3 w-3 shrink-0" />
-                <span className="truncate text-destructive-foreground/70 text-xs sm:text-sm">
+                <span className="text-destructive-foreground/70 truncate text-[10px] sm:text-xs">
                   items need action
                 </span>
               </div>
@@ -138,7 +137,7 @@ export default function UrgentAttention({
 
       {/* Dialog with Search and Filter */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="flex h-[70vh] max-h-[600px] w-full max-w-2xl flex-col overflow-hidden p-0">
+        <DialogContent className="flex h-[70vh] max-h-[600px] w-full flex-col overflow-hidden p-0">
           <DialogHeader className="shrink-0 border-b p-4">
             <DialogTitle className="flex items-center gap-2 text-lg font-bold">
               <AlertTriangle className="text-destructive h-5 w-5" />
@@ -177,49 +176,47 @@ export default function UrgentAttention({
             </Select>
           </div>
 
-          {/* Items List - flex-1 fills remaining space, ScrollArea handles overflow */}
-          <ScrollArea className="flex-1">
-            <div className="p-3">
-              {filteredItems.length === 0 ? (
-                <p className="text-muted-foreground py-8 text-center">
-                  No items found.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {filteredItems.map((item) => (
-                    <Link
-                      key={item.id}
-                      href={item.href}
-                      onClick={() => setIsDialogOpen(false)}
-                      className="bg-card hover:bg-accent flex items-center justify-between rounded-md border p-3 transition-colors"
-                    >
-                      <div className="flex min-w-0 flex-1 items-center gap-3">
-                        {item.type === "overdue" ? (
-                          <Clock className="text-destructive h-4 w-4 shrink-0" />
-                        ) : (
-                          <CalendarX className="text-muted-foreground h-4 w-4 shrink-0" />
-                        )}
-                        <div className="min-w-0 flex-1">
-                          <p className="truncate font-medium">{item.title}</p>
-                          <p className="text-muted-foreground truncate text-xs">
-                            {item.subtitle}
-                          </p>
-                        </div>
+          {/* Items List - simple overflow with max-height */}
+          <div className="max-h-[400px] overflow-y-auto p-3">
+            {filteredItems.length === 0 ? (
+              <p className="text-muted-foreground py-8 text-center">
+                No items found.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {filteredItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    onClick={() => setIsDialogOpen(false)}
+                    className="bg-card hover:bg-accent flex items-center justify-between rounded-md border p-3 transition-colors"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                      {item.type === "overdue" ? (
+                        <Clock className="text-destructive h-4 w-4 shrink-0" />
+                      ) : (
+                        <CalendarX className="text-muted-foreground h-4 w-4 shrink-0" />
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-medium">{item.title}</p>
+                        <p className="text-muted-foreground truncate text-xs">
+                          {item.subtitle}
+                        </p>
                       </div>
-                      <Badge
-                        variant={
-                          item.type === "overdue" ? "destructive" : "secondary"
-                        }
-                        className="ml-2 shrink-0"
-                      >
-                        {item.badge}
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
-              )}
-            </div>
-          </ScrollArea>
+                    </div>
+                    <Badge
+                      variant={
+                        item.type === "overdue" ? "destructive" : "secondary"
+                      }
+                      className="ml-2 shrink-0"
+                    >
+                      {item.badge}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </>

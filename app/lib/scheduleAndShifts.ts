@@ -16,7 +16,7 @@ export const fetchAllScheduledJobsWithShifts = async (): Promise<
   await connectMongo();
   try {
     const scheduledJobs = await Schedule.find().lean();
-    return scheduledJobs.map((job) => ({
+    return scheduledJobs.map((job: any) => ({
       _id: job._id.toString(),
       invoiceRef: job.invoiceRef.toString(),
       jobTitle: job.jobTitle || "",
@@ -28,7 +28,7 @@ export const fetchAllScheduledJobsWithShifts = async (): Promise<
       confirmed: job.confirmed,
       hours: job.hours,
       shifts:
-        job.shifts?.map((shift) => ({
+        job.shifts?.map((shift: any) => ({
           _id: shift._id.toString(),
           technicianId: shift.technicianId,
           clockIn: shift.clockIn,
@@ -40,7 +40,7 @@ export const fetchAllScheduledJobsWithShifts = async (): Promise<
       deadRun: job.deadRun,
       technicianNotes: job.technicianNotes,
       photos: job.photos
-        ? job.photos.map((photo) => ({
+        ? job.photos.map((photo: any) => ({
             _id: photo._id.toString(),
             url: photo.url,
             timestamp: photo.timestamp,
@@ -122,43 +122,6 @@ export const fetchAllPayrollPeriods = async (): Promise<
   }
 };
 
-/**
- * Fetch shifts for a specific technician within a payroll period.
- * @param technicianId - The ID of the technician.
- * @param payrollPeriodId - The ID of the payroll period.
- */
-
-export const fetchShiftsForTechnician = async (
-  technicianId: string,
-  payrollPeriodId: string,
-): Promise<ShiftType[]> => {
-  await connectMongo();
-  try {
-    const schedules = await Schedule.find({
-      assignedTechnicians: technicianId,
-      payrollPeriod: payrollPeriodId,
-    }).populate("payrollPeriod");
-
-    const shifts = schedules.flatMap(
-      (schedule) =>
-        schedule.shifts
-          ?.filter((shift) => shift.technicianId === technicianId)
-          .map((shift) => ({
-            _id: shift._id.toString(),
-            technicianId: shift.technicianId,
-            clockIn: shift.clockIn,
-            clockOut: shift.clockOut,
-            jobDetails: shift.jobDetails,
-            hoursWorked: shift.hoursWorked,
-          })) || [],
-    );
-
-    return shifts;
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch shifts for technician");
-  }
-};
 
 /**
  * Fetch a technician by ID.
@@ -226,7 +189,7 @@ export const fetchSchedulesForTechnician = async (
     assignedTechnicians: technicianId,
   }).lean();
 
-  return schedules.map((schedule) => ({
+  return schedules.map((schedule: any) => ({
     _id: schedule._id.toString(),
     invoiceRef: schedule.invoiceRef.toString(),
     jobTitle: schedule.jobTitle,
@@ -237,7 +200,7 @@ export const fetchSchedulesForTechnician = async (
     assignedTechnicians: schedule.assignedTechnicians,
     confirmed: schedule.confirmed,
     hours: schedule.hours,
-    shifts: schedule.shifts?.map((shift) => ({
+    shifts: schedule.shifts?.map((shift: any) => ({
       _id: shift._id.toString(),
       technicianId: shift.technicianId,
       clockIn: shift.clockIn,
@@ -251,7 +214,7 @@ export const fetchSchedulesForTechnician = async (
     deadRun: schedule.deadRun,
     technicianNotes: schedule.technicianNotes,
     photos: schedule.photos
-      ? schedule.photos.map((photo) => ({
+      ? schedule.photos.map((photo: any) => ({
           _id: photo._id.toString(),
           url: photo.url,
           timestamp: photo.timestamp,
@@ -288,7 +251,7 @@ export const fetchPayrollPeriodsForTechnician = async (
     _id: { $in: uniquePayrollPeriodIds },
   }).lean();
 
-  return payrollPeriods.map((pp) => ({
+  return payrollPeriods.map((pp: any) => ({
     _id: pp._id.toString(),
     startDate: pp.startDate.toLocaleString("en-US", { timeZone: "UTC" }),
     endDate: pp.endDate.toLocaleString("en-US", { timeZone: "UTC" }),

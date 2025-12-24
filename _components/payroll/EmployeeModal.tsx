@@ -1,15 +1,25 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useMemo, useState } from "react";
 import {
   ScheduleType,
   TechnicianType,
   PayrollPeriodType,
 } from "../../app/lib/typeDefinitions";
 import { useForm, Controller } from "react-hook-form";
-import { AnimatePresence, motion } from "framer-motion";
 import toast from "react-hot-toast";
-import { updateShiftHours } from "../../app/lib/actions/scheduleJobs.actions";
+import { updateShiftHoursBatch } from "../../app/lib/actions/scheduleJobs.actions";
 import { formatDateFns } from "../../app/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../ui/dialog";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Card, CardContent } from "../ui/card";
+import { Loader2 } from "lucide-react";
 
 interface EmployeeModalProps {
   isOpen: boolean;
@@ -26,48 +36,29 @@ interface FormValues {
   }[];
 }
 
-const EmployeeModal = ({
-  isOpen,
+interface FormContentProps {
+  assignedSchedules: ScheduleType[];
+  defaultValues: FormValues;
+  onClose: () => void;
+}
+
+const FormContent = ({
+  assignedSchedules,
+  defaultValues,
   onClose,
-  technician,
-  schedules,
-}: EmployeeModalProps) => {
-  const { control, handleSubmit, reset } = useForm<FormValues>({
-    defaultValues: {
-      shifts: [],
-    },
+}: FormContentProps) => {
+  const { control, handleSubmit } = useForm<FormValues>({
+    defaultValues,
   });
 
   const [isLoading, setIsLoading] = useState(false);
-  const [originalShifts, setOriginalShifts] = useState<
-    {
-      scheduleId: string;
-      hoursWorked: number;
-    }[]
-  >([]);
-
-  useEffect(() => {
-    if (isOpen) {
-      const shiftData = schedules
-        .filter((schedule) =>
-          schedule.assignedTechnicians.includes(technician.id),
-        )
-        .map((schedule) => ({
-          scheduleId: schedule._id.toString(),
-          hoursWorked: Number(schedule.hours) || 4,
-        }));
-
-      setOriginalShifts(shiftData);
-      reset({ shifts: shiftData });
-    }
-  }, [isOpen, technician, schedules, reset]);
 
   const onSubmit = async (data: FormValues) => {
     setIsLoading(true);
     try {
-      // Only update shifts that have actually changed
+      // Compare with default values to find changed shifts
       const changedShifts = data.shifts.filter((shift) => {
-        const originalShift = originalShifts.find(
+        const originalShift = defaultValues.shifts.find(
           (orig) => orig.scheduleId === shift.scheduleId,
         );
         return originalShift && originalShift.hoursWorked !== shift.hoursWorked;
@@ -79,14 +70,8 @@ const EmployeeModal = ({
         return;
       }
 
-      const updatePromises = changedShifts.map((shift) =>
-        updateShiftHours({
-          scheduleId: shift.scheduleId,
-          hoursWorked: shift.hoursWorked,
-        }),
-      );
-
-      await Promise.all(updatePromises);
+      // Single batch update call
+      await updateShiftHoursBatch(changedShifts);
       toast.success(`Updated ${changedShifts.length} shift(s) successfully`);
       onClose();
     } catch (error) {
@@ -97,156 +82,124 @@ const EmployeeModal = ({
     }
   };
 
-  if (!isOpen) return null;
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="max-h-96 space-y-4 overflow-y-auto">
+        {assignedSchedules.map((schedule, index) => (
+          <Card key={schedule._id.toString()}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-foreground font-medium">
+                    {schedule.jobTitle}
+                  </p>
+                  <p className="text-muted-foreground text-sm">
+                    {formatDateFns(schedule.startDateTime)}
+                  </p>
+                </div>
+                <Controller
+                  control={control}
+                  name={`shifts.${index}.hoursWorked`}
+                  render={({ field }) => (
+                    <Input
+                      type="number"
+                      min="0"
+                      step="0.5"
+                      value={field.value ?? 0}
+                      onChange={(e) => {
+                        const value = parseFloat(e.target.value) || 0;
+                        field.onChange(value);
+                      }}
+                      onBlur={field.onBlur}
+                      className="w-24 text-center"
+                    />
+                  )}
+                />
+                <Controller
+                  control={control}
+                  name={`shifts.${index}.scheduleId`}
+                  render={({ field }) => (
+                    <input
+                      type="hidden"
+                      {...field}
+                      value={schedule._id.toString()}
+                    />
+                  )}
+                />
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <DialogFooter className="mt-6">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isLoading}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+};
 
+const EmployeeModal = ({
+  isOpen,
+  onClose,
+  technician,
+  schedules,
+}: EmployeeModalProps) => {
   // Extract shifts assigned to the technician
-  const assignedSchedules = schedules.filter((schedule) =>
-    schedule.assignedTechnicians.includes(technician.id),
+  const assignedSchedules = useMemo(
+    () =>
+      schedules.filter((schedule) =>
+        schedule.assignedTechnicians.includes(technician.id),
+      ),
+    [schedules, technician.id],
   );
 
-  if (assignedSchedules.length === 0) {
-    // No shifts to display
-    return (
-      <AnimatePresence>
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black-2 bg-opacity-50"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-        >
-          <motion.div
-            className="w-full max-w-lg rounded-lg bg-white p-6 shadow-lg"
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.8 }}
-          >
-            <h2 className="mb-4 text-xl font-semibold text-darkGreen">
-              Shifts for {technician.name}
-            </h2>
-            <p className="text-darkGray">No shifts assigned for this period.</p>
-            <div className="mt-6 flex justify-end">
-              <button
-                type="button"
-                className="rounded bg-darkGreen px-4 py-2 text-white"
-                onClick={onClose}
-              >
-                Close
-              </button>
-            </div>
-          </motion.div>
-        </motion.div>
-      </AnimatePresence>
-    );
-  }
+  // Compute default form values based on assigned schedules
+  const defaultValues = useMemo<FormValues>(() => {
+    const shiftData = assignedSchedules.map((schedule) => ({
+      scheduleId: schedule._id.toString(),
+      hoursWorked: Number(schedule.hours) || 4,
+    }));
+    return { shifts: shiftData };
+  }, [assignedSchedules]);
 
   return (
-    <>
-      {isOpen && (
-        <motion.div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black-2 bg-opacity-50"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          onClick={onClose}
-        >
-          <motion.div
-            className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg"
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.8 }}
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="mb-4 text-xl font-semibold text-darkGreen">
-              Shifts for {technician.name}
-            </h2>
-            <form onSubmit={handleSubmit(onSubmit)}>
-              <div className="max-h-96 space-y-4 overflow-y-auto ">
-                {assignedSchedules.map((schedule, index) => (
-                  <div
-                    key={schedule._id.toString()}
-                    className="flex flex-col rounded border border-borderGreen bg-lightGray p-4"
-                  >
-                    <div className="mb-2 flex items-center justify-between">
-                      <div>
-                        <p className="font-medium text-darkGreen">
-                          {schedule.jobTitle}
-                        </p>
-                        <p className="text-sm text-darkGray">
-                          {formatDateFns(schedule.startDateTime)}
-                        </p>
-                      </div>
-                      <Controller
-                        control={control}
-                        name={`shifts.${index}.hoursWorked`}
-                        render={({ field }) => (
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.5"
-                            value={field.value ?? 0}
-                            onChange={(e) => {
-                              const value = parseFloat(e.target.value) || 0;
-                              field.onChange(value);
-                            }}
-                            onBlur={field.onBlur}
-                            className="w-24 rounded border border-darkGreen px-2 py-1 text-center focus:border-darkGreen focus:outline-none focus:ring-1 focus:ring-darkGreen"
-                          />
-                        )}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-6 flex justify-end space-x-4">
-                <button
-                  type="button"
-                  className="rounded bg-darkGray px-4 py-2 text-white hover:bg-gray-700"
-                  onClick={onClose}
-                  disabled={isLoading}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className={`flex items-center justify-center rounded bg-darkGreen px-4 py-2 text-white hover:bg-green-700 ${
-                    isLoading ? "cursor-not-allowed opacity-50" : ""
-                  }`}
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <svg
-                        className="-ml-1 mr-3 h-5 w-5 animate-spin text-white"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8v8H4z"
-                        ></path>
-                      </svg>
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </motion.div>
-      )}
-    </>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Shifts for {technician.name}</DialogTitle>
+        </DialogHeader>
+
+        {assignedSchedules.length === 0 ? (
+          <p className="text-muted-foreground">
+            No shifts assigned for this period.
+          </p>
+        ) : (
+          <FormContent
+            key={`${technician.id}-${assignedSchedules.length}`}
+            assignedSchedules={assignedSchedules}
+            defaultValues={defaultValues}
+            onClose={onClose}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
 

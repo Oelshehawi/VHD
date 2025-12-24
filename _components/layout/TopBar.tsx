@@ -2,7 +2,7 @@
 
 import { ModeToggle } from "../mode-toggle";
 import NotificationBell from "../Notifications/NotificationBell";
-import { UserButton } from "@clerk/nextjs";
+import { UserButton,SignedIn } from "@clerk/nextjs";
 import { SidebarTrigger } from "../ui/sidebar";
 import { Separator } from "../ui/separator";
 import { AppBreadcrumbs } from "./Breadcrumbs";
@@ -21,7 +21,9 @@ export function TopBar() {
       <div className="flex items-center gap-4">
         <ModeToggle />
         <NotificationBell />
-        <UserButton />
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
       </div>
     </header>
   );

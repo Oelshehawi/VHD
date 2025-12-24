@@ -13,7 +13,7 @@ export default function PortalAccessManager({
   clientName,
 }: PortalAccessManagerProps) {
   return (
-    <Card>
+    <Card className="">
       <CardHeader>
         <CardTitle>Client Portal Access</CardTitle>
       </CardHeader>
@@ -22,4 +22,4 @@ export default function PortalAccessManager({
       </CardContent>
     </Card>
   );
-} 
+}

@@ -1,6 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
-import { XMarkIcon } from "@heroicons/react/24/solid";
+import { useState, useEffect, useMemo } from "react";
+import { useForm, Controller } from "react-hook-form";
+import toast from "react-hot-toast";
+import { format } from "date-fns";
+import { Check, X, Minus, RotateCcw, Loader2 } from "lucide-react";
 import {
   ReportType,
   ScheduleType,
@@ -11,37 +14,56 @@ import {
   getReportByScheduleId,
   getReportsByJobNameAndLocation,
 } from "../../app/lib/actions/scheduleJobs.actions";
-import toast from "react-hot-toast";
-import { motion } from "framer-motion";
-import { format } from "date-fns";
 import ReportSelectionModal from "./ReportSelectionModal";
 
+// Shadcn UI Components
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "../ui/dialog";
+import { DatePicker } from "../ui/date-picker";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
+import { Label } from "../ui/label";
+import { Checkbox } from "../ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "../ui/table";
+import { cn } from "../../app/lib/utils";
 
+// Step types
 type FormStep = "basic" | "equipment" | "inspection" | "recommendations";
 
-type InspectionItemType = {
-  status?: "Yes" | "No" | "N/A";
-};
-
-interface ReportFormProps {
-  schedule: ScheduleType;
-  onClose: () => void;
-  technicians: TechnicianType[];
-}
-
-interface FormData {
-  _id?: string;
+// Form data type
+interface ReportFormData {
   scheduleId: string;
   invoiceId: string;
-  jobTitle?: string;
-  location?: string;
-  dateCompleted: Date | string;
+  jobTitle: string;
+  location: string;
+  dateCompleted: string;
   technicianId: string;
-  lastServiceDate?: Date | string;
-  fuelType?: string;
-  cookingVolume?: string;
-  cookingEquipment?: string[];
-  inspectionItems: InspectionItemType[];
+  lastServiceDate: string;
+  fuelType: string;
+  cookingVolume: string;
+  cookingEquipment: string[];
+  inspectionItems: Record<number, "Yes" | "No" | "N/A" | "">;
   equipmentDetails: {
     hoodType: string;
     filterType: string;
@@ -54,190 +76,157 @@ interface FormData {
     ductworkCleaned: boolean;
     fanCleaned: boolean;
   };
-  recommendedCleaningFrequency?: number;
-  comments?: string;
-  recommendations?: string;
+  recommendedCleaningFrequency: number | "";
+  comments: string;
+  recommendations: string;
 }
 
-const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
+// Inspection items definition
+const INSPECTION_ITEMS = [
+  "Filters are in place?",
+  "Filters listed?",
+  "Filters needs to be cleaned more often?",
+  "Filters need to be replaced?",
+  "Wash cycle working?",
+  "Fire suppression nozzles clear?",
+  "Fan tips and is accessible?",
+  "Safe access to fan?",
+  "Exhaust fan is operable?",
+  "Ecology Unit requires cleaning?",
+  "Ecology Unit deficiencies?",
+  "Grease buildup on roof between cleanings?",
+  "Entire system cleaned in accordance with applicable codes?",
+  "Entire system interior accessible for cleaning?",
+  "Multi storey vertical requires cleaning (Spinjets)?",
+  "Adequate number of access panels?",
+];
+
+const COOKING_EQUIPMENT_OPTIONS = [
+  { value: "griddles", label: "Griddles" },
+  { value: "deepFatFryers", label: "Deep Fat Fryers" },
+  { value: "woks", label: "Woks" },
+  { value: "ovens", label: "Ovens" },
+  { value: "flattopGrills", label: "Flattop Grills" },
+];
+
+const FUEL_TYPES = ["Natural Gas", "Electric", "Solid Fuel", "Other"];
+const COOKING_VOLUMES = ["High", "Medium", "Low"];
+
+// Key mappings for API
+const INSPECTION_KEY_MAPPINGS: Record<number, string> = {
+  0: "filtersInPlace",
+  1: "filtersListed",
+  2: "filtersNeedCleaningMoreOften",
+  3: "filtersNeedReplacement",
+  4: "washCycleWorking",
+  5: "fireSuppressionNozzlesClear",
+  6: "fanTipAccessible",
+  7: "safeAccessToFan",
+  8: "exhaustFanOperational",
+  9: "ecologyUnitRequiresCleaning",
+  10: "ecologyUnitDeficiencies",
+  11: "greaseBuildupOnRoof",
+  12: "systemCleanedPerCode",
+  13: "systemInteriorAccessible",
+  14: "multiStoreyVerticalCleaning",
+  15: "adequateAccessPanels",
+};
+
+interface ReportModalProps {
+  schedule: ScheduleType;
+  onClose: () => void;
+  technicians: TechnicianType[];
+}
+
+const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
   const [step, setStep] = useState<FormStep>("basic");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isAutoFilling, setIsAutoFilling] = useState(false);
-  const [autoFilledFields, setAutoFilledFields] = useState<string[]>([]);
   const [clientReports, setClientReports] = useState<any[]>([]);
   const [showReportSelector, setShowReportSelector] = useState(false);
+  const [existingReportId, setExistingReportId] = useState<
+    string | undefined
+  >();
 
-  // Smart technician pre-selection
-  const getDefaultTechnician = () => {
-    // If only one technician, select them
-    if (technicians.length === 1) {
-      return technicians[0]?.id || "";
-    }
-    
-    // If job has assigned technicians, try to match one
-    if (schedule.assignedTechnicians && schedule.assignedTechnicians.length > 0) {
-      const assignedTech = technicians.find(tech => 
-        schedule.assignedTechnicians.includes(tech.id)
+  // Get default technician
+  const defaultTechnicianId = useMemo(() => {
+    if (technicians.length === 1) return technicians[0]?.id || "";
+    if (schedule.assignedTechnicians?.length > 0) {
+      const assigned = technicians.find((tech) =>
+        schedule.assignedTechnicians.includes(tech.id),
       );
-      if (assignedTech) {
-        return assignedTech.id;
-      }
+      if (assigned) return assigned.id;
     }
-    
     return "";
-  };
+  }, [technicians, schedule.assignedTechnicians]);
 
-  const [formData, setFormData] = useState<FormData>({
-    scheduleId: schedule._id.toString(),
-    invoiceId:
-      typeof schedule.invoiceRef === "string"
-        ? schedule.invoiceRef
-        : schedule.invoiceRef.toString(),
-    jobTitle: schedule.jobTitle,
-    location: schedule.location,
-    dateCompleted: new Date(),
-    technicianId: getDefaultTechnician(),
-    cookingEquipment: [],
-    inspectionItems: [],
-    equipmentDetails: {
-      hoodType: "",
-      filterType: "",
-      ductworkType: "",
-      fanType: "",
-    },
-    cleaningDetails: {
-      hoodCleaned: false,
-      filtersCleaned: false,
-      ductworkCleaned: false,
-      fanCleaned: false,
-    },
-  });
+  // React Hook Form setup
+  const { control, handleSubmit, reset, setValue, watch, getValues } =
+    useForm<ReportFormData>({
+      defaultValues: {
+        scheduleId: schedule._id.toString(),
+        invoiceId:
+          typeof schedule.invoiceRef === "string"
+            ? schedule.invoiceRef
+            : schedule.invoiceRef.toString(),
+        jobTitle: schedule.jobTitle || "",
+        location: schedule.location || "",
+        dateCompleted: new Date().toISOString().split("T")[0],
+        technicianId: defaultTechnicianId,
+        lastServiceDate: "",
+        fuelType: "",
+        cookingVolume: "",
+        cookingEquipment: [],
+        inspectionItems: {},
+        equipmentDetails: {
+          hoodType: "",
+          filterType: "",
+          ductworkType: "",
+          fanType: "",
+        },
+        cleaningDetails: {
+          hoodCleaned: false,
+          filtersCleaned: false,
+          ductworkCleaned: false,
+          fanCleaned: false,
+        },
+        recommendedCleaningFrequency: "",
+        comments: "",
+        recommendations: "",
+      },
+    });
 
-  // Add this after useState declarations
-  const inspectionItems = [
-    { name: "Filters are in place?" },
-    { name: "Filters listed?" },
-    { name: "Filters needs to be cleaned more often?" },
-    { name: "Filters need to be replaced?" },
-    { name: "Wash cycle working?" },
-    { name: "Fire suppression nozzles clear?" },
-    { name: "Fan tips and is accessible?" },
-    { name: "Safe access to fan?" },
-    { name: "Exhaust fan is operable?" },
-    { name: "Ecology Unit requires cleaning?" },
-    { name: "Ecology Unit deficiencies?" },
-    { name: "Grease buildup on roof between cleanings?" },
-    { name: "Entire system cleaned in accordance with applicable codes?" },
-    { name: "Entire system interior accessible for cleaning?" },
-    { name: "Multi storey vertical requires cleaning (Spinjets)?" },
-    { name: "Adequate number of access panels?" },
-  ];
+  const watchedInspectionItems = watch("inspectionItems");
 
-  const cookingEquipmentOptions = [
-    { value: "griddles", label: "Griddles" },
-    { value: "deepFatFryers", label: "Deep Fat Fryers" },
-    { value: "woks", label: "Woks" },
-    { value: "ovens", label: "Ovens" },
-    { value: "flattopGrills", label: "Flattop Grills" },
-  ];
-
-  // Fetch existing report data if available
+  // Fetch existing report and previous reports
   useEffect(() => {
-    const fetchReport = async () => {
+    const fetchData = async () => {
       try {
         const report = await getReportByScheduleId(schedule._id.toString());
+
         if (report) {
-          // Convert inspection items from object to array format
-          const arrayInspectionItems: InspectionItemType[] = [];
-
-          // Use the same key mappings for consistency with better typing
-          const keyMappings: { [key: string]: string } = {
-            "0": "filtersInPlace",
-            "1": "filtersListed",
-            "2": "filtersNeedCleaningMoreOften",
-            "3": "filtersNeedReplacement",
-            "4": "washCycleWorking",
-            "5": "fireSuppressionNozzlesClear",
-            "6": "fanTipAccessible",
-            "7": "safeAccessToFan",
-            "8": "exhaustFanOperational",
-            "9": "ecologyUnitRequiresCleaning",
-            "10": "ecologyUnitDeficiencies",
-            "11": "greaseBuildupOnRoof",
-            "12": "systemCleanedPerCode",
-            "13": "systemInteriorAccessible",
-            "14": "multiStoreyVerticalCleaning",
-            "15": "adequateAccessPanels",
-          };
-
-          // Map the backend object format to our array format
-          if (report.inspectionItems) {
-            // Ensure we have an array with the right length
-            for (let i = 0; i < inspectionItems.length; i++) {
-              arrayInspectionItems[i] = {};
-            }
-
-            // Map existing values with type-safe access
-            Object.entries(keyMappings).forEach(([indexStr, key]) => {
-              const index = parseInt(indexStr);
-              const status = (report.inspectionItems as any)[key];
-              if (status) {
-                arrayInspectionItems[index] = { status };
-              }
-            });
-          }
-
-          // Convert cooking equipment from old boolean format to new array format
-          const cookingEquipmentArray: string[] = [];
-          if (typeof report.cookingEquipment === 'object' && report.cookingEquipment) {
-            if ((report.cookingEquipment as any).griddles) cookingEquipmentArray.push("griddles");
-            if ((report.cookingEquipment as any).deepFatFryers) cookingEquipmentArray.push("deepFatFryers");
-            if ((report.cookingEquipment as any).woks) cookingEquipmentArray.push("woks");
-            if ((report.cookingEquipment as any).ovens) cookingEquipmentArray.push("ovens");
-            if ((report.cookingEquipment as any).flattopGrills) cookingEquipmentArray.push("flattopGrills");
-          } else if (Array.isArray(report.cookingEquipment)) {
-            cookingEquipmentArray.push(...report.cookingEquipment);
-          }
-
-          // Update the form data with the report and mapped inspection items
-          setFormData(prevData => ({
-            ...report,
-            scheduleId: schedule._id.toString(),
-            invoiceId:
-              typeof schedule.invoiceRef === "string"
-                ? schedule.invoiceRef
-                : schedule.invoiceRef.toString(),
-            jobTitle: schedule.jobTitle,
-            location: schedule.location,
-            cookingEquipment: cookingEquipmentArray,
-            inspectionItems: arrayInspectionItems,
-            // Ensure technicianId is preserved from the report
-            technicianId: report.technicianId || prevData.technicianId,
-          }));
-
+          setExistingReportId(
+            typeof report._id === "string"
+              ? report._id
+              : report._id?.toString(),
+          );
+          loadReportIntoForm(report);
         }
 
-        // Always try to fetch previous reports for autofill (whether updating existing or creating new)
+        // Fetch previous reports for auto-fill
         if (schedule.jobTitle && schedule.location) {
-          try {
-            setIsAutoFilling(true);
-            const reports = await getReportsByJobNameAndLocation(schedule.jobTitle, schedule.location);
-
-            // Filter out the current report if it exists to show only previous reports
-            const previousReports = reports.filter(r => r.scheduleId !== schedule._id.toString());
-
-            if (previousReports.length > 0) {
-              setClientReports(previousReports);
-              // Only show selector if no existing report was found
-              if (!report) {
-                setShowReportSelector(true);
-              }
+          const reports = await getReportsByJobNameAndLocation(
+            schedule.jobTitle,
+            schedule.location,
+          );
+          const previousReports = reports.filter(
+            (r) => r.scheduleId !== schedule._id.toString(),
+          );
+          if (previousReports.length > 0) {
+            setClientReports(previousReports);
+            if (!report) {
+              setShowReportSelector(true);
             }
-          } catch (error) {
-            console.error("Error fetching reports by job name and location:", error);
-          } finally {
-            setIsAutoFilling(false);
           }
         }
       } catch (error) {
@@ -247,170 +236,98 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
       }
     };
 
-    fetchReport();
-  }, [schedule._id, schedule.invoiceRef]);
+    fetchData();
+  }, [schedule._id]);
 
-  // Form helpers
-  type FormField = string | boolean | number | Date | undefined;
-
-  const handleNestedChange = (
-    section: keyof FormData,
-    field: string,
-    value: FormField,
-  ) => {
-    setFormData((prev) => {
-      // Create a new copy of the form data
-      const result = { ...prev };
-
-      // Initialize the section if it doesn't exist
-      if (!result[section]) {
-        // Initialize with the correct type based on the section name
-        if (section === "equipmentDetails") {
-          result.equipmentDetails = {
-            hoodType: "",
-            filterType: "",
-            ductworkType: "",
-            fanType: "",
-          };
-        } else if (section === "cleaningDetails") {
-          result.cleaningDetails = {
-            hoodCleaned: false,
-            filtersCleaned: false,
-            ductworkCleaned: false,
-            fanCleaned: false,
-          };
-        }
-      }
-
-      // Now update the field safely
-      if (section === "equipmentDetails" && result.equipmentDetails) {
-        (result.equipmentDetails as any)[field] = value;
-      } else if (section === "cleaningDetails" && result.cleaningDetails) {
-        (result.cleaningDetails as any)[field] = value;
-      }
-
-      return result;
-    });
-  };
-
-  const handleInspectionChange = (
-    index: number,
-    field: string,
-    value: string,
-  ) => {
-    setFormData((prevData) => {
-      const updatedFormData = { ...prevData };
-
-      // Initialize inspectionItems array if it doesn't exist
-      if (!updatedFormData.inspectionItems) {
-        updatedFormData.inspectionItems = [];
-      }
-
-      // Initialize item at index if it doesn't exist
-      if (!updatedFormData.inspectionItems[index]) {
-        updatedFormData.inspectionItems[index] = {};
-      }
-
-      // Update the field
-      updatedFormData.inspectionItems[index] = {
-        ...updatedFormData.inspectionItems[index],
-        [field]: value,
-      };
-
-      return updatedFormData;
-    });
-  };
-
-  const handleReportSelect = (report: any) => {
-    const fieldsToUpdate = [];
-
-    // Convert inspection items from object to array format for form
-    const arrayInspectionItems: InspectionItemType[] = [];
-    const keyMappings: { [key: string]: string } = {
-      "0": "filtersInPlace",
-      "1": "filtersListed",
-      "2": "filtersNeedCleaningMoreOften",
-      "3": "filtersNeedReplacement",
-      "4": "washCycleWorking",
-      "5": "fireSuppressionNozzlesClear",
-      "6": "fanTipAccessible",
-      "7": "safeAccessToFan",
-      "8": "exhaustFanOperational",
-      "9": "ecologyUnitRequiresCleaning",
-      "10": "ecologyUnitDeficiencies",
-      "11": "greaseBuildupOnRoof",
-      "12": "systemCleanedPerCode",
-      "13": "systemInteriorAccessible",
-      "14": "multiStoreyVerticalCleaning",
-      "15": "adequateAccessPanels",
-    };
-
+  // Load report data into form
+  const loadReportIntoForm = (report: any) => {
+    // Convert inspection items from object to indexed format
+    const inspectionItems: Record<number, "Yes" | "No" | "N/A" | ""> = {};
     if (report.inspectionItems) {
-      for (let i = 0; i < inspectionItems.length; i++) {
-        arrayInspectionItems[i] = {};
-      }
-
-      Object.entries(keyMappings).forEach(([indexStr, key]) => {
+      Object.entries(INSPECTION_KEY_MAPPINGS).forEach(([indexStr, key]) => {
         const index = parseInt(indexStr);
         const status = (report.inspectionItems as any)[key];
         if (status) {
-          arrayInspectionItems[index] = { status };
+          inspectionItems[index] = status;
         }
       });
     }
 
-    // Convert cooking equipment from old boolean format to new array format
-    const cookingEquipmentArray: string[] = [];
-    if (typeof report.cookingEquipment === 'object' && report.cookingEquipment) {
-      if ((report.cookingEquipment as any).griddles) cookingEquipmentArray.push("griddles");
-      if ((report.cookingEquipment as any).deepFatFryers) cookingEquipmentArray.push("deepFatFryers");
-      if ((report.cookingEquipment as any).woks) cookingEquipmentArray.push("woks");
-      if ((report.cookingEquipment as any).ovens) cookingEquipmentArray.push("ovens");
-      if ((report.cookingEquipment as any).flattopGrills) cookingEquipmentArray.push("flattopGrills");
+    // Convert cooking equipment
+    const cookingEquipment: string[] = [];
+    if (
+      typeof report.cookingEquipment === "object" &&
+      report.cookingEquipment
+    ) {
+      if (report.cookingEquipment.griddles) cookingEquipment.push("griddles");
+      if (report.cookingEquipment.deepFatFryers)
+        cookingEquipment.push("deepFatFryers");
+      if (report.cookingEquipment.woks) cookingEquipment.push("woks");
+      if (report.cookingEquipment.ovens) cookingEquipment.push("ovens");
+      if (report.cookingEquipment.flattopGrills)
+        cookingEquipment.push("flattopGrills");
     } else if (Array.isArray(report.cookingEquipment)) {
-      cookingEquipmentArray.push(...report.cookingEquipment);
+      cookingEquipment.push(...report.cookingEquipment);
     }
 
-    // Update form data with autofilled values
-    setFormData(prevData => ({
-      ...prevData,
-      fuelType: report.fuelType || prevData.fuelType,
-      cookingVolume: report.cookingVolume || prevData.cookingVolume,
-      cookingEquipment: cookingEquipmentArray.length > 0 ? cookingEquipmentArray : prevData.cookingEquipment,
+    reset({
+      scheduleId: schedule._id.toString(),
+      invoiceId:
+        typeof schedule.invoiceRef === "string"
+          ? schedule.invoiceRef
+          : schedule.invoiceRef.toString(),
+      jobTitle: schedule.jobTitle || "",
+      location: schedule.location || "",
+      dateCompleted: report.dateCompleted
+        ? new Date(report.dateCompleted).toISOString().split("T")[0]
+        : new Date().toISOString().split("T")[0],
+      technicianId: report.technicianId || defaultTechnicianId,
+      lastServiceDate: report.lastServiceDate
+        ? new Date(report.lastServiceDate).toISOString().split("T")[0]
+        : "",
+      fuelType: report.fuelType || "",
+      cookingVolume: report.cookingVolume || "",
+      cookingEquipment,
+      inspectionItems,
       equipmentDetails: {
-        ...prevData.equipmentDetails,
-        ...(report.equipmentDetails || {}),
+        hoodType: report.equipmentDetails?.hoodType || "",
+        filterType: report.equipmentDetails?.filterType || "",
+        ductworkType: report.equipmentDetails?.ductworkType || "",
+        fanType: report.equipmentDetails?.fanType || "",
       },
       cleaningDetails: {
-        ...prevData.cleaningDetails,
-        ...(report.cleaningDetails || {}),
+        hoodCleaned: report.cleaningDetails?.hoodCleaned || false,
+        filtersCleaned: report.cleaningDetails?.filtersCleaned || false,
+        ductworkCleaned: report.cleaningDetails?.ductworkCleaned || false,
+        fanCleaned: report.cleaningDetails?.fanCleaned || false,
       },
-      inspectionItems: arrayInspectionItems.length > 0 ? arrayInspectionItems : prevData.inspectionItems,
-      recommendedCleaningFrequency: report.recommendedCleaningFrequency || prevData.recommendedCleaningFrequency,
-      comments: report.comments || prevData.comments,
-      recommendations: report.recommendations || prevData.recommendations,
-    }));
-
-    // Track which fields were auto-filled
-    const updatedFields = [];
-    if (report.fuelType) updatedFields.push("fuelType");
-    if (report.cookingVolume) updatedFields.push("cookingVolume");
-    if (cookingEquipmentArray.length > 0) updatedFields.push("cookingEquipment");
-    if (report.equipmentDetails) updatedFields.push("equipmentDetails");
-    if (report.cleaningDetails) updatedFields.push("cleaningDetails");
-    if (report.inspectionItems) updatedFields.push("inspectionItems");
-    if (report.recommendedCleaningFrequency) updatedFields.push("recommendedCleaningFrequency");
-    if (report.comments) updatedFields.push("comments");
-    if (report.recommendations) updatedFields.push("recommendations");
-
-    setAutoFilledFields(updatedFields);
-    setShowReportSelector(false);
-    toast.success(`Form auto-filled from previous report (${new Date(report.dateCompleted).toLocaleDateString()})`);
+      recommendedCleaningFrequency: report.recommendedCleaningFrequency || "",
+      comments: report.comments || "",
+      recommendations: report.recommendations || "",
+    });
   };
 
-  const handleSubmit = async () => {
-    // Validate technician is selected
-    if (!formData.technicianId) {
+  // Handle report selection for auto-fill
+  const handleReportSelect = (report: any) => {
+    loadReportIntoForm(report);
+    setShowReportSelector(false);
+    toast.success(
+      `Form auto-filled from report (${format(new Date(report.dateCompleted), "MMM d, yyyy")})`,
+    );
+  };
+
+  // Mark all inspection items
+  const markAllInspection = (status: "Yes" | "No" | "N/A") => {
+    const newItems: Record<number, "Yes" | "No" | "N/A" | ""> = {};
+    INSPECTION_ITEMS.forEach((_, index) => {
+      newItems[index] = status;
+    });
+    setValue("inspectionItems", newItems);
+  };
+
+  // Form submission
+  const onSubmit = async (data: ReportFormData) => {
+    if (!data.technicianId) {
       toast.error("Please select a technician");
       setStep("basic");
       return;
@@ -418,69 +335,47 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
 
     setSaving(true);
     try {
-      // Create a serialized version with ISO date strings
-      const serializedData = {
-        ...formData,
-        dateCompleted:
-          formData.dateCompleted instanceof Date
-            ? formData.dateCompleted.toISOString()
-            : formData.dateCompleted,
-        lastServiceDate:
-          formData.lastServiceDate instanceof Date
-            ? formData.lastServiceDate.toISOString()
-            : formData.lastServiceDate,
-      };
-
-      // Convert our array-based inspection items to an object format for the API
+      // Convert inspection items to API format
       const inspectionItemsObject: Record<string, string> = {};
-
-      // Use a more reliable mapping between UI items and API keys with better typing
-      const keyMappings: { [key: string]: string } = {
-        "0": "filtersInPlace",
-        "1": "filtersListed",
-        "2": "filtersNeedCleaningMoreOften",
-        "3": "filtersNeedReplacement",
-        "4": "washCycleWorking",
-        "5": "fireSuppressionNozzlesClear",
-        "6": "fanTipAccessible",
-        "7": "safeAccessToFan",
-        "8": "exhaustFanOperational",
-        "9": "ecologyUnitRequiresCleaning",
-        "10": "ecologyUnitDeficiencies",
-        "11": "greaseBuildupOnRoof",
-        "12": "systemCleanedPerCode",
-        "13": "systemInteriorAccessible",
-        "14": "multiStoreyVerticalCleaning",
-        "15": "adequateAccessPanels",
-      };
-
-      inspectionItems.forEach((_, index) => {
-        // Safely access potentially undefined properties
-        const status = serializedData.inspectionItems[index]?.status;
-        if (status) {
-          const key = keyMappings[index.toString()];
-          if (key) {
-            inspectionItemsObject[key] = status;
-          }
+      Object.entries(data.inspectionItems).forEach(([indexStr, status]) => {
+        const index = parseInt(indexStr);
+        const key = INSPECTION_KEY_MAPPINGS[index];
+        if (key && status) {
+          inspectionItemsObject[key] = status;
         }
       });
 
-      // Convert cooking equipment array back to object format for API compatibility
+      // Convert cooking equipment to API format
       const cookingEquipmentObject: Record<string, boolean> = {};
-      if (serializedData.cookingEquipment && Array.isArray(serializedData.cookingEquipment)) {
-        serializedData.cookingEquipment.forEach((item: string) => {
-          cookingEquipmentObject[item] = true;
-        });
-      }
+      data.cookingEquipment.forEach((item) => {
+        cookingEquipmentObject[item] = true;
+      });
 
-      // Create the final data to send to the API with a more specific type cast
       const apiData = {
-        ...serializedData,
+        _id: existingReportId,
+        scheduleId: data.scheduleId,
+        invoiceId: data.invoiceId,
+        jobTitle: data.jobTitle,
+        location: data.location,
+        dateCompleted: new Date(data.dateCompleted).toISOString(),
+        technicianId: data.technicianId,
+        lastServiceDate: data.lastServiceDate
+          ? new Date(data.lastServiceDate).toISOString()
+          : undefined,
+        fuelType: data.fuelType || undefined,
+        cookingVolume: data.cookingVolume || undefined,
         cookingEquipment: cookingEquipmentObject,
         inspectionItems: inspectionItemsObject,
+        equipmentDetails: data.equipmentDetails,
+        cleaningDetails: data.cleaningDetails,
+        recommendedCleaningFrequency:
+          typeof data.recommendedCleaningFrequency === "number"
+            ? data.recommendedCleaningFrequency
+            : undefined,
+        comments: data.comments || undefined,
+        recommendations: data.recommendations || undefined,
       };
 
-      // Using 'unknown' as an intermediate step is safer than direct 'any' casting
       await createOrUpdateReport(apiData as unknown as ReportType);
       toast.success("Report saved successfully");
       onClose();
@@ -492,670 +387,694 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportFormProps) => {
     }
   };
 
+  // Step navigation
+  const steps: FormStep[] = [
+    "basic",
+    "equipment",
+    "inspection",
+    "recommendations",
+  ];
+  const currentStepIndex = steps.indexOf(step);
+  const progress = ((currentStepIndex + 1) / steps.length) * 100;
+
   const nextStep = () => {
-    if (step === "basic") setStep("equipment");
-    else if (step === "equipment") setStep("inspection");
-    else if (step === "inspection") setStep("recommendations");
+    const next = steps[currentStepIndex + 1];
+    if (next) setStep(next);
   };
 
   const prevStep = () => {
-    if (step === "recommendations") setStep("inspection");
-    else if (step === "inspection") setStep("equipment");
-    else if (step === "equipment") setStep("basic");
+    const prev = steps[currentStepIndex - 1];
+    if (prev) setStep(prev);
   };
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-        <div className="w-full max-w-md rounded-xl border border-gray-200 bg-white shadow-2xl p-8">
-          <div className="flex flex-col items-center space-y-4">
-            <div className="relative">
-              <div className="h-12 w-12 rounded-full border-4 border-gray-200"></div>
-              <div className="absolute top-0 left-0 h-12 w-12 rounded-full border-4 border-blue-600 border-t-transparent animate-spin"></div>
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">Loading Report</h3>
-              <p className="text-sm text-gray-500">Please wait while we fetch the report data...</p>
-            </div>
+      <Dialog open={true} onOpenChange={() => onClose()}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Loading Report</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center space-y-4 py-8">
+            <Loader2 className="text-primary h-12 w-12 animate-spin" />
+            <p className="text-muted-foreground text-sm">
+              Please wait while we fetch the report data...
+            </p>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
     );
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="relative w-full max-w-4xl rounded-xl border border-gray-200 bg-white shadow-2xl max-h-[90vh] overflow-hidden">
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 z-10 rounded-full p-2 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
-        >
-          <XMarkIcon className="h-6 w-6" />
-        </button>
-
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-semibold text-gray-900">
+    <>
+      <Dialog open={true} onOpenChange={() => onClose()}>
+        <DialogContent className="flex min-h-[90vh] max-h-[90vh] w-full max-w-5xl min-w-[800px] flex-col gap-0 p-0">
+          <DialogHeader className="shrink-0 border-b p-6">
+            <DialogTitle className="text-xl">
               Kitchen Exhaust System Cleaning Report
-            </h2>
-          </div>
-        </div>
+            </DialogTitle>
+          </DialogHeader>
 
-        {/* Progress Bar */}
-        <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
-          <div className="mb-4 h-2 w-full overflow-hidden rounded-full bg-gray-200">
-            <div
-              className="h-full bg-blue-600 transition-all duration-300 ease-in-out"
-              style={{
-                width:
-                  step === "basic"
-                    ? "25%"
-                    : step === "equipment"
-                      ? "50%"
-                      : step === "inspection"
-                        ? "75%"
-                        : "100%",
-              }}
-            ></div>
-          </div>
-
-          <div className="flex justify-between">
-            <button
-              onClick={() => setStep("basic")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                step === "basic" 
-                  ? "bg-blue-600 text-white" 
-                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-              }`}
-            >
-              Basic Info
-            </button>
-            <button
-              onClick={() => setStep("equipment")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                step === "equipment" 
-                  ? "bg-blue-600 text-white" 
-                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-              }`}
-            >
-              Equipment
-            </button>
-            <button
-              onClick={() => setStep("inspection")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                step === "inspection" 
-                  ? "bg-blue-600 text-white" 
-                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-              }`}
-            >
-              Inspection
-            </button>
-            <button
-              onClick={() => setStep("recommendations")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                step === "recommendations" 
-                  ? "bg-blue-600 text-white" 
-                  : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-              }`}
-            >
-              Recommendations
-            </button>
-          </div>
-        </div>
-
-        <div className="p-6 overflow-y-auto max-h-[60vh]">
-          {/* Auto-fill Status */}
-          {isAutoFilling && (
-            <div className="flex items-center justify-center bg-blue-50 p-3 rounded-lg border border-blue-200 mb-4">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-blue-400 border-t-transparent"></div>
-              <span className="ml-2 text-xs font-medium text-blue-700">
-                Loading previous reports for auto-fill...
-              </span>
+          {/* Progress Bar and Step Navigation */}
+          <div className="bg-muted/30 shrink-0 border-b px-6 py-4">
+            <div className="bg-muted mb-4 h-2 w-full overflow-hidden rounded-full">
+              <div
+                className="bg-primary h-full transition-all duration-300"
+                style={{ width: `${progress}%` }}
+              />
             </div>
-          )}
 
-          {/* Report Selection Modal */}
-          <ReportSelectionModal
-            reports={clientReports}
-            isOpen={showReportSelector}
-            onClose={() => setShowReportSelector(false)}
-            onSelect={handleReportSelect}
-          />
+            <div className="flex gap-2">
+              {steps.map((s) => (
+                <Button
+                  key={s}
+                  variant={step === s ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStep(s)}
+                  className="capitalize"
+                >
+                  {s === "basic"
+                    ? "Basic Info"
+                    : s === "recommendations"
+                      ? "Notes"
+                      : s}
+                </Button>
+              ))}
+            </div>
+          </div>
 
-          <motion.div
-            key={step}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.3 }}
-            className="min-h-[400px]"
-          >
-            {step === "basic" && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="mb-2 font-semibold">Job Information</h3>
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {/* Form Content - simple overflow instead of ScrollArea */}
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <form id="report-form" onSubmit={handleSubmit(onSubmit)}>
+              <div className="space-y-6 p-6">
+                {/* Basic Info Step */}
+                {step === "basic" && (
+                  <div className="space-y-6">
+                    {/* Job Information */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Job Title
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.jobTitle || ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            jobTitle: e.target.value,
-                          }))
-                        }
-                        className="w-full rounded-md border border-gray-300 p-2"
-                        placeholder="Enter job title"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Restaurant Location
-                      </label>
-                      <input
-                        type="text"
-                        value={formData.location || ""}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            location: e.target.value,
-                          }))
-                        }
-                        className="w-full rounded-md border border-gray-300 p-2"
-                        placeholder="Enter restaurant address"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Technician</h3>
-                  {technicians.length === 1 ? (
-                    <div className="flex items-center rounded-md border border-gray-300 bg-gray-50 p-2">
-                      <span>{technicians[0]?.name}</span>
-                      <input type="hidden" value={technicians[0]?.id} />
-                    </div>
-                  ) : (
-                    <div>
-                      <select
-                        value={formData.technicianId}
-                        onChange={(e) =>
-                          setFormData((prev) => ({
-                            ...prev,
-                            technicianId: e.target.value,
-                          }))
-                        }
-                        className="w-full rounded-md border border-gray-300 p-2"
-                      >
-                        <option value="">Select Technician</option>
-                        {technicians.map((tech) => (
-                          <option key={tech.id} value={tech.id}>
-                            {tech.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Date of Service</h3>
-                  <input
-                    type="date"
-                    value={
-                      formData.dateCompleted
-                        ? new Date(formData.dateCompleted)
-                            .toISOString()
-                            .split("T")[0]
-                        : ""
-                    }
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        dateCompleted: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-md border border-gray-300 p-2"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Last Service Date</h3>
-                  <input
-                    type="date"
-                    value={
-                      formData.lastServiceDate
-                        ? new Date(formData.lastServiceDate)
-                            .toISOString()
-                            .split("T")[0]
-                        : ""
-                    }
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        lastServiceDate: e.target.value,
-                      }))
-                    }
-                    className="w-full rounded-md border border-gray-300 p-2"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Fuel Type</h3>
-                  <div className="flex flex-wrap gap-4">
-                    {["Natural Gas", "Electric", "Solid Fuel", "Other"].map(
-                      (type) => (
-                        <label key={type} className="flex items-center gap-2">
-                          <input
-                            type="radio"
-                            value={type}
-                            checked={formData.fuelType === type}
-                            onChange={() =>
-                              setFormData((prev) => ({
-                                ...prev,
-                                fuelType: type as any,
-                              }))
-                            }
-                            className="h-4 w-4"
+                      <h3 className="text-foreground mb-4 text-sm font-semibold">
+                        Job Information
+                      </h3>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label htmlFor="jobTitle">Job Title</Label>
+                          <Controller
+                            name="jobTitle"
+                            control={control}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                id="jobTitle"
+                                placeholder="Enter job title"
+                              />
+                            )}
                           />
-                          {type}
-                        </label>
-                      ),
-                    )}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Cooking Volume</h3>
-                  <div className="flex gap-4">
-                    {["High", "Medium", "Low"].map((volume) => (
-                      <label key={volume} className="flex items-center gap-2">
-                        <input
-                          type="radio"
-                          value={volume}
-                          checked={formData.cookingVolume === volume}
-                          onChange={() =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              cookingVolume: volume as any,
-                            }))
-                          }
-                          className="h-4 w-4"
-                        />
-                        {volume}
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Cooking Equipment</h3>
-                  <div className="space-y-2">
-                    <p className="text-sm text-gray-600">Select all cooking equipment present:</p>
-                    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                      {cookingEquipmentOptions.map((option) => (
-                        <label key={option.value} className="flex items-center gap-2">
-                          <input
-                            type="checkbox"
-                            checked={formData.cookingEquipment?.includes(option.value) || false}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  cookingEquipment: [...(prev.cookingEquipment || []), option.value],
-                                }));
-                              } else {
-                                setFormData((prev) => ({
-                                  ...prev,
-                                  cookingEquipment: (prev.cookingEquipment || []).filter(
-                                    (item) => item !== option.value
-                                  ),
-                                }));
-                              }
-                            }}
-                            className="h-4 w-4"
+                        </div>
+                        <div className="space-y-2">
+                          <Label htmlFor="location">Restaurant Location</Label>
+                          <Controller
+                            name="location"
+                            control={control}
+                            render={({ field }) => (
+                              <Input
+                                {...field}
+                                id="location"
+                                placeholder="Enter restaurant address"
+                              />
+                            )}
                           />
-                          <span className="text-sm">{option.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === "equipment" && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="mb-2 font-semibold">Hood Type</h3>
-                  <input
-                    type="text"
-                    name="equipmentDetails.hoodType"
-                    value={formData.equipmentDetails?.hoodType || ""}
-                    onChange={(e) =>
-                      handleNestedChange(
-                        "equipmentDetails",
-                        "hoodType",
-                        e.target.value,
-                      )
-                    }
-                    className="w-full rounded-md border border-gray-300 p-2"
-                    placeholder="Enter hood type"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Filter Type</h3>
-                  <input
-                    type="text"
-                    name="equipmentDetails.filterType"
-                    value={formData.equipmentDetails?.filterType || ""}
-                    onChange={(e) =>
-                      handleNestedChange(
-                        "equipmentDetails",
-                        "filterType",
-                        e.target.value,
-                      )
-                    }
-                    className="w-full rounded-md border border-gray-300 p-2"
-                    placeholder="Enter filter type"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Ductwork Type</h3>
-                  <input
-                    type="text"
-                    name="equipmentDetails.ductworkType"
-                    value={formData.equipmentDetails?.ductworkType || ""}
-                    onChange={(e) =>
-                      handleNestedChange(
-                        "equipmentDetails",
-                        "ductworkType",
-                        e.target.value,
-                      )
-                    }
-                    className="w-full rounded-md border border-gray-300 p-2"
-                    placeholder="Enter ductwork type"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Fan Type</h3>
-                  <input
-                    type="text"
-                    name="equipmentDetails.fanType"
-                    value={formData.equipmentDetails?.fanType || ""}
-                    onChange={(e) =>
-                      handleNestedChange(
-                        "equipmentDetails",
-                        "fanType",
-                        e.target.value,
-                      )
-                    }
-                    className="w-full rounded-md border border-gray-300 p-2"
-                    placeholder="Enter fan type"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Cleaning Details</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.cleaningDetails?.hoodCleaned || false}
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "cleaningDetails",
-                            "hoodCleaned",
-                            e.target.checked,
-                          )
-                        }
-                        className="h-4 w-4"
-                      />
-                      Hood Cleaned
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          formData.cleaningDetails?.filtersCleaned || false
-                        }
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "cleaningDetails",
-                            "filtersCleaned",
-                            e.target.checked,
-                          )
-                        }
-                        className="h-4 w-4"
-                      />
-                      Filters Cleaned
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={
-                          formData.cleaningDetails?.ductworkCleaned || false
-                        }
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "cleaningDetails",
-                            "ductworkCleaned",
-                            e.target.checked,
-                          )
-                        }
-                        className="h-4 w-4"
-                      />
-                      Ductwork Cleaned
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.cleaningDetails?.fanCleaned || false}
-                        onChange={(e) =>
-                          handleNestedChange(
-                            "cleaningDetails",
-                            "fanCleaned",
-                            e.target.checked,
-                          )
-                        }
-                        className="h-4 w-4"
-                      />
-                      Fan Cleaned
-                    </label>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {step === "inspection" && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="mb-2 font-semibold">Inspection</h3>
-                  <div className="max-h-[300px] space-y-4 overflow-y-auto">
-                    {inspectionItems.map((item, index) => (
-                      <div
-                        key={index}
-                        className="flex flex-col rounded-md border border-gray-300 p-4"
-                      >
-                        <div className="flex justify-between">
-                          <h4 className="font-medium">{item.name}</h4>
-                          <div className="flex items-center space-x-4">
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                value="Yes"
-                                checked={
-                                  (formData.inspectionItems?.[index]?.status ||
-                                    "") === "Yes"
-                                }
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    handleInspectionChange(
-                                      index,
-                                      "status",
-                                      "Yes",
-                                    );
-                                  }
-                                }}
-                                className="h-4 w-4"
-                              />
-                              <span>Yes</span>
-                            </label>
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                value="No"
-                                checked={
-                                  (formData.inspectionItems?.[index]?.status ||
-                                    "") === "No"
-                                }
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    handleInspectionChange(index, "status", "No");
-                                  }
-                                }}
-                                className="h-4 w-4"
-                              />
-                              <span>No</span>
-                            </label>
-                            <label className="flex items-center space-x-2">
-                              <input
-                                type="radio"
-                                value="N/A"
-                                checked={
-                                  (formData.inspectionItems?.[index]?.status ||
-                                    "") === "N/A"
-                                }
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    handleInspectionChange(
-                                      index,
-                                      "status",
-                                      "N/A",
-                                    );
-                                  }
-                                }}
-                                className="h-4 w-4"
-                              />
-                              <span>N/A</span>
-                            </label>
-                          </div>
                         </div>
                       </div>
-                    ))}
+                    </div>
+
+                    {/* Technician */}
+                    <div className="space-y-2">
+                      <Label htmlFor="technician">Technician</Label>
+                      {technicians.length === 1 ? (
+                        <div className="bg-muted flex items-center rounded-md border p-2">
+                          <span>{technicians[0]?.name}</span>
+                        </div>
+                      ) : (
+                        <Controller
+                          name="technicianId"
+                          control={control}
+                          render={({ field }) => (
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select Technician" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {technicians.map((tech) => (
+                                  <SelectItem key={tech.id} value={tech.id}>
+                                    {tech.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      )}
+                    </div>
+
+                    {/* Dates */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label>Date of Service</Label>
+                        <Controller
+                          name="dateCompleted"
+                          control={control}
+                          render={({ field }) => (
+                            <DatePicker
+                              date={
+                                field.value ? new Date(field.value) : undefined
+                              }
+                              onSelect={(date) =>
+                                field.onChange(
+                                  date ? format(date, "yyyy-MM-dd") : "",
+                                )
+                              }
+                              placeholder="Select service date"
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Last Service Date</Label>
+                        <Controller
+                          name="lastServiceDate"
+                          control={control}
+                          render={({ field }) => (
+                            <DatePicker
+                              date={
+                                field.value ? new Date(field.value) : undefined
+                              }
+                              onSelect={(date) =>
+                                field.onChange(
+                                  date ? format(date, "yyyy-MM-dd") : "",
+                                )
+                              }
+                              placeholder="Select last service date"
+                            />
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Fuel Type */}
+                    <div className="space-y-3">
+                      <Label>Fuel Type</Label>
+                      <Controller
+                        name="fuelType"
+                        control={control}
+                        render={({ field }) => (
+                          <RadioGroup
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="flex flex-wrap gap-4"
+                          >
+                            {FUEL_TYPES.map((type) => (
+                              <div
+                                key={type}
+                                className="flex items-center space-x-2"
+                              >
+                                <RadioGroupItem
+                                  value={type}
+                                  id={`fuel-${type}`}
+                                />
+                                <Label
+                                  htmlFor={`fuel-${type}`}
+                                  className="font-normal"
+                                >
+                                  {type}
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                        )}
+                      />
+                    </div>
+
+                    {/* Cooking Volume */}
+                    <div className="space-y-3">
+                      <Label>Cooking Volume</Label>
+                      <Controller
+                        name="cookingVolume"
+                        control={control}
+                        render={({ field }) => (
+                          <RadioGroup
+                            value={field.value}
+                            onValueChange={field.onChange}
+                            className="flex gap-4"
+                          >
+                            {COOKING_VOLUMES.map((volume) => (
+                              <div
+                                key={volume}
+                                className="flex items-center space-x-2"
+                              >
+                                <RadioGroupItem
+                                  value={volume}
+                                  id={`volume-${volume}`}
+                                />
+                                <Label
+                                  htmlFor={`volume-${volume}`}
+                                  className="font-normal"
+                                >
+                                  {volume}
+                                </Label>
+                              </div>
+                            ))}
+                          </RadioGroup>
+                        )}
+                      />
+                    </div>
+
+                    {/* Cooking Equipment */}
+                    <div className="space-y-3">
+                      <Label>Cooking Equipment</Label>
+                      <p className="text-muted-foreground text-sm">
+                        Select all cooking equipment present:
+                      </p>
+                      <Controller
+                        name="cookingEquipment"
+                        control={control}
+                        render={({ field }) => (
+                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                            {COOKING_EQUIPMENT_OPTIONS.map((option) => (
+                              <div
+                                key={option.value}
+                                className="flex items-center space-x-2"
+                              >
+                                <Checkbox
+                                  id={`equip-${option.value}`}
+                                  checked={field.value.includes(option.value)}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      field.onChange([
+                                        ...field.value,
+                                        option.value,
+                                      ]);
+                                    } else {
+                                      field.onChange(
+                                        field.value.filter(
+                                          (v) => v !== option.value,
+                                        ),
+                                      );
+                                    }
+                                  }}
+                                />
+                                <Label
+                                  htmlFor={`equip-${option.value}`}
+                                  className="font-normal"
+                                >
+                                  {option.label}
+                                </Label>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      />
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* Equipment Step */}
+                {step === "equipment" && (
+                  <div className="space-y-6">
+                    {/* Equipment Details */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="hoodType">Hood Type</Label>
+                        <Controller
+                          name="equipmentDetails.hoodType"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="hoodType"
+                              placeholder="Enter hood type"
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="filterType">Filter Type</Label>
+                        <Controller
+                          name="equipmentDetails.filterType"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="filterType"
+                              placeholder="Enter filter type"
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="ductworkType">Ductwork Type</Label>
+                        <Controller
+                          name="equipmentDetails.ductworkType"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="ductworkType"
+                              placeholder="Enter ductwork type"
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="fanType">Fan Type</Label>
+                        <Controller
+                          name="equipmentDetails.fanType"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="fanType"
+                              placeholder="Enter fan type"
+                            />
+                          )}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Cleaning Details */}
+                    <div className="space-y-3">
+                      <Label>Cleaning Performed</Label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <Controller
+                          name="cleaningDetails.hoodCleaned"
+                          control={control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="hoodCleaned"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                              <Label
+                                htmlFor="hoodCleaned"
+                                className="font-normal"
+                              >
+                                Hood Cleaned
+                              </Label>
+                            </div>
+                          )}
+                        />
+                        <Controller
+                          name="cleaningDetails.filtersCleaned"
+                          control={control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="filtersCleaned"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                              <Label
+                                htmlFor="filtersCleaned"
+                                className="font-normal"
+                              >
+                                Filters Cleaned
+                              </Label>
+                            </div>
+                          )}
+                        />
+                        <Controller
+                          name="cleaningDetails.ductworkCleaned"
+                          control={control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="ductworkCleaned"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                              <Label
+                                htmlFor="ductworkCleaned"
+                                className="font-normal"
+                              >
+                                Ductwork Cleaned
+                              </Label>
+                            </div>
+                          )}
+                        />
+                        <Controller
+                          name="cleaningDetails.fanCleaned"
+                          control={control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="fanCleaned"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                              <Label
+                                htmlFor="fanCleaned"
+                                className="font-normal"
+                              >
+                                Fan Cleaned
+                              </Label>
+                            </div>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Inspection Step */}
+                {step === "inspection" && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-foreground text-sm font-semibold">
+                        Inspection Checklist
+                      </h3>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => markAllInspection("Yes")}
+                          className="text-xs"
+                        >
+                          <Check className="mr-1 h-3 w-3" />
+                          All Yes
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => markAllInspection("N/A")}
+                          className="text-xs"
+                        >
+                          <Minus className="mr-1 h-3 w-3" />
+                          All N/A
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-full">
+                              Inspection Item
+                            </TableHead>
+                            <TableHead className="w-16 text-center">
+                              Yes
+                            </TableHead>
+                            <TableHead className="w-16 text-center">
+                              No
+                            </TableHead>
+                            <TableHead className="w-16 text-center">
+                              N/A
+                            </TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {INSPECTION_ITEMS.map((item, index) => (
+                            <TableRow key={index} className="hover:bg-muted/50">
+                              <TableCell className="py-2 text-sm">
+                                {item}
+                              </TableCell>
+                              {(["Yes", "No", "N/A"] as const).map((status) => (
+                                <TableCell
+                                  key={status}
+                                  className="py-2 text-center"
+                                >
+                                  <button
+                                    type="button"
+                                    className={cn(
+                                      "inline-flex h-8 w-8 items-center justify-center rounded-full text-xs font-medium transition-all",
+                                      watchedInspectionItems[index] === status
+                                        ? status === "Yes"
+                                          ? "bg-success text-success-foreground"
+                                          : status === "No"
+                                            ? "bg-destructive text-destructive-foreground"
+                                            : "bg-muted text-muted-foreground"
+                                        : "hover:bg-accent border",
+                                    )}
+                                    onClick={() => {
+                                      const current =
+                                        getValues("inspectionItems");
+                                      setValue("inspectionItems", {
+                                        ...current,
+                                        [index]: status,
+                                      });
+                                    }}
+                                  >
+                                    {status.charAt(0)}
+                                  </button>
+                                </TableCell>
+                              ))}
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Recommendations Step */}
+                {step === "recommendations" && (
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <Label>Recommended Cleaning Frequency</Label>
+                      <p className="text-muted-foreground text-xs">
+                        How often this system should be cleaned per year
+                      </p>
+                      <Controller
+                        name="recommendedCleaningFrequency"
+                        control={control}
+                        render={({ field }) => (
+                          <Select
+                            value={field.value?.toString() || ""}
+                            onValueChange={(value) =>
+                              field.onChange(value ? parseInt(value) : "")
+                            }
+                          >
+                            <SelectTrigger className="w-full max-w-xs">
+                              <SelectValue placeholder="Select frequency" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="12">
+                                Monthly (12x/year)
+                              </SelectItem>
+                              <SelectItem value="6">
+                                Bi-Monthly (6x/year)
+                              </SelectItem>
+                              <SelectItem value="4">
+                                Quarterly (4x/year)
+                              </SelectItem>
+                              <SelectItem value="3">
+                                Tri-Annual (3x/year)
+                              </SelectItem>
+                              <SelectItem value="2">
+                                Semi-Annual (2x/year)
+                              </SelectItem>
+                              <SelectItem value="1">
+                                Annual (1x/year)
+                              </SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="comments">Comments</Label>
+                      <Controller
+                        name="comments"
+                        control={control}
+                        render={({ field }) => (
+                          <Textarea
+                            {...field}
+                            id="comments"
+                            rows={4}
+                            placeholder="Enter any comments about the service..."
+                          />
+                        )}
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="recommendations">Recommendations</Label>
+                      <Controller
+                        name="recommendations"
+                        control={control}
+                        render={({ field }) => (
+                          <Textarea
+                            {...field}
+                            id="recommendations"
+                            rows={4}
+                            placeholder="Enter recommendations for the client..."
+                          />
+                        )}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
+            </form>
+          </div>
+
+          {/* Footer */}
+          <div className="flex shrink-0 items-center justify-between border-t p-6">
+            {currentStepIndex > 0 ? (
+              <Button type="button" variant="outline" onClick={prevStep}>
+                Previous
+              </Button>
+            ) : (
+              <div />
             )}
 
-            {step === "recommendations" && (
-              <div className="space-y-4">
-                <div>
-                  <h3 className="mb-2 font-semibold">
-                    Recommended Cleaning Frequency (per year)
-                  </h3>
-                  <input
-                    type="number"
-                    value={formData.recommendedCleaningFrequency || ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        recommendedCleaningFrequency:
-                          parseInt(e.target.value) || undefined,
-                      }))
-                    }
-                    min="1"
-                    max="12"
-                    className="w-full rounded-md border border-gray-300 p-2"
-                  />
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Comments</h3>
-                  <textarea
-                    value={formData.comments || ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        comments: e.target.value,
-                      }))
-                    }
-                    rows={4}
-                    className="w-full rounded-md border border-gray-300 p-2"
-                    placeholder="Enter comments here..."
-                  ></textarea>
-                </div>
-
-                <div>
-                  <h3 className="mb-2 font-semibold">Recommendations</h3>
-                  <textarea
-                    value={formData.recommendations || ""}
-                    onChange={(e) =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        recommendations: e.target.value,
-                      }))
-                    }
-                    rows={4}
-                    className="w-full rounded-md border border-gray-300 p-2"
-                    placeholder="Enter recommendations here..."
-                  ></textarea>
-                </div>
-              </div>
+            {clientReports.length > 0 && !showReportSelector && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowReportSelector(true)}
+                className="text-primary"
+              >
+                <RotateCcw className="mr-2 h-4 w-4" />
+                Auto-fill from Previous
+              </Button>
             )}
-          </motion.div>
-        </div>
 
-        <div className="mt-6 flex justify-between items-center px-6 pb-6">
-          {step !== "basic" ? (
-            <button
-              onClick={prevStep}
-              className="rounded-lg bg-gray-100 px-4 py-2 text-gray-700 hover:bg-gray-200 transition-colors"
-            >
-              Previous
-            </button>
-          ) : (
-            <div></div>
-          )}
+            {currentStepIndex < steps.length - 1 ? (
+              <Button type="button" onClick={nextStep}>
+                Next
+              </Button>
+            ) : (
+              <Button type="submit" form="report-form" disabled={saving}>
+                {saving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  "Save Report"
+                )}
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
-          {clientReports.length > 0 && !showReportSelector && (
-            <button
-              onClick={() => setShowReportSelector(true)}
-              className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
-            >
-              <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
-              Auto-fill from Previous
-            </button>
-          )}
-
-          {step !== "recommendations" ? (
-            <button
-              onClick={nextStep}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 transition-colors"
-            >
-              Next
-            </button>
-          ) : (
-            <button
-              onClick={handleSubmit}
-              disabled={saving}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50 transition-colors"
-            >
-              {saving ? "Saving..." : "Save Report"}
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
+      {/* Report Selection Modal */}
+      <ReportSelectionModal
+        reports={clientReports}
+        isOpen={showReportSelector}
+        onClose={() => setShowReportSelector(false)}
+        onSelect={handleReportSelect}
+      />
+    </>
   );
 };
 
