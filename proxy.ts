@@ -12,6 +12,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/distance-matrix",
   "/api/cron/process-reminders",
   "/api/cron/process-reminders(.*)",
+  "/api/cron/update-overdue-invoices",
   "/api/send-invoice(.*)",
   "/api/availability",
   "/api/timeoff",

@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAndProcessOverdueInvoices } from "../../../lib/actions/actions";
+import { auth } from "@clerk/nextjs/server";
 
 export async function GET(req: NextRequest) {
   // Only allow GET requests (Vercel cron calls this endpoint)
+
+  const { userId } = await auth();
+
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
   // Verify this request is from Vercel Cron (skip in development)
   if (process.env.NODE_ENV === "production") {
