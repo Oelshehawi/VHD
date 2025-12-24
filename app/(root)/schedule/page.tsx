@@ -1,14 +1,7 @@
-import {
-  fetchAllInvoices,
-  fetchHolidays,
-  fetchTechnicianAvailability,
-} from "../../lib/data";
+import { fetchHolidays, fetchTechnicianAvailability } from "../../lib/data";
 import { fetchAllScheduledJobsWithShifts } from "../../lib/scheduleAndShifts";
 import { auth } from "@clerk/nextjs/server";
-import {
-  InvoiceType,
-  ScheduleType,
-} from "../../../app/lib/typeDefinitions";
+import { ScheduleType } from "../../../app/lib/typeDefinitions";
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
 
@@ -25,23 +18,16 @@ const Schedule = async ({
   const date = resolvedSearchParams?.date || null;
 
   // Fetch all data in parallel for better performance
-  const [
-    invoicesResult,
-    scheduledJobsResult,
-    holidays,
-    availability,
-    authResult,
-    technicians,
-  ] = await Promise.all([
-    fetchAllInvoices(),
-    fetchAllScheduledJobsWithShifts(),
-    fetchHolidays(),
-    fetchTechnicianAvailability(),
-    auth(),
-    getTechnicians(),
-  ]);
+  // Invoices are now lazy-loaded in AddJob modal via TanStack Query
+  const [scheduledJobsResult, holidays, availability, authResult, technicians] =
+    await Promise.all([
+      fetchAllScheduledJobsWithShifts(),
+      fetchHolidays(),
+      fetchTechnicianAvailability(),
+      auth(),
+      getTechnicians(),
+    ]);
 
-  const invoices: InvoiceType[] = invoicesResult ?? [];
   let scheduledJobs: ScheduleType[] = scheduledJobsResult;
   const { sessionClaims, userId }: any = authResult;
   const canManage =
@@ -53,19 +39,10 @@ const Schedule = async ({
     );
   }
 
-  const sortedInvoices = invoices.sort((a, b) => {
-    const dateComparison =
-      new Date(b.dateIssued).getTime() - new Date(a.dateIssued).getTime();
-    if (dateComparison !== 0) return dateComparison;
-
-    return a.clientId.toString().localeCompare(b.clientId.toString());
-  });
-
   return (
-    <div className="flex h-full w-full flex-col bg-gray-50 min-w-0">
-      <div className="flex-1 min-w-0">
+    <div className="flex h-full w-full min-w-0 flex-col bg-gray-50">
+      <div className="min-w-0 flex-1">
         <CalendarOptions
-          invoices={sortedInvoices}
           scheduledJobs={scheduledJobs}
           canManage={canManage}
           holidays={holidays}

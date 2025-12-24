@@ -6,16 +6,54 @@ import {
   PayrollPeriod,
   Report,
   AuditLog,
+  Invoice,
 } from "../../../models/reactDataSchema";
 import {
   PayrollPeriodType,
   ScheduleType,
   ReportType,
+  InvoiceType,
 } from "../typeDefinitions";
 import { clerkClient } from "@clerk/nextjs/server";
-import { calculateJobDurationFromPrice, convertMinutesToHours } from "../utils";
-import { Invoice } from "../../../models/reactDataSchema";
-import { InvoiceType } from "../typeDefinitions";
+import { calculateJobDurationFromPrice, minutesToPayrollHours } from "../utils";
+
+/**
+ * Server action to fetch pending and overdue invoices for AddJob modal
+ * Used by TanStack Query in client components
+ */
+export async function getPendingInvoices(): Promise<InvoiceType[]> {
+  await connectMongo();
+  try {
+    const invoices = await Invoice.find({
+      status: { $in: ["pending", "overdue"] },
+    }).sort({ dateIssued: -1 });
+
+    const formattedItems = (items: any[]) =>
+      items.map((item) => ({
+        description: item.description,
+        price: parseFloat(item.price) || 0,
+      }));
+
+    return invoices.map((invoice) => ({
+      _id: invoice._id.toString(),
+      invoiceId: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+      // @ts-ignore
+      dateIssued: invoice.dateIssued.toISOString(),
+      // @ts-ignore
+      dateDue: invoice.dateDue.toISOString(),
+      items: formattedItems(invoice.items),
+      frequency: invoice.frequency,
+      location: invoice.location,
+      notes: invoice.notes,
+      status: invoice.status,
+      clientId: invoice.clientId.toString(),
+    })) as InvoiceType[];
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch pending invoices");
+  }
+}
 
 /**
  * Adds a specified number of days to a date.
@@ -139,21 +177,17 @@ export async function createSchedule(
             0,
           );
 
-          // Calculate duration in minutes and convert to hours
+          // Calculate duration in minutes and convert to payroll bucket hours
           const durationInMinutes = calculateJobDurationFromPrice(totalPrice);
-          scheduleData.hours = convertMinutesToHours(durationInMinutes);
-
-          console.log(
-            `Calculated job duration: $${totalPrice} → ${durationInMinutes} minutes → ${scheduleData.hours} hours`,
-          );
+          scheduleData.hours = minutesToPayrollHours(durationInMinutes);
         }
       } catch (error) {
         console.warn(
           "Could not calculate duration from invoice price, using default:",
           error,
         );
-        // Fall back to default 2.5 hours if calculation fails
-        scheduleData.hours = 2.5;
+        // Fall back to default 4 hours if calculation fails
+        scheduleData.hours = 4;
       }
     }
 
@@ -299,6 +333,7 @@ export const updateJob = async ({
   startDateTime,
   assignedTechnicians,
   technicianNotes,
+  hours,
 }: {
   scheduleId: string;
   jobTitle: string;
@@ -306,6 +341,7 @@ export const updateJob = async ({
   startDateTime: string;
   assignedTechnicians: string[];
   technicianNotes?: string;
+  hours?: number;
 }) => {
   await connectMongo();
   try {
@@ -322,19 +358,23 @@ export const updateJob = async ({
       throw new Error("Schedule not found");
     }
 
+    // Build update object
+    const updateFields: any = {
+      jobTitle: trimmedJobTitle,
+      location,
+      startDateTime: updatedStartDate,
+      assignedTechnicians,
+      payrollPeriod: payrollPeriod?._id,
+      technicianNotes,
+    };
+
+    // Only include hours if provided
+    if (hours !== undefined) {
+      updateFields.hours = hours;
+    }
+
     // Update the schedule with the new details and payroll period
-    await Schedule.findByIdAndUpdate(
-      scheduleId,
-      {
-        jobTitle: trimmedJobTitle,
-        location,
-        startDateTime: updatedStartDate,
-        assignedTechnicians,
-        payrollPeriod: payrollPeriod?._id,
-        technicianNotes,
-      },
-      { new: true },
-    );
+    await Schedule.findByIdAndUpdate(scheduleId, updateFields, { new: true });
 
     // Sync invoice dateIssued if this is the only schedule linked to the invoice
     if (schedule.invoiceRef) {

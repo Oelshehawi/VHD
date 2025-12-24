@@ -1,7 +1,20 @@
 import connectMongo from "./connect";
-import { Client, Invoice, Availability, TimeOffRequest } from "../../models/reactDataSchema";
+import {
+  Client,
+  Invoice,
+  Availability,
+  TimeOffRequest,
+} from "../../models/reactDataSchema";
 import { formatPhoneNumber, escapeRegex } from "./utils";
-import { ClientType, Holiday, HolidayResponse, OBSERVANCES, InvoiceType, AvailabilityType, TimeOffRequestType } from "./typeDefinitions";
+import {
+  ClientType,
+  Holiday,
+  HolidayResponse,
+  OBSERVANCES,
+  InvoiceType,
+  AvailabilityType,
+  TimeOffRequestType,
+} from "./typeDefinitions";
 
 export const fetchAllClients = async () => {
   await connectMongo();
@@ -21,7 +34,9 @@ export const fetchAllClients = async () => {
   }
 };
 
-export const fetchClientById = async (clientId: string): Promise<ClientType> => {
+export const fetchClientById = async (
+  clientId: string,
+): Promise<ClientType> => {
   await connectMongo();
   try {
     const client = await Client.findOne({ _id: clientId }).lean<ClientType>();
@@ -94,6 +109,44 @@ export const fetchAllInvoices = async () => {
   }
 };
 
+/**
+ * Fetch only pending and overdue invoices for scheduling
+ * Used by AddJob modal for lazy loading
+ */
+export const fetchPendingInvoices = async () => {
+  await connectMongo();
+  try {
+    const invoices = await Invoice.find({
+      status: { $in: ["pending", "overdue"] },
+    }).sort({ dateIssued: -1 });
+
+    const formattedItems = (items: any[]) =>
+      items.map((item) => ({
+        description: item.description,
+        price: parseFloat(item.price) || 0,
+      }));
+
+    return invoices.map((invoice) => ({
+      _id: invoice._id.toString(),
+      invoiceId: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+      // @ts-ignore
+      dateIssued: invoice.dateIssued.toISOString(),
+      // @ts-ignore
+      dateDue: invoice.dateDue.toISOString(),
+      items: formattedItems(invoice.items),
+      frequency: invoice.frequency,
+      location: invoice.location,
+      notes: invoice.notes,
+      status: invoice.status,
+      clientId: invoice.clientId.toString(),
+    }));
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to fetch pending invoices");
+  }
+};
+
 export const fetchInvoiceById = async (invoiceId: string) => {
   await connectMongo();
   try {
@@ -104,7 +157,9 @@ export const fetchInvoiceById = async (invoiceId: string) => {
         price: parseFloat(item.price) || 0,
       }));
 
-    const invoice = await Invoice.findOne({ _id: invoiceId }).lean<InvoiceType>();
+    const invoice = await Invoice.findOne({
+      _id: invoiceId,
+    }).lean<InvoiceType>();
     if (!invoice) {
       throw new Error("Invoice not found");
     }
@@ -118,16 +173,23 @@ export const fetchInvoiceById = async (invoiceId: string) => {
       dateIssued: invoice.dateIssued.toISOString().split("T")[0],
       clientId: invoice.clientId.toString(),
       items: formattedItems(invoice.items),
-      callHistory: invoice.callHistory?.map((call: any) => ({
-        _id: call._id?.toString(),
-        callerId: call.callerId,
-        callerName: call.callerName,
-        timestamp: call.timestamp instanceof Date ? call.timestamp.toISOString() : call.timestamp,
-        outcome: call.outcome,
-        notes: call.notes,
-        followUpDate: call.followUpDate instanceof Date ? call.followUpDate.toISOString() : call.followUpDate,
-        duration: call.duration,
-      })) || [],
+      callHistory:
+        invoice.callHistory?.map((call: any) => ({
+          _id: call._id?.toString(),
+          callerId: call.callerId,
+          callerName: call.callerName,
+          timestamp:
+            call.timestamp instanceof Date
+              ? call.timestamp.toISOString()
+              : call.timestamp,
+          outcome: call.outcome,
+          notes: call.notes,
+          followUpDate:
+            call.followUpDate instanceof Date
+              ? call.followUpDate.toISOString()
+              : call.followUpDate,
+          duration: call.duration,
+        })) || [],
       paymentReminders: invoice.paymentReminders
         ? {
             enabled: invoice.paymentReminders.enabled,
@@ -145,9 +207,10 @@ export const fetchInvoiceById = async (invoiceId: string) => {
                 // Create a new plain object without MongoDB properties
                 const plainEntry: any = {};
                 if (entry.sentAt !== undefined) {
-                  plainEntry.sentAt = entry.sentAt instanceof Date
-                    ? entry.sentAt.toISOString()
-                    : String(entry.sentAt);
+                  plainEntry.sentAt =
+                    entry.sentAt instanceof Date
+                      ? entry.sentAt.toISOString()
+                      : String(entry.sentAt);
                 }
                 if (entry.emailTemplate !== undefined) {
                   plainEntry.emailTemplate = entry.emailTemplate;
@@ -358,7 +421,9 @@ export const fetchHolidays = async (): Promise<Holiday[]> => {
 /**
  * Fetch all technician availability
  */
-export async function fetchTechnicianAvailability(): Promise<AvailabilityType[]> {
+export async function fetchTechnicianAvailability(): Promise<
+  AvailabilityType[]
+> {
   await connectMongo();
   try {
     const availability = await Availability.find().lean<AvailabilityType[]>();
@@ -377,7 +442,9 @@ export async function fetchTechnicianAvailabilityById(
 ): Promise<AvailabilityType[]> {
   await connectMongo();
   try {
-    const availability = await Availability.find({ technicianId }).lean<AvailabilityType[]>();
+    const availability = await Availability.find({ technicianId }).lean<
+      AvailabilityType[]
+    >();
     return JSON.parse(JSON.stringify(availability));
   } catch (error) {
     console.error("Error fetching technician availability:", error);
@@ -433,7 +500,14 @@ export async function isTechnicianAvailable(
           const [blockEnd] = block.endTime.split(":").map(Number);
 
           // Check if time ranges overlap
-          if (reqStart && reqEnd && blockStart && blockEnd && reqStart < blockEnd && reqEnd > blockStart) {
+          if (
+            reqStart &&
+            reqEnd &&
+            blockStart &&
+            blockEnd &&
+            reqStart < blockEnd &&
+            reqEnd > blockStart
+          ) {
             return false; // Time conflict
           }
         }
@@ -456,7 +530,9 @@ export async function isTechnicianAvailable(
 /**
  * Fetch all pending time-off requests
  */
-export async function fetchPendingTimeOffRequests(): Promise<TimeOffRequestType[]> {
+export async function fetchPendingTimeOffRequests(): Promise<
+  TimeOffRequestType[]
+> {
   await connectMongo();
   try {
     const requests = await TimeOffRequest.find({ status: "pending" })

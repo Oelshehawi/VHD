@@ -1,11 +1,19 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import { useUser } from "@clerk/nextjs";
+import { useQuery } from "@tanstack/react-query";
 import toast from "react-hot-toast";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
-import InvoiceSearchSelect from "../invoices/InvoiceSearchSelect";
-import { createSchedule } from "../../app/lib/actions/scheduleJobs.actions";
+import { InvoiceSearchSelect } from "../invoices/InvoiceSearchSelect";
+import {
+  createSchedule,
+  getPendingInvoices,
+} from "../../app/lib/actions/scheduleJobs.actions";
+import {
+  calculateJobDurationFromPrice,
+  minutesToPayrollHours,
+} from "../../app/lib/utils";
 import TechnicianSelect from "./TechnicianSelect";
 import {
   Dialog,
@@ -19,15 +27,23 @@ import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { DatePickerWithTime } from "../ui/date-picker-with-time";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+import { Loader2 } from "lucide-react";
+
+const HOURS_OPTIONS = [2, 4, 6, 8, 12] as const;
 
 const AddJob = ({
-  invoices,
   open,
   onOpenChange,
   technicians,
   scheduledJobs,
 }: {
-  invoices: InvoiceType[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   technicians: { id: string; name: string }[];
@@ -35,6 +51,15 @@ const AddJob = ({
 }) => {
   const { user } = useUser();
   const [isLoading, setIsLoading] = useState(false);
+  const [resetKey, setResetKey] = useState(0);
+
+  // Lazy load pending invoices when modal opens
+  const { data: invoices = [], isLoading: isLoadingInvoices } = useQuery({
+    queryKey: ["pendingInvoices"],
+    queryFn: getPendingInvoices,
+    enabled: open,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
 
   const {
     register,
@@ -54,16 +79,19 @@ const AddJob = ({
       invoiceRef: "",
       confirmed: false,
       technicianNotes: "",
+      hours: 4,
     },
     mode: "onChange",
   });
 
   const startDateTime = watch("startDateTime");
+  const hours = watch("hours");
 
   // Reset form when dialog closes
   useEffect(() => {
     if (!open) {
       reset();
+      setResetKey((prev) => prev + 1);
     }
   }, [open, reset]);
 
@@ -75,9 +103,25 @@ const AddJob = ({
 
     // Autofill startDateTime with invoice dateIssued if available
     if (invoice.dateIssued) {
-      const invoiceDate = new Date(invoice.dateIssued);
-      invoiceDate.setHours(9, 0, 0, 0); // Set time to 09:00 (9am) as default
+      // Parse date string without timezone conversion to prevent day shift
+      const dateStr =
+        typeof invoice.dateIssued === "string"
+          ? invoice.dateIssued.split("T")[0]
+          : new Date(invoice.dateIssued).toISOString().split("T")[0];
+      const [year, month, day] = dateStr!.split("-").map(Number);
+      const invoiceDate = new Date(year!, month! - 1, day!, 9, 0, 0, 0);
       setValue("startDateTime", invoiceDate);
+    }
+
+    // Calculate estimated hours from invoice total price
+    if (invoice.items && invoice.items.length > 0) {
+      const totalPrice = invoice.items.reduce(
+        (sum, item) => sum + (item.price || 0),
+        0,
+      );
+      const durationMinutes = calculateJobDurationFromPrice(totalPrice);
+      const estimatedHours = minutesToPayrollHours(durationMinutes);
+      setValue("hours", estimatedHours);
     }
 
     // Check for previous jobs with the same title and grab technician notes if available
@@ -180,14 +224,27 @@ const AddJob = ({
         >
           {/* Invoice SearchSelect */}
           <div className="space-y-2">
-            <Label htmlFor="invoice">Select Invoice</Label>
-            <InvoiceSearchSelect
-              placeholder="Search and select invoice..."
-              data={invoices}
-              onSelect={handleInvoiceSelect}
-              register={register}
-              error={errors.invoiceRef}
-            />
+            <Label htmlFor="invoice">
+              Select Invoice<span className="text-destructive">*</span>
+            </Label>
+            {isLoadingInvoices ? (
+              <div className="flex h-10 items-center justify-center rounded-md border">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span className="text-muted-foreground ml-2 text-sm">
+                  Loading invoices...
+                </span>
+              </div>
+            ) : (
+              <InvoiceSearchSelect
+                invoices={invoices as InvoiceType[]}
+                onSelect={handleInvoiceSelect}
+                error={errors.invoiceRef}
+                resetKey={resetKey}
+              />
+            )}
+            {errors.invoiceRef && (
+              <p className="text-destructive text-sm">Invoice is required</p>
+            )}
           </div>
 
           {/* Other Input Fields */}
@@ -253,6 +310,35 @@ const AddJob = ({
                 Start Date & Time is required
               </p>
             )}
+          </div>
+
+          {/* Estimated Duration */}
+          <div className="space-y-2">
+            <Label htmlFor="hours">Estimated Duration</Label>
+            <Controller
+              control={control}
+              name="hours"
+              render={({ field }) => (
+                <Select
+                  value={String(field.value || 4)}
+                  onValueChange={(value) => field.onChange(Number(value))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOURS_OPTIONS.map((h) => (
+                      <SelectItem key={h} value={String(h)}>
+                        {h} hours
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            <p className="text-muted-foreground text-xs">
+              Auto-calculated from invoice price. You can override if needed.
+            </p>
           </div>
 
           {/* Technician Select */}

@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm, Controller } from "react-hook-form";
 import { updateJob } from "../../app/lib/actions/scheduleJobs.actions";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
 import toast from "react-hot-toast";
-import { useForm } from "react-hook-form";
 import TechnicianSelect from "./TechnicianSelect";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -13,6 +13,15 @@ import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { DatePickerWithTime } from "../ui/date-picker-with-time";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
+
+const HOURS_OPTIONS = [2, 4, 6, 8, 12] as const;
 
 interface EditJobModalProps {
   job: ScheduleType;
@@ -46,6 +55,7 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
       startDateTime: getInitialDate(),
       assignedTechnicians: job.assignedTechnicians,
       technicianNotes: job.technicianNotes || "",
+      hours: job.hours || 4,
     },
   });
 
@@ -97,6 +107,7 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
         startDateTime: trimmedData.startDateTime,
         assignedTechnicians: trimmedData.assignedTechnicians,
         technicianNotes: trimmedData.technicianNotes,
+        hours: trimmedData.hours,
       });
 
       // Refresh the server component to get fresh data
@@ -132,7 +143,7 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
             />
             {errors.jobTitle && (
               <p className="text-destructive text-sm">
-                {errors.jobTitle.message}
+                {errors.jobTitle.message as string}
               </p>
             )}
           </div>
@@ -150,7 +161,7 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
             />
             {errors.location && (
               <p className="text-destructive text-sm">
-                {errors.location.message}
+                {errors.location.message as string}
               </p>
             )}
           </div>
@@ -184,6 +195,32 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
                 Start Date & Time is required
               </p>
             )}
+          </div>
+
+          {/* Estimated Duration */}
+          <div className="space-y-2">
+            <Label htmlFor="hours">Estimated Duration</Label>
+            <Controller
+              control={control}
+              name="hours"
+              render={({ field }) => (
+                <Select
+                  value={String(field.value || 4)}
+                  onValueChange={(value) => field.onChange(Number(value))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOURS_OPTIONS.map((h) => (
+                      <SelectItem key={h} value={String(h)}>
+                        {h} hours
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
           </div>
 
           {/* Assigned Technicians */}

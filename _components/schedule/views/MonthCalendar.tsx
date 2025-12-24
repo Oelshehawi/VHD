@@ -23,7 +23,6 @@ import {
 import { useState, useEffect, useMemo } from "react";
 import {
   ScheduleType,
-  InvoiceType,
   AvailabilityType,
 } from "../../../app/lib/typeDefinitions";
 import JobDetailsModal from "../JobDetailsModal";
@@ -44,7 +43,6 @@ export default function MonthCalendar({
   onDateChange,
   initialDate,
 }: {
-  invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   technicians: { id: string; name: string }[];

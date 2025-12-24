@@ -9,7 +9,6 @@ import {
 import CalendarGrid from "../CalendarGrid";
 
 const WeekCalendar = ({
-  invoices,
   scheduledJobs,
   canManage,
   currentWeek,
@@ -19,7 +18,6 @@ const WeekCalendar = ({
   showAvailability,
   showOptimization,
 }: {
-  invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   currentWeek: Date[];
@@ -66,7 +64,6 @@ const WeekCalendar = ({
       {/* Modern Calendar Container */}
       <div className="bg-card border-border h-full rounded-t-2xl border shadow-xl">
         <CalendarGrid
-          invoices={invoices}
           week={currentWeek}
           selectedDayJobs={selectedDayJobs}
           canManage={canManage}

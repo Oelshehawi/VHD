@@ -1,10 +1,19 @@
 "use client";
 import { useState, useMemo } from "react";
 import { format, isSameDay } from "date-fns";
-import { Holiday, ScheduleType, InvoiceType, AvailabilityType } from "../../app/lib/typeDefinitions";
+import {
+  Holiday,
+  ScheduleType,
+  InvoiceType,
+  AvailabilityType,
+} from "../../app/lib/typeDefinitions";
 import JobItem from "./JobItem";
 import JobDetailsModal from "./JobDetailsModal";
-import { calculateJobDurationFromPrice, convertMinutesToHours, cn } from "../../app/lib/utils";
+import {
+  calculateJobDurationFromPrice,
+  convertMinutesToHours,
+  cn,
+} from "../../app/lib/utils";
 import { isTechnicianUnavailable } from "../../app/lib/utils/availabilityUtils";
 
 const parseDate = (dateString: string): Date => {
@@ -15,7 +24,6 @@ const parseDate = (dateString: string): Date => {
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 const CalendarColumn = ({
-  invoices,
   day,
   jobs,
   isToday,
@@ -25,7 +33,6 @@ const CalendarColumn = ({
   availability,
   showAvailability,
 }: {
-  invoices: InvoiceType[];
   day: Date;
   jobs: ScheduleType[];
   isToday: boolean;
@@ -42,7 +49,7 @@ const CalendarColumn = ({
   // Memoize holiday lookup
   const holiday = useMemo(
     () => holidays.find((h) => isSameDay(parseDate(h.date), day)),
-    [holidays, day]
+    [holidays, day],
   );
 
   // Memoize sorted jobs
@@ -50,9 +57,10 @@ const CalendarColumn = ({
     () =>
       [...jobs].sort(
         (a, b) =>
-          new Date(a.startDateTime).getTime() - new Date(b.startDateTime).getTime()
+          new Date(a.startDateTime).getTime() -
+          new Date(b.startDateTime).getTime(),
       ),
-    [jobs]
+    [jobs],
   );
 
   // Get hour and minutes from job's start time
@@ -87,7 +95,7 @@ const CalendarColumn = ({
             "absolute inset-x-0 top-0 z-20 px-2 py-1 text-center",
             holiday.type === "statutory"
               ? "bg-red-500/20 text-red-700 dark:text-red-300"
-              : "bg-purple-500/20 text-purple-700 dark:text-purple-300"
+              : "bg-purple-500/20 text-purple-700 dark:text-purple-300",
           )}
         >
           <span className="text-xs font-medium">
@@ -111,16 +119,16 @@ const CalendarColumn = ({
                 tech.id,
                 day,
                 `${String(hour).padStart(2, "0")}:00`,
-                `${String(hour + 1).padStart(2, "0")}:00`
-              )
+                `${String(hour + 1).padStart(2, "0")}:00`,
+              ),
             );
 
           return (
             <div
               key={hour}
               className={cn(
-                "relative h-[50px] border-b border-border/30 sm:h-[60px]",
-                isUnavailableHour && "bg-destructive/10"
+                "border-border/30 relative h-[50px] border-b sm:h-[60px]",
+                isUnavailableHour && "bg-destructive/10",
               )}
             >
               {/* Jobs that start at this hour */}
@@ -130,20 +138,8 @@ const CalendarColumn = ({
                   const { minutes } = getJobTime(job);
                   const topOffset = (minutes / 60) * 100;
 
-                  // Calculate job height based on duration
-                  let jobDuration = job.hours || 2.5;
-                  const invoice = invoices.find(
-                    (inv) => inv._id.toString() === job.invoiceRef.toString()
-                  );
-
-                  if (invoice?.items) {
-                    const totalPrice = invoice.items.reduce(
-                      (sum, item) => sum + (item.price || 0),
-                      0
-                    );
-                    const durationInMinutes = calculateJobDurationFromPrice(totalPrice);
-                    jobDuration = convertMinutesToHours(durationInMinutes);
-                  }
+                  // Use the hours stored on the schedule directly
+                  const jobDuration = job.hours || 4;
 
                   // 50px per hour on mobile, 60px on desktop
                   const heightInPixels = Math.max(60, jobDuration * 50);
@@ -158,7 +154,6 @@ const CalendarColumn = ({
                       }}
                     >
                       <JobItem
-                        invoices={invoices}
                         job={job}
                         canManage={canManage}
                         technicians={technicians}

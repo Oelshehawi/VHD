@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  * @returns Escaped string safe for use in regex patterns
  */
 export function escapeRegex(str: string): string {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export const formatDate = (dateString: any) => {
@@ -411,6 +411,21 @@ export function convertMinutesToHours(durationInMinutes: number): number {
   const hours = durationInMinutes / 60;
   // Round to nearest 0.5 hour increment
   return Math.ceil(hours * 2) / 2;
+}
+
+/**
+ * Convert minutes to payroll-friendly hours (2, 4, 6, 8, 12)
+ * Rounds up to the next bucket to ensure adequate time allocation
+ * @param minutes - Duration in minutes
+ * @returns Bucket value in hours (2, 4, 6, 8, or 12)
+ */
+export function minutesToPayrollHours(minutes: number): number {
+  const hours = minutes / 60;
+  if (hours <= 2) return 2;
+  if (hours <= 4) return 4;
+  if (hours <= 6) return 6;
+  if (hours <= 8) return 8;
+  return 12;
 }
 
 /**

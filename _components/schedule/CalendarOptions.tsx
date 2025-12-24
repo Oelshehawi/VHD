@@ -40,7 +40,6 @@ const isMobileDevice = (): boolean => {
 };
 
 const CalendarOptions = ({
-  invoices,
   scheduledJobs,
   canManage,
   holidays,
@@ -49,7 +48,6 @@ const CalendarOptions = ({
   initialView,
   initialDate,
 }: {
-  invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   holidays: any;
@@ -268,7 +266,6 @@ const CalendarOptions = ({
         goToToday={navigateToToday}
         currentWeek={currentWeek}
         currentDay={currentDay}
-        invoices={invoices}
         canManage={canManage}
         isMobile={isMobileDevice()}
         technicians={technicians}
@@ -290,7 +287,6 @@ const CalendarOptions = ({
             <Card className="flex h-full w-full flex-col">
               <MonthCalendar
                 key={currentDate}
-                invoices={invoices}
                 scheduledJobs={scheduledJobs}
                 canManage={canManage}
                 technicians={technicians}
@@ -304,7 +300,6 @@ const CalendarOptions = ({
         ) : currentView === "week" ? (
           <div className="h-full">
             <WeekCalendar
-              invoices={invoices}
               scheduledJobs={scheduledJobs}
               canManage={canManage}
               currentWeek={currentWeek}
@@ -317,7 +312,6 @@ const CalendarOptions = ({
         ) : (
           <div className="h-full">
             <DayCalendar
-              invoices={invoices}
               scheduledJobs={scheduledJobs}
               canManage={canManage}
               currentDay={currentDay}
@@ -352,7 +346,6 @@ const Header = ({
   previousDay,
   nextDay,
   goToToday,
-  invoices,
   canManage,
   isMobile,
   technicians,
@@ -371,7 +364,6 @@ const Header = ({
   previousDay: () => void;
   nextDay: () => void;
   goToToday: () => void;
-  invoices: InvoiceType[];
   canManage: boolean;
   isMobile: boolean;
   technicians: { id: string; name: string }[];
@@ -536,7 +528,6 @@ const Header = ({
 
       {/* Add Job Modal */}
       <AddJob
-        invoices={invoices}
         open={open}
         onOpenChange={setOpen}
         technicians={technicians}

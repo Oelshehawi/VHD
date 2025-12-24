@@ -16,7 +16,6 @@ import JobDetailsModal from "../JobDetailsModal";
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
 interface DayCalendarProps {
-  invoices: InvoiceType[];
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   currentDay: Date;
@@ -28,7 +27,6 @@ interface DayCalendarProps {
 }
 
 const DayCalendar = ({
-  invoices,
   scheduledJobs,
   canManage,
   currentDay,
@@ -213,7 +211,6 @@ const DayCalendar = ({
                         }`}
                       >
                         <CalendarColumn
-                          invoices={invoices}
                           day={currentDay}
                           jobs={currentDayJobs}
                           isToday={isToday(currentDay)}

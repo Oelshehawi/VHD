@@ -1,29 +1,24 @@
 "use client";
 import React, { useMemo } from "react";
-import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
+import { ScheduleType } from "../../app/lib/typeDefinitions";
 import { motion } from "framer-motion";
 import { Badge } from "../ui/badge";
 import { format } from "date-fns-tz";
 
 interface JobItemProps {
-  invoices: InvoiceType[];
   job: ScheduleType;
   canManage: boolean;
   technicians: { id: string; name: string }[];
   onJobClick?: (job: ScheduleType) => void;
 }
 
-const JobItem = ({
-  job,
-  technicians,
-  onJobClick,
-}: JobItemProps) => {
+const JobItem = ({ job, technicians, onJobClick }: JobItemProps) => {
   // Memoize technician names lookup
   const techNames = useMemo(() => {
     return job.assignedTechnicians.map(
       (techId) =>
         technicians.find((tech) => tech.id === techId)?.name.split(" ")[0] ||
-        "Unknown"
+        "Unknown",
     );
   }, [job.assignedTechnicians, technicians]);
 
@@ -38,41 +33,38 @@ const JobItem = ({
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ scale: 1.01 }}
       transition={{ duration: 0.2 }}
-      className={`h-full rounded-md px-2.5 py-1.5 cursor-pointer transition-colors ${statusClasses}`}
+      className={`h-full cursor-pointer rounded-md px-2.5 py-1.5 transition-colors ${statusClasses}`}
       onClick={() => onJobClick?.(job)}
     >
-      <div className="flex flex-col gap-0.5 h-full">
+      <div className="flex h-full flex-col gap-0.5">
         {/* Job Title */}
-        <span className="text-sm font-medium text-foreground truncate leading-tight">
+        <span className="text-foreground truncate text-sm leading-tight font-medium">
           {job.jobTitle}
         </span>
 
         {/* Location - truncated */}
-        <span className="text-xs text-muted-foreground truncate leading-tight">
+        <span className="text-muted-foreground truncate text-xs leading-tight">
           {job.location}
         </span>
 
         {/* Time */}
-        <span className="text-xs font-medium text-muted-foreground">
+        <span className="text-muted-foreground text-xs font-medium">
           {format(job.startDateTime, "h:mm a", { timeZone: "PST" })}
         </span>
 
         {/* Technician Pills */}
-        <div className="flex gap-1 flex-wrap mt-auto">
+        <div className="mt-auto flex flex-wrap gap-1">
           {techNames.slice(0, 2).map((tech, index) => (
             <Badge
               key={index}
               variant="secondary"
-              className="text-[10px] px-1.5 py-0 h-4"
+              className="h-4 px-1.5 py-0 text-[10px]"
             >
               {tech}
             </Badge>
           ))}
           {techNames.length > 2 && (
-            <Badge
-              variant="outline"
-              className="text-[10px] px-1.5 py-0 h-4"
-            >
+            <Badge variant="outline" className="h-4 px-1.5 py-0 text-[10px]">
               +{techNames.length - 2}
             </Badge>
           )}
@@ -89,6 +81,7 @@ export default React.memo(JobItem, (prevProps, nextProps) => {
     prevProps.job.confirmed === nextProps.job.confirmed &&
     prevProps.job.jobTitle === nextProps.job.jobTitle &&
     prevProps.job.startDateTime === nextProps.job.startDateTime &&
-    prevProps.job.assignedTechnicians.length === nextProps.job.assignedTechnicians.length
+    prevProps.job.assignedTechnicians.length ===
+      nextProps.job.assignedTechnicians.length
   );
 });
