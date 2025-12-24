@@ -232,7 +232,7 @@ const InvoiceDetailsContainer = ({
     <div className="space-y-4 sm:space-y-6">
       {/* Action Bar - Only show if user can manage */}
       {canManage && (
-        <Card className="gap-0 p-4 py-0 sm:p-6">
+        <Card className="p-4 sm:p-6">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3 sm:gap-4">
               <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12">

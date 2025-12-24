@@ -215,7 +215,7 @@ export default function ActionsFeed({
   }, [recentActions, selectedCategory]);
 
   return (
-    <Card className="flex h-full max-h-[calc(100vh-120px)] min-h-0 flex-col gap-0 overflow-hidden py-0 shadow-sm">
+    <Card className="flex h-full max-h-[calc(100vh-120px)] min-h-0 flex-col overflow-hidden shadow-sm">
       <CardHeader className="bg-muted/40 shrink-0 border-b p-3 pb-3 sm:p-4 sm:pb-4 lg:p-6 lg:pb-4">
         {/* Title Section - Compact on mobile */}
         <div className="mb-3 sm:mb-4">

@@ -278,7 +278,7 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
               </CardHeader>
               <CardContent className="space-y-3">
                 {fields.map((field, index) => (
-                  <Card key={field.id} className="gap-0 p-3 py-0">
+                  <Card key={field.id} className="p-3 py-0">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 space-y-3">
                         <div className="space-y-2">

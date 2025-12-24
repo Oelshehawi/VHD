@@ -68,7 +68,7 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
               <FaPhone className="text-muted-foreground h-3 w-3" />
               <Badge
                 variant={needsFollowUp ? "destructive" : "secondary"}
-                className="px-2 py-0 text-[10px]"
+                className="px-2 text-[10px]"
               >
                 {
                   CALL_OUTCOME_LABELS[

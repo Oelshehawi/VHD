@@ -38,7 +38,7 @@ const ReportSelectionModal = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[80vh] w-full max-w-2xl flex-col gap-0 overflow-hidden p-0">
+      <DialogContent className="flex max-h-[80vh] w-full max-w-2xl flex-col overflow-hidden p-0">
         <DialogHeader className="shrink-0 space-y-1 border-b p-6">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="text-primary h-5 w-5" />
@@ -69,7 +69,7 @@ const ReportSelectionModal = ({
                 {reports.map((report) => (
                   <Card
                     key={report._id}
-                    className="hover:border-primary/50 hover:bg-accent/50 cursor-pointer gap-0 py-0 transition-all duration-200"
+                    className="hover:border-primary/50 hover:bg-accent/50 cursor-pointer transition-all duration-200"
                     onClick={() => onSelect(report)}
                   >
                     <CardContent className="p-4">

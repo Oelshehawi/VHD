@@ -36,7 +36,7 @@ const JobItem = ({ job, technicians, onJobClick }: JobItemProps) => {
       className={`h-full cursor-pointer rounded-md px-2.5 py-1.5 transition-colors ${statusClasses}`}
       onClick={() => onJobClick?.(job)}
     >
-      <div className="flex h-full flex-col gap-0.5">
+      <div className=".5 flex h-full flex-col">
         {/* Job Title */}
         <span className="text-foreground truncate text-sm leading-tight font-medium">
           {job.jobTitle}
@@ -58,13 +58,13 @@ const JobItem = ({ job, technicians, onJobClick }: JobItemProps) => {
             <Badge
               key={index}
               variant="secondary"
-              className="h-4 px-1.5 py-0 text-[10px]"
+              className="h-4 px-1.5 text-[10px]"
             >
               {tech}
             </Badge>
           ))}
           {techNames.length > 2 && (
-            <Badge variant="outline" className="h-4 px-1.5 py-0 text-[10px]">
+            <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
               +{techNames.length - 2}
             </Badge>
           )}

@@ -362,7 +362,7 @@ const InlineEditInvoice = ({
     <>
       <Card>
         <CardHeader className="border-b">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center">
               <div className="bg-primary/10 flex h-8 w-8 items-center justify-center rounded-lg">
                 <FaFileInvoice className="text-primary h-4 w-4" />
@@ -379,7 +379,7 @@ const InlineEditInvoice = ({
               </div>
             </div>
             {canManage && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 sm:gap-3">
                 <InvoiceStatusUpdate
                   onStatusChange={handleStatusChange}
                   invoiceStatus={invoice.status}

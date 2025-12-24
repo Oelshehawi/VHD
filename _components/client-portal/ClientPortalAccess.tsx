@@ -30,22 +30,27 @@ export default function ClientPortalAccess({
 
   return (
     <>
-      <div className="flex space-x-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           type="button"
           onClick={() => setIsModalOpen(true)}
           variant="default"
+          size="sm"
+          className="text-xs sm:text-sm"
         >
-          Client Portal Access
+          <span className="hidden sm:inline">Client Portal Access</span>
+          <span className="sm:hidden">Portal Access</span>
         </Button>
 
         <Button
           type="button"
           onClick={handleViewAsClient}
           variant="default"
-          className="bg-primary"
+          size="sm"
+          className="bg-primary text-xs sm:text-sm"
         >
-          View Client Portal
+          <span className="hidden sm:inline">View Client Portal</span>
+          <span className="sm:hidden">View Portal</span>
         </Button>
       </div>
 

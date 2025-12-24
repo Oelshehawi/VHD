@@ -174,7 +174,7 @@ export default function EditItemsTotalsDialog({
 
               <div className="space-y-3">
                 {fields.map((field, index) => (
-                  <Card key={field.id} className="gap-0 p-4 py-0">
+                  <Card key={field.id} className="p-4 py-0">
                     <div className="flex items-start gap-3">
                       <div className="flex-1 space-y-3">
                         <div className="space-y-2">
@@ -237,7 +237,7 @@ export default function EditItemsTotalsDialog({
               <Separator className="my-4" />
 
               {/* Totals Preview */}
-              <Card className="bg-muted/50 gap-0 p-4 py-0">
+              <Card className="bg-muted/50 p-4 py-0">
                 <h4 className="text-foreground mb-3 text-sm font-medium">
                   Totals Preview
                 </h4>

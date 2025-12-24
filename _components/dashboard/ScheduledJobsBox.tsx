@@ -57,7 +57,7 @@ const ScheduledJobsBox = ({
     <>
       <div className="flex gap-2">
         <Card
-          className="hover:bg-muted/50 flex-1 cursor-pointer gap-0 py-0 transition-colors"
+          className="hover:bg-muted/50 flex-1 cursor-pointer transition-colors"
           onClick={() => setIsModalOpen(true)}
         >
           <CardContent className="flex items-center justify-between gap-2 p-3">
@@ -70,7 +70,7 @@ const ScheduledJobsBox = ({
             </Badge>
           </CardContent>
         </Card>
-        <Card className="flex-1 gap-0 py-0">
+        <Card className="flex-1 py-0">
           <CardContent className="flex items-center justify-between gap-2 p-3">
             <p className="text-muted-foreground text-xs">Unscheduled</p>
             <Badge variant="destructive">{unscheduledCount}</Badge>

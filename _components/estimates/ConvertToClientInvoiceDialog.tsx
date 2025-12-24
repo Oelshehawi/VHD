@@ -632,7 +632,7 @@ export default function ConvertToClientInvoiceDialog({
                   )}
 
                   {!scheduleForm.watch("createSchedule") && (
-                    <Card className="bg-muted/30 gap-0 p-4 py-0">
+                    <Card className="bg-muted/30 p-4 py-0">
                       <p className="text-muted-foreground text-center text-sm">
                         You can skip this step and create a scheduled job later
                         from the Schedule page.

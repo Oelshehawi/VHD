@@ -297,7 +297,7 @@ const ReminderConfigModal = ({
                           </span>
                           <Badge
                             variant={log.success ? "secondary" : "destructive"}
-                            className="bg-opacity-10 px-2 py-0 text-[10px]"
+                            className="bg-opacity-10 px-2 text-[10px]"
                           >
                             {log.success ? "Success" : "Failed"}
                           </Badge>

@@ -283,8 +283,8 @@ const CalendarOptions = ({
 
       <main className="bg-background min-w-0 flex-1 overflow-y-auto">
         {currentView === "month" ? (
-          <div className="flex h-full min-w-0 items-start justify-center p-2 md:items-center md:p-4">
-            <Card className="flex h-full w-full flex-col">
+          <div className="flex min-w-0 items-start justify-center p-2 md:items-center md:p-4 lg:h-full">
+            <Card className="flex w-full flex-col lg:h-full">
               <MonthCalendar
                 key={currentDate}
                 scheduledJobs={scheduledJobs}

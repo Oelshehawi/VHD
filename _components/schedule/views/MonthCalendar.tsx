@@ -313,9 +313,9 @@ export default function MonthCalendar({
       </div>
 
       {/* MOBILE VIEW - Original compact view with selected day jobs list */}
-      <CardContent className="min-w-0 overflow-hidden px-2 py-3 sm:px-4 sm:py-4 md:py-6 lg:hidden">
+      <CardContent className="min-w-0 px-2 py-3 sm:px-4 sm:py-4 md:py-6 lg:hidden">
         <div className="w-full min-w-0">
-          <div className="flex min-w-0 flex-col gap-6">
+          <div className="flex min-w-0 flex-col gap-4">
             <div>
               <div className="mb-6 flex items-center justify-between">
                 <h2 className="text-foreground text-base font-bold sm:text-lg md:text-xl">
@@ -385,7 +385,7 @@ export default function MonthCalendar({
                         type="button"
                         onClick={() => handleDaySelect(day)}
                         className={classNames(
-                          "group relative w-full touch-manipulation py-2 transition-all duration-200 sm:py-3 md:py-4",
+                          "group relative flex w-full touch-manipulation flex-col items-center justify-start py-1.5 transition-all duration-200 sm:py-2 md:py-3",
                           isEqual(day, selectedDay) && "text-background z-10",
                           !isEqual(day, selectedDay) &&
                             isToday(day) &&
@@ -415,13 +415,13 @@ export default function MonthCalendar({
                       >
                         <time
                           dateTime={format(day, "yyyy-MM-dd")}
-                          className="mx-auto flex h-6 w-6 items-center justify-center rounded-full text-xs sm:h-7 sm:w-7 sm:text-sm md:h-9 md:w-9 md:text-base"
+                          className="flex h-5 w-5 items-center justify-center rounded-full text-xs sm:h-6 sm:w-6 sm:text-sm md:h-7 md:w-7 md:text-base"
                         >
                           {format(day, "d")}
                         </time>
 
                         {jobCount > 0 && (
-                          <div className="absolute bottom-0.5 left-1/2 -translate-x-1/2 transform sm:bottom-1">
+                          <div className="mt-0.5">
                             <Badge
                               variant={
                                 isEqual(day, selectedDay)
@@ -431,7 +431,7 @@ export default function MonthCalendar({
                                     : "secondary"
                               }
                               className={classNames(
-                                "h-[16px] min-w-[16px] px-1 text-[9px] font-medium sm:h-[18px] sm:min-w-[18px] sm:text-[10px]",
+                                "h-[14px] min-w-[14px] px-1 text-[8px] font-medium sm:h-[16px] sm:min-w-[16px] sm:text-[9px]",
                                 isEqual(day, selectedDay) &&
                                   "bg-primary-foreground/30 text-primary-foreground",
                               )}
@@ -459,7 +459,7 @@ export default function MonthCalendar({
             </div>
 
             {/* Selected Day Jobs List - Mobile */}
-            <section className="max-h-[40vh] min-w-0 overflow-x-hidden overflow-y-auto pb-4">
+            <section className="min-w-0">
               <div className="sticky top-0 z-20 min-w-0 overflow-hidden">
                 {showAvailability &&
                   (() => {
@@ -625,13 +625,13 @@ export function Job({
               <Badge
                 key={index}
                 variant="secondary"
-                className="h-4 px-1.5 py-0 text-[10px]"
+                className="h-4 px-1.5 text-[10px]"
               >
                 {tech}
               </Badge>
             ))}
             {techNames.length > 3 && (
-              <Badge variant="outline" className="h-4 px-1.5 py-0 text-[10px]">
+              <Badge variant="outline" className="h-4 px-1.5 text-[10px]">
                 +{techNames.length - 3}
               </Badge>
             )}

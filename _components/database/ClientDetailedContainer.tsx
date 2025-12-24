@@ -23,16 +23,16 @@ const ClientDetailedContainer = ({
     <div className="space-y-6">
       {/* Action Bar */}
       <Card className="">
-        <CardContent className="flex items-center justify-between p-6">
+        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
           <div className="flex items-center space-x-4">
-            <div className="bg-primary/10 flex h-12 w-12 items-center justify-center rounded-lg">
-              <User className="text-primary h-6 w-6" />
+            <div className="bg-primary/10 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg sm:h-12 sm:w-12">
+              <User className="text-primary h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div>
-              <h2 className="text-foreground text-lg font-semibold">
+              <h2 className="text-foreground text-base font-semibold sm:text-lg">
                 Client Management
               </h2>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-xs sm:text-sm">
                 Manage client information and portal access
               </p>
             </div>
