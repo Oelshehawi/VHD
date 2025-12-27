@@ -28,17 +28,17 @@ const PendingAmountContainer = ({
   return (
     <>
       <Card
-        className="border-primary bg-primary text-primary-foreground hover:bg-primary/90 cursor-pointer shadow-lg transition-colors"
+        className="border-primary/30 bg-primary/10 hover:bg-primary/20 cursor-pointer shadow-lg transition-colors"
         onClick={() => setOpen(true)}
       >
         <CardContent className="p-1.5 sm:p-2">
           <div className="flex min-w-0 flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-1.5">
-              <div className="border-primary-foreground/20 bg-primary-foreground/10 shrink-0 rounded-lg border p-1">
-                <FaDollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <div className="border-primary/20 bg-primary/20 shrink-0 rounded-lg border p-1">
+                <FaDollarSign className="text-primary h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </div>
               <div className="min-w-0">
-                <h2 className="truncate text-sm font-bold sm:text-base">
+                <h2 className="text-primary-foreground truncate text-sm font-bold sm:text-base">
                   Pending Amount
                 </h2>
                 <p className="text-primary-foreground/70 truncate text-[10px] sm:text-xs">
@@ -47,8 +47,8 @@ const PendingAmountContainer = ({
               </div>
             </div>
             <div className="shrink-0 text-center sm:text-right">
-              <div className="border-primary-foreground/20 bg-primary-foreground/10 rounded-lg border p-1.5 text-center">
-                <div className="truncate text-lg font-bold sm:text-xl">
+              <div className="border-primary/20 bg-primary/20 rounded-md border p-1.5 text-center">
+                <div className="text-primary truncate text-lg font-bold sm:text-xl">
                   {formatAmount(amount)}
                 </div>
               </div>

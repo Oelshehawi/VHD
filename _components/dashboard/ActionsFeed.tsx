@@ -215,85 +215,86 @@ export default function ActionsFeed({
   }, [recentActions, selectedCategory]);
 
   return (
-    <Card className="flex h-full max-h-[calc(100vh-120px)] min-h-0 flex-col overflow-hidden shadow-sm">
+    <Card className="flex h-full gap-0 max-h-[calc(100vh-120px)] min-h-0 flex-col overflow-hidden py-0 shadow-sm">
       <CardHeader className="bg-muted/40 shrink-0 border-b p-3 pb-3 sm:p-4 sm:pb-4 lg:p-6 lg:pb-4">
-        {/* Title Section - Compact on mobile */}
+        {/* Title Section with Category and Date Picker */}
         <div className="mb-3 sm:mb-4">
-          <CardTitle className="truncate text-lg sm:text-xl">
-            Recent Activity
-          </CardTitle>
-          <CardDescription className="mt-0.5 truncate text-xs sm:text-sm">
-            Latest actions by your team
-          </CardDescription>
+          <div className="flex items-center justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <CardTitle className="truncate text-lg sm:text-xl">
+                Recent Activity
+              </CardTitle>
+              <CardDescription className="mt-0.5 truncate text-xs sm:text-sm">
+                Latest actions by your team
+              </CardDescription>
+            </div>
+
+            {/* Category and Date Picker - Compact size */}
+            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <Select
+                value={selectedCategory}
+                onValueChange={setSelectedCategory}
+              >
+                <SelectTrigger className="bg-background h-7 w-[130px] shrink-0 text-xs sm:h-8 sm:w-[150px] sm:text-xs">
+                  <SelectValue placeholder="Category" />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ACTION_CATEGORIES).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="bg-background h-7 w-[130px] shrink-0 justify-start text-left text-xs font-normal sm:h-9 sm:w-[150px] sm:text-xs"
+                  >
+                    <FaCalendarAlt className="mr-1.5 h-3 w-3 shrink-0" />
+                    <span className="truncate text-[10px] sm:text-xs">
+                      {dateRange?.from ? (
+                        dateRange.to ? (
+                          <>
+                            {format(dateRange.from, "MMM d")} -{" "}
+                            {format(dateRange.to, "MMM d")}
+                          </>
+                        ) : (
+                          format(dateRange.from, "MMM d")
+                        )
+                      ) : (
+                        <span>Date</span>
+                      )}
+                    </span>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    defaultMonth={dateRange?.from}
+                    selected={dateRange}
+                    onSelect={handleDateRangeChange}
+                    numberOfMonths={1}
+                    className="rounded-lg border shadow-sm"
+                  />
+                </PopoverContent>
+              </Popover>
+            </div>
+          </div>
         </div>
 
-        {/* Filters Section - Responsive layout */}
-        <div className="flex min-w-0 flex-col gap-2 sm:gap-2.5 lg:gap-3">
-          {/* Search Bar - Full width on mobile, flex-1 on larger screens */}
-          <div className="relative min-w-0 flex-1">
-            <FaSearch className="text-muted-foreground absolute top-2.5 left-2.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-            <Input
-              type="search"
-              placeholder="Search actions..."
-              defaultValue={searchQuery}
-              onChange={(e) => updateSearchQuery(e.target.value)}
-              className="bg-background h-9 min-w-0 pl-8 text-sm sm:h-10 sm:pl-9 sm:text-base"
-            />
-          </div>
-
-          {/* Category and Date Picker - Side by side on tablet+, stacked on mobile */}
-          <div className="flex flex-col justify-between gap-2 sm:flex-row sm:gap-2 lg:gap-3">
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-            >
-              <SelectTrigger className="bg-background h-9 w-full shrink-0 text-sm sm:h-10 sm:w-[140px] sm:text-base lg:w-[180px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(ACTION_CATEGORIES).map(([key, label]) => (
-                  <SelectItem key={key} value={key}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="bg-background h-9 w-full shrink-0 justify-start text-left text-sm font-normal sm:h-10 sm:w-auto sm:text-base"
-                >
-                  <FaCalendarAlt className="mr-2 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                  <span className="truncate text-xs sm:text-sm">
-                    {dateRange?.from ? (
-                      dateRange.to ? (
-                        <>
-                          {format(dateRange.from, "MMM d, yyyy")} -{" "}
-                          {format(dateRange.to, "MMM d, yyyy")}
-                        </>
-                      ) : (
-                        format(dateRange.from, "MMM d, yyyy")
-                      )
-                    ) : (
-                      <span>Pick a date range</span>
-                    )}
-                  </span>
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="end">
-                <Calendar
-                  mode="range"
-                  defaultMonth={dateRange?.from}
-                  selected={dateRange}
-                  onSelect={handleDateRangeChange}
-                  numberOfMonths={1}
-                  className="rounded-lg border shadow-sm"
-                />
-              </PopoverContent>
-            </Popover>
-          </div>
+        {/* Search Bar */}
+        <div className="relative min-w-0 flex-1">
+          <FaSearch className="text-muted-foreground absolute top-2.5 left-2.5 h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+          <Input
+            type="search"
+            placeholder="Search actions..."
+            defaultValue={searchQuery}
+            onChange={(e) => updateSearchQuery(e.target.value)}
+            className="bg-background h-9 min-w-0 pl-8 text-sm sm:h-10 sm:pl-9 sm:text-base"
+          />
         </div>
       </CardHeader>
 

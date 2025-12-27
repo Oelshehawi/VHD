@@ -1047,7 +1047,11 @@ export const fetchAnalyticsMetrics = async (): Promise<AnalyticsMetrics> => {
 export const getUnscheduledJobs = async () => {
   await connectMongo();
   try {
-    const jobs = await JobsDueSoon.find({ isScheduled: false })
+    const minDate = new Date("2024-01-01T00:00:00.000Z");
+    const jobs = await JobsDueSoon.find({
+      isScheduled: false,
+      dateDue: { $gte: minDate },
+    })
       .sort({ dateDue: 1 })
       .lean();
 

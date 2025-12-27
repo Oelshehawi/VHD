@@ -12,14 +12,13 @@ import NotificationsPanel from "./NotificationsPanel";
 export default function NotificationBell() {
   const [open, setOpen] = useState(false);
 
-  // TanStack Query with automatic polling
+  // TanStack Query with NO POLLING FOR NOW
   const { data: unreadCount = 0 } = useQuery({
     queryKey: ["unreadCount"],
     queryFn: async () => {
       const result = await getUnreadCount();
       return result.success ? result.count : 0;
     },
-    refetchInterval: 60000, // Poll every 60s
   });
 
   return (
