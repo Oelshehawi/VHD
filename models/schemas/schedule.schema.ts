@@ -18,7 +18,7 @@ const PhotoSchema = new Schema<PhotoType>({
   url: { type: String, required: true },
   timestamp: { type: Date, required: true },
   technicianId: { type: String, required: true },
-  type: { type: String, enum: ["before", "after"], required: true },
+  type: { type: String, enum: ["before", "after", "estimate"], required: true },
 });
 
 const SignatureSchema = new Schema<SignatureType>({

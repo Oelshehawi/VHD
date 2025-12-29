@@ -9,6 +9,7 @@ import { updateSchedule } from "../../app/lib/actions/scheduleJobs.actions";
 import DeleteModal from "../DeleteModal";
 import EditJobModal from "./EditJobModal";
 import ReportModal from "./ReportModal";
+import EstimatePhotosTab from "./EstimatePhotosTab";
 import GeneratePDF, { type PDFData } from "../pdf/GeneratePDF";
 import MediaDisplay from "../invoices/MediaDisplay";
 import { getReportByScheduleId } from "../../app/lib/actions/scheduleJobs.actions";
@@ -22,6 +23,7 @@ import {
   Pencil,
   Phone,
   KeyRound,
+  FileImage,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
@@ -37,7 +39,7 @@ interface JobDetailsModalProps {
   technicians: { id: string; name: string }[];
 }
 
-type ModalView = "details" | "media" | "report" | "edit";
+type ModalView = "details" | "media" | "report" | "edit" | "estimatePhotos";
 
 export default function JobDetailsModal({
   job,
@@ -262,6 +264,10 @@ export default function JobDetailsModal({
                 Media
               </TabsTrigger>
             )}
+            <TabsTrigger value="estimatePhotos">
+              <FileImage className="mr-1 h-4 w-4" />
+              Estimate Photos
+            </TabsTrigger>
             <TabsTrigger value="report">
               <FileText className="mr-1 h-4 w-4" />
               Report
@@ -590,6 +596,10 @@ export default function JobDetailsModal({
                   </Button>
                 </div>
               )}
+            </TabsContent>
+
+            <TabsContent value="estimatePhotos" className="p-6">
+              <EstimatePhotosTab job={job} />
             </TabsContent>
 
             <TabsContent value="edit" className="p-6">

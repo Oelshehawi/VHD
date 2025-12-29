@@ -14,7 +14,7 @@ export const config = {
 
 interface UpdatePhotoRequest {
   cloudinaryUrl: string;
-  type: "before" | "after" | "signature";
+  type: "before" | "after" | "estimate" | "signature";
   technicianId: string;
   scheduleId: string;
   timestamp: string;
@@ -26,7 +26,7 @@ interface PhotoObject {
   url: string;
   timestamp: string;
   technicianId: string;
-  type: "before" | "after";
+  type: "before" | "after" | "estimate";
 }
 
 // Interface for the signature object
@@ -138,12 +138,12 @@ export default async function handler(
       // Set the signature field
       updateQuery.signature = signatureObject;
     } else {
-      // For photo type (before/after)
+      // For photo type (before/after/estimate)
       const photoObject: PhotoObject = {
         url: cloudinaryUrl,
         timestamp: timestamp || new Date().toISOString(),
         technicianId: technicianId || "",
-        type: type as "before" | "after", // Cast is safe because we've checked it's not 'signature'
+        type: type as "before" | "after" | "estimate", // Cast is safe because we've checked it's not 'signature'
       };
 
       // Add the new photo to the photos array

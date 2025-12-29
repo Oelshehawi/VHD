@@ -213,7 +213,7 @@ export interface PhotoType {
   timestamp: Date;
   technicianId: string;
   _id: ObjectId | string;
-  type: "before" | "after";
+  type: "before" | "after" | "estimate";
 }
 
 export interface ReportType {
