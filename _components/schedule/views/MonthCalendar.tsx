@@ -313,6 +313,18 @@ export default function MonthCalendar({
                     {format(day, "d")}
                   </button>
 
+                  {/* Job count badge */}
+                  {dayJobs.length > 0 && (
+                    <div className="absolute bottom-1 right-1">
+                      <Badge
+                        variant="secondary"
+                        className="h-4 min-w-[16px] px-1 text-[9px] font-medium"
+                      >
+                        {dayJobs.length}
+                      </Badge>
+                    </div>
+                  )}
+
                   {/* Indicator dots - top-right corner */}
                   <div className="absolute top-1 right-1 flex items-center gap-1">
                     {/* Unavailability dot (red) */}

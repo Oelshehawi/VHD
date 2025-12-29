@@ -2,6 +2,7 @@ import { format, isToday } from "date-fns";
 import CalendarColumn from "./CalendarColumn";
 import { ScheduleType, AvailabilityType, TimeOffRequestType } from "../../app/lib/typeDefinitions";
 import { cn } from "../../app/lib/utils";
+import { Badge } from "../../ui/badge";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
@@ -33,36 +34,53 @@ const CalendarGrid = ({
         <div className="border-border/50 bg-muted/30 w-14 flex-none border-r sm:w-16" />
 
         {/* Day headers */}
-        {week.map((day, idx) => (
-          <div
-            key={idx}
-            className={cn(
-              "flex flex-1 flex-col items-center py-3 transition-colors",
-              isToday(day) ? "bg-primary/5" : "hover:bg-muted/30",
-              idx < week.length - 1 && "border-border/50 border-r",
-            )}
-          >
-            {/* Day name */}
-            <span
-              className={cn(
-                "text-xs font-medium tracking-wide uppercase",
-                isToday(day) ? "text-primary" : "text-muted-foreground",
-              )}
-            >
-              {format(day, "EEE")}
-            </span>
+        {week.map((day, idx) => {
+          const dayJobs = selectedDayJobs(day);
+          const jobCount = dayJobs.length;
 
-            {/* Date number */}
-            <span
+          return (
+            <div
+              key={idx}
               className={cn(
-                "mt-1 text-xl font-semibold",
-                isToday(day) ? "text-primary" : "text-foreground",
+                "relative flex flex-1 flex-col items-center py-3 transition-colors",
+                isToday(day) ? "bg-primary/5" : "hover:bg-muted/30",
+                idx < week.length - 1 && "border-border/50 border-r",
               )}
             >
-              {format(day, "d")}
-            </span>
-          </div>
-        ))}
+              {/* Day name */}
+              <span
+                className={cn(
+                  "text-xs font-medium tracking-wide uppercase",
+                  isToday(day) ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                {format(day, "EEE")}
+              </span>
+
+              {/* Date number */}
+              <span
+                className={cn(
+                  "mt-1 text-xl font-semibold",
+                  isToday(day) ? "text-primary" : "text-foreground",
+                )}
+              >
+                {format(day, "d")}
+              </span>
+
+              {/* Job count badge */}
+              {jobCount > 0 && (
+                <div className="absolute top-1 right-1">
+                  <Badge
+                    variant="secondary"
+                    className="h-4 min-w-[16px] px-1 text-[9px] font-medium"
+                  >
+                    {jobCount}
+                  </Badge>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Scrollable content */}
