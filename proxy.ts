@@ -21,6 +21,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/deletePhoto",
   "/api/downloadPhoto",
   "/api/update-photos",
+  "/api/updateTechnicianNotes",
 ]);
 
 // Define client portal routes
