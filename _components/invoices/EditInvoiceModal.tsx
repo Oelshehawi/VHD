@@ -38,6 +38,7 @@ import {
 } from "../ui/select";
 import { DatePicker } from "../ui/date-picker";
 import { format } from "date-fns";
+import { Loader2 } from "lucide-react";
 
 const InlineEditInvoice = ({
   invoice,
@@ -542,9 +543,16 @@ const InvoiceStatusUpdate = ({
   return (
     <Select value={status} onValueChange={handleChange} disabled={isLoading}>
       <SelectTrigger className="w-32">
-        <Badge variant={getStatusVariant(status)} className="capitalize">
-          <SelectValue />
-        </Badge>
+        {isLoading ? (
+          <div className="flex items-center gap-2">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            <span className="text-sm">Loading...</span>
+          </div>
+        ) : (
+          <Badge variant={getStatusVariant(status)} className="capitalize">
+            <SelectValue />
+          </Badge>
+        )}
       </SelectTrigger>
       <SelectContent>
         <SelectItem value="paid">Paid</SelectItem>
