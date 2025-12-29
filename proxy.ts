@@ -39,8 +39,6 @@ export default clerkMiddleware(async (auth, req) => {
   const isManager = (sessionClaims as any)?.metadata?.isManager === true;
   const isClientPortalUser =
     (sessionClaims as any)?.metadata?.isClientPortalUser === true;
-  // Employee is anyone who is neither manager nor client portal user
-  const isEmployee = userId && !isManager && !isClientPortalUser;
 
   // Handle public routes - always accessible
   if (isPublicRoute(req)) {
@@ -67,7 +65,9 @@ export default clerkMiddleware(async (auth, req) => {
     } else if (isManager) {
       return NextResponse.redirect(new URL("/dashboard", req.url));
     } else {
-      return NextResponse.redirect(new URL("/employee-dashboard", req.url));
+      // User is authenticated but neither manager nor client portal user
+      // Redirect to sign-in since employees should use the phone app
+      return NextResponse.redirect(new URL("/sign-in", req.url));
     }
   }
 
@@ -79,17 +79,16 @@ export default clerkMiddleware(async (auth, req) => {
         new URL("/client-portal/dashboard", req.url),
       );
     }
-  } else if (isEmployee) {
-    // Employees should not access admin routes or client portal routes
-    if (isAdminRoute(req) || isClientPortalRoute(req)) {
-      return NextResponse.redirect(new URL("/employee-dashboard", req.url));
-    }
   } else if (isManager) {
     // Managers can access both admin and client portal routes
     if (isClientPortalRoute(req)) {
       // Allow access to client portal
       return NextResponse.next();
     }
+  } else {
+    // User is authenticated but neither manager nor client portal user
+    // Redirect to sign-in since employees should use the phone app
+    return NextResponse.redirect(new URL("/sign-in", req.url));
   }
 
   // Continue for all other valid routes

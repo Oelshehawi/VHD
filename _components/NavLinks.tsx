@@ -44,10 +44,7 @@ const NavLinks = ({
         { href: "/payroll", icon: CurrencyDollarIcon, badge: pendingTimeOffCount ? pendingTimeOffCount : undefined },
         { href: "/analytics", icon: ChartBarIcon },
       ]
-    : [
-        { href: "/employee-dashboard", icon: HomeIcon },
-        { href: "/schedule", icon: CalendarIcon },
-      ];
+    : [];
 
   return (
     <motion.div

@@ -58,10 +58,7 @@ export function AppSidebar({
         },
         { title: "Analytics", url: "/analytics", icon: BarChart },
       ]
-    : [
-        { title: "Home", url: "/employee-dashboard", icon: Home },
-        { title: "Schedule", url: "/schedule", icon: Calendar },
-      ];
+    : [];
 
   return (
     <Sidebar {...props}>
