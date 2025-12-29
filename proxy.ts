@@ -17,6 +17,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/availability",
   "/api/timeoff",
   "/api/markChequeAsPaid",
+  "/api/cloudinaryUpload",
 ]);
 
 // Define client portal routes
