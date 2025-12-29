@@ -1,8 +1,12 @@
 import { format, isToday } from "date-fns";
 import CalendarColumn from "./CalendarColumn";
-import { ScheduleType, AvailabilityType, TimeOffRequestType } from "../../app/lib/typeDefinitions";
+import {
+  ScheduleType,
+  AvailabilityType,
+  TimeOffRequestType,
+} from "../../app/lib/typeDefinitions";
 import { cn } from "../../app/lib/utils";
-import { Badge } from "../../ui/badge";
+import { Badge } from "../../_components/ui/badge";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 
