@@ -24,31 +24,6 @@ export const formatDate = (dateString: any) => {
   return `${month}/${day}/${year}`;
 };
 
-/**
- * Format a UTC date string exactly as stored in database (no timezone conversion)
- * @param dateInput - Date string in ISO format or Date object
- * @returns Formatted date string (MM/DD/YYYY)
- */
-export const formatDateUTC = (dateInput: string | Date): string => {
-  let dateString: string | undefined;
-
-  if (dateInput instanceof Date) {
-    // Extract UTC date components directly without timezone conversion
-    const year = dateInput.getUTCFullYear();
-    const month = String(dateInput.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(dateInput.getUTCDate()).padStart(2, "0");
-    dateString = `${year}-${month}-${day}`;
-  } else if (typeof dateInput === "string") {
-    // If it's a string, extract just the date part (YYYY-MM-DD)
-    dateString = dateInput.includes("T") ? dateInput.split("T")[0] : dateInput;
-  } else {
-    console.warn("formatDateUTC received invalid input:", dateInput);
-    return "Invalid Date";
-  }
-
-  // Use the existing formatDate function which works with YYYY-MM-DD strings
-  return formatDate(dateString);
-};
 
 /**
  * Format a UTC date string in readable format exactly as stored (no timezone conversion)
@@ -128,62 +103,6 @@ export const formatDateStringUTC = (dateInput: string | Date): string => {
   return `${monthName} ${parseInt(day, 10)}, ${year}`;
 };
 
-export const formatDateTime = (dateString: Date) => {
-  const dateTimeOptions: Intl.DateTimeFormatOptions = {
-    weekday: "short", // abbreviated weekday name (e.g., 'Mon')
-    month: "short", // abbreviated month name (e.g., 'Oct')
-    day: "numeric", // numeric day of the month (e.g., '25')
-    hour: "numeric", // numeric hour (e.g., '8')
-    minute: "numeric", // numeric minute (e.g., '30')
-    hour12: true, // use 12-hour clock (true) or 24-hour clock (false)
-  };
-
-  const dateDayOptions: Intl.DateTimeFormatOptions = {
-    weekday: "short", // abbreviated weekday name (e.g., 'Mon')
-    year: "numeric", // numeric year (e.g., '2023')
-    month: "2-digit", // abbreviated month name (e.g., 'Oct')
-    day: "2-digit", // numeric day of the month (e.g., '25')
-  };
-
-  const dateOptions: Intl.DateTimeFormatOptions = {
-    month: "short", // abbreviated month name (e.g., 'Oct')
-    year: "numeric", // numeric year (e.g., '2023')
-    day: "numeric", // numeric day of the month (e.g., '25')
-  };
-
-  const timeOptions: Intl.DateTimeFormatOptions = {
-    hour: "numeric", // numeric hour (e.g., '8')
-    minute: "numeric", // numeric minute (e.g., '30')
-    hour12: true, // use 12-hour clock (true) or 24-hour clock (false)
-  };
-
-  const formattedDateTime: string = new Date(dateString).toLocaleString(
-    "en-CA",
-    dateTimeOptions,
-  );
-
-  const formattedDateDay: string = new Date(dateString).toLocaleString(
-    "en-CA",
-    dateDayOptions,
-  );
-
-  const formattedDate: string = new Date(dateString).toLocaleString(
-    "en-CA",
-    dateOptions,
-  );
-
-  const formattedTime: string = new Date(dateString).toLocaleString(
-    "en-CA",
-    timeOptions,
-  );
-
-  return {
-    dateTime: formattedDateTime,
-    dateDay: formattedDateDay,
-    dateOnly: formattedDate,
-    timeOnly: formattedTime,
-  };
-};
 
 export function formatAmount(amount: number): string {
   const formatter = new Intl.NumberFormat("en-CA", {
@@ -208,19 +127,7 @@ export const isNumberKey = (evt: any) => {
   return true;
 };
 
-export const parseStringify = (value: any) => JSON.parse(JSON.stringify(value));
 
-export function encryptId(id: string) {
-  return btoa(id);
-}
-
-export const getTransactionStatus = (date: Date) => {
-  const today = new Date();
-  const twoDaysAgo = new Date(today);
-  twoDaysAgo.setDate(today.getDate() - 2);
-
-  return date > twoDaysAgo ? "Processing" : "Success";
-};
 
 export const formatDateToString = (dateInput: string | Date) => {
   // Handle both string and Date inputs
@@ -355,13 +262,6 @@ export const generatePagination = (currentPage: number, totalPages: number) => {
   ];
 };
 
-export const formatLocalDateTime = (localeString: string) => {
-  const parsedDate = new Date(localeString);
-  if (isNaN(parsedDate.getTime())) {
-    return "";
-  }
-  return format(parsedDate, "yyyy-MM-dd'T'HH:mm");
-};
 
 export const calculateSubtotal = (items: any[]) =>
   items.reduce((acc, item) => acc + item.price, 0);
@@ -373,10 +273,6 @@ export const formatDateFns = (date: string | Date): string => {
   return format(parsedDate, "MMMM do, yyyy", { timeZone: "UTC" }); // e.g., "October 15th, 2024"
 };
 
-// Will take in a UTC date and keeep the date in the utc date
-export const formatDateFnsUTC = (date: string | Date): string => {
-  return format(date, "MMMM do, yyyy", { timeZone: "UTC" }); // e.g., "October 15th, 2024"
-};
 
 /**
  * Calculate job duration based on invoice price (business rule)

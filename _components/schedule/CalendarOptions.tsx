@@ -6,9 +6,9 @@ import SearchSelect from "./JobSearchSelect";
 import OptimizationModal from "../optimization/OptimizationModal";
 import { useState, useEffect } from "react";
 import {
-  InvoiceType,
   ScheduleType,
   AvailabilityType,
+  TimeOffRequestType,
 } from "../../app/lib/typeDefinitions";
 import {
   add,
@@ -19,14 +19,7 @@ import {
   isValid,
   startOfDay,
 } from "date-fns";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  EyeOff,
-  Plus,
-  BarChart3,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, BarChart3 } from "lucide-react";
 import AddJob from "./AddJob";
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
@@ -45,6 +38,7 @@ const CalendarOptions = ({
   holidays,
   technicians,
   availability,
+  timeOffRequests = [],
   initialView,
   initialDate,
 }: {
@@ -53,6 +47,7 @@ const CalendarOptions = ({
   holidays: any;
   technicians: { id: string; name: string }[];
   availability: AvailabilityType[];
+  timeOffRequests?: TimeOffRequestType[];
   initialView?: string;
   initialDate?: string | null;
 }) => {
@@ -82,7 +77,8 @@ const CalendarOptions = ({
 
   const [isOptimizationModalOpen, setIsOptimizationModalOpen] =
     useState<boolean>(false);
-  const [showAvailability, setShowAvailability] = useState<boolean>(false);
+  // Availability is always shown - no toggle needed
+  const showAvailability = true;
   const [currentDate, setCurrentDate] = useState<string | null>(
     initialDate || null,
   );
@@ -272,7 +268,6 @@ const CalendarOptions = ({
         isOptimizationModalOpen={isOptimizationModalOpen}
         setIsOptimizationModalOpen={setIsOptimizationModalOpen}
         showAvailability={showAvailability}
-        setShowAvailability={setShowAvailability}
       />
 
       <OptimizationModal
@@ -292,6 +287,7 @@ const CalendarOptions = ({
                 technicians={technicians}
                 availability={availability}
                 showAvailability={showAvailability}
+                timeOffRequests={timeOffRequests}
                 onDateChange={handleDateChange}
                 initialDate={currentDate}
               />
@@ -307,6 +303,7 @@ const CalendarOptions = ({
               technicians={technicians}
               availability={availability}
               showAvailability={showAvailability}
+              timeOffRequests={timeOffRequests}
             />
           </div>
         ) : (
@@ -319,6 +316,7 @@ const CalendarOptions = ({
               technicians={technicians}
               availability={availability}
               showAvailability={showAvailability}
+              timeOffRequests={timeOffRequests}
               onDateSelect={(date: Date | undefined) => {
                 if (date) {
                   setCurrentDay(startOfDay(date));
@@ -351,8 +349,6 @@ const Header = ({
   technicians,
   isOptimizationModalOpen,
   setIsOptimizationModalOpen,
-  showAvailability,
-  setShowAvailability,
 }: {
   currentView: "day" | "week" | "month";
   onViewChange: (view: "day" | "week" | "month") => void;
@@ -370,7 +366,6 @@ const Header = ({
   isOptimizationModalOpen: boolean;
   setIsOptimizationModalOpen: (open: boolean) => void;
   showAvailability: boolean;
-  setShowAvailability: (show: boolean) => void;
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -481,24 +476,6 @@ const Header = ({
               <span className="hidden sm:inline">Optimize</span>
             </Button>
           )}
-
-          {/* Availability Toggle - Icon only on small screens */}
-          <Button
-            onClick={() => setShowAvailability(!showAvailability)}
-            variant={showAvailability ? "secondary" : "outline"}
-            size="sm"
-            className="h-8 flex-shrink-0"
-            title={showAvailability ? "Hide availability" : "Show availability"}
-          >
-            {showAvailability ? (
-              <Eye className="h-4 w-4" />
-            ) : (
-              <EyeOff className="h-4 w-4" />
-            )}
-            <span className="ml-1.5 hidden lg:inline">
-              {showAvailability ? "Availability On" : "Availability Off"}
-            </span>
-          </Button>
 
           {/* View Tabs - Hide on mobile, show Week only on desktop */}
           {!isMobile && (

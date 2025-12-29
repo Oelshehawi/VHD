@@ -1,6 +1,6 @@
 import { format, isToday } from "date-fns";
 import CalendarColumn from "./CalendarColumn";
-import { ScheduleType, AvailabilityType } from "../../app/lib/typeDefinitions";
+import { ScheduleType, AvailabilityType, TimeOffRequestType } from "../../app/lib/typeDefinitions";
 import { cn } from "../../app/lib/utils";
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
@@ -13,6 +13,7 @@ const CalendarGrid = ({
   technicians,
   availability,
   showAvailability,
+  timeOffRequests = [],
 }: {
   week: Date[];
   selectedDayJobs: (day: Date) => ScheduleType[];
@@ -22,6 +23,7 @@ const CalendarGrid = ({
   availability: AvailabilityType[];
   showAvailability: boolean;
   showOptimization?: boolean;
+  timeOffRequests?: TimeOffRequestType[];
 }) => {
   return (
     <div className="bg-card flex h-full flex-col">
@@ -100,6 +102,7 @@ const CalendarGrid = ({
                   technicians={technicians}
                   availability={availability}
                   showAvailability={showAvailability}
+                  timeOffRequests={timeOffRequests}
                 />
               </div>
             ))}

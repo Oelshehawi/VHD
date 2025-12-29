@@ -5,6 +5,7 @@ import {
   ScheduleType,
   InvoiceType,
   AvailabilityType,
+  TimeOffRequestType,
 } from "../../../app/lib/typeDefinitions";
 import CalendarGrid from "../CalendarGrid";
 
@@ -16,6 +17,7 @@ const WeekCalendar = ({
   technicians,
   availability,
   showAvailability,
+  timeOffRequests = [],
   showOptimization,
 }: {
   scheduledJobs: ScheduleType[];
@@ -25,6 +27,7 @@ const WeekCalendar = ({
   technicians: { id: string; name: string }[];
   availability: AvailabilityType[];
   showAvailability: boolean;
+  timeOffRequests?: TimeOffRequestType[];
   showOptimization?: boolean;
 }) => {
   // Group jobs by date with optimized performance
@@ -71,6 +74,7 @@ const WeekCalendar = ({
           technicians={technicians}
           availability={availability}
           showAvailability={showAvailability}
+          timeOffRequests={timeOffRequests}
         />
       </div>
     </div>

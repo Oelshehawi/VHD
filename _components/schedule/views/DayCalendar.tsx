@@ -1,10 +1,15 @@
 "use client";
 import { useMemo, useState } from "react";
-import { format, isToday, isSameDay } from "date-fns";
+import { format, isToday, isSameDay, startOfDay, parseISO } from "date-fns";
+import { CalendarDays, Clock } from "lucide-react";
+import { getTechnicianUnavailabilityInfo } from "../../../app/lib/utils/availabilityUtils";
+import { formatTimeRange12hr } from "../../../app/lib/utils/timeFormatUtils";
+import { formatDateStringUTC } from "../../../app/lib/utils";
 import {
   ScheduleType,
   InvoiceType,
   AvailabilityType,
+  TimeOffRequestType,
 } from "../../../app/lib/typeDefinitions";
 import CalendarColumn from "../CalendarColumn";
 import { Card } from "../../ui/card";
@@ -23,6 +28,7 @@ interface DayCalendarProps {
   technicians: { id: string; name: string }[];
   availability: AvailabilityType[];
   showAvailability: boolean;
+  timeOffRequests?: TimeOffRequestType[];
   onDateSelect?: (date: Date | undefined) => void;
 }
 
@@ -34,6 +40,7 @@ const DayCalendar = ({
   technicians,
   availability,
   showAvailability,
+  timeOffRequests = [],
   onDateSelect,
 }: DayCalendarProps) => {
   // Modal state
@@ -91,6 +98,29 @@ const DayCalendar = ({
   };
 
   const currentDayJobs = selectedDayJobs(currentDay);
+
+  // Get time-off requests for the current day
+  const currentDayTimeOff = useMemo(() => {
+    const dayKey = format(currentDay, "yyyy-MM-dd");
+    return timeOffRequests.filter((request) => {
+      // Parse dates as UTC to avoid timezone shifts
+      const startDateStr = typeof request.startDate === 'string'
+        ? (request.startDate.split('T')[0] || request.startDate)
+        : format(request.startDate, "yyyy-MM-dd");
+      const endDateStr = typeof request.endDate === 'string'
+        ? (request.endDate.split('T')[0] || request.endDate)
+        : format(request.endDate, "yyyy-MM-dd");
+      return dayKey >= startDateStr && dayKey <= endDateStr;
+    });
+  }, [timeOffRequests, currentDay]);
+
+  // Get availability/unavailability info for the current day (always shown)
+  const dayAvailability = useMemo(() => {
+    return technicians.map((tech) => ({
+      tech,
+      info: getTechnicianUnavailabilityInfo(availability, tech.id, currentDay),
+    })).filter((item) => item.info.isUnavailable);
+  }, [technicians, availability, currentDay]);
 
   return (
     <>
@@ -163,6 +193,18 @@ const DayCalendar = ({
                           </span>
                         </div>
                       )}
+                      
+                      {/* Time-off indicator */}
+                      {currentDayTimeOff.length > 0 && (
+                        <div className="absolute top-1 left-1 sm:top-2 sm:left-2">
+                          <span
+                            className={`inline-flex h-4 w-4 items-center justify-center rounded-full text-[10px] font-medium sm:h-5 sm:w-5 sm:text-xs bg-blue-500/20 text-blue-600 dark:text-blue-400`}
+                            title={`${currentDayTimeOff.length} time-off request${currentDayTimeOff.length > 1 ? "s" : ""}`}
+                          >
+                            <CalendarDays className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -219,6 +261,7 @@ const DayCalendar = ({
                           technicians={technicians}
                           availability={availability}
                           showAvailability={showAvailability}
+                          timeOffRequests={currentDayTimeOff}
                         />
                       </div>
                     </div>
@@ -262,6 +305,84 @@ const DayCalendar = ({
                       </Badge>
                     )}
                   </div>
+
+                  {/* Availability/Unavailability - Always shown */}
+                  {dayAvailability.length > 0 && (
+                    <div className="mb-3 space-y-1.5">
+                      <h4 className="text-foreground text-xs font-semibold mb-1">
+                        Unavailability
+                      </h4>
+                      {dayAvailability.map(({ tech, info }) => (
+                        <div
+                          key={tech.id}
+                          className="bg-destructive/10 hover:bg-destructive/20 border-l-2 border-destructive rounded-md px-2 py-1.5"
+                        >
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-destructive truncate text-xs font-medium flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {tech.name}
+                            </span>
+                            <span className="text-muted-foreground text-[10px]">
+                              {info.type === "full-day" 
+                                ? "All day" 
+                                : formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
+                            </span>
+                            {info.reason && (
+                              <span className="text-muted-foreground text-[10px]">
+                                {info.reason}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Time-off requests */}
+                  {currentDayTimeOff.length > 0 && (
+                    <div className="mb-3 space-y-1.5">
+                      <h4 className="text-foreground text-xs font-semibold mb-1">
+                        Time Off
+                      </h4>
+                      {currentDayTimeOff.map((request) => {
+                        const technician = technicians.find(
+                          (tech) => tech.id === request.technicianId,
+                        );
+                        // Format dates using UTC to avoid timezone issues
+                        const startDateStr = typeof request.startDate === 'string'
+                          ? (request.startDate.split('T')[0] || request.startDate)
+                          : format(request.startDate, "yyyy-MM-dd");
+                        const endDateStr = typeof request.endDate === 'string'
+                          ? (request.endDate.split('T')[0] || request.endDate)
+                          : format(request.endDate, "yyyy-MM-dd");
+                        const startDate = formatDateStringUTC(startDateStr);
+                        const endDate = formatDateStringUTC(endDateStr);
+                        const dateRange = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+
+                        return (
+                          <div
+                            key={request._id as string}
+                            className="bg-blue-500/10 hover:bg-blue-500/20 border-l-2 border-blue-500 rounded-md px-2 py-1.5"
+                          >
+                            <div className="flex flex-col gap-0.5">
+                              <span className="text-blue-600 dark:text-blue-400 truncate text-xs font-medium flex items-center gap-1">
+                                <CalendarDays className="h-3 w-3" />
+                                {technician?.name || "Unknown"}
+                              </span>
+                              <span className="text-muted-foreground text-[10px]">
+                                {dateRange}
+                              </span>
+                              {request.reason && (
+                                <span className="text-muted-foreground text-[10px]">
+                                  {request.reason}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
 
                   {currentDayJobs.length > 0 ? (
                     <ul className="space-y-1.5">

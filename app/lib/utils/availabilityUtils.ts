@@ -1,4 +1,5 @@
 import { AvailabilityType } from "../typeDefinitions";
+import { formatTimeRange12hr } from "./timeFormatUtils";
 
 /**
  * Check if a technician is unavailable on a specific date
@@ -127,7 +128,9 @@ export function getTechnicianUnavailabilityInfo(
           type: block.isFullDay ? "full-day" : "time-block",
           startTime: block.startTime,
           endTime: block.endTime,
-          reason: block.isFullDay ? "Full day unavailable" : `Unavailable ${block.startTime}-${block.endTime}`,
+          reason: block.isFullDay
+            ? "Full day unavailable"
+            : `Unavailable ${formatTimeRange12hr(block.startTime, block.endTime)}`,
         };
       }
     }
@@ -151,7 +154,7 @@ export function getTechnicianUnavailabilityInfo(
         endTime: block.endTime,
         reason: block.isFullDay
           ? `Every ${dayName} (All day)`
-          : `Every ${dayName} (${block.startTime}-${block.endTime})`,
+          : `Every ${dayName} (${formatTimeRange12hr(block.startTime, block.endTime)})`,
       };
     }
   }
@@ -179,7 +182,7 @@ export function formatAvailability(block: AvailabilityType): string {
     if (block.isFullDay) {
       return `Every ${dayName}`;
     }
-    return `Every ${dayName}, ${block.startTime}-${block.endTime}`;
+    return `Every ${dayName}, ${formatTimeRange12hr(block.startTime, block.endTime)}`;
   }
 
   if (block.specificDate) {
@@ -192,7 +195,7 @@ export function formatAvailability(block: AvailabilityType): string {
     if (block.isFullDay) {
       return dateStr;
     }
-    return `${dateStr}, ${block.startTime}-${block.endTime}`;
+    return `${dateStr}, ${formatTimeRange12hr(block.startTime, block.endTime)}`;
   }
 
   return "Unknown";

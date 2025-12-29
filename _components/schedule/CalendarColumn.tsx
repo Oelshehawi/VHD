@@ -1,11 +1,14 @@
 "use client";
 import { useState, useMemo } from "react";
 import { format, isSameDay } from "date-fns";
+import { CalendarDays } from "lucide-react";
+import { formatDateStringUTC } from "../../app/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import {
   Holiday,
   ScheduleType,
-  InvoiceType,
   AvailabilityType,
+  TimeOffRequestType,
 } from "../../app/lib/typeDefinitions";
 import JobItem from "./JobItem";
 import JobDetailsModal from "./JobDetailsModal";
@@ -32,6 +35,7 @@ const CalendarColumn = ({
   technicians,
   availability,
   showAvailability,
+  timeOffRequests = [],
 }: {
   day: Date;
   jobs: ScheduleType[];
@@ -42,6 +46,7 @@ const CalendarColumn = ({
   availability: AvailabilityType[];
   showAvailability: boolean;
   showOptimization?: boolean;
+  timeOffRequests?: TimeOffRequestType[];
 }) => {
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -78,13 +83,22 @@ const CalendarColumn = ({
     setIsModalOpen(true);
   };
 
-  const handleModalOpenChange = (open: boolean) => {
-    setIsModalOpen(open);
-    if (!open) {
-      // Clear selectedJob after animation completes
-      setTimeout(() => setSelectedJob(null), 150);
-    }
-  };
+  // Get time-off requests for this day
+  const dayTimeOff = useMemo(() => {
+    const dayKey = format(day, "yyyy-MM-dd");
+    return timeOffRequests.filter((request) => {
+      // Parse dates as UTC to avoid timezone shifts
+      const startDateStr =
+        typeof request.startDate === "string"
+          ? request.startDate.split("T")[0] || request.startDate
+          : format(request.startDate, "yyyy-MM-dd");
+      const endDateStr =
+        typeof request.endDate === "string"
+          ? request.endDate.split("T")[0] || request.endDate
+          : format(request.endDate, "yyyy-MM-dd");
+      return dayKey >= startDateStr && dayKey <= endDateStr;
+    });
+  }, [timeOffRequests, day]);
 
   return (
     <div className="relative h-full">
@@ -107,21 +121,86 @@ const CalendarColumn = ({
         </div>
       )}
 
+      {/* Time-off banner */}
+      {dayTimeOff.length > 0 && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div
+              className={cn(
+                "absolute inset-x-0 z-20 cursor-help px-2 py-1 text-center",
+                holiday ? "top-8" : "top-0",
+                "bg-blue-500/20 text-blue-700 dark:text-blue-300",
+              )}
+            >
+              <div className="flex flex-wrap items-center justify-center gap-1">
+                {dayTimeOff.map((request) => {
+                  const technician = technicians.find(
+                    (tech) => tech.id === request.technicianId,
+                  );
+                  return (
+                    <span
+                      key={request._id as string}
+                      className="flex items-center gap-1 text-xs font-medium"
+                    >
+                      <CalendarDays className="h-3 w-3" />
+                      {technician?.name || "Unknown"}
+                    </span>
+                  );
+                })}
+              </div>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="top" className="max-w-xs">
+            <div className="space-y-2">
+              {dayTimeOff.map((request) => {
+                const technician = technicians.find(
+                  (tech) => tech.id === request.technicianId,
+                );
+                // Format dates using UTC to avoid timezone issues
+                const startDateStr =
+                  typeof request.startDate === "string"
+                    ? request.startDate.split("T")[0] || request.startDate
+                    : format(request.startDate, "yyyy-MM-dd");
+                const endDateStr =
+                  typeof request.endDate === "string"
+                    ? request.endDate.split("T")[0] || request.endDate
+                    : format(request.endDate, "yyyy-MM-dd");
+                const startDate = formatDateStringUTC(startDateStr);
+                const endDate = formatDateStringUTC(endDateStr);
+                return (
+                  <div key={request._id as string} className="text-xs">
+                    <div className="font-semibold">
+                      {technician?.name || "Unknown"}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {startDate === endDate
+                        ? startDate
+                        : `${startDate} - ${endDate}`}
+                    </div>
+                    <div className="text-muted-foreground">
+                      {request.reason}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </TooltipContent>
+        </Tooltip>
+      )}
+
       {/* Time slots */}
       <div className="relative h-full">
         {HOURS.map((hour) => {
-          // Only check unavailability when toggle is on
-          const isUnavailableHour =
-            showAvailability &&
-            technicians.some((tech) =>
-              isTechnicianUnavailable(
-                availability,
-                tech.id,
-                day,
-                `${String(hour).padStart(2, "0")}:00`,
-                `${String(hour + 1).padStart(2, "0")}:00`,
-              ),
-            );
+          // Always check unavailability (availability always shown)
+          const isUnavailableHour = technicians.some((tech) =>
+            isTechnicianUnavailable(
+              availability,
+              tech.id,
+              day,
+              `${String(hour).padStart(2, "0")}:00`,
+              `${String(hour + 1).padStart(2, "0")}:00`,
+            ),
+          );
 
           return (
             <div

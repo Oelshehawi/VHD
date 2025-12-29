@@ -24,11 +24,18 @@ import { useState, useEffect, useMemo } from "react";
 import {
   ScheduleType,
   AvailabilityType,
+  TimeOffRequestType,
 } from "../../../app/lib/typeDefinitions";
 import JobDetailsModal from "../JobDetailsModal";
 import { getTechnicianUnavailabilityInfo } from "../../../app/lib/utils/availabilityUtils";
 import { formatTimeRange12hr } from "../../../app/lib/utils/timeFormatUtils";
-import { cn } from "../../../app/lib/utils";
+import { cn, formatDateStringUTC } from "../../../app/lib/utils";
+import { CalendarDays } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "../../ui/tooltip";
 
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -40,6 +47,7 @@ export default function MonthCalendar({
   technicians,
   availability,
   showAvailability,
+  timeOffRequests = [],
   onDateChange,
   initialDate,
 }: {
@@ -48,6 +56,7 @@ export default function MonthCalendar({
   technicians: { id: string; name: string }[];
   availability: AvailabilityType[];
   showAvailability: boolean;
+  timeOffRequests?: TimeOffRequestType[];
   onDateChange?: (date: Date, view: "week" | "month") => void;
   initialDate?: string | null;
 }) {
@@ -120,6 +129,36 @@ export default function MonthCalendar({
     return map;
   }, [scheduledJobs]);
 
+  // Group time-off requests by date
+  const timeOffByDate = useMemo(() => {
+    const map: Record<string, TimeOffRequestType[]> = {};
+    timeOffRequests.forEach((request) => {
+      // Parse dates as UTC to avoid timezone shifts
+      const startDateStr = typeof request.startDate === 'string'
+        ? (request.startDate.split('T')[0] || request.startDate)
+        : format(request.startDate, "yyyy-MM-dd");
+      const endDateStr = typeof request.endDate === 'string'
+        ? (request.endDate.split('T')[0] || request.endDate)
+        : format(request.endDate, "yyyy-MM-dd");
+
+      // Parse as UTC dates (YYYY-MM-DD format)
+      const [startYear, startMonth, startDay] = startDateStr.split("-").map(Number);
+      const [endYear, endMonth, endDay] = endDateStr.split("-").map(Number);
+      const startDate = new Date(startYear as number, (startMonth as number) - 1, startDay as number);
+      const endDate = new Date(endYear as number, (endMonth as number) - 1, endDay as number);
+
+      // Add request to all days in the range (inclusive of both start and end)
+      let currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        const dateKey = format(currentDate, "yyyy-MM-dd");
+        if (!map[dateKey]) map[dateKey] = [];
+        map[dateKey]!.push(request);
+        currentDate = add(currentDate, { days: 1 });
+      }
+    });
+    return map;
+  }, [timeOffRequests]);
+
   function previousMonth() {
     let firstDayPrevMonth = add(firstDayCurrentMonth, { months: -1 });
     setCurrentMonth(format(firstDayPrevMonth, "MMM-yyyy"));
@@ -139,6 +178,12 @@ export default function MonthCalendar({
         new Date(a.startDateTime).getTime() -
         new Date(b.startDateTime).getTime(),
     );
+
+  // Get time-off requests for selected day
+  const selectedDayTimeOff = useMemo(() => {
+    const dateKey = format(selectedDay, "yyyy-MM-dd");
+    return timeOffByDate[dateKey] || [];
+  }, [timeOffByDate, selectedDay]);
 
   const handleDaySelect = (day: Date) => {
     setSelectedDay(day);
@@ -223,15 +268,28 @@ export default function MonthCalendar({
             {calendarDays.map((day, dayIdx) => {
               const dateKey = format(day, "yyyy-MM-dd");
               const dayJobs = jobsByDate[dateKey] || [];
+              const dayTimeOff = timeOffByDate[dateKey] || [];
               const isCurrentMonth = isSameMonth(day, firstDayCurrentMonth);
               const isSelected = isEqual(day, selectedDay);
               const isTodayDate = isToday(day);
+
+              // Get unavailability info for this day
+              const unavailabilityInfoList = technicians
+                .map((tech) => ({
+                  tech,
+                  info: getTechnicianUnavailabilityInfo(
+                    availability,
+                    tech.id,
+                    day,
+                  ),
+                }))
+                .filter((item) => item.info.isUnavailable === true);
 
               return (
                 <div
                   key={day.toString()}
                   className={cn(
-                    "bg-card flex min-h-[100px] flex-col p-1",
+                    "bg-card relative flex min-h-[100px] flex-col p-1",
                     !isCurrentMonth && "bg-muted/30",
                   )}
                 >
@@ -254,6 +312,74 @@ export default function MonthCalendar({
                   >
                     {format(day, "d")}
                   </button>
+
+                  {/* Indicator dots - top-right corner */}
+                  <div className="absolute top-1 right-1 flex items-center gap-1">
+                    {/* Unavailability dot (red) */}
+                    {unavailabilityInfoList.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="relative">
+                            <div className="bg-destructive h-2.5 w-2.5 rounded-full shadow-sm animate-pulse" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-2 text-xs">
+                            <div className="font-semibold">Unavailability</div>
+                            {unavailabilityInfoList.map(({ tech, info }) => (
+                              <div key={tech.id}>
+                                <div className="font-medium">{tech.name}</div>
+                                <div className="text-muted-foreground">
+                                  {info.type === "full-day"
+                                    ? "All day"
+                                    : formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
+                                </div>
+                                {info.reason && (
+                                  <div className="text-muted-foreground">{info.reason}</div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    {/* Time-off dot (blue) */}
+                    {dayTimeOff.length > 0 && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="relative">
+                            <div className="bg-blue-500 h-2.5 w-2.5 rounded-full shadow-sm animate-pulse" />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="top" className="max-w-xs">
+                          <div className="space-y-2 text-xs">
+                            <div className="font-semibold">Time Off</div>
+                            {dayTimeOff.map((request) => {
+                              const technician = technicians.find(t => t.id === request.technicianId);
+                              const startDateStr = typeof request.startDate === 'string'
+                                ? (request.startDate.split('T')[0] || request.startDate)
+                                : format(request.startDate, "yyyy-MM-dd");
+                              const endDateStr = typeof request.endDate === 'string'
+                                ? (request.endDate.split('T')[0] || request.endDate)
+                                : format(request.endDate, "yyyy-MM-dd");
+                              const startDate = formatDateStringUTC(startDateStr);
+                              const endDate = formatDateStringUTC(endDateStr);
+                              return (
+                                <div key={request._id as string}>
+                                  <div className="font-medium">{technician?.name || "Unknown"}</div>
+                                  <div className="text-muted-foreground">
+                                    {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
+                                  </div>
+                                  <div className="text-muted-foreground">{request.reason}</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                  </div>
 
                   {/* Jobs for this day */}
                   <div className="flex-1 space-y-0.5 overflow-hidden">
@@ -355,18 +481,21 @@ export default function MonthCalendar({
                     isSameDay(new Date(job.startDateTime), day),
                   ).length;
 
-                  const unavailabilityInfoList = showAvailability
-                    ? technicians
-                        .map((tech) => ({
-                          tech,
-                          info: getTechnicianUnavailabilityInfo(
-                            availability,
-                            tech.id,
-                            day,
-                          ),
-                        }))
-                        .filter((item) => item.info.isUnavailable === true)
-                    : [];
+                  const dateKey = format(day, "yyyy-MM-dd");
+                  const dayTimeOff = timeOffByDate[dateKey] || [];
+                  const timeOffCount = dayTimeOff.length;
+
+                  // Availability is always shown
+                  const unavailabilityInfoList = technicians
+                    .map((tech) => ({
+                      tech,
+                      info: getTechnicianUnavailabilityInfo(
+                        availability,
+                        tech.id,
+                        day,
+                      ),
+                    }))
+                    .filter((item) => item.info.isUnavailable === true);
 
                   const tooltipText = unavailabilityInfoList
                     .map((item) => `${item.tech.name}: ${item.info.reason}`)
@@ -407,10 +536,6 @@ export default function MonthCalendar({
                           !isEqual(day, selectedDay) && "hover:bg-muted",
                           (isEqual(day, selectedDay) || isToday(day)) &&
                             "font-semibold",
-                          showAvailability &&
-                            unavailabilityInfoList.length > 0 &&
-                            !isEqual(day, selectedDay) &&
-                            "border-destructive hover:bg-destructive/10 border-2",
                         )}
                       >
                         <time
@@ -441,12 +566,73 @@ export default function MonthCalendar({
                           </div>
                         )}
 
-                        {showAvailability &&
-                          unavailabilityInfoList.length > 0 && (
-                            <div className="absolute top-1 right-1 sm:top-2 sm:right-2">
-                              <div className="bg-destructive h-2 w-2 rounded-full shadow-sm sm:h-2.5 sm:w-2.5" />
-                            </div>
+                        {/* Indicator dots - top-right corner */}
+                        <div className="absolute top-1 right-1 flex items-center gap-0.5 sm:top-2 sm:right-2 sm:gap-1">
+                          {/* Unavailability dot (red) */}
+                          {unavailabilityInfoList.length > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="relative">
+                                  <div className="bg-destructive h-2 w-2 rounded-full shadow-sm animate-pulse sm:h-2.5 sm:w-2.5" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-2 text-xs">
+                                  <div className="font-semibold">Unavailability</div>
+                                  {unavailabilityInfoList.map(({ tech, info }) => (
+                                    <div key={tech.id}>
+                                      <div className="font-medium">{tech.name}</div>
+                                      <div className="text-muted-foreground">
+                                        {info.type === "full-day"
+                                          ? "All day"
+                                          : formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
+                                      </div>
+                                      {info.reason && (
+                                        <div className="text-muted-foreground">{info.reason}</div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
                           )}
+
+                          {/* Time-off dot (blue) */}
+                          {timeOffCount > 0 && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div className="relative">
+                                  <div className="bg-blue-500 h-2 w-2 rounded-full shadow-sm animate-pulse sm:h-2.5 sm:w-2.5" />
+                                </div>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="max-w-xs">
+                                <div className="space-y-2 text-xs">
+                                  <div className="font-semibold">Time Off</div>
+                                  {dayTimeOff.map((request) => {
+                                    const technician = technicians.find(t => t.id === request.technicianId);
+                                    const startDateStr = typeof request.startDate === 'string'
+                                      ? (request.startDate.split('T')[0] || request.startDate)
+                                      : format(request.startDate, "yyyy-MM-dd");
+                                    const endDateStr = typeof request.endDate === 'string'
+                                      ? (request.endDate.split('T')[0] || request.endDate)
+                                      : format(request.endDate, "yyyy-MM-dd");
+                                    const startDate = formatDateStringUTC(startDateStr);
+                                    const endDate = formatDateStringUTC(endDateStr);
+                                    return (
+                                      <div key={request._id as string}>
+                                        <div className="font-medium">{technician?.name || "Unknown"}</div>
+                                        <div className="text-muted-foreground">
+                                          {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
+                                        </div>
+                                        <div className="text-muted-foreground">{request.reason}</div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
 
                         {isToday(day) && !isEqual(day, selectedDay) && (
                           <div className="border-primary pointer-events-none absolute inset-0 rounded-lg border-2"></div>
@@ -461,52 +647,52 @@ export default function MonthCalendar({
             {/* Selected Day Jobs List - Mobile */}
             <section className="min-w-0">
               <div className="sticky top-0 z-20 min-w-0 overflow-hidden">
-                {showAvailability &&
-                  (() => {
-                    const dayUnavailability = technicians
-                      .map((tech) => ({
-                        tech,
-                        info: getTechnicianUnavailabilityInfo(
-                          availability,
-                          tech.id,
-                          selectedDay,
-                        ),
-                      }))
-                      .filter((item) => item.info.isUnavailable === true);
+                {(() => {
+                  // Availability is always shown
+                  const dayUnavailability = technicians
+                    .map((tech) => ({
+                      tech,
+                      info: getTechnicianUnavailabilityInfo(
+                        availability,
+                        tech.id,
+                        selectedDay,
+                      ),
+                    }))
+                    .filter((item) => item.info.isUnavailable === true);
 
-                    return dayUnavailability.length > 0 ? (
-                      <Card className="border-l-destructive bg-destructive/10 mb-3 border-l-4">
-                        <CardContent className="p-3">
-                          <h3 className="text-destructive-foreground mb-2 text-xs font-semibold">
-                            ⚠️ Unavailability
-                          </h3>
-                          <div className="space-y-1">
-                            {dayUnavailability.map(({ tech, info }) => (
-                              <div
-                                key={tech.id}
-                                className="text-destructive-foreground text-xs"
-                              >
-                                <span className="font-medium">{tech.name}</span>
-                                {info.type === "full-day" ? (
-                                  <span className="text-destructive/80 ml-2">
-                                    - All day
-                                  </span>
-                                ) : (
-                                  <span className="text-destructive/80 ml-2">
-                                    -{" "}
-                                    {formatTimeRange12hr(
-                                      info.startTime || "00:00",
-                                      info.endTime || "23:59",
-                                    )}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ) : null;
-                  })()}
+                  return dayUnavailability.length > 0 ? (
+                    <Card className="border-l-destructive bg-destructive/10 mb-3 border-l-4">
+                      <CardContent className="p-3">
+                        <h3 className="text-destructive-foreground mb-2 text-xs font-semibold">
+                          ⚠️ Unavailability
+                        </h3>
+                        <div className="space-y-1">
+                          {dayUnavailability.map(({ tech, info }) => (
+                            <div
+                              key={tech.id}
+                              className="text-destructive-foreground text-xs"
+                            >
+                              <span className="font-medium">{tech.name}</span>
+                              {info.type === "full-day" ? (
+                                <span className="text-destructive/80 ml-2">
+                                  - All day
+                                </span>
+                              ) : (
+                                <span className="text-destructive/80 ml-2">
+                                  -{" "}
+                                  {formatTimeRange12hr(
+                                    info.startTime || "00:00",
+                                    info.endTime || "23:59",
+                                  )}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ) : null;
+                })()}
 
                 <div className="bg-card border-border mb-3 border-b pb-3">
                   <h2 className="text-foreground flex items-center justify-between gap-2 text-sm font-semibold">
@@ -528,6 +714,49 @@ export default function MonthCalendar({
                   </h2>
                 </div>
               </div>
+              
+              {/* Time-off requests for selected day */}
+              {selectedDayTimeOff.length > 0 && (
+                <Card className="border-l-blue-500 bg-blue-500/10 mb-3 border-l-4">
+                  <CardContent className="p-3">
+                    <h3 className="text-blue-600 dark:text-blue-400 mb-2 text-xs font-semibold flex items-center gap-1">
+                      <CalendarDays className="h-4 w-4" />
+                      Time Off
+                    </h3>
+                    <div className="space-y-1">
+                      {selectedDayTimeOff.map((request) => {
+                        const technician = technicians.find(
+                          (tech) => tech.id === request.technicianId,
+                        );
+                        // Format dates using UTC to avoid timezone issues
+                        const startDateStr = typeof request.startDate === 'string'
+                          ? (request.startDate.split('T')[0] || request.startDate)
+                          : format(request.startDate, "yyyy-MM-dd");
+                        const endDateStr = typeof request.endDate === 'string'
+                          ? (request.endDate.split('T')[0] || request.endDate)
+                          : format(request.endDate, "yyyy-MM-dd");
+                        const startDate = formatDateStringUTC(startDateStr);
+                        const endDate = formatDateStringUTC(endDateStr);
+                        return (
+                          <div
+                            key={request._id as string}
+                            className="text-blue-600 dark:text-blue-400 text-xs"
+                          >
+                            <span className="font-medium">{technician?.name || "Unknown"}</span>
+                            <span className="text-blue-500/80 ml-2">
+                              {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
+                            </span>
+                            <div className="text-blue-500/80 ml-0 mt-0.5">
+                              - {request.reason}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               <ul className="flex min-w-0 flex-col gap-2 overflow-hidden sm:gap-3">
                 {selectedDayJobs.length > 0 ? (
                   selectedDayJobs.map((job) => (

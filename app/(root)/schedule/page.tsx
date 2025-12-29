@@ -1,7 +1,7 @@
-import { fetchHolidays, fetchTechnicianAvailability } from "../../lib/data";
+import { fetchHolidays, fetchTechnicianAvailability, fetchTimeOffRequests } from "../../lib/data";
 import { fetchAllScheduledJobsWithShifts } from "../../lib/scheduleAndShifts";
 import { auth } from "@clerk/nextjs/server";
-import { ScheduleType } from "../../../app/lib/typeDefinitions";
+import { ScheduleType, TimeOffRequestType } from "../../../app/lib/typeDefinitions";
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
 
@@ -19,13 +19,14 @@ const Schedule = async ({
 
   // Fetch all data in parallel for better performance
   // Invoices are now lazy-loaded in AddJob modal via TanStack Query
-  const [scheduledJobsResult, holidays, availability, authResult, technicians] =
+  const [scheduledJobsResult, holidays, availability, authResult, technicians, timeOffRequests] =
     await Promise.all([
       fetchAllScheduledJobsWithShifts(),
       fetchHolidays(),
       fetchTechnicianAvailability(),
       auth(),
       getTechnicians(),
+      fetchTimeOffRequests("approved"),
     ]);
 
   let scheduledJobs: ScheduleType[] = scheduledJobsResult;
@@ -48,6 +49,7 @@ const Schedule = async ({
           holidays={holidays}
           technicians={technicians}
           availability={availability}
+          timeOffRequests={timeOffRequests}
           initialView={view}
           initialDate={date}
         />
