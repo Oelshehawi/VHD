@@ -11,7 +11,6 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { DatePickerWithTime } from "../ui/date-picker-with-time";
 import {
   Select,
@@ -56,6 +55,8 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
       assignedTechnicians: job.assignedTechnicians,
       technicianNotes: job.technicianNotes || "",
       hours: job.hours || 4,
+      onSiteContact: job.onSiteContact || { name: "", phone: "", email: "" },
+      accessInstructions: job.accessInstructions || "",
     },
   });
 
@@ -108,6 +109,8 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
         assignedTechnicians: trimmedData.assignedTechnicians,
         technicianNotes: trimmedData.technicianNotes,
         hours: trimmedData.hours,
+        onSiteContact: trimmedData.onSiteContact,
+        accessInstructions: trimmedData.accessInstructions,
       });
 
       // Refresh the server component to get fresh data
@@ -124,21 +127,25 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
   };
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Edit Job</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          {/* Job Title */}
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Job Details Section */}
+      <div className="space-y-4">
+        <h3 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+          Job Details
+        </h3>
+
+        {/* Job Title & Location - 2 columns */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="jobTitle">
+            <Label htmlFor="editJobTitle">
               Job Title <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="jobTitle"
+              id="editJobTitle"
               type="text"
-              {...register("jobTitle", { required: "Job Title is required" })}
+              {...register("jobTitle", {
+                required: "Job Title is required",
+              })}
               className={errors.jobTitle ? "border-destructive" : ""}
             />
             {errors.jobTitle && (
@@ -148,15 +155,16 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
             )}
           </div>
 
-          {/* Location */}
           <div className="space-y-2">
-            <Label htmlFor="location">
+            <Label htmlFor="editLocation">
               Location <span className="text-destructive">*</span>
             </Label>
             <Input
-              id="location"
+              id="editLocation"
               type="text"
-              {...register("location", { required: "Location is required" })}
+              {...register("location", {
+                required: "Location is required",
+              })}
               className={errors.location ? "border-destructive" : ""}
             />
             {errors.location && (
@@ -165,100 +173,194 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
               </p>
             )}
           </div>
+        </div>
 
-          {/* Start Date & Time */}
-          <div className="space-y-2">
-            <Label htmlFor="startDateTime">
-              Start Date & Time <span className="text-destructive">*</span>
-            </Label>
-            <DatePickerWithTime
-              date={
-                startDateTime instanceof Date
-                  ? startDateTime
-                  : startDateTime
-                    ? new Date(startDateTime as string)
-                    : undefined
+        {/* Start Date & Time - Full Width */}
+        <div className="space-y-2">
+          <Label htmlFor="editStartDateTime">
+            Start Date & Time <span className="text-destructive">*</span>
+          </Label>
+          <DatePickerWithTime
+            date={
+              startDateTime instanceof Date
+                ? startDateTime
+                : startDateTime
+                  ? new Date(startDateTime as string)
+                  : undefined
+            }
+            onSelect={(date) => {
+              if (date) {
+                setValue("startDateTime", date, { shouldValidate: true });
+                clearErrors("startDateTime");
               }
-              onSelect={(date) => {
-                if (date) {
-                  setValue("startDateTime", date, { shouldValidate: true });
-                  clearErrors("startDateTime");
-                }
-              }}
-              datePlaceholder="Select date"
-              timePlaceholder="Select time"
-              dateId="startDate"
-              timeId="startTime"
+            }}
+            datePlaceholder="Select date"
+            timePlaceholder="Select time"
+            dateId="editStartDate"
+            timeId="editStartTime"
+          />
+          {errors.startDateTime && (
+            <p className="text-destructive text-sm">
+              Start Date & Time is required
+            </p>
+          )}
+        </div>
+
+        {/* Estimated Duration - Full Width */}
+        <div className="space-y-2">
+          <Label htmlFor="editHours">
+            Estimated Duration
+            <span className="text-muted-foreground ml-2 text-xs font-normal">
+              (from invoice)
+            </span>
+          </Label>
+          <Controller
+            control={control}
+            name="hours"
+            render={({ field }) => (
+              <Select
+                value={String(field.value || 4)}
+                onValueChange={(value) => field.onChange(Number(value))}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select duration" />
+                </SelectTrigger>
+                <SelectContent>
+                  {HOURS_OPTIONS.map((h) => (
+                    <SelectItem key={h} value={String(h)}>
+                      {h} hours
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          />
+        </div>
+
+        {/* Technicians - Full Width */}
+        <div className="space-y-2">
+          <Label htmlFor="editTechnicians">Assign Technicians</Label>
+          <TechnicianSelect
+            control={control}
+            name="assignedTechnicians"
+            technicians={technicians}
+            placeholder="Select technicians..."
+            error={errors.assignedTechnicians}
+            theme="light"
+          />
+        </div>
+      </div>
+
+      {/* Site Access Info Section */}
+      <div className="space-y-4 border-t pt-4">
+        <h3 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+          Site Access Info
+        </h3>
+
+        {/* Contact Name & Phone - 2 columns */}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="editContactName">
+              Contact Name <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="editContactName"
+              {...register("onSiteContact.name", {
+                required: "Contact Name is required",
+              })}
+              placeholder="John Smith"
+              className={errors.onSiteContact?.name ? "border-destructive" : ""}
             />
-            {errors.startDateTime && (
+            {errors.onSiteContact?.name && (
               <p className="text-destructive text-sm">
-                Start Date & Time is required
+                {errors.onSiteContact.name.message}
               </p>
             )}
           </div>
 
-          {/* Estimated Duration */}
           <div className="space-y-2">
-            <Label htmlFor="hours">Estimated Duration</Label>
-            <Controller
-              control={control}
-              name="hours"
-              render={({ field }) => (
-                <Select
-                  value={String(field.value || 4)}
-                  onValueChange={(value) => field.onChange(Number(value))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {HOURS_OPTIONS.map((h) => (
-                      <SelectItem key={h} value={String(h)}>
-                        {h} hours
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
+            <Label htmlFor="editContactPhone">
+              Phone <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="editContactPhone"
+              {...register("onSiteContact.phone", {
+                required: "Phone number is required",
+              })}
+              placeholder="604-555-1234"
+              type="tel"
+              className={
+                errors.onSiteContact?.phone ? "border-destructive" : ""
+              }
             />
+            {errors.onSiteContact?.phone && (
+              <p className="text-destructive text-sm">
+                {errors.onSiteContact.phone.message}
+              </p>
+            )}
           </div>
+        </div>
 
-          {/* Assigned Technicians */}
-          <div className="space-y-2">
-            <Label htmlFor="technicians">Assign Technicians</Label>
-            <TechnicianSelect
-              control={control}
-              name="assignedTechnicians"
-              technicians={technicians}
-              placeholder="Select technicians..."
-              error={errors.assignedTechnicians}
-              theme="light"
-            />
-          </div>
+        {/* Email - Full Width */}
+        <div className="space-y-2">
+          <Label htmlFor="editContactEmail">Email (optional)</Label>
+          <Input
+            id="editContactEmail"
+            {...register("onSiteContact.email")}
+            placeholder="contact@example.com"
+            type="email"
+          />
+        </div>
 
-          {/* Technician Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="technicianNotes">Technician Notes</Label>
-            <Textarea
-              id="technicianNotes"
-              {...register("technicianNotes")}
-              rows={4}
-              placeholder="Enter any notes about this job (equipment, access instructions, etc.)"
-            />
-          </div>
+        {/* Access Instructions - Full Width */}
+        <div className="space-y-2">
+          <Label htmlFor="editAccessInstructions">
+            Access Instructions <span className="text-destructive">*</span>
+          </Label>
+          <Textarea
+            id="editAccessInstructions"
+            {...register("accessInstructions", {
+              required: "Access Instructions are required",
+            })}
+            rows={2}
+            placeholder="e.g., Use back entrance, gate code is 1234, ask for manager on duty"
+            className={errors.accessInstructions ? "border-destructive" : ""}
+          />
+          {errors.accessInstructions && (
+            <p className="text-destructive text-sm">
+              {errors.accessInstructions.message as string}
+            </p>
+          )}
+        </div>
+      </div>
 
-          {/* Action Buttons */}
-          <div className="border-border flex justify-end gap-3 border-t pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
-        </form>
-      </CardContent>
-    </Card>
+      {/* Notes Section */}
+      <div className="space-y-4 border-t pt-4">
+        <h3 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+          Notes
+        </h3>
+
+        <div className="space-y-2">
+          <Label htmlFor="editTechnicianNotes">Technician Notes</Label>
+          <Textarea
+            id="editTechnicianNotes"
+            {...register("technicianNotes")}
+            rows={3}
+            placeholder="Enter any notes about this job (equipment, etc.)"
+          />
+        </div>
+      </div>
+
+      {/* Action Buttons */}
+      <div className="border-border flex justify-end gap-3 border-t pt-4">
+        <Button type="button" variant="outline" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isLoading}>
+          {isLoading ? "Saving..." : "Save Changes"}
+        </Button>
+      </div>
+    </form>
   );
 };
 

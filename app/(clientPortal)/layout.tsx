@@ -10,6 +10,10 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Client Portal - VHD Power System Inspection",
   description: "Access your VHD services and reports",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default async function ClientPortalLayout({

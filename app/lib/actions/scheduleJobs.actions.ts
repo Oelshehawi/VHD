@@ -334,6 +334,8 @@ export const updateJob = async ({
   assignedTechnicians,
   technicianNotes,
   hours,
+  onSiteContact,
+  accessInstructions,
 }: {
   scheduleId: string;
   jobTitle: string;
@@ -342,6 +344,8 @@ export const updateJob = async ({
   assignedTechnicians: string[];
   technicianNotes?: string;
   hours?: number;
+  onSiteContact?: { name: string; phone: string; email?: string };
+  accessInstructions?: string;
 }) => {
   await connectMongo();
   try {
@@ -366,6 +370,8 @@ export const updateJob = async ({
       assignedTechnicians,
       payrollPeriod: payrollPeriod?._id,
       technicianNotes,
+      onSiteContact,
+      accessInstructions,
     };
 
     // Only include hours if provided

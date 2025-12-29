@@ -39,6 +39,8 @@ export const fetchAllScheduledJobsWithShifts = async (): Promise<
       payrollPeriod: job.payrollPeriod ? job.payrollPeriod.toString() : "",
       deadRun: job.deadRun,
       technicianNotes: job.technicianNotes,
+      onSiteContact: job.onSiteContact || undefined,
+      accessInstructions: job.accessInstructions || undefined,
       photos: job.photos
         ? job.photos.map((photo: any) => ({
             _id: photo._id.toString(),
@@ -213,6 +215,8 @@ export const fetchSchedulesForTechnician = async (
       : "",
     deadRun: schedule.deadRun,
     technicianNotes: schedule.technicianNotes,
+    onSiteContact: schedule.onSiteContact || undefined,
+    accessInstructions: schedule.accessInstructions || undefined,
     photos: schedule.photos
       ? schedule.photos.map((photo: any) => ({
           _id: photo._id.toString(),

@@ -26,6 +26,12 @@ export interface ShiftType {
   hoursWorked: number;
 }
 
+export interface OnSiteContactType {
+  name: string;
+  phone: string;
+  email?: string;
+}
+
 export interface PendingInvoiceType {
   _id: ObjectId | string;
   invoiceId: string;
@@ -52,6 +58,8 @@ export interface ScheduleType {
   technicianNotes?: string;
   signature?: SignatureType;
   photos?: PhotoType[];
+  onSiteContact?: OnSiteContactType;
+  accessInstructions?: string;
 }
 
 export interface TechnicianLocationType {

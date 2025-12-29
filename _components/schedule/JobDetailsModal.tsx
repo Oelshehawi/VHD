@@ -20,6 +20,8 @@ import {
   Camera,
   FileText,
   Pencil,
+  Phone,
+  KeyRound,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
@@ -381,6 +383,57 @@ export default function JobDetailsModal({
                     </h4>
                     <p className="text-muted-foreground text-sm whitespace-pre-wrap">
                       {job.technicianNotes}
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* On-Site Contact */}
+              {(job.onSiteContact?.name || job.onSiteContact?.phone) && (
+                <Card className="bg-primary/5 gap-0 py-0">
+                  <CardContent className="p-4">
+                    <h4 className="text-primary mb-2 flex items-center font-medium">
+                      <Phone className="mr-2 h-4 w-4" />
+                      On-Site Contact
+                    </h4>
+                    <div className="space-y-2">
+                      {job.onSiteContact.name && (
+                        <p className="text-foreground text-sm font-medium">
+                          {job.onSiteContact.name}
+                        </p>
+                      )}
+                      {job.onSiteContact.phone && (
+                        <a
+                          href={`tel:${job.onSiteContact.phone}`}
+                          className="text-primary inline-flex items-center text-sm hover:underline"
+                        >
+                          <Phone className="mr-1 h-3 w-3" />
+                          {job.onSiteContact.phone}
+                        </a>
+                      )}
+                      {job.onSiteContact.email && (
+                        <a
+                          href={`mailto:${job.onSiteContact.email}`}
+                          className="text-primary block text-sm hover:underline"
+                        >
+                          {job.onSiteContact.email}
+                        </a>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Access Instructions */}
+              {job.accessInstructions && (
+                <Card className="bg-amber-500/10 gap-0 py-0">
+                  <CardContent className="p-4">
+                    <h4 className="mb-2 flex items-center font-medium text-amber-700 dark:text-amber-400">
+                      <KeyRound className="mr-2 h-4 w-4" />
+                      Access Instructions
+                    </h4>
+                    <p className="text-muted-foreground text-sm whitespace-pre-wrap">
+                      {job.accessInstructions}
                     </p>
                   </CardContent>
                 </Card>

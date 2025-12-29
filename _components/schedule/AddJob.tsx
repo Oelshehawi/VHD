@@ -80,6 +80,8 @@ const AddJob = ({
       confirmed: false,
       technicianNotes: "",
       hours: 4,
+      onSiteContact: { name: "", phone: "", email: "" },
+      accessInstructions: "",
     },
     mode: "onChange",
   });
@@ -124,7 +126,7 @@ const AddJob = ({
       setValue("hours", estimatedHours);
     }
 
-    // Check for previous jobs with the same title and grab technician notes if available
+    // Check for previous jobs with the same title and grab technician notes + contact info if available
     if (scheduledJobs && scheduledJobs.length > 0 && invoice.jobTitle) {
       // Sort jobs by startDateTime descending to get the most recent one first
       const sortedJobs = [...scheduledJobs]
@@ -135,9 +137,21 @@ const AddJob = ({
           return dateB - dateA; // Most recent first
         });
 
-      // If we found a previous job with the same title that has technician notes
-      if (sortedJobs.length > 0 && sortedJobs[0]?.technicianNotes) {
-        setValue("technicianNotes", sortedJobs[0].technicianNotes);
+      // If we found a previous job with the same title
+      if (sortedJobs.length > 0) {
+        const prevJob = sortedJobs[0];
+        if (prevJob?.technicianNotes) {
+          setValue("technicianNotes", prevJob.technicianNotes);
+        }
+        // Auto-populate on-site contact from previous job
+        if (prevJob?.onSiteContact?.name || prevJob?.onSiteContact?.phone) {
+          setValue("onSiteContact", prevJob.onSiteContact);
+          clearErrors(["onSiteContact.name", "onSiteContact.phone"]);
+        }
+        if (prevJob?.accessInstructions) {
+          setValue("accessInstructions", prevJob.accessInstructions);
+          clearErrors("accessInstructions");
+        }
       }
     }
   };
@@ -190,26 +204,9 @@ const AddJob = ({
     }
   };
 
-  const formFields = [
-    {
-      name: "jobTitle",
-      placeholder: "Job Title",
-      type: "text",
-      isRequired: true,
-      icon: "📋",
-    },
-    {
-      name: "location",
-      placeholder: "Location",
-      type: "text",
-      isRequired: true,
-      icon: "📍",
-    },
-  ];
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Job</DialogTitle>
           <DialogDescription>
@@ -219,153 +216,266 @@ const AddJob = ({
 
         {/* Form */}
         <form
-          className="flex flex-col gap-4"
+          className="flex flex-col gap-6"
           onSubmit={handleSubmit(handleSave)}
         >
-          {/* Invoice SearchSelect */}
-          <div className="space-y-2">
-            <Label htmlFor="invoice">
-              Select Invoice<span className="text-destructive">*</span>
-            </Label>
-            {isLoadingInvoices ? (
-              <div className="flex h-10 items-center justify-center rounded-md border">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                <span className="text-muted-foreground ml-2 text-sm">
-                  Loading invoices...
-                </span>
-              </div>
-            ) : (
-              <InvoiceSearchSelect
-                invoices={invoices as InvoiceType[]}
-                onSelect={handleInvoiceSelect}
-                error={errors.invoiceRef}
-                resetKey={resetKey}
-              />
-            )}
-            {errors.invoiceRef && (
-              <p className="text-destructive text-sm">Invoice is required</p>
-            )}
-          </div>
+          {/* Job Details Section */}
+          <div className="space-y-4">
+            <h3 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+              Job Details
+            </h3>
 
-          {/* Other Input Fields */}
-          {formFields.map(({ name, placeholder, type, isRequired }) => (
-            <div className="space-y-2" key={name}>
-              <Label htmlFor={name}>
-                {placeholder}
-                {isRequired && <span className="text-destructive">*</span>}
+            {/* Invoice SearchSelect - Full Width */}
+            <div className="space-y-2">
+              <Label htmlFor="invoice">
+                Select Invoice<span className="text-destructive">*</span>
               </Label>
-              <Input
-                id={name}
-                {...register(name as "jobTitle" | "location", {
-                  required: isRequired,
-                })}
-                type={type}
-                placeholder={placeholder}
-                className={
-                  errors[name as "jobTitle" | "location"]
-                    ? "border-destructive"
-                    : ""
+              {isLoadingInvoices ? (
+                <div className="flex h-10 items-center justify-center rounded-md border">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <span className="text-muted-foreground ml-2 text-sm">
+                    Loading invoices...
+                  </span>
+                </div>
+              ) : (
+                <InvoiceSearchSelect
+                  invoices={invoices as InvoiceType[]}
+                  onSelect={handleInvoiceSelect}
+                  error={errors.invoiceRef}
+                  resetKey={resetKey}
+                />
+              )}
+              {errors.invoiceRef && (
+                <p className="text-destructive text-sm">Invoice is required</p>
+              )}
+            </div>
+
+            {/* Job Title & Location - 2 columns */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="jobTitle">
+                  Job Title<span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="jobTitle"
+                  {...register("jobTitle", { required: true })}
+                  type="text"
+                  placeholder="Job Title"
+                  className={errors.jobTitle ? "border-destructive" : ""}
+                />
+                {errors.jobTitle && (
+                  <p className="text-destructive text-sm">
+                    Job Title is required
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="location">
+                  Location<span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="location"
+                  {...register("location", { required: true })}
+                  type="text"
+                  placeholder="Location"
+                  className={errors.location ? "border-destructive" : ""}
+                />
+                {errors.location && (
+                  <p className="text-destructive text-sm">
+                    Location is required
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Start Date & Time - Full Width */}
+            <div className="space-y-2">
+              <Label htmlFor="startDateTime">
+                Start Date & Time
+                <span className="text-destructive">*</span>
+              </Label>
+              <DatePickerWithTime
+                date={
+                  startDateTime instanceof Date
+                    ? startDateTime
+                    : startDateTime
+                      ? new Date(startDateTime)
+                      : undefined
                 }
+                onSelect={(date) => {
+                  if (date) {
+                    setValue("startDateTime", date, { shouldValidate: true });
+                    clearErrors("startDateTime");
+                  } else {
+                    // Clear the value - set to empty string for validation
+                    setValue("startDateTime", "" as Date | string, {
+                      shouldValidate: true,
+                    });
+                  }
+                }}
+                datePlaceholder="Select date"
+                timePlaceholder="Select time"
+                dateId="startDate"
+                timeId="startTime"
               />
-              {errors[name as "jobTitle" | "location"]?.type === "required" && (
+              {errors.startDateTime && (
                 <p className="text-destructive text-sm">
-                  {placeholder} is required
+                  Start Date & Time is required
                 </p>
               )}
             </div>
-          ))}
 
-          {/* Date & Time Picker */}
-          <div className="space-y-2">
-            <Label htmlFor="startDateTime">
-              Start Date & Time
-              <span className="text-destructive">*</span>
-            </Label>
-            <DatePickerWithTime
-              date={
-                startDateTime instanceof Date
-                  ? startDateTime
-                  : startDateTime
-                    ? new Date(startDateTime)
-                    : undefined
-              }
-              onSelect={(date) => {
-                if (date) {
-                  setValue("startDateTime", date, { shouldValidate: true });
-                  clearErrors("startDateTime");
-                } else {
-                  // Clear the value - set to empty string for validation
-                  setValue("startDateTime", "" as Date | string, {
-                    shouldValidate: true,
-                  });
+            {/* Estimated Duration - Full Width */}
+            <div className="space-y-2">
+              <Label htmlFor="hours">
+                Estimated Duration
+                <span className="text-muted-foreground ml-2 text-xs font-normal">
+                  (from invoice)
+                </span>
+              </Label>
+              <Controller
+                control={control}
+                name="hours"
+                render={({ field }) => (
+                  <Select
+                    value={String(field.value || 4)}
+                    onValueChange={(value) => field.onChange(Number(value))}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {HOURS_OPTIONS.map((h) => (
+                        <SelectItem key={h} value={String(h)}>
+                          {h} hours
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            {/* Technicians - Full Width */}
+            <div className="space-y-2">
+              <Label htmlFor="technicians">Assign Technicians</Label>
+              <TechnicianSelect
+                control={control}
+                name="assignedTechnicians"
+                technicians={technicians}
+                placeholder="Select technicians..."
+                error={errors.assignedTechnicians}
+              />
+            </div>
+          </div>
+
+          {/* Site Access Info Section */}
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+              Site Access Info
+            </h3>
+
+            {/* Contact Name & Phone - 2 columns */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="contactName">
+                  Contact Name<span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="contactName"
+                  {...register("onSiteContact.name", {
+                    required: "Contact Name is required",
+                  })}
+                  placeholder="John Smith"
+                  className={
+                    errors.onSiteContact?.name ? "border-destructive" : ""
+                  }
+                />
+                {errors.onSiteContact?.name && (
+                  <p className="text-destructive text-sm">
+                    {errors.onSiteContact.name.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="contactPhone">
+                  Phone<span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="contactPhone"
+                  {...register("onSiteContact.phone", {
+                    required: "Phone number is required",
+                  })}
+                  placeholder="604-555-1234"
+                  type="tel"
+                  className={
+                    errors.onSiteContact?.phone ? "border-destructive" : ""
+                  }
+                />
+                {errors.onSiteContact?.phone && (
+                  <p className="text-destructive text-sm">
+                    {errors.onSiteContact.phone.message}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Email - Full Width */}
+            <div className="space-y-2">
+              <Label htmlFor="contactEmail">Email (optional)</Label>
+              <Input
+                id="contactEmail"
+                {...register("onSiteContact.email")}
+                placeholder="contact@example.com"
+                type="email"
+              />
+            </div>
+
+            {/* Access Instructions - Full Width */}
+            <div className="space-y-2">
+              <Label htmlFor="accessInstructions">
+                Access Instructions<span className="text-destructive">*</span>
+              </Label>
+              <Textarea
+                id="accessInstructions"
+                {...register("accessInstructions", {
+                  required: "Access Instructions are required",
+                })}
+                rows={2}
+                placeholder="e.g., Use back entrance, gate code is 1234, ask for manager on duty"
+                className={
+                  errors.accessInstructions ? "border-destructive" : ""
                 }
-              }}
-              datePlaceholder="Select date"
-              timePlaceholder="Select time"
-              dateId="startDate"
-              timeId="startTime"
-            />
-            {errors.startDateTime && (
-              <p className="text-destructive text-sm">
-                Start Date & Time is required
-              </p>
-            )}
-          </div>
-
-          {/* Estimated Duration */}
-          <div className="space-y-2">
-            <Label htmlFor="hours">Estimated Duration</Label>
-            <Controller
-              control={control}
-              name="hours"
-              render={({ field }) => (
-                <Select
-                  value={String(field.value || 4)}
-                  onValueChange={(value) => field.onChange(Number(value))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {HOURS_OPTIONS.map((h) => (
-                      <SelectItem key={h} value={String(h)}>
-                        {h} hours
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              />
+              {errors.accessInstructions && (
+                <p className="text-destructive text-sm">
+                  {errors.accessInstructions.message}
+                </p>
               )}
-            />
-            <p className="text-muted-foreground text-xs">
-              Auto-calculated from invoice price. You can override if needed.
-            </p>
+            </div>
           </div>
 
-          {/* Technician Select */}
-          <div className="space-y-2">
-            <Label htmlFor="technicians">Assign Technicians</Label>
-            <TechnicianSelect
-              control={control}
-              name="assignedTechnicians"
-              technicians={technicians}
-              placeholder="Select technicians..."
-              error={errors.assignedTechnicians}
-            />
-          </div>
+          {/* Notes Section */}
+          <div className="space-y-4 border-t pt-4">
+            <h3 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+              Notes
+            </h3>
 
-          {/* Technician Notes */}
-          <div className="space-y-2">
-            <Label htmlFor="technicianNotes">Technician Notes</Label>
-            <Textarea
-              id="technicianNotes"
-              {...register("technicianNotes")}
-              rows={4}
-              placeholder="Enter any notes about this job (equipment, access instructions, etc.)"
-            />
+            <div className="space-y-2">
+              <Label htmlFor="technicianNotes">Technician Notes</Label>
+              <Textarea
+                id="technicianNotes"
+                {...register("technicianNotes")}
+                rows={3}
+                placeholder="Enter any notes about this job (equipment, etc.)"
+              />
+            </div>
           </div>
 
           {/* Submit Button */}
-          <div className="mt-2 flex justify-end">
+          <div className="flex justify-end border-t pt-4">
             <Button type="submit" disabled={isLoading || !isValid}>
               {isLoading ? "Submitting..." : "Add Job"}
             </Button>

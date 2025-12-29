@@ -12,8 +12,16 @@ import { AppSidebar } from "../../_components/app-sidebar";
 import { SidebarInset, SidebarProvider } from "../../_components/ui/sidebar";
 import { TopBar } from "../../_components/layout/TopBar";
 import { BreadcrumbNameProvider } from "../../_components/layout/BreadcrumbNameProvider";
+import type { Metadata } from "next";
 
 const inter = Inter({ subsets: ["latin"] });
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+  },
+};
 
 export default async function RootLayout({
   children,
