@@ -16,6 +16,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/send-invoice(.*)",
   "/api/availability",
   "/api/timeoff",
+  "/api/markChequeAsPaid",
 ]);
 
 // Define client portal routes
@@ -23,14 +24,6 @@ const isClientPortalRoute = createRouteMatcher([
   "/client-portal/((?!auth-error).*)",
 ]);
 
-// Define admin routes
-const isAdminRoute = createRouteMatcher([
-  "/dashboard(.*)",
-  "/database(.*)",
-  "/invoices",
-  "/reports(.*)",
-  "/payroll(.*)",
-]);
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();
