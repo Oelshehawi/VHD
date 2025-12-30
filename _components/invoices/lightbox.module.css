@@ -1,4 +1,13 @@
 /* Custom styles for the lightbox */
+/* Ensure lightbox appears above dialog overlay (z-50) */
+.lightboxContainer :global(.yarl__root) {
+  z-index: 60 !important;
+}
+
+.lightboxContainer :global(.yarl__container) {
+  z-index: 60 !important;
+}
+
 .lightboxContainer :global(.yarl__slide_description) {
   background: rgba(0, 0, 0, 0.6);
   padding: 8px 12px;
