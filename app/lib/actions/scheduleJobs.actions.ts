@@ -587,6 +587,21 @@ export const getReportByScheduleId = async (scheduleId: string) => {
   }
 };
 
+export const deleteReport = async (reportId: string) => {
+  await connectMongo();
+  try {
+    const deletedReport = await Report.findByIdAndDelete(reportId);
+    if (!deletedReport) {
+      throw new Error("Report not found");
+    }
+    revalidatePath("/schedule");
+    return { success: true };
+  } catch (error) {
+    console.error("Database Error:", error);
+    throw new Error("Failed to delete report");
+  }
+};
+
 export const getReportsByJobNameAndLocation = async (
   jobTitle: string,
   location: string,

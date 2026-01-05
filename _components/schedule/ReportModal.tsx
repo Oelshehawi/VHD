@@ -397,7 +397,12 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
   const currentStepIndex = steps.indexOf(step);
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
 
-  const nextStep = () => {
+  const nextStep = (e?: React.MouseEvent) => {
+    // Prevent any form submission
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const next = steps[currentStepIndex + 1];
     if (next) setStep(next);
   };
@@ -1048,7 +1053,14 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
             )}
 
             {currentStepIndex < steps.length - 1 ? (
-              <Button type="button" onClick={nextStep}>
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextStep(e);
+                }}
+              >
                 Next
               </Button>
             ) : (
