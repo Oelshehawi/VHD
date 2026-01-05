@@ -56,8 +56,10 @@ export default async function RootLayout({
                 <SidebarInset className="min-w-0">
                   <BreadcrumbNameProvider>
                     <TopBar />
-                    <div className="flex-1 overflow-auto p-4 min-w-0">
-                      <div className="flex flex-col gap-4 min-w-0">{children}</div>
+                    <div className="min-w-0 flex-1 overflow-auto p-4">
+                      <div className="flex h-full min-w-0 flex-col gap-4">
+                        {children}
+                      </div>
                     </div>
                   </BreadcrumbNameProvider>
                 </SidebarInset>

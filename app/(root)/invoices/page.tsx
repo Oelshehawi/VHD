@@ -67,12 +67,12 @@ const Invoice = async ({
   const totalPages = await fetchInvoicesPages(query, filter, sort);
   return (
     <Suspense fallback={<TableContainerSkeleton />}>
-      <div className="flex items-center justify-center">
-        <Card className="flex w-full max-w-7xl flex-col gap-8 p-8">
+      <div className="flex h-full min-h-0">
+        <Card className="flex min-h-0 w-full flex-1 flex-col gap-8 p-8">
           <AddInvoice clients={clients} />
-          <div className="flex-1 space-y-6">
+          <div className="flex min-h-0 flex-1 flex-col space-y-6">
             <InvoiceSearchBar />
-            <div className="min-w-0 flex-1">
+            <div className="min-h-0 flex-1 overflow-hidden">
               <InvoiceTable
                 query={query}
                 currentPage={currentPage}

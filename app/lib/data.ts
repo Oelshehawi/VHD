@@ -235,7 +235,7 @@ export const fetchInvoiceById = async (invoiceId: string) => {
   }
 };
 
-const ITEMS_PER_PAGE = 7;
+const ITEMS_PER_PAGE = 9;
 
 export async function fetchFilteredClients(
   query: string,
