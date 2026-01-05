@@ -95,7 +95,7 @@ const GoogleReviewCard = ({ reviewUrl }: GoogleReviewCardProps) => {
             ))}
           </motion.div>
           <p className="mb-4 text-gray-600">
-            Your feedback helps us improve our services. We'd appreciate if you
+            Your feedback helps us improve our services. We&apos;d appreciate if you
             could take a moment to share your experience.
           </p>
           <motion.a

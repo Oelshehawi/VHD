@@ -1,17 +1,13 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import PushNotificationManager from './PushNotificationManager'
 
 function InstallPrompt() {
-  const [isIOS, setIsIOS] = useState(false)
-  const [isStandalone, setIsStandalone] = useState(false)
- 
-  useEffect(() => {
-    setIsIOS(
-      /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
-    )
- 
-    setIsStandalone(window.matchMedia('(display-mode: standalone)').matches)
-  }, [])
+  const [isIOS] = useState(
+    () => typeof window !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream
+  )
+  const [isStandalone] = useState(
+    () => typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches
+  )
  
   if (isStandalone) {
     return null // Don't show install button if already installed
@@ -28,7 +24,7 @@ function InstallPrompt() {
             {' '}
             ⎋{' '}
           </span>
-          and then "Add to Home Screen"
+          and then &quot;Add to Home Screen&quot;
           <span role="img" aria-label="plus icon">
             {' '}
             ➕{' '}

@@ -228,7 +228,7 @@ export default function EditItemsTotalsDialog({
                   <div className="text-muted-foreground rounded-lg border-2 border-dashed py-8 text-center">
                     <p>No items added yet.</p>
                     <p className="mt-1 text-sm">
-                      Click "Add Item" to get started.
+                      Click &quot;Add Item&quot; to get started.
                     </p>
                   </div>
                 )}

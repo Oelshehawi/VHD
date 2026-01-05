@@ -30,7 +30,7 @@ export default async function AnalyticsPage() {
                 Access Denied
               </h2>
               <p className="text-muted-foreground">
-                You don't have the required permissions to access this page.
+                You don&apos;t have the required permissions to access this page.
               </p>
             </div>
           </CardContent>

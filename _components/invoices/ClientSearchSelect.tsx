@@ -1,8 +1,15 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { clsx } from "clsx";
 import { FaSearch } from "react-icons/fa";
 import { ClientType } from "../../app/lib/typeDefinitions";
 
+/**
+ * ClientSearchSelect - A searchable dropdown for selecting clients
+ * 
+ * Note: To reset this component's state, use the `key` prop on the parent:
+ * <ClientSearchSelect key={resetKey} ... />
+ * This leverages React's key-based reconciliation to reset all internal state.
+ */
 const ClientSearchSelect = ({
   placeholder,
   data,
@@ -10,8 +17,6 @@ const ClientSearchSelect = ({
   onSelect,
   register,
   error,
-  resetKey
-  
 }: {
   placeholder: string;
   data: ClientType[];
@@ -19,17 +24,10 @@ const ClientSearchSelect = ({
   onSelect: (client: ClientType) => void;
   register: any;
   error: any;
-  resetKey: number;
 }) => {
   const [filteredData, setFilteredData] = useState<ClientType[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [OpenDropdown, setOpenDropdown] = useState(false);
-
-  useEffect(() => {
-    setSearchTerm("");
-    setFilteredData([]);
-    setOpenDropdown(false);
-  }, [resetKey]);
 
 
   const handleSearch = (term: string) => {

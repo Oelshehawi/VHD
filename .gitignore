@@ -47,3 +47,5 @@ next-env.d.ts
 
 .cloudinary-progress.json
 certificates
+# clerk configuration (can include secrets)
+/.clerk/

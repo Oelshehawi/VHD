@@ -497,6 +497,7 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
       <Page size="A4" style={scaledStyles.page}>
         {/* Logo Watermark */}
         <View style={scaledStyles.logoContainer}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image component doesn't support alt */}
           <Image
             src="/images/logo.png"
             style={{ width: "100%", height: "100%" }}
@@ -635,7 +636,7 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
             CLIENT PORTAL ACCESS
           </Text>
           <Text style={scaledStyles.clientPortalText}>
-            Once you approve this estimate, you'll receive access to our client
+            Once you approve this estimate, you&apos;ll receive access to our client
             portal where you can:
           </Text>
           <View style={scaledStyles.clientPortalGrid}>

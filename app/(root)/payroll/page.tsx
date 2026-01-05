@@ -91,7 +91,7 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
   if (!canManage)
     return (
       <div className="text-foreground flex min-h-screen items-center justify-center text-3xl font-bold">
-        You don't have correct permissions to access this page!
+        You don&apos;t have correct permissions to access this page!
       </div>
     );
 

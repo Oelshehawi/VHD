@@ -229,6 +229,7 @@ const ReceiptPdfDocument: React.FC<ReceiptPdfDocumentProps> = ({
 
       {/* Logo */}
       <View style={styles.logoContainer}>
+        {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image component doesn't support alt */}
         <Image src="/images/logo.png" />
       </View>
 
