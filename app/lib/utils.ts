@@ -24,7 +24,6 @@ export const formatDate = (dateString: any) => {
   return `${month}/${day}/${year}`;
 };
 
-
 /**
  * Format a UTC date string in readable format exactly as stored (no timezone conversion)
  * @param dateInput - Date string in ISO format or Date object
@@ -103,7 +102,6 @@ export const formatDateStringUTC = (dateInput: string | Date): string => {
   return `${monthName} ${parseInt(day, 10)}, ${year}`;
 };
 
-
 export function formatAmount(amount: number): string {
   const formatter = new Intl.NumberFormat("en-CA", {
     style: "currency",
@@ -126,8 +124,6 @@ export const isNumberKey = (evt: any) => {
   }
   return true;
 };
-
-
 
 export const formatDateToString = (dateInput: string | Date) => {
   // Handle both string and Date inputs
@@ -262,7 +258,6 @@ export const generatePagination = (currentPage: number, totalPages: number) => {
   ];
 };
 
-
 export const calculateSubtotal = (items: any[]) =>
   items.reduce((acc, item) => acc + item.price, 0);
 
@@ -272,7 +267,6 @@ export const formatDateFns = (date: string | Date): string => {
   const parsedDate = typeof date === "string" ? new Date(date) : date;
   return format(parsedDate, "MMMM do, yyyy", { timeZone: "UTC" }); // e.g., "October 15th, 2024"
 };
-
 
 /**
  * Calculate job duration based on invoice price (business rule)
@@ -317,6 +311,20 @@ export function convertMinutesToHours(durationInMinutes: number): number {
  */
 export function minutesToPayrollHours(minutes: number): number {
   const hours = minutes / 60;
+  if (hours <= 2) return 2;
+  if (hours <= 4) return 4;
+  if (hours <= 6) return 6;
+  if (hours <= 8) return 8;
+  return 12;
+}
+
+/**
+ * Convert hours to payroll-friendly hours (2, 4, 6, 8, 12)
+ * Rounds up to the next bucket to ensure adequate time allocation
+ * @param hours - Duration in hours (can be any number)
+ * @returns Bucket value in hours (2, 4, 6, 8, or 12)
+ */
+export function hoursToPayrollHours(hours: number): number {
   if (hours <= 2) return 2;
   if (hours <= 4) return 4;
   if (hours <= 6) return 6;

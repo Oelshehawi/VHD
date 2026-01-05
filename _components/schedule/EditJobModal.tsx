@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useForm, Controller } from "react-hook-form";
 import { updateJob } from "../../app/lib/actions/scheduleJobs.actions";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
+import { hoursToPayrollHours } from "../../app/lib/utils";
 import toast from "react-hot-toast";
 import TechnicianSelect from "./TechnicianSelect";
 import { Button } from "../ui/button";
@@ -39,6 +40,18 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
     return isNaN(date.getTime()) ? undefined : date;
   };
 
+  // Round hours to a valid payroll bucket (2, 4, 6, 8, 12)
+  const getInitialHours = (): number => {
+    if (
+      job.hours !== undefined &&
+      job.hours !== null &&
+      typeof job.hours === "number"
+    ) {
+      return hoursToPayrollHours(job.hours);
+    }
+    return 4; // Default if hours doesn't exist
+  };
+
   const {
     register,
     handleSubmit,
@@ -54,7 +67,7 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
       startDateTime: getInitialDate(),
       assignedTechnicians: job.assignedTechnicians,
       technicianNotes: job.technicianNotes || "",
-      hours: job.hours || 4,
+      hours: getInitialHours(),
       onSiteContact: job.onSiteContact || { name: "", phone: "", email: "" },
       accessInstructions: job.accessInstructions || "",
     },
@@ -217,23 +230,29 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
           <Controller
             control={control}
             name="hours"
-            render={({ field }) => (
-              <Select
-                value={String(field.value || 4)}
-                onValueChange={(value) => field.onChange(Number(value))}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select duration" />
-                </SelectTrigger>
-                <SelectContent>
-                  {HOURS_OPTIONS.map((h) => (
-                    <SelectItem key={h} value={String(h)}>
-                      {h} hours
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            render={({ field }) => {
+              // Ensure the value is always a valid option
+              const currentValue = HOURS_OPTIONS.includes(field.value as any)
+                ? field.value
+                : 4;
+              return (
+                <Select
+                  value={String(currentValue)}
+                  onValueChange={(value) => field.onChange(Number(value))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select duration" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {HOURS_OPTIONS.map((h) => (
+                      <SelectItem key={h} value={String(h)}>
+                        {h} hours
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              );
+            }}
           />
         </div>
 
@@ -260,44 +279,22 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
         {/* Contact Name & Phone - 2 columns */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="editContactName">
-              Contact Name <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="editContactName">Contact Name</Label>
             <Input
               id="editContactName"
-              {...register("onSiteContact.name", {
-                required: "Contact Name is required",
-              })}
+              {...register("onSiteContact.name")}
               placeholder="John Smith"
-              className={errors.onSiteContact?.name ? "border-destructive" : ""}
             />
-            {errors.onSiteContact?.name && (
-              <p className="text-destructive text-sm">
-                {errors.onSiteContact.name.message}
-              </p>
-            )}
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="editContactPhone">
-              Phone <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="editContactPhone">Phone</Label>
             <Input
               id="editContactPhone"
-              {...register("onSiteContact.phone", {
-                required: "Phone number is required",
-              })}
+              {...register("onSiteContact.phone")}
               placeholder="604-555-1234"
               type="tel"
-              className={
-                errors.onSiteContact?.phone ? "border-destructive" : ""
-              }
             />
-            {errors.onSiteContact?.phone && (
-              <p className="text-destructive text-sm">
-                {errors.onSiteContact.phone.message}
-              </p>
-            )}
           </div>
         </div>
 
@@ -314,23 +311,13 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
 
         {/* Access Instructions - Full Width */}
         <div className="space-y-2">
-          <Label htmlFor="editAccessInstructions">
-            Access Instructions <span className="text-destructive">*</span>
-          </Label>
+          <Label htmlFor="editAccessInstructions">Access Instructions</Label>
           <Textarea
             id="editAccessInstructions"
-            {...register("accessInstructions", {
-              required: "Access Instructions are required",
-            })}
+            {...register("accessInstructions")}
             rows={2}
             placeholder="e.g., Use back entrance, gate code is 1234, ask for manager on duty"
-            className={errors.accessInstructions ? "border-destructive" : ""}
           />
-          {errors.accessInstructions && (
-            <p className="text-destructive text-sm">
-              {errors.accessInstructions.message as string}
-            </p>
-          )}
         </div>
       </div>
 

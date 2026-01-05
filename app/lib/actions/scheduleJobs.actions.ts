@@ -295,19 +295,31 @@ export const updateSchedule = async ({
   scheduleId,
   confirmed,
   deadRun,
+  onSiteContact,
+  accessInstructions,
   performedBy = "system",
 }: {
   scheduleId: string;
   confirmed?: boolean;
   deadRun?: boolean;
+  onSiteContact?: { name: string; phone: string; email?: string };
+  accessInstructions?: string;
   performedBy?: string;
 }) => {
   await connectMongo();
   try {
     // Build update object with only provided fields
-    const updateFields: { confirmed?: boolean; deadRun?: boolean } = {};
+    const updateFields: {
+      confirmed?: boolean;
+      deadRun?: boolean;
+      onSiteContact?: { name: string; phone: string; email?: string };
+      accessInstructions?: string;
+    } = {};
     if (confirmed !== undefined) updateFields.confirmed = confirmed;
     if (deadRun !== undefined) updateFields.deadRun = deadRun;
+    if (onSiteContact !== undefined) updateFields.onSiteContact = onSiteContact;
+    if (accessInstructions !== undefined)
+      updateFields.accessInstructions = accessInstructions;
 
     // Fetch the schedule to get job details for audit logging
     const schedule = await Schedule.findByIdAndUpdate(
@@ -334,6 +346,12 @@ export const updateSchedule = async ({
             ? "schedule_dead_run_marked"
             : "schedule_dead_run_cleared";
           reason = `Schedule ${deadRun ? "marked as dead run" : "dead run cleared"}`;
+        } else if (
+          onSiteContact !== undefined ||
+          accessInstructions !== undefined
+        ) {
+          action = "schedule_updated";
+          reason = "Schedule access information updated";
         } else {
           action = "schedule_updated";
           reason = "Schedule updated";
@@ -393,6 +411,8 @@ export const updateJob = async ({
   try {
     // Trim jobTitle to remove leading/trailing spaces
     const trimmedJobTitle = jobTitle.trim();
+    // Parse startDateTime - if it's an ISO string, it's already in UTC
+    // which is what MongoDB expects
     const updatedStartDate = new Date(startDateTime);
 
     // Find or create the appropriate payroll period

@@ -30,6 +30,7 @@ import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Card, CardContent } from "../ui/card";
 import { format } from "date-fns-tz";
+import JobConfirmationModal from "./JobConfirmationModal";
 
 interface JobDetailsModalProps {
   job: ScheduleType | null;
@@ -58,12 +59,22 @@ export default function JobDetailsModal({
     useState<ReportType | null>(null);
   const [isCheckingReport, setIsCheckingReport] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  // Local state mirrors for optimistic UI updates
+  const [localOnSiteContact, setLocalOnSiteContact] = useState(
+    job?.onSiteContact,
+  );
+  const [localAccessInstructions, setLocalAccessInstructions] = useState(
+    job?.accessInstructions,
+  );
 
   // Update state when job changes
   useEffect(() => {
     if (job) {
       setConfirmed(job.confirmed);
       setIsDeadRun(job.deadRun ?? false);
+      setLocalOnSiteContact(job.onSiteContact);
+      setLocalAccessInstructions(job.accessInstructions);
       setActiveView("details"); // Always start with details view
       setHasExistingReport(false);
       setExistingReportData(null);
@@ -106,25 +117,60 @@ export default function JobDetailsModal({
       return;
     }
 
-    setIsLoading(true);
-    const newStatus = !isConfirmed;
+    // If unconfirming, do it directly without modal
+    if (isConfirmed) {
+      setIsLoading(true);
+      try {
+        const performedBy = user?.fullName || user?.firstName || "user";
 
+        await updateSchedule({
+          scheduleId: job._id.toString(),
+          confirmed: false,
+          performedBy,
+        });
+
+        toast.success("Job unconfirmed successfully");
+        setConfirmed(false);
+      } catch (error) {
+        console.error("Failed to update the job:", error);
+        toast.error("Failed to update the job status");
+      } finally {
+        setIsLoading(false);
+      }
+      return;
+    }
+
+    // If confirming, show confirmation modal
+    setShowConfirmationModal(true);
+  };
+
+  const handleConfirmAccessInfo = async (accessInfo: {
+    onSiteContact: { name: string; phone: string; email?: string };
+    accessInstructions: string;
+  }) => {
+    if (!job) return;
+
+    setIsLoading(true);
     try {
       const performedBy = user?.fullName || user?.firstName || "user";
 
+      // Update access info and confirmed status in a single call
       await updateSchedule({
         scheduleId: job._id.toString(),
-        confirmed: newStatus,
+        confirmed: true,
+        onSiteContact: accessInfo.onSiteContact,
+        accessInstructions: accessInfo.accessInstructions.trim(),
         performedBy,
       });
 
-      toast.success(
-        `Job ${newStatus ? "confirmed" : "unconfirmed"} successfully`,
-      );
-      setConfirmed(newStatus);
+      toast.success("Job confirmed successfully");
+      setConfirmed(true);
+      setLocalOnSiteContact(accessInfo.onSiteContact);
+      setLocalAccessInstructions(accessInfo.accessInstructions.trim());
+      setShowConfirmationModal(false);
     } catch (error) {
-      console.error("Failed to update the job:", error);
-      toast.error("Failed to update the job status");
+      console.error("Failed to confirm the job:", error);
+      toast.error("Failed to confirm the job");
     } finally {
       setIsLoading(false);
     }
@@ -395,7 +441,7 @@ export default function JobDetailsModal({
               )}
 
               {/* On-Site Contact */}
-              {(job.onSiteContact?.name || job.onSiteContact?.phone) && (
+              {(localOnSiteContact?.name || localOnSiteContact?.phone) && (
                 <Card className="bg-primary/5 gap-0 py-0">
                   <CardContent className="p-4">
                     <h4 className="text-primary mb-2 flex items-center font-medium">
@@ -403,26 +449,26 @@ export default function JobDetailsModal({
                       On-Site Contact
                     </h4>
                     <div className="space-y-2">
-                      {job.onSiteContact.name && (
+                      {localOnSiteContact.name && (
                         <p className="text-foreground text-sm font-medium">
-                          {job.onSiteContact.name}
+                          {localOnSiteContact.name}
                         </p>
                       )}
-                      {job.onSiteContact.phone && (
+                      {localOnSiteContact.phone && (
                         <a
-                          href={`tel:${job.onSiteContact.phone}`}
+                          href={`tel:${localOnSiteContact.phone}`}
                           className="text-primary inline-flex items-center text-sm hover:underline"
                         >
                           <Phone className="mr-1 h-3 w-3" />
-                          {job.onSiteContact.phone}
+                          {localOnSiteContact.phone}
                         </a>
                       )}
-                      {job.onSiteContact.email && (
+                      {localOnSiteContact.email && (
                         <a
-                          href={`mailto:${job.onSiteContact.email}`}
+                          href={`mailto:${localOnSiteContact.email}`}
                           className="text-primary block text-sm hover:underline"
                         >
-                          {job.onSiteContact.email}
+                          {localOnSiteContact.email}
                         </a>
                       )}
                     </div>
@@ -431,15 +477,15 @@ export default function JobDetailsModal({
               )}
 
               {/* Access Instructions */}
-              {job.accessInstructions && (
-                <Card className="bg-amber-500/10 gap-0 py-0">
+              {localAccessInstructions && (
+                <Card className="gap-0 bg-amber-500/10 py-0">
                   <CardContent className="p-4">
                     <h4 className="mb-2 flex items-center font-medium text-amber-700 dark:text-amber-400">
                       <KeyRound className="mr-2 h-4 w-4" />
                       Access Instructions
                     </h4>
                     <p className="text-muted-foreground text-sm whitespace-pre-wrap">
-                      {job.accessInstructions}
+                      {localAccessInstructions}
                     </p>
                   </CardContent>
                 </Card>
@@ -648,6 +694,24 @@ export default function JobDetailsModal({
           />
         )}
       </DialogContent>
+
+      {/* Confirmation Modal */}
+      <JobConfirmationModal
+        isOpen={showConfirmationModal}
+        onClose={() => {
+          setShowConfirmationModal(false);
+        }}
+        onConfirm={handleConfirmAccessInfo}
+        initialData={
+          job
+            ? {
+                onSiteContact: job.onSiteContact,
+                accessInstructions: job.accessInstructions,
+              }
+            : undefined
+        }
+        isLoading={isLoading}
+      />
     </Dialog>
   );
 }

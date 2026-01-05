@@ -176,6 +176,9 @@ const AddJob = ({
       if (data.technicianNotes) {
         data.technicianNotes = data.technicianNotes.trim();
       }
+      if (data.accessInstructions) {
+        data.accessInstructions = data.accessInstructions.trim();
+      }
 
       // Ensure startDateTime is a Date object
       const dateValue =
@@ -206,13 +209,13 @@ const AddJob = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Add New Job</DialogTitle>
-          <DialogDescription>
-            Create a new scheduled job for your calendar.
-          </DialogDescription>
-        </DialogHeader>
+        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Add New Job</DialogTitle>
+            <DialogDescription>
+              Create a new scheduled job for your calendar.
+            </DialogDescription>
+          </DialogHeader>
 
         {/* Form */}
         <form
@@ -379,46 +382,22 @@ const AddJob = ({
             {/* Contact Name & Phone - 2 columns */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="contactName">
-                  Contact Name<span className="text-destructive">*</span>
-                </Label>
+                <Label htmlFor="contactName">Contact Name</Label>
                 <Input
                   id="contactName"
-                  {...register("onSiteContact.name", {
-                    required: "Contact Name is required",
-                  })}
+                  {...register("onSiteContact.name")}
                   placeholder="John Smith"
-                  className={
-                    errors.onSiteContact?.name ? "border-destructive" : ""
-                  }
                 />
-                {errors.onSiteContact?.name && (
-                  <p className="text-destructive text-sm">
-                    {errors.onSiteContact.name.message}
-                  </p>
-                )}
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="contactPhone">
-                  Phone<span className="text-destructive">*</span>
-                </Label>
+                <Label htmlFor="contactPhone">Phone</Label>
                 <Input
                   id="contactPhone"
-                  {...register("onSiteContact.phone", {
-                    required: "Phone number is required",
-                  })}
+                  {...register("onSiteContact.phone")}
                   placeholder="604-555-1234"
                   type="tel"
-                  className={
-                    errors.onSiteContact?.phone ? "border-destructive" : ""
-                  }
                 />
-                {errors.onSiteContact?.phone && (
-                  <p className="text-destructive text-sm">
-                    {errors.onSiteContact.phone.message}
-                  </p>
-                )}
               </div>
             </div>
 
@@ -435,25 +414,13 @@ const AddJob = ({
 
             {/* Access Instructions - Full Width */}
             <div className="space-y-2">
-              <Label htmlFor="accessInstructions">
-                Access Instructions<span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="accessInstructions">Access Instructions</Label>
               <Textarea
                 id="accessInstructions"
-                {...register("accessInstructions", {
-                  required: "Access Instructions are required",
-                })}
+                {...register("accessInstructions")}
                 rows={2}
                 placeholder="e.g., Use back entrance, gate code is 1234, ask for manager on duty"
-                className={
-                  errors.accessInstructions ? "border-destructive" : ""
-                }
               />
-              {errors.accessInstructions && (
-                <p className="text-destructive text-sm">
-                  {errors.accessInstructions.message}
-                </p>
-              )}
             </div>
           </div>
 
