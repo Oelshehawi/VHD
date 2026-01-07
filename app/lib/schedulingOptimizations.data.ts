@@ -184,9 +184,18 @@ export async function fetchUnscheduledJobsForOptimization(dateRange?: {
     }
 
     // Get unscheduled jobs with populated client data
-    const unscheduledJobs = await JobsDueSoon.find(dateFilter)
-      .populate("clientId")
-      .lean();
+    const unscheduledJobs = await JobsDueSoon.aggregate([
+      { $match: dateFilter },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      { $match: { "client.isArchived": { $ne: true } } },
+    ]);
 
     if (!unscheduledJobs.length) return [];
 

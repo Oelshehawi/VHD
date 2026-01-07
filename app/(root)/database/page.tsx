@@ -4,6 +4,7 @@ import AddClient from "../../../_components/database/AddClient";
 import ClientTable from "../../../_components/database/ClientTable";
 import Search from "../../../_components/database/Search";
 import Sorting from "../../../_components/database/Sorting";
+import ArchiveFilter from "../../../_components/database/ArchiveFilter";
 import Pagination from "../../../_components/database/Pagination";
 import { Suspense } from "react";
 import { TableContainerSkeleton } from "../../../_components/Skeletons";
@@ -12,7 +13,12 @@ import { Card, CardContent } from "../../../_components/ui/card";
 const Database = async ({
   searchParams,
 }: {
-  searchParams: Promise<{ query?: string; page?: string; sort?: 1 | -1 }>;
+  searchParams: Promise<{ 
+    query?: string; 
+    page?: string; 
+    sort?: 1 | -1;
+    archive?: "all" | "active" | "archived";
+  }>;
 }) => {
   // AUTH STUFF
   const { sessionClaims } = await auth();
@@ -57,8 +63,9 @@ const Database = async ({
   const query = resolvedSearchParams?.query || "";
   const sort = resolvedSearchParams?.sort || 1;
   const currentPage = Number(resolvedSearchParams?.page) || 1;
+  const archiveStatus = resolvedSearchParams?.archive || "active";
 
-  const totalPages = await fetchClientsPages(query);
+  const totalPages = await fetchClientsPages(query, archiveStatus);
 
   return (
     <Suspense fallback={<TableContainerSkeleton />}>
@@ -73,12 +80,16 @@ const Database = async ({
               <div className="w-full md:w-48">
                 <Sorting />
               </div>
+              <div className="w-full md:w-48">
+                <ArchiveFilter />
+              </div>
             </div>
             <div className="min-h-0 flex-1 overflow-hidden">
               <ClientTable
                 query={query}
                 sort={sort}
                 currentPage={currentPage}
+                archiveStatus={archiveStatus}
               />
             </div>
           </div>

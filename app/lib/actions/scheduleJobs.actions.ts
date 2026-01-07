@@ -32,9 +32,19 @@ cloudinary.config({
 export async function getPendingInvoices(): Promise<InvoiceType[]> {
   await connectMongo();
   try {
-    const invoices = await Invoice.find({
-      status: { $in: ["pending", "overdue"] },
-    }).sort({ dateIssued: -1 });
+    const invoices = await Invoice.aggregate([
+      { $match: { status: { $in: ["pending", "overdue"] } } },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      { $match: { "client.isArchived": { $ne: true } } },
+      { $sort: { dateIssued: -1 } },
+    ]);
 
     const formattedItems = (items: any[]) =>
       items.map((item) => ({
@@ -42,7 +52,7 @@ export async function getPendingInvoices(): Promise<InvoiceType[]> {
         price: parseFloat(item.price) || 0,
       }));
 
-    return invoices.map((invoice) => ({
+    return invoices.map((invoice: any) => ({
       _id: invoice._id.toString(),
       invoiceId: invoice.invoiceId,
       jobTitle: invoice.jobTitle,

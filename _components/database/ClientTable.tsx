@@ -18,12 +18,14 @@ const ClientTable = async ({
   query,
   currentPage,
   sort,
+  archiveStatus,
 }: {
   query: string;
   currentPage: number;
   sort: 1 | -1;
+  archiveStatus?: "all" | "active" | "archived";
 }) => {
-  const clientData = await fetchFilteredClients(query, currentPage, sort);
+  const clientData = await fetchFilteredClients(query, currentPage, sort, archiveStatus);
 
   if (!clientData.length) {
     return (

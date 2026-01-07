@@ -2,6 +2,8 @@
 import { useState } from "react";
 import TransactionHistory from "./TransactionHistory";
 import InlineEditClient from "./EditClientModal";
+import ArchiveClientModal from "./ArchiveClientModal";
+import ArchivedBanner from "../ui/archived-banner";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import ClientPortalAccess from "../client-portal/ClientPortalAccess";
 import { Card, CardContent } from "../ui/card";
@@ -21,6 +23,15 @@ const ClientDetailedContainer = ({
 
   return (
     <div className="space-y-6">
+      {/* Archived Banner */}
+      {client.isArchived && (
+        <ArchivedBanner
+          entity="client"
+          archiveReason={client.archiveReason}
+          archivedAt={client.archivedAt}
+        />
+      )}
+      
       {/* Action Bar */}
       <Card className="">
         <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -37,10 +48,13 @@ const ClientDetailedContainer = ({
               </p>
             </div>
           </div>
-          <ClientPortalAccess
-            clientId={client._id as string}
-            clientName={client.clientName}
-          />
+          <div className="flex items-center gap-2">
+            <ArchiveClientModal client={client} />
+            <ClientPortalAccess
+              clientId={client._id as string}
+              clientName={client.clientName}
+            />
+          </div>
         </CardContent>
       </Card>
 
