@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { FaPaperPlane, FaCheckCircle } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { CgUnavailable } from "react-icons/cg";
 import { DueInvoiceType } from "../../app/lib/typeDefinitions";
 import { sendCleaningReminderEmail } from "../../app/lib/actions/email.actions";

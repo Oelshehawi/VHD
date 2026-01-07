@@ -6,7 +6,7 @@ import EstimatesList from "./EstimatesList";
 import EstimateFilters from "./EstimateFilters";
 import Pagination from "../database/Pagination";
 import DeleteModal from "../DeleteModal";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { updateEstimateStatus } from "../../app/lib/actions/estimates.actions";
 import AddEstimate from "./AddEstimate";
 import { Badge } from "../ui/badge";

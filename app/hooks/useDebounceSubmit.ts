@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useDebouncedCallback } from "use-debounce";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface UseDebounceSubmitOptions {
   onSubmit: (data: any) => Promise<void>;

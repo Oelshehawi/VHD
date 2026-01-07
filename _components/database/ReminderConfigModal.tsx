@@ -12,7 +12,7 @@ import {
   getReminderSettings,
   sendPaymentReminderEmail,
 } from "../../app/lib/actions/reminder.actions";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { formatDateStringUTC } from "../../app/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";

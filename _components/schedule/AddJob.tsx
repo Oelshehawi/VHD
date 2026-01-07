@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import { useForm, SubmitHandler, Controller } from "react-hook-form";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { ScheduleType, InvoiceType } from "../../app/lib/typeDefinitions";
 import { InvoiceSearchSelect } from "../invoices/InvoiceSearchSelect";
 import {

@@ -6,7 +6,7 @@ import {
   PayrollPeriodType,
 } from "../../app/lib/typeDefinitions";
 import { useForm, Controller } from "react-hook-form";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { updateShiftHoursBatch } from "../../app/lib/actions/scheduleJobs.actions";
 import { formatDateFns } from "../../app/lib/utils";
 import {

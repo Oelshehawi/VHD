@@ -10,7 +10,7 @@ import {
 import { CallLogEntry } from "../../app/lib/typeDefinitions";
 import { useUser } from "@clerk/nextjs";
 import { logJobCall } from "../../app/lib/actions/actions";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import {

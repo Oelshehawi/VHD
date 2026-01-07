@@ -9,7 +9,7 @@ import {
 import { FaCog, FaPhone, FaHistory, FaSearch } from "react-icons/fa";
 import { CgUnavailable } from "react-icons/cg";
 import { updateInvoice } from "../../app/lib/actions/actions";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { formatAmount, formatDateStringUTC } from "../../app/lib/utils";
 import Link from "next/link";
 import PaymentModal from "../payments/PaymentModal";

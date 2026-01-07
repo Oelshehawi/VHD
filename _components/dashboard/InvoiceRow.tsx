@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { updateInvoiceScheduleStatus } from "../../app/lib/actions/actions";
 import { sendCleaningReminderEmail } from "../../app/lib/actions/email.actions";
 import { formatDateStringUTC } from "../../app/lib/utils";

@@ -6,7 +6,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
 import { toPublicId } from "../../app/lib/imageUtils";
 import { formatDateFns } from "../../app/lib/utils";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import EstimatePhotoUpload from "./EstimatePhotoUpload";
 import EstimatePhotoGrid from "./EstimatePhotoGrid";
 import Lightbox from "yet-another-react-lightbox";

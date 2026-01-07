@@ -21,7 +21,7 @@ import {
 import { ClientType } from "../../app/lib/typeDefinitions";
 import { ClientCombobox } from "./ClientCombobox";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import InvoiceSelectionModal from "./InvoiceSelectionModal";
 import { useIsMobile } from "../../app/hooks/use-mobile";
 import { Button } from "../ui/button";

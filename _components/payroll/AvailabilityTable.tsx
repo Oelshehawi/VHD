@@ -6,7 +6,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { formatTimeRange12hr } from "../../app/lib/utils/timeFormatUtils";
 import DeleteModal from "../DeleteModal";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { Trash2, Calendar, RefreshCw } from "lucide-react";
 import { Button } from "../ui/button";
 

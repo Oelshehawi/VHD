@@ -11,7 +11,7 @@ import {
   FaFileInvoice,
   FaCalendarAlt,
 } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { convertEstimateToClientAndInvoice } from "../../app/lib/actions/estimates.actions";
 import { EstimateType } from "../../app/lib/typeDefinitions";
 import {

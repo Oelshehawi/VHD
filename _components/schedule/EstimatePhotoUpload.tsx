@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Upload, X, CheckCircle, AlertCircle, Loader2, ImagePlus } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { cn } from "../../app/lib/utils";
 
 interface EstimatePhotoUploadProps {

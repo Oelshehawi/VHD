@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { ScheduleType, ReportType } from "../../app/lib/typeDefinitions";
 import Link from "next/link";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import {
   updateSchedule,
   getReportByScheduleId,

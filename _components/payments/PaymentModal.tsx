@@ -3,7 +3,7 @@
 import { useForm } from "react-hook-form";
 import { PaymentInfo } from "../../app/lib/typeDefinitions";
 import { FaCreditCard, FaStickyNote } from "react-icons/fa";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import {
   Dialog,
   DialogContent,
