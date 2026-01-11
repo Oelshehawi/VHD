@@ -15,6 +15,17 @@ import {
 import { toast } from "sonner";
 import { formatDateStringUTC } from "../../app/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Button } from "../ui/button";
 import {
@@ -49,6 +60,9 @@ const ReminderConfigModal = ({
     enabled: false,
     frequency: "none",
   });
+  const [startFrom, setStartFrom] = useState<"today" | "dateIssued">(
+    "dateIssued",
+  );
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -96,6 +110,7 @@ const ReminderConfigModal = ({
         {
           enabled: settings.enabled,
           frequency: settings.frequency,
+          startFrom,
         },
         userName,
       );
@@ -116,14 +131,6 @@ const ReminderConfigModal = ({
   };
 
   const handleSendReminder = async () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to send a payment reminder now? This will immediately send an email to the client.",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
     setIsSending(true);
     try {
       const userName = user?.fullName || user?.firstName || "User";
@@ -204,27 +211,54 @@ const ReminderConfigModal = ({
               </div>
             </div>
 
-            {/* Frequency Selection */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">
-                Reminder Frequency
-              </label>
-              <Select
-                value={settings.frequency}
-                onValueChange={handleFrequencyChange}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None (default)</SelectItem>
-                  <SelectItem value="3days">Every 3 days</SelectItem>
-                  <SelectItem value="5days">Every 5 days</SelectItem>
-                  <SelectItem value="7days">Every 7 days</SelectItem>
-                  <SelectItem value="14days">Every 14 days</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Frequency and Start From Selection - Same Row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Frequency
+                </label>
+                <Select
+                  value={settings.frequency}
+                  onValueChange={handleFrequencyChange}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (default)</SelectItem>
+                    <SelectItem value="3days">Every 3 days</SelectItem>
+                    <SelectItem value="5days">Every 5 days</SelectItem>
+                    <SelectItem value="7days">Every 7 days</SelectItem>
+                    <SelectItem value="14days">Every 14 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-700">
+                  Start From
+                </label>
+                <Select
+                  value={startFrom}
+                  onValueChange={(value) =>
+                    setStartFrom(value as "today" | "dateIssued")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select start" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="dateIssued">Issue Date</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
+            <p className="text-muted-foreground text-xs">
+              {startFrom === "today"
+                ? "First reminder will be sent X days from now"
+                : "Calculates from invoice issue date, skips past intervals"}
+            </p>
 
             {/* Save Button */}
             <Button
@@ -237,24 +271,42 @@ const ReminderConfigModal = ({
 
             <Separator />
 
-            {/* Manual Send Button */}
+            {/* Manual Send Button with AlertDialog */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">
                 Send Reminder Now
               </label>
-              <Button
-                onClick={handleSendReminder}
-                disabled={isSending}
-                variant="secondary"
-                className="w-full gap-2"
-              >
-                {isSending ? (
-                  <FaPaperPlane className="h-4 w-4 animate-spin" />
-                ) : (
-                  <FaPaperPlane className="h-4 w-4" />
-                )}
-                <span>Send Reminder Now</span>
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    disabled={isSending}
+                    variant="secondary"
+                    className="w-full gap-2"
+                  >
+                    {isSending ? (
+                      <FaPaperPlane className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <FaPaperPlane className="h-4 w-4" />
+                    )}
+                    <span>Send Reminder Now</span>
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Send Payment Reminder?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This will immediately send a payment reminder email to the
+                      client.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleSendReminder}>
+                      Send Reminder
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </TabsContent>
 

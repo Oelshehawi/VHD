@@ -83,7 +83,9 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
   const [showInvoiceSelector, setShowInvoiceSelector] = useState(false);
   const [dateIssuedValue, setDateIssuedValue] = useState<Date | undefined>();
   const [reminderEnabled, setReminderEnabled] = useState(false);
-  const [reminderFrequency, setReminderFrequency] = useState<"none" | "3days" | "5days" | "7days">("5days");
+  const [reminderFrequency, setReminderFrequency] = useState<
+    "none" | "3days" | "5days" | "7days"
+  >("5days");
 
   const {
     register,
@@ -522,9 +524,12 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                   <p className="text-muted-foreground ml-6 text-xs">
                     Automatically send payment reminder emails
                   </p>
-                  <div className="bg-muted/50 rounded-lg border p-4 space-y-3">
+                  <div className="bg-muted/50 space-y-3 rounded-lg border p-4">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="reminder-toggle" className="text-sm font-normal cursor-pointer">
+                      <Label
+                        htmlFor="reminder-toggle"
+                        className="cursor-pointer text-sm font-normal"
+                      >
                         Enable automatic reminders
                       </Label>
                       <button
@@ -535,23 +540,31 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                         onClick={() => setReminderEnabled(!reminderEnabled)}
                         className={cn(
                           "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
-                          reminderEnabled ? "bg-primary" : "bg-input"
+                          reminderEnabled ? "bg-primary" : "bg-input",
                         )}
                       >
                         <span
                           className={cn(
-                            "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
-                            reminderEnabled ? "translate-x-4" : "translate-x-0.5"
+                            "bg-background pointer-events-none block h-4 w-4 rounded-full shadow-lg ring-0 transition-transform",
+                            reminderEnabled
+                              ? "translate-x-4"
+                              : "translate-x-0.5",
                           )}
                         />
                       </button>
                     </div>
                     {reminderEnabled && (
                       <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Reminder Frequency</Label>
+                        <Label className="text-muted-foreground text-xs">
+                          Reminder Frequency
+                        </Label>
                         <Select
                           value={reminderFrequency}
-                          onValueChange={(value) => setReminderFrequency(value as "3days" | "5days" | "7days")}
+                          onValueChange={(value) =>
+                            setReminderFrequency(
+                              value as "3days" | "5days" | "7days",
+                            )
+                          }
                         >
                           <SelectTrigger data-vaul-no-drag className="h-9">
                             <SelectValue />
@@ -562,6 +575,9 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                             <SelectItem value="7days">Every 7 days</SelectItem>
                           </SelectContent>
                         </Select>
+                        <p className="text-muted-foreground text-xs">
+                          Calculated from invoice issue date
+                        </p>
                       </div>
                     )}
                   </div>

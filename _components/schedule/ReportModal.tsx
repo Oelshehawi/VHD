@@ -46,6 +46,7 @@ import {
   TableHeader,
   TableRow,
 } from "../ui/table";
+import { MultiSelect } from "../ui/multi-select";
 import { cn } from "../../app/lib/utils";
 
 // Step types
@@ -94,7 +95,7 @@ interface ReportFormData {
 const INSPECTION_ITEMS = [
   "Filters in place?",
   "Filters need more frequent cleaning?",
-  "Filters need replacement?",
+  "Ecology unit operational?",
   "Wash cycle working?",
   "Fire suppression nozzles clear?",
   "Safe access to fan/roof?",
@@ -143,7 +144,7 @@ const COOKING_VOLUMES = ["High", "Medium", "Low"];
 const INSPECTION_KEY_MAPPINGS: Record<number, string> = {
   0: "filtersInPlace",
   1: "filtersNeedCleaningMoreOften",
-  2: "filtersNeedReplacement",
+  2: "ecologyUnitOperational",
   3: "washCycleWorking",
   4: "fireSuppressionNozzlesClear",
   5: "safeAccessToFan",
@@ -228,72 +229,92 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
   const watchedInspectionItems = watch("inspectionItems");
 
   // Load report data into form - defined as useCallback to be used in useEffect
-  const loadReportIntoForm = useCallback((report: any) => {
-    // Convert inspection items from object to indexed format
-    const inspectionItems: Record<number, "Yes" | "No" | "N/A" | ""> = {};
-    if (report.inspectionItems) {
-      Object.entries(INSPECTION_KEY_MAPPINGS).forEach(([indexStr, key]) => {
-        const index = parseInt(indexStr);
-        const status = (report.inspectionItems as any)[key];
-        if (status) {
-          inspectionItems[index] = status;
-        }
+  const loadReportIntoForm = useCallback(
+    (report: any) => {
+      // Convert inspection items from object to indexed format
+      const inspectionItems: Record<number, "Yes" | "No" | "N/A" | ""> = {};
+      if (report.inspectionItems) {
+        Object.entries(INSPECTION_KEY_MAPPINGS).forEach(([indexStr, key]) => {
+          const index = parseInt(indexStr);
+          const status = (report.inspectionItems as any)[key];
+          if (status) {
+            inspectionItems[index] = status;
+          }
+        });
+      }
+
+      // Convert cooking equipment
+      const cookingEquipment: string[] = [];
+      if (
+        typeof report.cookingEquipment === "object" &&
+        report.cookingEquipment
+      ) {
+        if (report.cookingEquipment.griddles) cookingEquipment.push("griddles");
+        if (report.cookingEquipment.deepFatFryers)
+          cookingEquipment.push("deepFatFryers");
+        if (report.cookingEquipment.woks) cookingEquipment.push("woks");
+        if (report.cookingEquipment.ovens) cookingEquipment.push("ovens");
+        if (report.cookingEquipment.flattopGrills)
+          cookingEquipment.push("flattopGrills");
+      } else if (Array.isArray(report.cookingEquipment)) {
+        cookingEquipment.push(...report.cookingEquipment);
+      }
+
+      reset({
+        scheduleId: schedule._id.toString(),
+        invoiceId:
+          typeof schedule.invoiceRef === "string"
+            ? schedule.invoiceRef
+            : schedule.invoiceRef.toString(),
+        jobTitle: schedule.jobTitle || "",
+        location: schedule.location || "",
+        dateCompleted: report.dateCompleted
+          ? new Date(report.dateCompleted).toISOString().split("T")[0]
+          : new Date().toISOString().split("T")[0],
+        technicianId: report.technicianId || defaultTechnicianId,
+        lastServiceDate: report.lastServiceDate
+          ? new Date(report.lastServiceDate).toISOString().split("T")[0]
+          : "",
+        fuelType: report.fuelType || "",
+        cookingVolume: report.cookingVolume || "",
+        cookingEquipment,
+        inspectionItems,
+        equipmentDetails: {
+          hoodType: report.equipmentDetails?.hoodType || "",
+          filterType: report.equipmentDetails?.filterType || "",
+          ductworkType: report.equipmentDetails?.ductworkType || "",
+          fanType: report.equipmentDetails?.fanType || "",
+        },
+        cleaningDetails: {
+          hoodCleaned: report.cleaningDetails?.hoodCleaned || false,
+          filtersCleaned: report.cleaningDetails?.filtersCleaned || false,
+          ductworkCleaned: report.cleaningDetails?.ductworkCleaned || false,
+          fanCleaned: report.cleaningDetails?.fanCleaned || false,
+        },
+        ecologyUnit: {
+          exists: report.ecologyUnit?.exists || false,
+          filterReplacementNeeded:
+            report.ecologyUnit?.filterReplacementNeeded || false,
+          notes: report.ecologyUnit?.notes || "",
+        },
+        accessPanels: {
+          adequate: report.accessPanels?.adequate ?? true,
+          notes: report.accessPanels?.notes || "",
+        },
+        recommendedCleaningFrequency: report.recommendedCleaningFrequency || "",
+        comments: report.comments || "",
+        recommendations: report.recommendations || "",
       });
-    }
-
-    // Convert cooking equipment
-    const cookingEquipment: string[] = [];
-    if (
-      typeof report.cookingEquipment === "object" &&
-      report.cookingEquipment
-    ) {
-      if (report.cookingEquipment.griddles) cookingEquipment.push("griddles");
-      if (report.cookingEquipment.deepFatFryers)
-        cookingEquipment.push("deepFatFryers");
-      if (report.cookingEquipment.woks) cookingEquipment.push("woks");
-      if (report.cookingEquipment.ovens) cookingEquipment.push("ovens");
-      if (report.cookingEquipment.flattopGrills)
-        cookingEquipment.push("flattopGrills");
-    } else if (Array.isArray(report.cookingEquipment)) {
-      cookingEquipment.push(...report.cookingEquipment);
-    }
-
-    reset({
-      scheduleId: schedule._id.toString(),
-      invoiceId:
-        typeof schedule.invoiceRef === "string"
-          ? schedule.invoiceRef
-          : schedule.invoiceRef.toString(),
-      jobTitle: schedule.jobTitle || "",
-      location: schedule.location || "",
-      dateCompleted: report.dateCompleted
-        ? new Date(report.dateCompleted).toISOString().split("T")[0]
-        : new Date().toISOString().split("T")[0],
-      technicianId: report.technicianId || defaultTechnicianId,
-      lastServiceDate: report.lastServiceDate
-        ? new Date(report.lastServiceDate).toISOString().split("T")[0]
-        : "",
-      fuelType: report.fuelType || "",
-      cookingVolume: report.cookingVolume || "",
-      cookingEquipment,
-      inspectionItems,
-      equipmentDetails: {
-        hoodType: report.equipmentDetails?.hoodType || "",
-        filterType: report.equipmentDetails?.filterType || "",
-        ductworkType: report.equipmentDetails?.ductworkType || "",
-        fanType: report.equipmentDetails?.fanType || "",
-      },
-      cleaningDetails: {
-        hoodCleaned: report.cleaningDetails?.hoodCleaned || false,
-        filtersCleaned: report.cleaningDetails?.filtersCleaned || false,
-        ductworkCleaned: report.cleaningDetails?.ductworkCleaned || false,
-        fanCleaned: report.cleaningDetails?.fanCleaned || false,
-      },
-      recommendedCleaningFrequency: report.recommendedCleaningFrequency || "",
-      comments: report.comments || "",
-      recommendations: report.recommendations || "",
-    });
-  }, [schedule._id, schedule.invoiceRef, schedule.jobTitle, schedule.location, reset, defaultTechnicianId]);
+    },
+    [
+      schedule._id,
+      schedule.invoiceRef,
+      schedule.jobTitle,
+      schedule.location,
+      reset,
+      defaultTechnicianId,
+    ],
+  );
 
   // Fetch existing report and previous reports
   useEffect(() => {
@@ -406,6 +427,26 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         comments: data.comments || undefined,
         recommendations: data.recommendations || undefined,
       };
+
+      // DEBUG: Log ecologyUnit and related fields
+      console.log("=== REPORT SAVE DEBUG ===");
+      console.log(
+        "data.ecologyUnit:",
+        JSON.stringify(data.ecologyUnit, null, 2),
+      );
+      console.log(
+        "data.accessPanels:",
+        JSON.stringify(data.accessPanels, null, 2),
+      );
+      console.log(
+        "data.cleaningDetails:",
+        JSON.stringify(data.cleaningDetails, null, 2),
+      );
+      console.log(
+        "apiData.ecologyUnit:",
+        JSON.stringify(apiData.ecologyUnit, null, 2),
+      );
+      console.log("Full apiData:", JSON.stringify(apiData, null, 2));
 
       await createOrUpdateReport(apiData as unknown as ReportType);
       toast.success("Report saved successfully");
@@ -865,84 +906,34 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                     {/* Cleaning Details */}
                     <div className="space-y-3">
                       <Label>Cleaning Performed</Label>
-                      <div className="grid grid-cols-2 gap-4">
-                        <Controller
-                          name="cleaningDetails.hoodCleaned"
-                          control={control}
-                          render={({ field }) => (
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="hoodCleaned"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                              <Label
-                                htmlFor="hoodCleaned"
-                                className="font-normal"
-                              >
-                                Hood Cleaned
-                              </Label>
-                            </div>
-                          )}
-                        />
-                        <Controller
-                          name="cleaningDetails.filtersCleaned"
-                          control={control}
-                          render={({ field }) => (
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="filtersCleaned"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                              <Label
-                                htmlFor="filtersCleaned"
-                                className="font-normal"
-                              >
-                                Filters Cleaned
-                              </Label>
-                            </div>
-                          )}
-                        />
-                        <Controller
-                          name="cleaningDetails.ductworkCleaned"
-                          control={control}
-                          render={({ field }) => (
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="ductworkCleaned"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                              <Label
-                                htmlFor="ductworkCleaned"
-                                className="font-normal"
-                              >
-                                Ductwork Cleaned
-                              </Label>
-                            </div>
-                          )}
-                        />
-                        <Controller
-                          name="cleaningDetails.fanCleaned"
-                          control={control}
-                          render={({ field }) => (
-                            <div className="flex items-center space-x-2">
-                              <Checkbox
-                                id="fanCleaned"
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                              <Label
-                                htmlFor="fanCleaned"
-                                className="font-normal"
-                              >
-                                Fan Cleaned
-                              </Label>
-                            </div>
-                          )}
-                        />
-                      </div>
+                      <MultiSelect
+                        options={[
+                          { label: "Hood Cleaned", value: "hoodCleaned" },
+                          { label: "Filters Cleaned", value: "filtersCleaned" },
+                          {
+                            label: "Ductwork Cleaned",
+                            value: "ductworkCleaned",
+                          },
+                          { label: "Fan Cleaned", value: "fanCleaned" },
+                        ]}
+                        defaultValue={Object.entries(
+                          watch("cleaningDetails") || {},
+                        )
+                          .filter(([, v]) => v === true)
+                          .map(([k]) => k)}
+                        onValueChange={(values) => {
+                          setValue("cleaningDetails", {
+                            hoodCleaned: values.includes("hoodCleaned"),
+                            filtersCleaned: values.includes("filtersCleaned"),
+                            ductworkCleaned: values.includes("ductworkCleaned"),
+                            fanCleaned: values.includes("fanCleaned"),
+                          });
+                        }}
+                        placeholder="Select cleaning tasks..."
+                        maxCount={4}
+                        hideSelectAll={false}
+                        searchable={false}
+                      />
                     </div>
                   </div>
                 )}

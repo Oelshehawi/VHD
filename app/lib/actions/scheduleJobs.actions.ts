@@ -562,11 +562,28 @@ export const createOrUpdateReport = async (reportData: ReportType) => {
     });
 
     if (existingReport) {
+      // DEBUG: Log what we're about to update
+      console.log("=== SERVER: createOrUpdateReport UPDATE ===");
+      console.log("Existing report ID:", existingReport._id);
+      console.log(
+        "reportData.ecologyUnit:",
+        JSON.stringify(reportData.ecologyUnit, null, 2),
+      );
+      console.log(
+        "reportData.accessPanels:",
+        JSON.stringify(reportData.accessPanels, null, 2),
+      );
+
       // Update existing report
       existingReport = await Report.findByIdAndUpdate(
         existingReport._id,
         reportData,
         { new: true },
+      );
+
+      console.log(
+        "Updated report.ecologyUnit:",
+        JSON.stringify(existingReport?.ecologyUnit, null, 2),
       );
 
       // Return a plain JavaScript object, not a Mongoose document

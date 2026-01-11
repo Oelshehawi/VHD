@@ -242,6 +242,7 @@ export interface ReportType {
     filtersListed?: "Yes" | "No" | "N/A";
     filtersNeedCleaningMoreOften?: "Yes" | "No" | "N/A";
     filtersNeedReplacement?: "Yes" | "No" | "N/A";
+    ecologyUnitOperational?: "Yes" | "No" | "N/A";
     washCycleWorking?: "Yes" | "No" | "N/A";
     fireSuppressionNozzlesClear?: "Yes" | "No" | "N/A";
     fanTipAccessible?: "Yes" | "No" | "N/A";

@@ -29,16 +29,22 @@ export async function configurePaymentReminders(
   settings: {
     enabled: boolean;
     frequency: "none" | "3days" | "5days" | "7days" | "14days";
+    startFrom?: "today" | "dateIssued";
   },
   performedBy?: string,
 ) {
   await connectMongo();
 
   try {
+    // Get the invoice to access dateIssued if needed
+    const currentInvoice = await Invoice.findById(invoiceId);
+    if (!currentInvoice) {
+      return { success: false, error: "Invoice not found" };
+    }
+
     // Calculate next reminder date based on frequency
     let nextReminderDate: Date | undefined;
     if (settings.enabled && settings.frequency !== "none") {
-      const now = new Date();
       const days =
         settings.frequency === "3days"
           ? 3
@@ -48,16 +54,50 @@ export async function configurePaymentReminders(
               ? 7
               : 14;
 
-      // Calculate target date based on local date to avoid timezone rollover issues
-      // Get local year/month/day, add days, then set to 9 AM local time
-      const localNow = new Date(
+      // Default to dateIssued if not specified
+      const startFrom = settings.startFrom ?? "dateIssued";
+
+      // Determine base date: dateIssued (default) or today
+      let baseYear: number, baseMonth: number, baseDay: number;
+
+      if (startFrom === "dateIssued" && currentInvoice.dateIssued) {
+        // Parse date string directly to avoid timezone issues
+        // dateIssued could be a Date object or ISO string like "2026-01-10T00:00:00.000Z"
+        const dateStr =
+          currentInvoice.dateIssued instanceof Date
+            ? currentInvoice.dateIssued.toISOString()
+            : String(currentInvoice.dateIssued);
+        const datePart = dateStr.split("T")[0] || dateStr;
+        const parts = datePart.split("-");
+        baseYear = parseInt(parts[0] || "2026", 10);
+        baseMonth = parseInt(parts[1] || "1", 10) - 1; // JS months are 0-indexed
+        baseDay = parseInt(parts[2] || "1", 10);
+      } else {
+        const now = new Date();
+        baseYear = now.getFullYear();
+        baseMonth = now.getMonth();
+        baseDay = now.getDate();
+      }
+
+      // Calculate target date by adding days
+      const localBase = new Date(baseYear, baseMonth, baseDay);
+      const targetLocal = new Date(
+        localBase.getTime() + days * 24 * 60 * 60 * 1000,
+      );
+
+      // If starting from dateIssued, we may need to advance to next interval if it's in the past
+      const now = new Date();
+      const nowLocal = new Date(
         now.getFullYear(),
         now.getMonth(),
         now.getDate(),
       );
-      const targetLocal = new Date(
-        localNow.getTime() + days * 24 * 60 * 60 * 1000,
-      );
+
+      // Keep advancing by the frequency until we get a future date
+      while (targetLocal < nowLocal) {
+        targetLocal.setTime(targetLocal.getTime() + days * 24 * 60 * 60 * 1000);
+      }
+
       // Set to 9 AM local time for the reminder
       nextReminderDate = new Date(
         targetLocal.getFullYear(),
@@ -71,7 +111,6 @@ export async function configurePaymentReminders(
     }
 
     // Get current reminder settings for audit log
-    const currentInvoice = await Invoice.findById(invoiceId);
     const oldSettings = currentInvoice?.paymentReminders;
 
     // Update the invoice

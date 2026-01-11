@@ -280,6 +280,8 @@ export default function JobDetailsModal({
         comments: report.comments,
         recommendedCleaningFrequency: report.recommendedCleaningFrequency,
         inspectionItems: report.inspectionItems,
+        ecologyUnit: report.ecologyUnit,
+        accessPanels: report.accessPanels,
       };
 
       const assignedTech = technicians.find(
@@ -679,8 +681,8 @@ export default function JobDetailsModal({
                             <AlertDialogHeader>
                               <AlertDialogTitle>Delete Report</AlertDialogTitle>
                               <AlertDialogDescription>
-                                Are you sure you want to delete this report? This
-                                action cannot be undone.
+                                Are you sure you want to delete this report?
+                                This action cannot be undone.
                               </AlertDialogDescription>
                             </AlertDialogHeader>
                             <AlertDialogFooter>

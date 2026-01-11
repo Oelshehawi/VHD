@@ -115,6 +115,11 @@ export const ReportSchema = new Schema<ReportType>({
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
     },
+    ecologyUnitOperational: {
+      type: String,
+      enum: ["Yes", "No", "N/A"],
+      default: "N/A",
+    },
     washCycleWorking: {
       type: String,
       enum: ["Yes", "No", "N/A"],

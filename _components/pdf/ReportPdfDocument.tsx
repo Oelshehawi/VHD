@@ -10,6 +10,7 @@ import {
   Path,
   Image,
 } from "@react-pdf/renderer";
+import { getImageSrc } from "../../app/lib/imageUtils";
 
 const createStyles = (scale: number) => {
   const s = (value: number) => Math.round(value * scale);
@@ -186,7 +187,8 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
   technician,
   scale = 1,
 }) => {
-  const styles = React.useMemo(() => createStyles(scale), [scale]);
+  // Note: Don't use React hooks here - this component is rendered server-side for PDF generation
+  const styles = createStyles(scale);
 
   const formatDate = (date: string | Date) => {
     const dateObj = new Date(date);
@@ -229,10 +231,13 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
           </View>
         </View>
 
-        {/* Logo */}
+        {/* Logo - Using hybrid approach for client/server compatibility */}
         <View style={styles.logoContainer}>
           {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image component doesn't support alt */}
-          <Image src="/images/logo.png" />
+          <Image
+            src={getImageSrc("images/logo.png")}
+            style={{ width: "100%", height: "100%" }}
+          />
         </View>
 
         {/* Report Info */}
@@ -240,7 +245,8 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
           <Text style={styles.sectionTitle}>Report Information</Text>
           <View style={styles.infoRow}>
             <Text style={styles.infoItem}>
-              <Text style={styles.boldText}>Report ID:</Text> {report._id}
+              <Text style={styles.boldText}>Report ID:</Text>{" "}
+              {String(report._id)}
             </Text>
             <Text style={styles.infoItem}>
               <Text style={styles.boldText}>Date Completed:</Text>{" "}
@@ -332,7 +338,16 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
 
         {/* Cleaning Details */}
         <View style={styles.rowContainer}>
-          <View style={styles.columnSection}>
+          <View
+            style={
+              report.ecologyUnit?.exists
+                ? styles.columnSection
+                : {
+                    ...styles.columnSection,
+                    alignItems: "center",
+                  }
+            }
+          >
             <Text style={styles.sectionTitle}>Cleaning Performed</Text>
             <Text style={styles.infoItem}>
               Hood Cleaned: {report.cleaningDetails?.hoodCleaned ? "Yes" : "No"}
@@ -350,26 +365,22 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
             </Text>
           </View>
 
-          <View style={styles.columnSection}>
-            <Text style={styles.sectionTitle}>Ecology Unit</Text>
-            <Text style={styles.infoItem}>
-              Present: {report.ecologyUnit?.exists ? "Yes" : "No"}
-            </Text>
-            {report.ecologyUnit?.exists && (
-              <>
+          {report.ecologyUnit?.exists && (
+            <View style={styles.columnSection}>
+              <Text style={styles.sectionTitle}>Ecology Unit</Text>
+              <Text style={styles.infoItem}>Operational: Yes</Text>
+              <Text style={styles.infoItem}>
+                Filter Replacement Needed:{" "}
+                {report.ecologyUnit?.filterReplacementNeeded ? "Yes" : "No"}
+              </Text>
+              {report.ecologyUnit?.notes && (
                 <Text style={styles.infoItem}>
-                  Filter Replacement Needed:{" "}
-                  {report.ecologyUnit?.filterReplacementNeeded ? "Yes" : "No"}
+                  <Text style={styles.boldText}>Notes:</Text>{" "}
+                  {report.ecologyUnit.notes}
                 </Text>
-                {report.ecologyUnit?.notes && (
-                  <Text style={styles.infoItem}>
-                    <Text style={styles.boldText}>Notes:</Text>{" "}
-                    {report.ecologyUnit.notes}
-                  </Text>
-                )}
-              </>
-            )}
-          </View>
+              )}
+            </View>
+          )}
         </View>
 
         {/* Inspection Items */}

@@ -13,7 +13,7 @@ import {
   getReminderSettings,
   sendPaymentReminderEmail,
 } from "../../app/lib/actions/reminder.actions";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { formatDateStringUTC } from "../../app/lib/utils";
 import { Card } from "../ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -25,6 +25,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
@@ -42,6 +53,9 @@ export default function PaymentRemindersCard({
     enabled: false,
     frequency: "none",
   });
+  const [startFrom, setStartFrom] = useState<"today" | "dateIssued">(
+    "dateIssued",
+  );
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -91,6 +105,7 @@ export default function PaymentRemindersCard({
         {
           enabled: settings.enabled,
           frequency: settings.frequency,
+          startFrom,
         },
         userName,
       );
@@ -110,12 +125,6 @@ export default function PaymentRemindersCard({
   };
 
   const handleSendReminder = async () => {
-    const confirmed = window.confirm(
-      "Send a payment reminder email to the client now?",
-    );
-
-    if (!confirmed) return;
-
     setIsSending(true);
     try {
       const userName = user?.fullName || user?.firstName || "User";
@@ -231,25 +240,50 @@ export default function PaymentRemindersCard({
             </div>
           )}
 
-          {/* Frequency Selection */}
-          <div className="space-y-2">
-            <Label className="text-sm">Auto Reminder Frequency</Label>
-            <Select
-              value={settings.frequency}
-              onValueChange={handleFrequencyChange}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select frequency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="none">None (disabled)</SelectItem>
-                <SelectItem value="3days">Every 3 days</SelectItem>
-                <SelectItem value="5days">Every 5 days</SelectItem>
-                <SelectItem value="7days">Every 7 days</SelectItem>
-                <SelectItem value="14days">Every 14 days</SelectItem>
-              </SelectContent>
-            </Select>
+          {/* Frequency and Start From Selection - Same Row */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label className="text-sm">Frequency</Label>
+              <Select
+                value={settings.frequency}
+                onValueChange={handleFrequencyChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select frequency" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">None</SelectItem>
+                  <SelectItem value="3days">Every 3 days</SelectItem>
+                  <SelectItem value="5days">Every 5 days</SelectItem>
+                  <SelectItem value="7days">Every 7 days</SelectItem>
+                  <SelectItem value="14days">Every 14 days</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm">Start From</Label>
+              <Select
+                value={startFrom}
+                onValueChange={(value) =>
+                  setStartFrom(value as "today" | "dateIssued")
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select start" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="today">Today</SelectItem>
+                  <SelectItem value="dateIssued">Issue Date</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+          <p className="text-muted-foreground text-xs">
+            {startFrom === "today"
+              ? "First reminder will be sent X days from now"
+              : "Calculates from invoice issue date, skips past intervals"}
+          </p>
 
           {/* Save Button */}
           <Button
@@ -263,21 +297,39 @@ export default function PaymentRemindersCard({
 
           <Separator />
 
-          {/* Manual Send Button */}
-          <Button
-            onClick={handleSendReminder}
-            disabled={isSending}
-            variant="secondary"
-            size="sm"
-            className="w-full gap-2"
-          >
-            {isSending ? (
-              <FaPaperPlane className="h-3 w-3 animate-spin" />
-            ) : (
-              <FaPaperPlane className="h-3 w-3" />
-            )}
-            Send Reminder Now
-          </Button>
+          {/* Manual Send Button with AlertDialog */}
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button
+                disabled={isSending}
+                variant="secondary"
+                size="sm"
+                className="w-full gap-2"
+              >
+                {isSending ? (
+                  <FaPaperPlane className="h-3 w-3 animate-spin" />
+                ) : (
+                  <FaPaperPlane className="h-3 w-3" />
+                )}
+                Send Reminder Now
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Send Payment Reminder?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will immediately send a payment reminder email to the
+                  client.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleSendReminder}>
+                  Send Reminder
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </TabsContent>
 
         <TabsContent value="history" className="mt-0">
