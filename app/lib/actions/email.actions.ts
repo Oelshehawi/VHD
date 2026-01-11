@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import connectMongo from "../connect";
-import { Invoice, Client, JobsDueSoon, AuditLog } from "../../../models/reactDataSchema";
+import { Invoice, Client, JobsDueSoon, AuditLog, Schedule, Report } from "../../../models/reactDataSchema";
 import { DueInvoiceType } from "../typeDefinitions";
 import {
   getEmailForPurpose,
@@ -12,9 +12,11 @@ import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
   type InvoiceData,
 } from "../../../_components/pdf/InvoicePdfDocument";
+import ReportPdfDocument from "../../../_components/pdf/ReportPdfDocument";
 
 
 const postmark = require("postmark");
+import { clerkClient } from "@clerk/nextjs/server";
 
 /**
  * Send a cleaning reminder email using Postmark
@@ -108,9 +110,16 @@ export async function sendCleaningReminderEmail(
  * Send invoice delivery email using Postmark
  * @param invoiceId The invoice ID to send
  * @param performedBy The user who performed this action
+ * @param recipients Optional array of email addresses (if not provided, uses accounting email)
+ * @param includeReport Whether to include the report PDF as attachment
  * @returns Object with status and message
  */
-export async function sendInvoiceDeliveryEmail(invoiceId: string, performedBy: string = "system") {
+export async function sendInvoiceDeliveryEmail(
+  invoiceId: string,
+  performedBy: string = "system",
+  recipients?: string[],
+  includeReport: boolean = false,
+) {
   await connectMongo();
 
   try {
@@ -132,10 +141,16 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string, performedBy: s
     // Convert to plain object
     const clientDetails = clientDetailsDoc.toObject();
 
-    // Get appropriate email for accounting purposes
-    const clientEmail = getEmailForPurpose(clientDetails, "accounting");
-    if (!clientEmail) {
-      return { success: false, error: "Client email not found" };
+    // Get appropriate email for accounting purposes (as default)
+    const defaultEmail = getEmailForPurpose(clientDetails, "accounting");
+    
+    // Use provided recipients or fall back to default accounting email
+    const emailRecipients = recipients && recipients.length > 0 
+      ? recipients 
+      : defaultEmail ? [defaultEmail] : [];
+    
+    if (emailRecipients.length === 0) {
+      return { success: false, error: "No recipient email addresses provided" };
     }
 
     // Calculate total with tax
@@ -173,7 +188,7 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string, performedBy: s
       jobTitle: invoice.jobTitle,
       location: invoice.location,
       clientName: clientDetails.clientName,
-      email: clientEmail,
+      email: defaultEmail || emailRecipients[0] || "",
       phoneNumber: clientDetails.phoneNumber,
       items: items.map(
         (item: { description: any; price: any; details?: any }) => ({
@@ -212,27 +227,93 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string, performedBy: s
       email_title: "Invoice - Vent Cleaning & Certification",
     };
 
-    // Send email using Postmark with PDF attachment
+    // Build attachments array
+    const attachments = [
+      {
+        Name: `${invoice.jobTitle.trim()} - Invoice.pdf`,
+        Content: pdfBase64,
+        ContentType: "application/pdf",
+        ContentID: `invoice-${invoice.invoiceId}`,
+      },
+    ];
+
+    // Add report PDF if requested
+    if (includeReport) {
+      try {
+        // Find schedules linked to this invoice
+        const schedules = await Schedule.find({ invoiceRef: invoiceId }).lean();
+        if (schedules && schedules.length > 0) {
+          const scheduleIds = schedules.map((s: any) => s._id.toString());
+          const report = await Report.findOne({ scheduleId: { $in: scheduleIds } }).lean();
+          
+          if (report) {
+            const reportData = report as any;
+            // Fetch technician data for report PDF
+            let technicianData = {
+              id: reportData.technicianId || "",
+              firstName: "Unknown",
+              lastName: "Technician",
+              fullName: "Unknown Technician",
+              email: "",
+            };
+            
+            if (reportData.technicianId) {
+              try {
+                const users: any = await clerkClient();
+                const user = await users.users.getUser(reportData.technicianId);
+                if (user) {
+                  technicianData = {
+                    id: user.id,
+                    firstName: user.firstName || "Unknown",
+                    lastName: user.lastName || "Technician",
+                    fullName: user.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown Technician",
+                    email: user.emailAddresses?.[0]?.emailAddress || "",
+                  };
+                }
+              } catch (techError) {
+                console.error("Failed to fetch technician data:", techError);
+              }
+            }
+            
+            // Generate report PDF
+            const ReportDocument = () => createElement(ReportPdfDocument, { 
+              report: report as any,
+              technician: technicianData,
+            });
+            const reportBuffer = await renderToBuffer(createElement(ReportDocument));
+            const reportBase64 = reportBuffer.toString("base64");
+            
+            attachments.push({
+              Name: `${invoice.jobTitle.trim()} - Report.pdf`,
+              Content: reportBase64,
+              ContentType: "application/pdf",
+              ContentID: `report-${invoice.invoiceId}`,
+            });
+          }
+        }
+      } catch (reportError) {
+        console.error("Failed to generate report PDF:", reportError);
+        // Continue without report attachment
+      }
+    }
+
+    // Send email using Postmark with PDF attachment to all recipients
     const postmarkClient = new postmark.ServerClient(
       process.env.POSTMARK_CLIENT,
     );
 
-    await postmarkClient.sendEmailWithTemplate({
-      From: "adam@vancouverventcleaning.ca",
-      To: clientEmail,
-      TemplateAlias: "invoice-delivery",
-      TemplateModel: templateModel,
-      Attachments: [
-        {
-          Name: `${invoice.jobTitle.trim()} - Invoice.pdf`,
-          Content: pdfBase64,
-          ContentType: "application/pdf",
-          ContentID: `invoice-${invoice.invoiceId}`,
-        },
-      ],
-      TrackOpens: true,
-      MessageStream: "invoice-delivery",
-    });
+    // Send to all recipients
+    for (const recipient of emailRecipients) {
+      await postmarkClient.sendEmailWithTemplate({
+        From: "adam@vancouverventcleaning.ca",
+        To: recipient,
+        TemplateAlias: "invoice-delivery",
+        TemplateModel: templateModel,
+        Attachments: attachments,
+        TrackOpens: true,
+        MessageStream: "invoice-delivery",
+      });
+    }
 
     // Create audit log entry for invoice email sent
     await AuditLog.create({
@@ -244,10 +325,11 @@ export async function sendInvoiceDeliveryEmail(invoiceId: string, performedBy: s
         newValue: {
           invoiceId: invoice.invoiceId,
           jobTitle: invoice.jobTitle,
-          clientEmail: clientEmail,
+          recipients: emailRecipients,
+          includeReport: includeReport,
           clientName: clientDetails.clientName,
         },
-        reason: "Invoice sent to client via email",
+        reason: `Invoice sent to ${emailRecipients.length} recipient(s) via email${includeReport ? " with report" : ""}`,
         metadata: {
           clientId: invoice.clientId,
         },

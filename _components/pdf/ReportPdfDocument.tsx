@@ -156,6 +156,11 @@ export interface ReportData {
     ovens?: boolean;
     flattopGrills?: boolean;
   };
+  ecologyUnit?: {
+    exists?: boolean;
+    filterReplacementNeeded?: boolean;
+    notes?: string;
+  };
   recommendations?: string;
   comments?: string;
   recommendedCleaningFrequency?: number;
@@ -345,24 +350,24 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
           </View>
 
           <View style={styles.columnSection}>
-            <Text style={styles.sectionTitle}>Cooking Equipment</Text>
+            <Text style={styles.sectionTitle}>Ecology Unit</Text>
             <Text style={styles.infoItem}>
-              Griddles: {report.cookingEquipment?.griddles ? "Yes" : "No"}
+              Present: {report.ecologyUnit?.exists ? "Yes" : "No"}
             </Text>
-            <Text style={styles.infoItem}>
-              Deep Fat Fryers:{" "}
-              {report.cookingEquipment?.deepFatFryers ? "Yes" : "No"}
-            </Text>
-            <Text style={styles.infoItem}>
-              Woks: {report.cookingEquipment?.woks ? "Yes" : "No"}
-            </Text>
-            <Text style={styles.infoItem}>
-              Ovens: {report.cookingEquipment?.ovens ? "Yes" : "No"}
-            </Text>
-            <Text style={styles.infoItem}>
-              Flattop Grills:{" "}
-              {report.cookingEquipment?.flattopGrills ? "Yes" : "No"}
-            </Text>
+            {report.ecologyUnit?.exists && (
+              <>
+                <Text style={styles.infoItem}>
+                  Filter Replacement Needed:{" "}
+                  {report.ecologyUnit?.filterReplacementNeeded ? "Yes" : "No"}
+                </Text>
+                {report.ecologyUnit?.notes && (
+                  <Text style={styles.infoItem}>
+                    <Text style={styles.boldText}>Notes:</Text>{" "}
+                    {report.ecologyUnit.notes}
+                  </Text>
+                )}
+              </>
+            )}
           </View>
         </View>
 

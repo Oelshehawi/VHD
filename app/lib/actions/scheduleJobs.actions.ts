@@ -667,3 +667,32 @@ export const getReportsByJobNameAndLocation = async (
     return [];
   }
 };
+
+/**
+ * Check if a schedule and report exist for an invoice
+ * Returns object with hasSchedule and hasReport flags
+ */
+export async function getReportStatusByInvoiceId(
+  invoiceId: string,
+): Promise<{ hasSchedule: boolean; hasReport: boolean }> {
+  await connectMongo();
+  try {
+    // Find schedules linked to this invoice
+    const schedules = await Schedule.find({ invoiceRef: invoiceId }).lean();
+
+    if (!schedules || schedules.length === 0) {
+      return { hasSchedule: false, hasReport: false };
+    }
+
+    // Check if any schedule has a report
+    const scheduleIds = schedules.map((s: any) => s._id.toString());
+    const reportCount = await Report.countDocuments({
+      scheduleId: { $in: scheduleIds },
+    });
+
+    return { hasSchedule: true, hasReport: reportCount > 0 };
+  } catch (error) {
+    console.error("Error checking report status:", error);
+    return { hasSchedule: false, hasReport: false };
+  }
+}

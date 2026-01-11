@@ -79,7 +79,7 @@ const ReminderConfigModal = ({
   };
 
   const handleFrequencyChange = (value: string) => {
-    const frequency = value as "none" | "3days" | "7days" | "14days";
+    const frequency = value as "none" | "3days" | "5days" | "7days" | "14days";
     setSettings((prev) => ({
       ...prev,
       enabled: frequency !== "none",
@@ -219,6 +219,7 @@ const ReminderConfigModal = ({
                 <SelectContent>
                   <SelectItem value="none">None (default)</SelectItem>
                   <SelectItem value="3days">Every 3 days</SelectItem>
+                  <SelectItem value="5days">Every 5 days</SelectItem>
                   <SelectItem value="7days">Every 7 days</SelectItem>
                   <SelectItem value="14days">Every 14 days</SelectItem>
                 </SelectContent>

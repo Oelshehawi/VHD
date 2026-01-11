@@ -193,6 +193,15 @@ export const ReportSchema = new Schema<ReportType>({
     ductworkCleaned: { type: Boolean, default: true },
     fanCleaned: { type: Boolean, default: true },
   },
+  ecologyUnit: {
+    exists: { type: Boolean, default: false },
+    filterReplacementNeeded: { type: Boolean, default: false },
+    notes: { type: String },
+  },
+  accessPanels: {
+    adequate: { type: Boolean, default: true },
+    notes: { type: String },
+  },
   recommendations: String,
 });
 

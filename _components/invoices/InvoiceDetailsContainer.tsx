@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { FaReceipt, FaPaperPlane } from "react-icons/fa";
 import { Loader2, FileText, Settings } from "lucide-react";
@@ -8,7 +8,8 @@ import ClientDetails from "./ClientDetails";
 import PriceBreakdown from "./PriceBreakdown";
 import { type ReceiptData } from "../pdf/GeneratePDF";
 import ReceiptModal from "./ReceiptModal";
-import InvoiceConfirmationModal from "./InvoiceConfirmationModal";
+import SendInvoiceModal from "./SendInvoiceModal";
+import PaymentRemindersCard from "./PaymentRemindersCard";
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
 import {
   calculateGST,
@@ -17,6 +18,7 @@ import {
   getEmailForPurpose,
 } from "../../app/lib/utils";
 import { sendInvoiceDeliveryEmail } from "../../app/lib/actions/email.actions";
+import { getReportStatusByInvoiceId } from "../../app/lib/actions/scheduleJobs.actions";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
@@ -48,17 +50,45 @@ const InvoiceDetailsContainer = ({
   const [currency, setCurrency] = useState<"CAD" | "USD">("CAD");
   const [exchangeRate, setExchangeRate] = useState<number>(1.35); // Default CAD to USD rate
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [hasSchedule, setHasSchedule] = useState(false);
+  const [hasReport, setHasReport] = useState(false);
+  const [isCheckingReport, setIsCheckingReport] = useState(false);
+
+  // Check report status when modal opens
+  useEffect(() => {
+    if (showConfirmationModal && invoice._id) {
+      setIsCheckingReport(true);
+      getReportStatusByInvoiceId(invoice._id as string)
+        .then((status) => {
+          setHasSchedule(status.hasSchedule);
+          setHasReport(status.hasReport);
+        })
+        .catch(() => {
+          setHasSchedule(false);
+          setHasReport(false);
+        })
+        .finally(() => setIsCheckingReport(false));
+    }
+  }, [showConfirmationModal, invoice._id]);
 
   // Email sending with debounce
   const {
     isProcessing: isSendingEmail,
     debouncedSubmit: handleSendInvoiceConfirmed,
   } = useDebounceSubmit({
-    onSubmit: async () => {
+    onSubmit: async ({
+      recipients,
+      includeReport,
+    }: {
+      recipients: string[];
+      includeReport: boolean;
+    }) => {
       const performedBy = user?.fullName || user?.firstName || "user";
       const response = await sendInvoiceDeliveryEmail(
         invoice._id as string,
         performedBy,
+        recipients,
+        includeReport,
       );
       if (!response.success) {
         throw new Error(response.error || "Failed to send invoice email");
@@ -477,20 +507,25 @@ const InvoiceDetailsContainer = ({
           {canManage && <PriceBreakdown invoice={invoice} />}
         </div>
 
-        {/* Right side - Client Info */}
+        {/* Right side - Client Info & Reminders */}
         <div className="space-y-4 sm:space-y-6 md:col-span-2 lg:col-span-1">
           <ClientDetails client={client} canManage={canManage} />
+          {canManage && (
+            <PaymentRemindersCard invoiceId={invoice._id as string} />
+          )}
         </div>
       </div>
 
-      {/* Invoice Confirmation Modal */}
-      <InvoiceConfirmationModal
+      {/* Send Invoice Modal */}
+      <SendInvoiceModal
         invoice={invoice}
         client={client}
         isOpen={showConfirmationModal}
-        isLoading={isSendingEmail}
-        onConfirm={() => {
-          handleSendInvoiceConfirmed(undefined);
+        isLoading={isSendingEmail || isCheckingReport}
+        hasSchedule={hasSchedule}
+        hasReport={hasReport}
+        onConfirm={(recipients, includeReport) => {
+          handleSendInvoiceConfirmed({ recipients, includeReport });
         }}
         onCancel={handleCancelConfirmation}
       />

@@ -28,7 +28,7 @@ export async function configurePaymentReminders(
   invoiceId: string,
   settings: {
     enabled: boolean;
-    frequency: "none" | "3days" | "7days" | "14days";
+    frequency: "none" | "3days" | "5days" | "7days" | "14days";
   },
   performedBy?: string,
 ) {
@@ -42,13 +42,32 @@ export async function configurePaymentReminders(
       const days =
         settings.frequency === "3days"
           ? 3
-          : settings.frequency === "7days"
-            ? 7
-            : 14;
+          : settings.frequency === "5days"
+            ? 5
+            : settings.frequency === "7days"
+              ? 7
+              : 14;
 
-      // Set reminder date to 9 AM PST (16:00 UTC) to match cron job schedule
-      const targetDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-      nextReminderDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 16, 0, 0, 0); // 16:00 UTC = 9 AM PST
+      // Calculate target date based on local date to avoid timezone rollover issues
+      // Get local year/month/day, add days, then set to 9 AM local time
+      const localNow = new Date(
+        now.getFullYear(),
+        now.getMonth(),
+        now.getDate(),
+      );
+      const targetLocal = new Date(
+        localNow.getTime() + days * 24 * 60 * 60 * 1000,
+      );
+      // Set to 9 AM local time for the reminder
+      nextReminderDate = new Date(
+        targetLocal.getFullYear(),
+        targetLocal.getMonth(),
+        targetLocal.getDate(),
+        9,
+        0,
+        0,
+        0,
+      );
     }
 
     // Get current reminder settings for audit log
@@ -126,11 +145,27 @@ export async function processAutoReminders(): Promise<ProcessResult> {
           let nextReminderDate: Date | undefined;
           if (frequency && frequency !== "none") {
             const days =
-              frequency === "3days" ? 3 : frequency === "7days" ? 7 : 14;
+              frequency === "3days"
+                ? 3
+                : frequency === "5days"
+                  ? 5
+                  : frequency === "7days"
+                    ? 7
+                    : 14;
 
             // Set reminder date to 9 AM PST (16:00 UTC) to match cron job schedule
-            const targetDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
-            nextReminderDate = new Date(targetDate.getFullYear(), targetDate.getMonth(), targetDate.getDate(), 16, 0, 0, 0); // 16:00 UTC = 9 AM PST
+            const targetDate = new Date(
+              now.getTime() + days * 24 * 60 * 60 * 1000,
+            );
+            nextReminderDate = new Date(
+              targetDate.getFullYear(),
+              targetDate.getMonth(),
+              targetDate.getDate(),
+              16,
+              0,
+              0,
+              0,
+            ); // 16:00 UTC = 9 AM PST
           }
 
           // Update next reminder date
@@ -275,18 +310,20 @@ export async function sendPaymentReminderEmail(
       email_title: `${sequenceText} Payment Reminder - Vent Cleaning & Certification`,
       reminder_sequence: sequenceText,
       total_reminders_sent: reminderSequence.toString(),
-      first_reminder: reminderSequence === 1
-        ? {
-            invoice_number: invoice.invoiceId || "",
-            jobTitle: invoice.jobTitle || "",
-            due_date: formattedDueDate,
-          }
-        : false,
-      subsequent_reminder: reminderSequence > 1
-        ? {
-            reminder_sequence: sequenceText,
-          }
-        : false,
+      first_reminder:
+        reminderSequence === 1
+          ? {
+              invoice_number: invoice.invoiceId || "",
+              jobTitle: invoice.jobTitle || "",
+              due_date: formattedDueDate,
+            }
+          : false,
+      subsequent_reminder:
+        reminderSequence > 1
+          ? {
+              reminder_sequence: sequenceText,
+            }
+          : false,
       is_overdue: isOverdue
         ? {
             invoice_number: invoice.invoiceId || "",
@@ -460,9 +497,10 @@ export async function getReminderSettings(invoiceId: string) {
               // Create a new plain object without MongoDB properties like _id
               const plainEntry: any = {};
               if (entry.sentAt !== undefined) {
-                plainEntry.sentAt = entry.sentAt instanceof Date
-                  ? entry.sentAt.toISOString()
-                  : String(entry.sentAt);
+                plainEntry.sentAt =
+                  entry.sentAt instanceof Date
+                    ? entry.sentAt.toISOString()
+                    : String(entry.sentAt);
               }
               if (entry.emailTemplate !== undefined) {
                 plainEntry.emailTemplate = entry.emailTemplate;

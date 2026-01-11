@@ -135,7 +135,7 @@ export interface PaymentInfo {
 
 export interface PaymentReminderSettings {
   enabled: boolean;
-  frequency: "none" | "3days" | "7days" | "14days";
+  frequency: "none" | "3days" | "5days" | "7days" | "14days";
   nextReminderDate?: Date;
   lastReminderSent?: Date;
   reminderHistory?: {
@@ -268,6 +268,15 @@ export interface ReportType {
     filtersCleaned: boolean;
     ductworkCleaned: boolean;
     fanCleaned: boolean;
+  };
+  ecologyUnit?: {
+    exists: boolean;
+    filterReplacementNeeded: boolean;
+    notes?: string;
+  };
+  accessPanels?: {
+    adequate: boolean;
+    notes?: string;
   };
   recommendations?: string;
 }

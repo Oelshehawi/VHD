@@ -79,57 +79,77 @@ interface ReportFormData {
   recommendedCleaningFrequency: number | "";
   comments: string;
   recommendations: string;
+  ecologyUnit: {
+    exists: boolean;
+    filterReplacementNeeded: boolean;
+    notes: string;
+  };
+  accessPanels: {
+    adequate: boolean;
+    notes: string;
+  };
 }
 
-// Inspection items definition
+// Inspection items definition - consolidated per NFPA 96
 const INSPECTION_ITEMS = [
-  "Filters are in place?",
-  "Filters listed?",
-  "Filters needs to be cleaned more often?",
-  "Filters need to be replaced?",
+  "Filters in place?",
+  "Filters need more frequent cleaning?",
+  "Filters need replacement?",
   "Wash cycle working?",
   "Fire suppression nozzles clear?",
-  "Fan tips and is accessible?",
-  "Safe access to fan?",
-  "Exhaust fan is operable?",
-  "Ecology Unit requires cleaning?",
-  "Ecology Unit deficiencies?",
-  "Grease buildup on roof between cleanings?",
-  "Entire system cleaned in accordance with applicable codes?",
-  "Entire system interior accessible for cleaning?",
-  "Multi storey vertical requires cleaning (Spinjets)?",
-  "Adequate number of access panels?",
+  "Safe access to fan/roof?",
+  "Exhaust fan operational?",
+  "Grease buildup on roof?",
+  "Adequate access panels?",
 ];
 
-const COOKING_EQUIPMENT_OPTIONS = [
-  { value: "griddles", label: "Griddles" },
-  { value: "deepFatFryers", label: "Deep Fat Fryers" },
-  { value: "woks", label: "Woks" },
-  { value: "ovens", label: "Ovens" },
-  { value: "flattopGrills", label: "Flattop Grills" },
+// Equipment type options
+const HOOD_TYPE_OPTIONS = [
+  "Type 1 Hood",
+  "Type 2 Hood",
+  "UV Hood",
+  "Spring Air Hood",
+  "Pizza Oven Hood",
+  "Other",
+];
+
+const FILTER_TYPE_OPTIONS = [
+  "Baffles",
+  "Drawer",
+  "Short Drawer",
+  "Mesh",
+  "Other",
+];
+
+const DUCTWORK_TYPE_OPTIONS = [
+  "Stainless Steel",
+  "Galvanized",
+  "Custom",
+  "Other",
+];
+
+const FAN_TYPE_OPTIONS = [
+  "Upblast Exhaust",
+  "Inline",
+  "Downblast",
+  "Utility Set",
+  "Other",
 ];
 
 const FUEL_TYPES = ["Natural Gas", "Electric", "Solid Fuel", "Other"];
 const COOKING_VOLUMES = ["High", "Medium", "Low"];
 
-// Key mappings for API
+// Key mappings for API - updated for consolidated inspection items
 const INSPECTION_KEY_MAPPINGS: Record<number, string> = {
   0: "filtersInPlace",
-  1: "filtersListed",
-  2: "filtersNeedCleaningMoreOften",
-  3: "filtersNeedReplacement",
-  4: "washCycleWorking",
-  5: "fireSuppressionNozzlesClear",
-  6: "fanTipAccessible",
-  7: "safeAccessToFan",
-  8: "exhaustFanOperational",
-  9: "ecologyUnitRequiresCleaning",
-  10: "ecologyUnitDeficiencies",
-  11: "greaseBuildupOnRoof",
-  12: "systemCleanedPerCode",
-  13: "systemInteriorAccessible",
-  14: "multiStoreyVerticalCleaning",
-  15: "adequateAccessPanels",
+  1: "filtersNeedCleaningMoreOften",
+  2: "filtersNeedReplacement",
+  3: "washCycleWorking",
+  4: "fireSuppressionNozzlesClear",
+  5: "safeAccessToFan",
+  6: "exhaustFanOperational",
+  7: "greaseBuildupOnRoof",
+  8: "adequateAccessPanels",
 };
 
 interface ReportModalProps {
@@ -193,6 +213,15 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         recommendedCleaningFrequency: "",
         comments: "",
         recommendations: "",
+        ecologyUnit: {
+          exists: false,
+          filterReplacementNeeded: false,
+          notes: "",
+        },
+        accessPanels: {
+          adequate: true,
+          notes: "",
+        },
       },
     });
 
@@ -368,6 +397,8 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         inspectionItems: inspectionItemsObject,
         equipmentDetails: data.equipmentDetails,
         cleaningDetails: data.cleaningDetails,
+        ecologyUnit: data.ecologyUnit,
+        accessPanels: data.accessPanels,
         recommendedCleaningFrequency:
           typeof data.recommendedCleaningFrequency === "number"
             ? data.recommendedCleaningFrequency
@@ -428,7 +459,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
   return (
     <>
       <Dialog open={true} onOpenChange={() => onClose()}>
-        <DialogContent className="flex min-h-[90vh] max-h-[90vh] w-full max-w-5xl min-w-[800px] flex-col gap-0 p-0">
+        <DialogContent className="flex max-h-[90vh] min-h-[90vh] w-full max-w-5xl min-w-[800px] flex-col gap-0 p-0">
           <DialogHeader className="shrink-0 border-b p-6">
             <DialogTitle className="text-xl">
               Kitchen Exhaust System Cleaning Report
@@ -448,6 +479,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
               {steps.map((s) => (
                 <Button
                   key={s}
+                  type="button"
                   variant={step === s ? "default" : "outline"}
                   size="sm"
                   onClick={() => setStep(s)}
@@ -470,53 +502,74 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                 {/* Basic Info Step */}
                 {step === "basic" && (
                   <div className="space-y-6">
-                    {/* Job Information */}
-                    <div>
-                      <h3 className="text-foreground mb-4 text-sm font-semibold">
-                        Job Information
-                      </h3>
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label htmlFor="jobTitle">Job Title</Label>
-                          <Controller
-                            name="jobTitle"
-                            control={control}
-                            render={({ field }) => (
-                              <Input
-                                {...field}
-                                id="jobTitle"
-                                placeholder="Enter job title"
-                              />
-                            )}
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label htmlFor="location">Restaurant Location</Label>
-                          <Controller
-                            name="location"
-                            control={control}
-                            render={({ field }) => (
-                              <Input
-                                {...field}
-                                id="location"
-                                placeholder="Enter restaurant address"
-                              />
-                            )}
-                          />
-                        </div>
+                    {/* Job Information - 2 columns */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="jobTitle">Job Title</Label>
+                        <Controller
+                          name="jobTitle"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="jobTitle"
+                              placeholder="Enter job title"
+                            />
+                          )}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="location">Restaurant Location</Label>
+                        <Controller
+                          name="location"
+                          control={control}
+                          render={({ field }) => (
+                            <Input
+                              {...field}
+                              id="location"
+                              placeholder="Enter restaurant address"
+                            />
+                          )}
+                        />
                       </div>
                     </div>
 
-                    {/* Technician */}
-                    <div className="space-y-2">
-                      <Label htmlFor="technician">Technician</Label>
-                      {technicians.length === 1 ? (
-                        <div className="bg-muted flex items-center rounded-md border p-2">
-                          <span>{technicians[0]?.name}</span>
-                        </div>
-                      ) : (
+                    {/* Technician, Fuel Type, Cooking Volume - 3 columns */}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                      <div className="space-y-2">
+                        <Label htmlFor="technician">Technician</Label>
+                        {technicians.length === 1 ? (
+                          <div className="bg-muted flex items-center rounded-md border p-2">
+                            <span>{technicians[0]?.name}</span>
+                          </div>
+                        ) : (
+                          <Controller
+                            name="technicianId"
+                            control={control}
+                            render={({ field }) => (
+                              <Select
+                                value={field.value}
+                                onValueChange={field.onChange}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select Technician" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {technicians.map((tech) => (
+                                    <SelectItem key={tech.id} value={tech.id}>
+                                      {tech.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            )}
+                          />
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Fuel Type</Label>
                         <Controller
-                          name="technicianId"
+                          name="fuelType"
                           control={control}
                           render={({ field }) => (
                             <Select
@@ -524,22 +577,46 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                               onValueChange={field.onChange}
                             >
                               <SelectTrigger>
-                                <SelectValue placeholder="Select Technician" />
+                                <SelectValue placeholder="Select fuel type" />
                               </SelectTrigger>
                               <SelectContent>
-                                {technicians.map((tech) => (
-                                  <SelectItem key={tech.id} value={tech.id}>
-                                    {tech.name}
+                                {FUEL_TYPES.map((type) => (
+                                  <SelectItem key={type} value={type}>
+                                    {type}
                                   </SelectItem>
                                 ))}
                               </SelectContent>
                             </Select>
                           )}
                         />
-                      )}
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Cooking Volume</Label>
+                        <Controller
+                          name="cookingVolume"
+                          control={control}
+                          render={({ field }) => (
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select volume" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {COOKING_VOLUMES.map((volume) => (
+                                  <SelectItem key={volume} value={volume}>
+                                    {volume}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          )}
+                        />
+                      </div>
                     </div>
 
-                    {/* Dates */}
+                    {/* Dates - 2 columns */}
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
                         <Label>Date of Service</Label>
@@ -567,135 +644,54 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                           name="lastServiceDate"
                           control={control}
                           render={({ field }) => (
-                            <DatePicker
-                              date={
-                                field.value ? new Date(field.value) : undefined
-                              }
-                              onSelect={(date) =>
-                                field.onChange(
-                                  date ? format(date, "yyyy-MM-dd") : "",
-                                )
-                              }
-                              placeholder="Select last service date"
-                            />
+                            <>
+                              <DatePicker
+                                date={
+                                  field.value
+                                    ? new Date(field.value)
+                                    : undefined
+                                }
+                                onSelect={(date) =>
+                                  field.onChange(
+                                    date ? format(date, "yyyy-MM-dd") : "",
+                                  )
+                                }
+                                placeholder="Select last service date"
+                              />
+                              {/* Quick date pills */}
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                {[3, 4, 6].map((months) => {
+                                  const baseDateStr =
+                                    getValues("dateCompleted") ||
+                                    format(new Date(), "yyyy-MM-dd");
+                                  const [year, month, day] = baseDateStr
+                                    .split("-")
+                                    .map(Number);
+                                  let targetMonth = month! - months;
+                                  let targetYear = year!;
+                                  while (targetMonth <= 0) {
+                                    targetMonth += 12;
+                                    targetYear -= 1;
+                                  }
+                                  const targetDateStr = `${targetYear}-${String(targetMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                                  return (
+                                    <button
+                                      key={months}
+                                      type="button"
+                                      onClick={() =>
+                                        field.onChange(targetDateStr)
+                                      }
+                                      className="border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 rounded-full border px-2 py-1 text-xs transition-colors"
+                                    >
+                                      {months}mo ago
+                                    </button>
+                                  );
+                                })}
+                              </div>
+                            </>
                           )}
                         />
                       </div>
-                    </div>
-
-                    {/* Fuel Type */}
-                    <div className="space-y-3">
-                      <Label>Fuel Type</Label>
-                      <Controller
-                        name="fuelType"
-                        control={control}
-                        render={({ field }) => (
-                          <RadioGroup
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            className="flex flex-wrap gap-4"
-                          >
-                            {FUEL_TYPES.map((type) => (
-                              <div
-                                key={type}
-                                className="flex items-center space-x-2"
-                              >
-                                <RadioGroupItem
-                                  value={type}
-                                  id={`fuel-${type}`}
-                                />
-                                <Label
-                                  htmlFor={`fuel-${type}`}
-                                  className="font-normal"
-                                >
-                                  {type}
-                                </Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
-                        )}
-                      />
-                    </div>
-
-                    {/* Cooking Volume */}
-                    <div className="space-y-3">
-                      <Label>Cooking Volume</Label>
-                      <Controller
-                        name="cookingVolume"
-                        control={control}
-                        render={({ field }) => (
-                          <RadioGroup
-                            value={field.value}
-                            onValueChange={field.onChange}
-                            className="flex gap-4"
-                          >
-                            {COOKING_VOLUMES.map((volume) => (
-                              <div
-                                key={volume}
-                                className="flex items-center space-x-2"
-                              >
-                                <RadioGroupItem
-                                  value={volume}
-                                  id={`volume-${volume}`}
-                                />
-                                <Label
-                                  htmlFor={`volume-${volume}`}
-                                  className="font-normal"
-                                >
-                                  {volume}
-                                </Label>
-                              </div>
-                            ))}
-                          </RadioGroup>
-                        )}
-                      />
-                    </div>
-
-                    {/* Cooking Equipment */}
-                    <div className="space-y-3">
-                      <Label>Cooking Equipment</Label>
-                      <p className="text-muted-foreground text-sm">
-                        Select all cooking equipment present:
-                      </p>
-                      <Controller
-                        name="cookingEquipment"
-                        control={control}
-                        render={({ field }) => (
-                          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-                            {COOKING_EQUIPMENT_OPTIONS.map((option) => (
-                              <div
-                                key={option.value}
-                                className="flex items-center space-x-2"
-                              >
-                                <Checkbox
-                                  id={`equip-${option.value}`}
-                                  checked={field.value.includes(option.value)}
-                                  onCheckedChange={(checked) => {
-                                    if (checked) {
-                                      field.onChange([
-                                        ...field.value,
-                                        option.value,
-                                      ]);
-                                    } else {
-                                      field.onChange(
-                                        field.value.filter(
-                                          (v) => v !== option.value,
-                                        ),
-                                      );
-                                    }
-                                  }}
-                                />
-                                <Label
-                                  htmlFor={`equip-${option.value}`}
-                                  className="font-normal"
-                                >
-                                  {option.label}
-                                </Label>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      />
                     </div>
                   </div>
                 )}
@@ -711,11 +707,21 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                           name="equipmentDetails.hoodType"
                           control={control}
                           render={({ field }) => (
-                            <Input
-                              {...field}
-                              id="hoodType"
-                              placeholder="Enter hood type"
-                            />
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select hood type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {HOOD_TYPE_OPTIONS.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
                         />
                       </div>
@@ -725,11 +731,21 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                           name="equipmentDetails.filterType"
                           control={control}
                           render={({ field }) => (
-                            <Input
-                              {...field}
-                              id="filterType"
-                              placeholder="Enter filter type"
-                            />
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select filter type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {FILTER_TYPE_OPTIONS.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
                         />
                       </div>
@@ -739,11 +755,21 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                           name="equipmentDetails.ductworkType"
                           control={control}
                           render={({ field }) => (
-                            <Input
-                              {...field}
-                              id="ductworkType"
-                              placeholder="Enter ductwork type"
-                            />
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select ductwork type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {DUCTWORK_TYPE_OPTIONS.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
                         />
                       </div>
@@ -753,14 +779,82 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                           name="equipmentDetails.fanType"
                           control={control}
                           render={({ field }) => (
-                            <Input
-                              {...field}
-                              id="fanType"
-                              placeholder="Enter fan type"
-                            />
+                            <Select
+                              value={field.value}
+                              onValueChange={field.onChange}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select fan type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {FAN_TYPE_OPTIONS.map((option) => (
+                                  <SelectItem key={option} value={option}>
+                                    {option}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
                           )}
                         />
                       </div>
+                    </div>
+
+                    {/* Ecology Unit Section */}
+                    <div className="space-y-4 rounded-lg border p-4">
+                      <Label className="text-base font-semibold">
+                        Ecology Unit
+                      </Label>
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                        <Controller
+                          name="ecologyUnit.exists"
+                          control={control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="ecologyUnitExists"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                              <Label
+                                htmlFor="ecologyUnitExists"
+                                className="font-normal"
+                              >
+                                Ecology unit present
+                              </Label>
+                            </div>
+                          )}
+                        />
+                        <Controller
+                          name="ecologyUnit.filterReplacementNeeded"
+                          control={control}
+                          render={({ field }) => (
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                id="ecologyFilterReplacement"
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                              <Label
+                                htmlFor="ecologyFilterReplacement"
+                                className="font-normal"
+                              >
+                                Filter replacement needed
+                              </Label>
+                            </div>
+                          )}
+                        />
+                      </div>
+                      <Controller
+                        name="ecologyUnit.notes"
+                        control={control}
+                        render={({ field }) => (
+                          <Textarea
+                            {...field}
+                            placeholder="Ecology unit notes (optional)"
+                            rows={2}
+                          />
+                        )}
+                      />
                     </div>
 
                     {/* Cleaning Details */}

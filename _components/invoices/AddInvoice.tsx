@@ -11,7 +11,7 @@ import {
   FaList,
   FaDollarSign,
 } from "react-icons/fa";
-import { X, Loader2 } from "lucide-react";
+import { X, Loader2, Bell } from "lucide-react";
 import { useUser } from "@clerk/nextjs";
 import { calculateDueDate } from "../../app/lib/utils";
 import {
@@ -62,6 +62,10 @@ interface InvoiceFormValues {
   dateDue: string;
   notes?: string;
   items: { description: string; details?: string; price: number }[];
+  paymentReminders?: {
+    enabled: boolean;
+    frequency: "none" | "3days" | "5days" | "7days";
+  };
 }
 
 const AddInvoice = ({ clients }: AddInvoiceProps) => {
@@ -78,6 +82,8 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
   const [selectedClient, setSelectedClient] = useState<ClientType | null>(null);
   const [showInvoiceSelector, setShowInvoiceSelector] = useState(false);
   const [dateIssuedValue, setDateIssuedValue] = useState<Date | undefined>();
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderFrequency, setReminderFrequency] = useState<"none" | "3days" | "5days" | "7days">("5days");
 
   const {
     register,
@@ -193,11 +199,20 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
   const { isProcessing, debouncedSubmit } = useDebounceSubmit({
     onSubmit: async (data: InvoiceFormValues) => {
       const userName = user?.fullName || user?.firstName || "User";
-      await createInvoice(data, userName);
+      // Add payment reminder settings to data
+      const invoiceData = {
+        ...data,
+        paymentReminders: reminderEnabled
+          ? { enabled: true, frequency: reminderFrequency }
+          : { enabled: false, frequency: "none" as const },
+      };
+      await createInvoice(invoiceData, userName);
       setOpen(false);
       setResetKey((prev) => prev + 1);
       setItems([{ description: "", details: "", price: 0 }]);
       setDateIssuedValue(undefined);
+      setReminderEnabled(false);
+      setReminderFrequency("5days");
       reset();
     },
     successMessage: "Invoice has been successfully added",
@@ -494,6 +509,62 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                         "border-primary/50 bg-primary/5",
                     )}
                   />
+                </div>
+
+                {/* Payment Reminders */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Bell className="text-muted-foreground h-4 w-4" />
+                    <Label className="text-sm font-medium">
+                      Payment Reminders
+                    </Label>
+                  </div>
+                  <p className="text-muted-foreground ml-6 text-xs">
+                    Automatically send payment reminder emails
+                  </p>
+                  <div className="bg-muted/50 rounded-lg border p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <Label htmlFor="reminder-toggle" className="text-sm font-normal cursor-pointer">
+                        Enable automatic reminders
+                      </Label>
+                      <button
+                        type="button"
+                        id="reminder-toggle"
+                        role="switch"
+                        aria-checked={reminderEnabled}
+                        onClick={() => setReminderEnabled(!reminderEnabled)}
+                        className={cn(
+                          "relative inline-flex h-5 w-9 shrink-0 cursor-pointer items-center rounded-full transition-colors",
+                          reminderEnabled ? "bg-primary" : "bg-input"
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            "pointer-events-none block h-4 w-4 rounded-full bg-background shadow-lg ring-0 transition-transform",
+                            reminderEnabled ? "translate-x-4" : "translate-x-0.5"
+                          )}
+                        />
+                      </button>
+                    </div>
+                    {reminderEnabled && (
+                      <div className="space-y-2">
+                        <Label className="text-xs text-muted-foreground">Reminder Frequency</Label>
+                        <Select
+                          value={reminderFrequency}
+                          onValueChange={(value) => setReminderFrequency(value as "3days" | "5days" | "7days")}
+                        >
+                          <SelectTrigger data-vaul-no-drag className="h-9">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3days">Every 3 days</SelectItem>
+                            <SelectItem value="5days">Every 5 days</SelectItem>
+                            <SelectItem value="7days">Every 7 days</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* Invoice Items Section */}

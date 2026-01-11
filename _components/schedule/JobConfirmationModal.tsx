@@ -48,7 +48,7 @@ const CHECKLIST_ITEMS: ChecklistItem[] = [
   },
   {
     id: "fanAccess",
-    label: "Fan access",
+    label: "Fan access and controls",
   },
 ];
 

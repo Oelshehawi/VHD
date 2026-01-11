@@ -52,7 +52,7 @@ export const invoiceSchema = new Schema<InvoiceType>({
     enabled: { type: Boolean, default: false },
     frequency: {
       type: String,
-      enum: ["none", "3days", "7days", "14days"],
+      enum: ["none", "3days", "5days", "7days", "14days"],
       default: "none",
     },
     nextReminderDate: { type: Date },
