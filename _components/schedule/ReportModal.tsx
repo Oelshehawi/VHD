@@ -1,7 +1,7 @@
 "use client";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { format } from "date-fns";
 import { Check, X, Minus, RotateCcw, Loader2 } from "lucide-react";
 import {
@@ -227,49 +227,8 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
 
   const watchedInspectionItems = watch("inspectionItems");
 
-  // Fetch existing report and previous reports
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const report = await getReportByScheduleId(schedule._id.toString());
-
-        if (report) {
-          setExistingReportId(
-            typeof report._id === "string"
-              ? report._id
-              : report._id?.toString(),
-          );
-          loadReportIntoForm(report);
-        }
-
-        // Fetch previous reports for auto-fill
-        if (schedule.jobTitle && schedule.location) {
-          const reports = await getReportsByJobNameAndLocation(
-            schedule.jobTitle,
-            schedule.location,
-          );
-          const previousReports = reports.filter(
-            (r) => r.scheduleId !== schedule._id.toString(),
-          );
-          if (previousReports.length > 0) {
-            setClientReports(previousReports);
-            if (!report) {
-              setShowReportSelector(true);
-            }
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching report:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [schedule._id]);
-
-  // Load report data into form
-  const loadReportIntoForm = (report: any) => {
+  // Load report data into form - defined as useCallback to be used in useEffect
+  const loadReportIntoForm = useCallback((report: any) => {
     // Convert inspection items from object to indexed format
     const inspectionItems: Record<number, "Yes" | "No" | "N/A" | ""> = {};
     if (report.inspectionItems) {
@@ -334,7 +293,48 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
       comments: report.comments || "",
       recommendations: report.recommendations || "",
     });
-  };
+  }, [schedule._id, schedule.invoiceRef, schedule.jobTitle, schedule.location, reset, defaultTechnicianId]);
+
+  // Fetch existing report and previous reports
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const report = await getReportByScheduleId(schedule._id.toString());
+
+        if (report) {
+          setExistingReportId(
+            typeof report._id === "string"
+              ? report._id
+              : report._id?.toString(),
+          );
+          loadReportIntoForm(report);
+        }
+
+        // Fetch previous reports for auto-fill
+        if (schedule.jobTitle && schedule.location) {
+          const reports = await getReportsByJobNameAndLocation(
+            schedule.jobTitle,
+            schedule.location,
+          );
+          const previousReports = reports.filter(
+            (r) => r.scheduleId !== schedule._id.toString(),
+          );
+          if (previousReports.length > 0) {
+            setClientReports(previousReports);
+            if (!report) {
+              setShowReportSelector(true);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching report:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [schedule._id, schedule.jobTitle, schedule.location, loadReportIntoForm]);
 
   // Handle report selection for auto-fill
   const handleReportSelect = (report: any) => {
@@ -428,7 +428,12 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
   const currentStepIndex = steps.indexOf(step);
   const progress = ((currentStepIndex + 1) / steps.length) * 100;
 
-  const nextStep = () => {
+  const nextStep = (e?: React.MouseEvent) => {
+    // Prevent any form submission
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     const next = steps[currentStepIndex + 1];
     if (next) setStep(next);
   };
@@ -1142,7 +1147,14 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
             )}
 
             {currentStepIndex < steps.length - 1 ? (
-              <Button type="button" onClick={nextStep}>
+              <Button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nextStep(e);
+                }}
+              >
                 Next
               </Button>
             ) : (

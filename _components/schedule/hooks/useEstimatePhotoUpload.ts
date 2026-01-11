@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ScheduleType } from "../../../app/lib/typeDefinitions";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 export interface UploadProgress {
   fileName: string;

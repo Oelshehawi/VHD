@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { Printer, Loader2 } from "lucide-react";
 import { PDFDownloadLink } from "@react-pdf/renderer";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import InvoicePdfDocument, { type InvoiceData } from "./InvoicePdfDocument";
 import EstimatePdfDocument, { type EstimateData } from "./EstimatePdfDocument";
 import ReceiptPdfDocument, { type ReceiptData } from "./ReceiptPdfDocument";

@@ -8,7 +8,7 @@ import {
   calculatePaymentDuration,
   getPaymentMethodDisplay,
 } from "../../app/lib/utils";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { calculateDueDate } from "../../app/lib/utils";
 import {
   FaArrowCircleRight,
@@ -39,6 +39,7 @@ import {
 import { DatePicker } from "../ui/date-picker";
 import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const InlineEditInvoice = ({
   invoice,
@@ -326,7 +327,10 @@ const InlineEditInvoice = ({
         </div>
       ) : (
         <div className="ml-6">
-          <div className="bg-muted text-foreground rounded-lg px-3 py-2 text-sm">
+          <div className={cn(
+            "bg-muted text-foreground rounded-lg px-3 py-2 text-sm",
+            field.name === "notes" && "whitespace-pre-wrap"
+          )}>
             {field.name === "dateDue" || field.name === "dateIssued" ? (
               formatDateToString(invoice[field.name])
             ) : field.name === "frequency" ? (
@@ -468,7 +472,7 @@ const InlineEditInvoice = ({
                       <span className="text-foreground text-xs font-medium">
                         Notes:
                       </span>
-                      <p className="text-muted-foreground mt-1 text-xs">
+                      <p className="text-muted-foreground mt-1 text-xs whitespace-pre-wrap">
                         {invoice.paymentInfo.notes}
                       </p>
                     </div>

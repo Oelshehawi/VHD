@@ -1,15 +1,15 @@
 "use client";
 
-import { useState, useTransition, useOptimistic } from "react";
+import { useState, useTransition, useOptimistic, useMemo } from "react";
 import {
   PendingInvoiceType,
   PaymentInfo,
   PaymentReminderSettings,
 } from "../../app/lib/typeDefinitions";
-import { FaCog, FaPhone, FaHistory } from "react-icons/fa";
+import { FaCog, FaPhone, FaHistory, FaSearch } from "react-icons/fa";
 import { CgUnavailable } from "react-icons/cg";
 import { updateInvoice } from "../../app/lib/actions/actions";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { formatAmount, formatDateStringUTC } from "../../app/lib/utils";
 import Link from "next/link";
 import PaymentModal from "../payments/PaymentModal";
@@ -18,6 +18,7 @@ import CallLogModal from "./CallLogModal";
 import CallHistoryModal from "./CallHistoryModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import {
   Select,
   SelectContent,
@@ -59,6 +60,7 @@ const PendingJobsModalContent = ({
     callHistory: any[];
     jobTitle: string;
   }>({ callHistory: [], jobTitle: "" });
+  const [searchQuery, setSearchQuery] = useState("");
 
   const [optimisticInvoices, setOptimisticInvoice] = useOptimistic(
     pendingInvoices,
@@ -196,24 +198,47 @@ const PendingJobsModalContent = ({
     );
   };
 
+  // Filter invoices based on search query
+  const filteredInvoices = useMemo(() => {
+    if (!searchQuery.trim()) return optimisticInvoices;
+    const query = searchQuery.toLowerCase();
+    return optimisticInvoices.filter(
+      (invoice) =>
+        invoice.jobTitle?.toLowerCase().includes(query) ||
+        invoice.invoiceId?.toLowerCase().includes(query),
+    );
+  }, [optimisticInvoices, searchQuery]);
+
   return (
     <>
       <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
         <DialogContent className="max-h-[85vh] w-full max-w-4xl overflow-hidden p-0">
-          <DialogHeader className="p-6 pb-2">
+          <DialogHeader className="space-y-4 p-6 pb-4">
             <DialogTitle className="text-xl font-bold">
               Pending Jobs
             </DialogTitle>
+            <div className="relative">
+              <FaSearch className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              <Input
+                type="text"
+                placeholder="Search by job title or invoice ID..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+              />
+            </div>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[calc(85vh-80px)] p-6 pt-2">
+          <ScrollArea className="max-h-[calc(85vh-140px)] p-6 pt-2">
             <div className="space-y-6">
-              {optimisticInvoices.length === 0 ? (
+              {filteredInvoices.length === 0 ? (
                 <p className="text-muted-foreground py-8 text-center">
-                  No pending jobs.
+                  {searchQuery
+                    ? "No jobs match your search."
+                    : "No pending jobs."}
                 </p>
               ) : (
-                optimisticInvoices.map((invoice) => {
+                filteredInvoices.map((invoice) => {
                   return (
                     <div
                       key={invoice._id as string}

@@ -148,27 +148,52 @@ export const fetchDueInvoices = async ({
 };
 
 const fetchDueInvoicesFromDB = async (monthNumber: number, year: number) => {
-  return await Invoice.find({
-    $expr: {
-      $and: [
-        { $eq: [{ $year: "$dateDue" }, year] },
-        { $eq: [{ $month: "$dateDue" }, monthNumber] },
-      ],
+  return await Invoice.aggregate([
+    {
+      $match: {
+        $expr: {
+          $and: [
+            { $eq: [{ $year: "$dateDue" }, year] },
+            { $eq: [{ $month: "$dateDue" }, monthNumber] },
+          ],
+        },
+      },
     },
-  }).lean();
+    {
+      $lookup: {
+        from: "clients",
+        localField: "clientId",
+        foreignField: "_id",
+        as: "client",
+      },
+    },
+    { $match: { "client.isArchived": { $ne: true } } },
+  ]);
 };
 
 const fetchJobsDue = async (monthNumber: number, year: number) => {
-  const jobs = await JobsDueSoon.find({
-    $expr: {
-      $and: [
-        { $eq: [{ $year: "$dateDue" }, year] },
-        { $eq: [{ $month: "$dateDue" }, monthNumber] },
-      ],
+  const jobs = await JobsDueSoon.aggregate([
+    {
+      $match: {
+        $expr: {
+          $and: [
+            { $eq: [{ $year: "$dateDue" }, year] },
+            { $eq: [{ $month: "$dateDue" }, monthNumber] },
+          ],
+        },
+      },
     },
-  })
-    .sort({ dateDue: 1 })
-    .lean();
+    {
+      $lookup: {
+        from: "clients",
+        localField: "clientId",
+        foreignField: "_id",
+        as: "client",
+      },
+    },
+    { $match: { "client.isArchived": { $ne: true } } },
+    { $sort: { dateDue: 1 } },
+  ]);
 
   return jobs.map((job) => ({
     ...job,
@@ -303,7 +328,7 @@ const createEmailSentMap = (jobsDueSoon: any[]) => {
 export const getClientCount = async () => {
   await connectMongo();
   try {
-    return await Client.countDocuments();
+    return await Client.countDocuments({ isArchived: { $ne: true } });
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to fetch client count");
@@ -315,6 +340,15 @@ export const getOverDueInvoiceAmount = async () => {
   try {
     const result = await Invoice.aggregate([
       { $match: { status: "overdue" } },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      { $match: { "client.isArchived": { $ne: true } } },
       { $unwind: "$items" },
       { $group: { _id: null, totalAmount: { $sum: "$items.price" } } },
     ]);
@@ -349,6 +383,15 @@ export const getPendingInvoiceAmount = async () => {
           dateIssued: { $lte: today },
         },
       },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      { $match: { "client.isArchived": { $ne: true } } },
       { $unwind: "$items" },
       { $group: { _id: null, totalAmount: { $sum: "$items.price" } } },
     ]);
@@ -1047,12 +1090,19 @@ export const getUnscheduledJobs = async () => {
   await connectMongo();
   try {
     const minDate = new Date("2024-01-01T00:00:00.000Z");
-    const jobs = await JobsDueSoon.find({
-      isScheduled: false,
-      dateDue: { $gte: minDate },
-    })
-      .sort({ dateDue: 1 })
-      .lean();
+    const jobs = await JobsDueSoon.aggregate([
+      { $match: { isScheduled: false, dateDue: { $gte: minDate } } },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      { $match: { "client.isArchived": { $ne: true } } },
+      { $sort: { dateDue: 1 } },
+    ]);
 
     return jobs.map((job: any) => ({
       _id: job._id.toString(),

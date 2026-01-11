@@ -30,8 +30,8 @@ export default function OptimizationSetupWithPreferences({
   onRunOptimization,
 }: OptimizationSetupWithPreferencesProps) {
   // Internal form state
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
+  const [startDate, setStartDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [endDate, setEndDate] = useState(() => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]);
   const [startingAddress, setStartingAddress] = useState("11020 Williams Rd Richmond, BC V7A 1X8");
   const [allowedDays, setAllowedDays] = useState<number[]>([1, 2, 3, 4, 5]); // Monday-Friday default
   const [maxJobsPerDay, setMaxJobsPerDay] = useState(4);

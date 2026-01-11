@@ -7,7 +7,7 @@ import {
 } from "../../app/lib/actions/availability.actions";
 import { TimeOffRequestType } from "../../app/lib/typeDefinitions";
 import { X, CheckCircle, XCircle, Loader2 } from "lucide-react";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";

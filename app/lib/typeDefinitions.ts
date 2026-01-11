@@ -125,6 +125,9 @@ export interface ClientType {
   phoneNumber: string;
   prefix: string;
   notes: string;
+  isArchived?: boolean;
+  archiveReason?: string;
+  archivedAt?: Date;
 }
 
 export interface PaymentInfo {

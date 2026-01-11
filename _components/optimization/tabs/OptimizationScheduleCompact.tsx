@@ -5,7 +5,7 @@ import { CloudRunOptimizationResponse, CloudRunScheduledJob } from "../../../app
 import { acceptOptimizedJob } from "../../../app/lib/actions/optimization.actions";
 import { formatDateStringUTC } from "../../../app/lib/utils";
 import { CheckIcon, PlusIcon } from "@heroicons/react/24/outline";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface OptimizationScheduleCompactProps {
   optimizationResult: CloudRunOptimizationResponse;

@@ -75,7 +75,7 @@
     "react-day-picker": "^9.13.0",
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.43.9",
-    "react-hot-toast": "^2.4.1",
+    "sonner": "^2.4.1",
     "react-icons": "^4.7.1",
     "react-resizable-panels": "^4.0.15",
     "react-select": "^5.8.1",

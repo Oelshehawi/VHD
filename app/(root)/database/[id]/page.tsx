@@ -27,24 +27,22 @@ const ClientDetailed = async ({
     <>
       <SetBreadcrumbName name={client.clientName} />
       <div className="bg-background">
-
-
         {/* Main Content */}
-          <div className="overflow-hidden">
-            <Suspense
-              fallback={
-                <div className="space-y-6">
-                  <ClientDetailedSkeleton />
-                </div>
-              }
-            >
-              <ClientDetailedContainer
-                client={client as ClientType}
-                invoices={invoices}
-              />
-            </Suspense>
-          </div>
+        <div className="overflow-hidden">
+          <Suspense
+            fallback={
+              <div className="space-y-6">
+                <ClientDetailedSkeleton />
+              </div>
+            }
+          >
+            <ClientDetailedContainer
+              client={client as ClientType}
+              invoices={invoices}
+            />
+          </Suspense>
         </div>
+      </div>
     </>
   );
 };

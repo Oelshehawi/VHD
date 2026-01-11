@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { deleteClient, deleteInvoice } from "../app/lib/actions/actions";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { FaTrash } from "react-icons/fa";
 import { deleteJob } from "../app/lib/actions/scheduleJobs.actions";
 import { deleteEstimate } from "../app/lib/actions/estimates.actions";

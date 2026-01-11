@@ -3,7 +3,7 @@
 import { useForm, useFieldArray } from "react-hook-form";
 import { useState, useEffect } from "react";
 import { FaSave, FaTimes, FaPlus, FaTrash, FaDollarSign } from "react-icons/fa";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { updateEstimate } from "../../app/lib/actions/estimates.actions";
 import { EstimateType } from "../../app/lib/typeDefinitions";
 import {
@@ -228,7 +228,7 @@ export default function EditItemsTotalsDialog({
                   <div className="text-muted-foreground rounded-lg border-2 border-dashed py-8 text-center">
                     <p>No items added yet.</p>
                     <p className="mt-1 text-sm">
-                      Click "Add Item" to get started.
+                      Click &quot;Add Item&quot; to get started.
                     </p>
                   </div>
                 )}

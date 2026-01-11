@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { generateClientAccessLink } from "../../app/lib/clerkClientPortal";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 
 interface AccessLinkGeneratorProps {
   clientId: string;

@@ -1,5 +1,5 @@
 "use client";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { updateClient } from "../../app/lib/actions/actions";
 import { useForm } from "react-hook-form";
 import { getEmailForPurpose } from "../../app/lib/utils";
@@ -204,7 +204,10 @@ const InlineEditClient = ({
       ) : (
         <div className="ml-6">
           <div className="flex items-center gap-2">
-            <div className="bg-muted text-foreground flex-1 rounded-lg px-3 py-2 text-sm">
+            <div className={cn(
+              "bg-muted text-foreground flex-1 rounded-lg px-3 py-2 text-sm",
+              field.name === "notes" && "whitespace-pre-wrap"
+            )}>
               {field.value || (
                 <span className="text-muted-foreground italic">
                   Not provided

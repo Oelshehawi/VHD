@@ -2,7 +2,7 @@
 
 import { PhotoType, SignatureType } from "../../app/lib/typeDefinitions";
 import { CldImage } from "next-cloudinary";
-import { useState, useCallback, useEffect, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { formatDateFns } from "../../app/lib/utils";
 import { toPublicId } from "../../app/lib/imageUtils";
 import Lightbox from "yet-another-react-lightbox";
@@ -37,15 +37,6 @@ export default function MediaDisplay({
   // State for lightbox
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
-  const [slides, setSlides] = useState<
-    Array<{
-      src: string;
-      title?: string;
-      description?: string;
-      downloadUrl?: string;
-      downloadFilename?: string;
-    }>
-  >([]);
 
   // Filter photos by type - memoize to prevent infinite loop
   const beforePhotos = useMemo(
@@ -58,17 +49,23 @@ export default function MediaDisplay({
     [photos],
   );
 
-  // Prepare slides for the lightbox
-  useEffect(() => {
-    const newSlides = [];
+  // Helper function to build optimized Cloudinary URL
+  const getOptimizedUrl = useCallback((url: string): string => {
+    const publicId = toPublicId(url);
+    if (!publicId) return url; // Fallback to original URL if extraction fails
 
-    // Helper function to build optimized Cloudinary URL
-    const getOptimizedUrl = (url: string): string => {
-      const publicId = toPublicId(url);
-      if (!publicId) return url; // Fallback to original URL if extraction fails
+    return `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto,dpr_auto,w_1600/${publicId}`;
+  }, []);
 
-      return `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto,dpr_auto,w_1600/${publicId}`;
-    };
+  // Prepare slides for the lightbox - derived data, no state needed
+  const slides = useMemo(() => {
+    const newSlides: Array<{
+      src: string;
+      title?: string;
+      description?: string;
+      downloadUrl?: string;
+      downloadFilename?: string;
+    }> = [];
 
     // Add before photos
     if (beforePhotos && beforePhotos.length > 0) {
@@ -110,8 +107,8 @@ export default function MediaDisplay({
       });
     }
 
-    setSlides(newSlides);
-  }, [beforePhotos, afterPhotos, signature]);
+    return newSlides;
+  }, [beforePhotos, afterPhotos, signature, getOptimizedUrl]);
 
   // Function to open lightbox at specific index
   const openLightbox = useCallback((photoIndex: number) => {

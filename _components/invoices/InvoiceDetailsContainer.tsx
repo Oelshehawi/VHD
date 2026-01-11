@@ -25,6 +25,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import ArchivedBanner from "../ui/archived-banner";
 import dynamic from "next/dynamic";
 
 const GeneratePDF = dynamic(() => import("../pdf/GeneratePDF"), { ssr: false });
@@ -260,6 +261,15 @@ const InvoiceDetailsContainer = ({
 
   return (
     <div className="space-y-4 sm:space-y-6">
+      {/* Archived Banner - Show if client is archived */}
+      {client.isArchived && (
+        <ArchivedBanner
+          entity="client"
+          archiveReason={client.archiveReason}
+          archivedAt={client.archivedAt}
+        />
+      )}
+      
       {/* Action Bar - Only show if user can manage */}
       {canManage && (
         <Card className="p-4 sm:p-6">

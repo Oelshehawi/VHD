@@ -4,15 +4,18 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { ScheduleType, ReportType } from "../../app/lib/typeDefinitions";
 import Link from "next/link";
-import toast from "react-hot-toast";
-import { updateSchedule } from "../../app/lib/actions/scheduleJobs.actions";
+import { toast } from "sonner";
+import {
+  updateSchedule,
+  getReportByScheduleId,
+  deleteReport,
+} from "../../app/lib/actions/scheduleJobs.actions";
 import DeleteModal from "../DeleteModal";
 import EditJobModal from "./EditJobModal";
 import ReportModal from "./ReportModal";
 import EstimatePhotosTab from "./EstimatePhotosTab";
 import GeneratePDF, { type PDFData } from "../pdf/GeneratePDF";
 import MediaDisplay from "../invoices/MediaDisplay";
-import { getReportByScheduleId } from "../../app/lib/actions/scheduleJobs.actions";
 import {
   X,
   Clock,
@@ -24,8 +27,20 @@ import {
   Phone,
   KeyRound,
   FileImage,
+  Trash2,
 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "../ui/alert-dialog";
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Card, CardContent } from "../ui/card";
@@ -60,6 +75,8 @@ export default function JobDetailsModal({
   const [isCheckingReport, setIsCheckingReport] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [isDeletingReport, setIsDeletingReport] = useState(false);
+  const [showDeleteReportConfirm, setShowDeleteReportConfirm] = useState(false);
   // Local state mirrors for optimistic UI updates
   const [localOnSiteContact, setLocalOnSiteContact] = useState(
     job?.onSiteContact,
@@ -205,6 +222,29 @@ export default function JobDetailsModal({
       toast.error("Failed to update the dead run status");
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeleteReport = async () => {
+    if (!existingReportData?._id) return;
+
+    setIsDeletingReport(true);
+    try {
+      const reportId =
+        typeof existingReportData._id === "string"
+          ? existingReportData._id
+          : existingReportData._id.toString();
+
+      await deleteReport(reportId);
+      toast.success("Report deleted successfully");
+      setHasExistingReport(false);
+      setExistingReportData(null);
+      setShowDeleteReportConfirm(false);
+    } catch (error) {
+      console.error("Failed to delete report:", error);
+      toast.error("Failed to delete report");
+    } finally {
+      setIsDeletingReport(false);
     }
   };
 
@@ -612,13 +652,53 @@ export default function JobDetailsModal({
                       Edit Report
                     </Button>
 
-                    <GeneratePDF
-                      pdfData={createReportPDFData(existingReportData)}
-                      fileName={`Report - ${job.jobTitle}.pdf`}
-                      buttonText="Download Report PDF"
-                      className="w-full"
-                      showScaleSelector
-                    />
+                    <div className="flex items-center justify-between gap-2">
+                      <GeneratePDF
+                        pdfData={createReportPDFData(existingReportData)}
+                        fileName={`Report - ${job.jobTitle}.pdf`}
+                        buttonText="Download Report PDF"
+                        className="flex-1"
+                        showScaleSelector
+                      />
+
+                      {canManage && (
+                        <AlertDialog
+                          open={showDeleteReportConfirm}
+                          onOpenChange={setShowDeleteReportConfirm}
+                        >
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this report? This
+                                action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel disabled={isDeletingReport}>
+                                Cancel
+                              </AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={handleDeleteReport}
+                                disabled={isDeletingReport}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                {isDeletingReport ? "Deleting..." : "Delete"}
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </div>
                   </div>
                 </div>
               ) : (

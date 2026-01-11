@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { toast } from "react-hot-toast";
+import { toast } from "sonner";
 import { DueInvoiceType } from "../../app/lib/typeDefinitions";
 import { updateScheduleStatus } from "../../app/lib/dashboard.data";
 import { formatDate } from "../../app/lib/utils";

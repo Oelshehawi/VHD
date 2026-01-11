@@ -2,7 +2,7 @@ import "../global.css";
 import { Metadata } from "next";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from "next/font/google";
-import { Toaster } from "react-hot-toast";
+import { Toaster } from "sonner";
 import ClientPortalFooter from "../../_components/client-portal/layout/ClientPortalFooter";
 
 const inter = Inter({ subsets: ["latin"] });

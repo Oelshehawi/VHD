@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { FaPaperPlane, FaHistory } from "react-icons/fa";
 import {
@@ -12,7 +12,7 @@ import {
   getReminderSettings,
   sendPaymentReminderEmail,
 } from "../../app/lib/actions/reminder.actions";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import { formatDateStringUTC } from "../../app/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
@@ -53,14 +53,7 @@ const ReminderConfigModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
 
-  // Reload settings when modal opens
-  useEffect(() => {
-    if (isOpen && invoiceId) {
-      loadReminderSettings();
-    }
-  }, [isOpen, invoiceId]);
-
-  const loadReminderSettings = async () => {
+  const loadReminderSettings = useCallback(async () => {
     try {
       const result = await getReminderSettings(invoiceId);
       if (result.success) {
@@ -76,7 +69,14 @@ const ReminderConfigModal = ({
       console.error("Error loading reminder settings:", error);
       toast.error("Failed to load reminder settings");
     }
-  };
+  }, [invoiceId]);
+
+  // Reload settings when modal opens
+  useEffect(() => {
+    if (isOpen && invoiceId) {
+      loadReminderSettings();
+    }
+  }, [isOpen, invoiceId, loadReminderSettings]);
 
   const handleFrequencyChange = (value: string) => {
     const frequency = value as "none" | "3days" | "5days" | "7days" | "14days";

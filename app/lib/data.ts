@@ -19,7 +19,7 @@ import {
 export const fetchAllClients = async () => {
   await connectMongo();
   try {
-    const clients = await Client.find();
+    const clients = await Client.find({ isArchived: { $ne: true } });
     return clients.map((client) => ({
       _id: client._id.toString(),
       clientName: client.clientName,
@@ -51,6 +51,9 @@ export const fetchClientById = async (
       phoneNumber: formatPhoneNumber(client.phoneNumber),
       prefix: client.prefix,
       notes: client.notes,
+      isArchived: client.isArchived,
+      archiveReason: client.archiveReason,
+      archivedAt: client.archivedAt,
     };
     return clientData;
   } catch (error) {
@@ -80,7 +83,17 @@ export const fetchClientInvoices = async (clientId: string) => {
 export const fetchAllInvoices = async () => {
   await connectMongo();
   try {
-    const invoices = await Invoice.find();
+    const invoices = await Invoice.aggregate([
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      { $match: { "client.isArchived": { $ne: true } } },
+    ]);
 
     const formattedItems = (items: any[]) =>
       items.map((item) => ({
@@ -116,9 +129,19 @@ export const fetchAllInvoices = async () => {
 export const fetchPendingInvoices = async () => {
   await connectMongo();
   try {
-    const invoices = await Invoice.find({
-      status: { $in: ["pending", "overdue"] },
-    }).sort({ dateIssued: -1 });
+    const invoices = await Invoice.aggregate([
+      { $match: { status: { $in: ["pending", "overdue"] } } },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      { $match: { "client.isArchived": { $ne: true } } },
+      { $sort: { dateIssued: -1 } },
+    ]);
 
     const formattedItems = (items: any[]) =>
       items.map((item) => ({
@@ -241,15 +264,31 @@ export async function fetchFilteredClients(
   query: string,
   currentPage: number,
   sort: 1 | -1,
+  archiveStatus?: "all" | "active" | "archived",
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
   const escapedQuery = escapeRegex(query);
+  
+  // Build archive filter
+  let archiveFilter = {};
+  if (archiveStatus === "active") {
+    archiveFilter = { isArchived: { $ne: true } };
+  } else if (archiveStatus === "archived") {
+    archiveFilter = { isArchived: true };
+  }
+  // If "all" or undefined, don't filter by archive status
+  
   let matchQuery = {
-    $or: [
-      { clientName: { $regex: escapedQuery, $options: "i" } },
-      { email: { $regex: escapedQuery, $options: "i" } },
-      { phoneNumber: { $regex: escapedQuery, $options: "i" } },
-      { notes: { $regex: escapedQuery, $options: "i" } },
+    $and: [
+      archiveFilter,
+      {
+        $or: [
+          { clientName: { $regex: escapedQuery, $options: "i" } },
+          { email: { $regex: escapedQuery, $options: "i" } },
+          { phoneNumber: { $regex: escapedQuery, $options: "i" } },
+          { notes: { $regex: escapedQuery, $options: "i" } },
+        ],
+      },
     ],
   };
 
@@ -271,16 +310,33 @@ export async function fetchFilteredClients(
   }
 }
 
-export async function fetchClientsPages(query: string) {
+export async function fetchClientsPages(
+  query: string,
+  archiveStatus?: "all" | "active" | "archived",
+) {
   await connectMongo();
   try {
     const escapedQuery = escapeRegex(query);
+    
+    // Build archive filter
+    let archiveFilter = {};
+    if (archiveStatus === "active") {
+      archiveFilter = { isArchived: { $ne: true } };
+    } else if (archiveStatus === "archived") {
+      archiveFilter = { isArchived: true };
+    }
+    
     const matchQuery = {
-      $or: [
-        { clientName: { $regex: escapedQuery, $options: "i" } },
-        { email: { $regex: escapedQuery, $options: "i" } },
-        { phoneNumber: { $regex: escapedQuery, $options: "i" } },
-        { notes: { $regex: escapedQuery, $options: "i" } },
+      $and: [
+        archiveFilter,
+        {
+          $or: [
+            { clientName: { $regex: escapedQuery, $options: "i" } },
+            { email: { $regex: escapedQuery, $options: "i" } },
+            { phoneNumber: { $regex: escapedQuery, $options: "i" } },
+            { notes: { $regex: escapedQuery, $options: "i" } },
+          ],
+        },
       ],
     };
 
@@ -332,6 +388,15 @@ export async function fetchFilteredInvoices(
   try {
     const invoices = await Invoice.aggregate([
       { $match: matchQuery },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      { $match: { "client.isArchived": { $ne: true } } },
       { $sort: sortQuery },
       { $skip: offset },
       { $limit: ITEMS_PER_PAGE },
@@ -374,6 +439,15 @@ export async function fetchInvoicesPages(
 
     const countResult = await Invoice.aggregate([
       { $match: matchQuery },
+      {
+        $lookup: {
+          from: "clients",
+          localField: "clientId",
+          foreignField: "_id",
+          as: "client",
+        },
+      },
+      { $match: { "client.isArchived": { $ne: true } } },
       { $count: "total" },
     ]);
 

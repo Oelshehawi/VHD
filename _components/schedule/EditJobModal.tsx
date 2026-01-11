@@ -6,7 +6,7 @@ import { useForm, Controller } from "react-hook-form";
 import { updateJob } from "../../app/lib/actions/scheduleJobs.actions";
 import { ScheduleType } from "../../app/lib/typeDefinitions";
 import { hoursToPayrollHours } from "../../app/lib/utils";
-import toast from "react-hot-toast";
+import { toast } from "sonner";
 import TechnicianSelect from "./TechnicianSelect";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";

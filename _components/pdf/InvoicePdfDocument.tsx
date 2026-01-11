@@ -322,6 +322,7 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
 
         {/* Logo - Using hybrid approach for client/server compatibility */}
         <View style={scaledStyles.logoContainer}>
+          {/* eslint-disable-next-line jsx-a11y/alt-text -- @react-pdf/renderer Image component doesn't support alt */}
           <Image
             src={getImageSrc("images/logo.png")}
             style={{ width: "100%", height: "100%" }}

@@ -20,7 +20,7 @@ import {
   startOfWeek,
   endOfWeek,
 } from "date-fns";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   ScheduleType,
   AvailabilityType,
@@ -80,16 +80,8 @@ export default function MonthCalendar({
   );
   let firstDayCurrentMonth = parse(currentMonth, "MMM-yyyy", new Date());
 
-  // Update state when initialDate prop changes
-  useEffect(() => {
-    if (initialDate) {
-      const parsedDate = parse(initialDate, "yyyy-MM-dd", new Date());
-      if (isValid(parsedDate)) {
-        setSelectedDay(parsedDate);
-        setCurrentMonth(format(parsedDate, "MMM-yyyy"));
-      }
-    }
-  }, [initialDate]);
+  // Note: Parent component uses key={currentDate} to remount this component
+  // when initialDate changes, so no useEffect needed for prop syncing
 
   // Modal state
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);

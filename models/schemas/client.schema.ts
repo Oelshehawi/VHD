@@ -15,6 +15,9 @@ export const ClientSchema = new Schema<ClientType>({
   phoneNumber: { type: String },
   prefix: { type: String },
   notes: { type: String },
+  isArchived: { type: Boolean, default: false, index: true },
+  archiveReason: { type: String },
+  archivedAt: { type: Date },
 });
 
 // Index for client searches

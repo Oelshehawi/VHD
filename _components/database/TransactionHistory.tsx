@@ -106,7 +106,7 @@ const TransactionHistory = ({ invoices }: { invoices: any }) => {
             </div>
             <p className="text-foreground font-medium">No invoices found</p>
             <p className="text-muted-foreground mt-1 text-sm">
-              This client doesn't have any invoices yet.
+              This client doesn&apos;t have any invoices yet.
             </p>
           </div>
         )}

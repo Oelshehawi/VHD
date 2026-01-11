@@ -24,8 +24,8 @@ export default function AuthErrorPage() {
           Authentication Error
         </h1>
         <p className="mb-6 max-w-md text-gray-600">
-          We couldn't authenticate your access to this portal. This could be
-          because you're not authorized to access this area or your session has
+          We couldn&apos;t authenticate your access to this portal. This could be
+          because you&apos;re not authorized to access this area or your session has
           expired.
         </p>
       </motion.div>
