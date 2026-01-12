@@ -11,7 +11,10 @@ import {
 } from "react-icons/fa";
 import { CallLogEntry } from "../../app/lib/typeDefinitions";
 import { CALL_OUTCOME_LABELS } from "../../app/lib/callLogConstants";
-import { formatDateStringUTC } from "../../app/lib/utils";
+import {
+  formatDateStringUTC,
+  formatDateTimeStringUTC,
+} from "../../app/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { ScrollArea } from "../ui/scroll-area";
 import { Button } from "../ui/button";
@@ -124,7 +127,7 @@ const CallHistoryModal = ({
                         </div>
                         <div className="text-muted-foreground flex items-center gap-1 text-xs">
                           <FaClock className="h-3 w-3" />
-                          {formatDateStringUTC(call.timestamp)}
+                          {formatDateTimeStringUTC(call.timestamp)}
                         </div>
                       </div>
                       {call.duration && (

@@ -314,9 +314,16 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
           {/* Header Content */}
           <View style={scaledStyles.headerContent}>
             <Text style={scaledStyles.invoiceTitle}>INVOICE</Text>
-            <Text style={scaledStyles.companyTitle}>
-              Vancouver Hood Doctors
-            </Text>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={scaledStyles.companyTitle}>
+                Vancouver Hood Doctors
+              </Text>
+              <Text
+                style={{ fontSize: s(9), color: "#495057", marginTop: s(2) }}
+              >
+                A division of VHD Enterprises Inc
+              </Text>
+            </View>
           </View>
         </View>
 
@@ -449,10 +456,17 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
               <Text style={scaledStyles.totalLabel}>Subtotal:</Text>
               <View style={{ flexDirection: "row", alignItems: "baseline" }}>
                 <Text style={scaledStyles.totalValue}>
-                  ${invoiceData.subtotal.toFixed(2)} {invoiceData.currency || "CAD"}
+                  ${invoiceData.subtotal.toFixed(2)}{" "}
+                  {invoiceData.currency || "CAD"}
                 </Text>
                 {invoiceData.originalCAD && (
-                  <Text style={{ fontSize: s(9), color: "#6c757d", marginLeft: s(4) }}>
+                  <Text
+                    style={{
+                      fontSize: s(9),
+                      color: "#6c757d",
+                      marginLeft: s(4),
+                    }}
+                  >
                     (${invoiceData.originalCAD.subtotal.toFixed(2)} CAD)
                   </Text>
                 )}
@@ -465,7 +479,13 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
                   ${invoiceData.gst.toFixed(2)} {invoiceData.currency || "CAD"}
                 </Text>
                 {invoiceData.originalCAD && (
-                  <Text style={{ fontSize: s(9), color: "#6c757d", marginLeft: s(4) }}>
+                  <Text
+                    style={{
+                      fontSize: s(9),
+                      color: "#6c757d",
+                      marginLeft: s(4),
+                    }}
+                  >
                     (${invoiceData.originalCAD.gst.toFixed(2)} CAD)
                   </Text>
                 )}
@@ -474,13 +494,28 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
             <View style={scaledStyles.grandTotalRow}>
               <Text style={scaledStyles.grandTotalLabel}>Total:</Text>
               <Text style={scaledStyles.grandTotalValue}>
-                ${invoiceData.totalAmount.toFixed(2)} {invoiceData.currency || "CAD"}
+                ${invoiceData.totalAmount.toFixed(2)}{" "}
+                {invoiceData.currency || "CAD"}
               </Text>
             </View>
             {invoiceData.originalCAD && invoiceData.exchangeRate && (
-              <View style={{ marginTop: s(8), paddingTop: s(8), borderTop: "1px solid #dee2e6" }}>
-                <Text style={{ fontSize: s(9), color: "#6c757d", textAlign: "center" }}>
-                  Converted from ${invoiceData.originalCAD.total.toFixed(2)} CAD at rate 1 CAD = {(1 / invoiceData.exchangeRate).toFixed(4)} USD
+              <View
+                style={{
+                  marginTop: s(8),
+                  paddingTop: s(8),
+                  borderTop: "1px solid #dee2e6",
+                }}
+              >
+                <Text
+                  style={{
+                    fontSize: s(9),
+                    color: "#6c757d",
+                    textAlign: "center",
+                  }}
+                >
+                  Converted from ${invoiceData.originalCAD.total.toFixed(2)} CAD
+                  at rate 1 CAD = {(1 / invoiceData.exchangeRate).toFixed(4)}{" "}
+                  USD
                 </Text>
               </View>
             )}

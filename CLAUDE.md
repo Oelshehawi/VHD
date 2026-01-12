@@ -8,34 +8,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Key Technologies:** React 19, Next.js 15 (App Router), TypeScript 5.4, MongoDB + Mongoose, Clerk Authentication, Tailwind CSS
 
+**Package Manager:** This project uses **pnpm** (not npm). Always use pnpm for installing dependencies and running scripts.
+
 ## Development Commands
 
 ```bash
 # Start development server with Turbo mode
-npm run dev
+pnpm run dev
 
 # Build for production
-npm run build
+pnpm run build
 
 # Start production server
-npm start
+pnpm start
 
-# Type checking
-npm run lint:types
+# Type checking (run after making changes)
+pnpm run lint:types
 
 # ESLint checks
-npm run lint:eslint
+pnpm run lint:eslint
+
+# Install dependencies
+pnpm install
 
 # Optimization and integration tests
-npm run test-optimization      # Test route optimization
-npm run test-openroute         # Test OpenRoute integration
+pnpm run test-optimization      # Test route optimization
+pnpm run test-openroute         # Test OpenRoute integration
 
 # Maintenance scripts
-npm run cleanup-spaces         # Clean up leading spaces
-npm run migrate-reminders      # Migrate reminders schema
-npm run cloudinary:shrink      # Dry-run image optimization
-npm run cloudinary:shrink:real # Actual image optimization
-npm run cloudinary:shrink:fast # Fast optimization (skip verification)
+pnpm run cleanup-spaces         # Clean up leading spaces
+pnpm run migrate-reminders      # Migrate reminders schema
+pnpm run cloudinary:shrink      # Dry-run image optimization
+pnpm run cloudinary:shrink:real # Actual image optimization
+pnpm run cloudinary:shrink:fast # Fast optimization (skip verification)
 ```
 
 ## High-Level Architecture
@@ -128,6 +133,7 @@ API routes use folder structure with `index.ts`:
 ### Data Fetching
 
 #### Server Components (Async Functions)
+
 - **Call server functions directly** - they are "use server" by default
 - **Error Handling:** Use try/catch or let errors propagate to Suspense boundaries
 - **Close to Consumption:** Keep fetch calls near where data is used
@@ -141,12 +147,14 @@ export const DashboardPage = async () => {
 ```
 
 #### Client Components (with TanStack Query)
+
 - **MUST use TanStack Query** for all data fetching in client components
 - **Never call server functions during initial render** - creates fetch waterfalls and violates RSC contracts
 - **Import and use `useQuery` hook** for caching, refetching, and loading states
 - **Query keys must reference dependencies** - changes trigger refetches automatically
 
 **Basic Pattern:**
+
 ```typescript
 "use client";
 import { useQuery } from "@tanstack/react-query";
@@ -167,6 +175,7 @@ export function MyComponent({ filterValue, dateRange }) {
 ```
 
 **Advanced Pattern with Debouncing (for search/date inputs):**
+
 ```typescript
 "use client";
 import { useState, useRef, useCallback, useMemo } from "react";
@@ -203,6 +212,7 @@ export function SearchableComponent() {
 ```
 
 **Date Picker Pattern (avoid refetch on arrow clicks):**
+
 - Use `onBlur` instead of `onChange` on date inputs to prevent rapid refetches
 - Debounce date changes (300ms) so only final date value triggers refetch
 - Never refetch on native date picker arrow clicks
@@ -243,6 +253,7 @@ export function QueryProvider({ children }: { children: React.ReactNode }) {
 ```
 
 #### Best Practices
+
 - **Server Components**: Initial page loads, authentication, SEO-critical data
 - **Client + TanStack Query**: User interactions, filters, dynamic parameters, tabs, modal data
 - **Query Key Dependencies**: Always include filters, search, dates in queryKey - auto-triggers refetch
@@ -300,13 +311,14 @@ export default function ComponentName({ prop1, prop2, onAction }: ComponentNameP
 
 ```bash
 # Check TypeScript types
-npm run lint:types
+pnpm run lint:types
 
 # Check ESLint rules
-npm run lint:eslint
+pnpm run lint:eslint
 ```
 
 Both checks must pass before committing. Fix any errors reported by these tools. This ensures:
+
 - Type safety with strict TypeScript checking
 - Code style consistency
 - Potential bugs caught early
@@ -317,7 +329,7 @@ Both checks must pass before committing. Fix any errors reported by these tools.
 - Keep commits focused and descriptive
 - Use conventional commit messages
 - Commit related changes together
-- Run `npm run lint:types` and `npm run lint:eslint` before committing
+- Run `pnpm run lint:types` and `pnpm run lint:eslint` before committing
 - Review changes before committing
 
 ## Important Architectural Considerations
@@ -400,14 +412,52 @@ Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, Ope
 - `POSTMARK_API_TOKEN`
 - `OPENROUTE_API_KEY`
 
+## Date Handling
+
+**Critical Rule:** Dates in this project should always be displayed **as stored** without using JavaScript `new Date()` constructor for display purposes, to avoid timezone shifts.
+
+### Why This Matters
+
+- The database stores dates in UTC or as ISO strings
+- Using `new Date(dateString)` can shift the date by a day depending on the user's timezone
+- For example, "2026-01-10" becomes "2026-01-09 16:00:00" in PST when parsed as a Date
+
+### Correct Approach
+
+```typescript
+// Use the utility function for displaying dates
+import { formatDateStringUTC } from "@/app/lib/utils";
+const displayDate = formatDateStringUTC(dateValue); // Returns "January 10, 2026"
+
+// Or parse date strings directly by splitting
+const dateStr = "2026-01-10T00:00:00.000Z";
+const datePart = dateStr.split("T")[0]; // "2026-01-10"
+const [year, month, day] = datePart.split("-");
+```
+
+### Avoid This
+
+```typescript
+// Don't use new Date() for display purposes - this may shift the date!
+const date = new Date(dateString);
+const formatted = date.toLocaleDateString(); // Wrong day possible
+```
+
+### Available Utility Functions
+
+- `formatDateStringUTC(dateInput)` - Formats date as "January 10, 2026" without timezone conversion
+- `formatDateToString(dateInput)` - Similar formatting, also timezone-safe
+
+For more details, see the workflow: `.agent/workflows/date-handling.md`
+
 ## Debugging Tips
 
-- **Type Errors:** Run `npm run lint:types` to catch TypeScript issues
+- **Type Errors:** Run `pnpm run lint:types` to catch TypeScript issues
 - **Database Issues:** Verify `MONGODB_URI` is correct and accessible
 - **API Failures:** Check browser DevTools Network tab for response status and body
 - **Authentication Issues:** Verify Clerk keys are set and user has correct role in Clerk dashboard
 - **PDF Generation Issues:** Check component props and data structure match @react-pdf/renderer requirements
-- **Route Optimization:** Test with `npm run test-openroute` before deploying changes
+- **Route Optimization:** Test with `pnpm run test-openroute` before deploying changes
 
 ## File Naming Conventions
 
@@ -421,6 +471,7 @@ Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, Ope
 ## Recent Project Developments
 
 Recent commits show focus on:
+
 - Analytics and audit logging with user tracking
 - Employee availability system improvements
 - Invoice and schedule enhancements
@@ -430,7 +481,7 @@ Recent commits show focus on:
 
 ## Testing
 
-- Route optimization tests: `npm run test-optimization`
-- OpenRoute integration tests: `npm run test-openroute`
+- Route optimization tests: `pnpm run test-optimization`
+- OpenRoute integration tests: `pnpm run test-openroute`
 - Manual testing across desktop and mobile views (PWA-enabled)
 - Edge cases: payment tracking, availability conflicts, timezone handling

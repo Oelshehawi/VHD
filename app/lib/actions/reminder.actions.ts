@@ -334,9 +334,28 @@ export async function sendPaymentReminderEmail(
     const pdfBuffer = await renderToBuffer(createElement(MyDocument));
     const pdfBase64 = pdfBuffer.toString("base64");
 
+    // Check for Stripe payment link
+    let hasOnlinePayment: any = false;
+    if (
+      invoice.stripePaymentSettings?.enabled &&
+      invoice.stripePaymentSettings?.paymentLinkToken
+    ) {
+      const expiresAt = invoice.stripePaymentSettings.paymentLinkExpiresAt;
+      const isLinkExpired = expiresAt ? now > new Date(expiresAt) : false;
+      if (!isLinkExpired) {
+        const baseUrl =
+          process.env.NEXT_PUBLIC_APP_URL || "https://vhd-psi.vercel.app";
+        const paymentLinkUrl = `${baseUrl}/pay?token=${invoice.stripePaymentSettings.paymentLinkToken}`;
+
+        hasOnlinePayment = {
+          payment_link_url: paymentLinkUrl,
+        };
+      }
+    }
+
     // Send email using Postmark with sequence-aware template
     // IMPORTANT: Variables used inside conditional sections must be nested within those sections
-    const templateModel = {
+    const templateModel: Record<string, any> = {
       client_name: clientDetails.clientName,
       invoice_number: invoice.invoiceId || "",
       jobTitle: invoice.jobTitle || "",
@@ -349,6 +368,7 @@ export async function sendPaymentReminderEmail(
       email_title: `${sequenceText} Payment Reminder - Vent Cleaning & Certification`,
       reminder_sequence: sequenceText,
       total_reminders_sent: reminderSequence.toString(),
+      has_online_payment: hasOnlinePayment,
       first_reminder:
         reminderSequence === 1
           ? {

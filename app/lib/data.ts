@@ -251,6 +251,41 @@ export const fetchInvoiceById = async (invoiceId: string) => {
               }) || [],
           }
         : undefined,
+      stripePaymentSettings: invoice.stripePaymentSettings
+        ? {
+            enabled: invoice.stripePaymentSettings.enabled,
+            allowCreditCard: invoice.stripePaymentSettings.allowCreditCard,
+            allowBankPayment: invoice.stripePaymentSettings.allowBankPayment,
+            paymentLinkToken: invoice.stripePaymentSettings.paymentLinkToken,
+            paymentLinkCreatedAt:
+              invoice.stripePaymentSettings.paymentLinkCreatedAt instanceof Date
+                ? invoice.stripePaymentSettings.paymentLinkCreatedAt.toISOString()
+                : invoice.stripePaymentSettings.paymentLinkCreatedAt,
+            paymentLinkExpiresAt:
+              invoice.stripePaymentSettings.paymentLinkExpiresAt instanceof Date
+                ? invoice.stripePaymentSettings.paymentLinkExpiresAt.toISOString()
+                : invoice.stripePaymentSettings.paymentLinkExpiresAt,
+          }
+        : undefined,
+      stripePaymentStatus: invoice.stripePaymentStatus
+        ? {
+            status: invoice.stripePaymentStatus.status,
+            lastUpdated:
+              invoice.stripePaymentStatus.lastUpdated instanceof Date
+                ? invoice.stripePaymentStatus.lastUpdated.toISOString()
+                : invoice.stripePaymentStatus.lastUpdated,
+            paymentMethod: invoice.stripePaymentStatus.paymentMethod,
+            events:
+              invoice.stripePaymentStatus.events?.map((event: any) => ({
+                eventType: event.eventType,
+                timestamp:
+                  event.timestamp instanceof Date
+                    ? event.timestamp.toISOString()
+                    : event.timestamp,
+                details: event.details,
+              })) || [],
+          }
+        : undefined,
     };
   } catch (error) {
     console.error("Database Error:", error);
@@ -268,7 +303,7 @@ export async function fetchFilteredClients(
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
   const escapedQuery = escapeRegex(query);
-  
+
   // Build archive filter
   let archiveFilter = {};
   if (archiveStatus === "active") {
@@ -277,7 +312,7 @@ export async function fetchFilteredClients(
     archiveFilter = { isArchived: true };
   }
   // If "all" or undefined, don't filter by archive status
-  
+
   let matchQuery = {
     $and: [
       archiveFilter,
@@ -317,7 +352,7 @@ export async function fetchClientsPages(
   await connectMongo();
   try {
     const escapedQuery = escapeRegex(query);
-    
+
     // Build archive filter
     let archiveFilter = {};
     if (archiveStatus === "active") {
@@ -325,7 +360,7 @@ export async function fetchClientsPages(
     } else if (archiveStatus === "archived") {
       archiveFilter = { isArchived: true };
     }
-    
+
     const matchQuery = {
       $and: [
         archiveFilter,

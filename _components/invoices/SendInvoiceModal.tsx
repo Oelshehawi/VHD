@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
 import { calculateSubtotal, calculateGST } from "../../app/lib/utils";
 import {
@@ -55,7 +55,7 @@ export default function SendInvoiceModal({
   const [includeReport, setIncludeReport] = useState(false);
 
   // Get all available client emails
-  const getAvailableEmails = () => {
+  const getAvailableEmails = useCallback(() => {
     const emails: { type: string; email: string }[] = [];
     if (client) {
       if (client.emails) {
@@ -79,7 +79,7 @@ export default function SendInvoiceModal({
       }
     }
     return emails;
-  };
+  }, [client]);
 
   const availableEmails = client ? getAvailableEmails() : [];
 
@@ -90,13 +90,17 @@ export default function SendInvoiceModal({
       // Default to first email (accounting or primary)
       const defaultEmail =
         emails.find((e) => e.type === "Accounting")?.email || emails[0]?.email;
-      setSelectedEmails(defaultEmail ? [defaultEmail] : []);
-      setAdditionalRecipients([]);
-      setNewRecipient("");
-      setEmailError("");
-      setIncludeReport(false);
+
+      // Use setTimeout to avoid synchronous setState in effect
+      setTimeout(() => {
+        setSelectedEmails(defaultEmail ? [defaultEmail] : []);
+        setAdditionalRecipients([]);
+        setNewRecipient("");
+        setEmailError("");
+        setIncludeReport(false);
+      }, 0);
     }
-  }, [isOpen, client]);
+  }, [isOpen, client, getAvailableEmails]);
 
   if (!invoice || !client) return null;
 

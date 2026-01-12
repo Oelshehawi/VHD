@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { checkAndProcessOverdueInvoices } from "../../../lib/actions/actions";
-import { auth } from "@clerk/nextjs/server";
 
 export async function GET(req: NextRequest) {
   // Only allow GET requests (Vercel cron calls this endpoint)

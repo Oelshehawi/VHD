@@ -1,13 +1,17 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import connectMongo from "../../../app/lib/connect";
-import { Invoice, Client, Schedule, AuditLog } from "../../../models/reactDataSchema";
+import {
+  Invoice,
+  Client,
+  Schedule,
+  AuditLog,
+} from "../../../models/reactDataSchema";
 import { getEmailForPurpose } from "../../../app/lib/utils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
   type InvoiceData,
 } from "../../../_components/pdf/InvoicePdfDocument";
-import { getAuth } from "@clerk/nextjs/server";
 
 const postmark = require("postmark");
 
@@ -23,7 +27,6 @@ export default async function handler(
   if (req.method !== "POST") {
     return res.status(405).json({ message: "Method not allowed" });
   }
-
 
   try {
     // Extract data from request body
@@ -72,20 +75,30 @@ export default async function handler(
     const gst = subtotal * 0.05; // 5% GST
     const totalWithTax = subtotal + gst;
 
-    // Calculate due date (14 days from issue date)
-    const issueDate = new Date(invoiceData.dateIssued);
+    // Calculate due date (14 days from issue date) - using timezone-safe approach
+    const dateStr =
+      invoiceData.dateIssued instanceof Date
+        ? invoiceData.dateIssued.toISOString()
+        : String(invoiceData.dateIssued);
+    const datePart = dateStr.split("T")[0] || dateStr;
+    const parts = datePart.split("-");
+    const baseYear = parseInt(parts[0], 10);
+    const baseMonth = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+    const baseDay = parseInt(parts[2], 10);
+
+    // Create date in local timezone
+    const issueDate = new Date(baseYear, baseMonth, baseDay);
     const dueDate = new Date(issueDate);
     dueDate.setDate(dueDate.getDate() + 14);
-    const formattedDueDate = dueDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+
+    // Import and use formatDateStringUTC to avoid timezone shift
+    const { formatDateStringUTC } = require("../../../app/lib/utils");
+    const formattedDueDate = formatDateStringUTC(dueDate);
 
     // Prepare invoice data for PDF generation
     const pdfInvoiceData: InvoiceData = {
       invoiceId: invoiceData.invoiceId,
-      dateIssued: invoiceData.dateIssued,
+      dateIssued: invoiceData.dateIssued, // Keep original format for PDF
       dateDue: formattedDueDate,
       jobTitle: invoiceData.jobTitle,
       location: invoiceData.location,
@@ -115,6 +128,27 @@ export default async function handler(
     const pdfBuffer = await renderToBuffer(createElement(MyDocument));
     const pdfBase64 = pdfBuffer.toString("base64");
 
+    // Check for Stripe payment link
+    let hasOnlinePaymentBlock: any = false;
+
+    if (
+      invoice.stripePaymentSettings?.enabled &&
+      invoice.stripePaymentSettings?.paymentLinkToken
+    ) {
+      const expiresAt = invoice.stripePaymentSettings.paymentLinkExpiresAt;
+      const isExpired = expiresAt ? new Date() > new Date(expiresAt) : false;
+
+      if (!isExpired) {
+        const baseUrl =
+          process.env.NEXT_PUBLIC_APP_URL || "https://vhd-psi.vercel.app";
+        const paymentLinkUrl = `${baseUrl}/pay?token=${invoice.stripePaymentSettings.paymentLinkToken}`;
+
+        hasOnlinePaymentBlock = {
+          payment_link_url: paymentLinkUrl,
+        };
+      }
+    }
+
     // Prepare email template model
     const templateModel = {
       client_name: clientDetails.clientName,
@@ -126,6 +160,7 @@ export default async function handler(
       contact_email: "adam@vancouverventcleaning.ca",
       header_title: "Invoice - Vent Cleaning & Certification",
       email_title: "Invoice - Vent Cleaning & Certification",
+      has_online_payment: hasOnlinePaymentBlock,
     };
 
     // Send email using Postmark with invoice delivery template

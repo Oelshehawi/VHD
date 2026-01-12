@@ -2,18 +2,22 @@
 
 import { revalidatePath } from "next/cache";
 import connectMongo from "../connect";
-import { Invoice, Client, JobsDueSoon, AuditLog, Schedule, Report } from "../../../models/reactDataSchema";
-import { DueInvoiceType } from "../typeDefinitions";
 import {
-  getEmailForPurpose,
-} from "../utils";
+  Invoice,
+  Client,
+  JobsDueSoon,
+  AuditLog,
+  Schedule,
+  Report,
+} from "../../../models/reactDataSchema";
+import { DueInvoiceType } from "../typeDefinitions";
+import { getEmailForPurpose } from "../utils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
   type InvoiceData,
 } from "../../../_components/pdf/InvoicePdfDocument";
 import ReportPdfDocument from "../../../_components/pdf/ReportPdfDocument";
-
 
 const postmark = require("postmark");
 import { clerkClient } from "@clerk/nextjs/server";
@@ -143,42 +147,48 @@ export async function sendInvoiceDeliveryEmail(
 
     // Get appropriate email for accounting purposes (as default)
     const defaultEmail = getEmailForPurpose(clientDetails, "accounting");
-    
+
     // Use provided recipients or fall back to default accounting email
-    const emailRecipients = recipients && recipients.length > 0 
-      ? recipients 
-      : defaultEmail ? [defaultEmail] : [];
-    
+    const emailRecipients =
+      recipients && recipients.length > 0
+        ? recipients
+        : defaultEmail
+          ? [defaultEmail]
+          : [];
+
     if (emailRecipients.length === 0) {
       return { success: false, error: "No recipient email addresses provided" };
     }
 
     // Calculate total with tax
     const items = invoice.items || [];
-    const total =
-      items.reduce(
-        (sum: number, item: { price: number }) => sum + (item?.price || 0),
-        0,
-      );
+    const total = items.reduce(
+      (sum: number, item: { price: number }) => sum + (item?.price || 0),
+      0,
+    );
     const gst = total * 0.05; // 5% GST
     const totalWithTax = total + gst;
 
-    // Calculate due date (14 days from issue date)
-    const issueDate = new Date(invoice.dateIssued);
+    // Calculate due date (14 days from issue date) - using timezone-safe approach
+    const dateStr =
+      invoice.dateIssued instanceof Date
+        ? invoice.dateIssued.toISOString()
+        : String(invoice.dateIssued);
+    const datePart = dateStr.split("T")[0] || dateStr;
+    const parts = datePart.split("-");
+    const baseYear = parseInt(parts[0], 10);
+    const baseMonth = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
+    const baseDay = parseInt(parts[2], 10);
+
+    // Create date in local timezone
+    const issueDate = new Date(baseYear, baseMonth, baseDay);
     const dueDate = new Date(issueDate);
     dueDate.setDate(dueDate.getDate() + 14);
-    const formattedDueDate = dueDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
 
-    // Format issue date
-    const formattedIssueDate = issueDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    // Use formatDateStringUTC to avoid timezone shift
+    const { formatDateStringUTC } = await import("../utils");
+    const formattedDueDate = formatDateStringUTC(dueDate);
+    const formattedIssueDate = formatDateStringUTC(issueDate);
 
     // Prepare invoice data for PDF generation
     const pdfInvoiceData: InvoiceData = {
@@ -213,8 +223,46 @@ export async function sendInvoiceDeliveryEmail(
     const pdfBuffer = await renderToBuffer(createElement(MyDocument));
     const pdfBase64 = pdfBuffer.toString("base64");
 
+    // Check for Stripe payment link
+    let hasOnlinePaymentBlock: any = false;
+
+    // Debug logging
+    console.log(
+      "Invoice stripePaymentSettings:",
+      invoice.stripePaymentSettings,
+    );
+    console.log("Payment enabled:", invoice.stripePaymentSettings?.enabled);
+    console.log(
+      "Payment token exists:",
+      !!invoice.stripePaymentSettings?.paymentLinkToken,
+    );
+
+    if (
+      invoice.stripePaymentSettings?.enabled &&
+      invoice.stripePaymentSettings?.paymentLinkToken
+    ) {
+      const expiresAt = invoice.stripePaymentSettings.paymentLinkExpiresAt;
+      const isExpired = expiresAt ? new Date() > new Date(expiresAt) : false;
+      console.log("Payment link expires at:", expiresAt);
+      console.log("Is expired:", isExpired);
+
+      if (!isExpired) {
+        const baseUrl =
+          process.env.NEXT_PUBLIC_APP_URL || "https://vhd-psi.vercel.app";
+        const paymentLinkUrl = `${baseUrl}/pay?token=${invoice.stripePaymentSettings.paymentLinkToken}`;
+
+        hasOnlinePaymentBlock = {
+          payment_link_url: paymentLinkUrl,
+        };
+
+        console.log("Generated payment link URL:", paymentLinkUrl);
+      }
+    }
+
+    console.log("Final hasOnlinePaymentBlock:", hasOnlinePaymentBlock);
+
     // Prepare template model
-    const templateModel = {
+    const templateModel: Record<string, any> = {
       client_name: clientDetails.clientName,
       invoice_number: invoice.invoiceId,
       jobTitle: invoice.jobTitle,
@@ -225,6 +273,7 @@ export async function sendInvoiceDeliveryEmail(
       contact_email: "adam@vancouverventcleaning.ca",
       header_title: "Invoice - Vent Cleaning & Certification",
       email_title: "Invoice - Vent Cleaning & Certification",
+      has_online_payment: hasOnlinePaymentBlock,
     };
 
     // Build attachments array
@@ -244,8 +293,10 @@ export async function sendInvoiceDeliveryEmail(
         const schedules = await Schedule.find({ invoiceRef: invoiceId }).lean();
         if (schedules && schedules.length > 0) {
           const scheduleIds = schedules.map((s: any) => s._id.toString());
-          const report = await Report.findOne({ scheduleId: { $in: scheduleIds } }).lean();
-          
+          const report = await Report.findOne({
+            scheduleId: { $in: scheduleIds },
+          }).lean();
+
           if (report) {
             const reportData = report as any;
             // Fetch technician data for report PDF
@@ -256,7 +307,7 @@ export async function sendInvoiceDeliveryEmail(
               fullName: "Unknown Technician",
               email: "",
             };
-            
+
             if (reportData.technicianId) {
               try {
                 const users: any = await clerkClient();
@@ -266,7 +317,10 @@ export async function sendInvoiceDeliveryEmail(
                     id: user.id,
                     firstName: user.firstName || "Unknown",
                     lastName: user.lastName || "Technician",
-                    fullName: user.fullName || `${user.firstName || ""} ${user.lastName || ""}`.trim() || "Unknown Technician",
+                    fullName:
+                      user.fullName ||
+                      `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+                      "Unknown Technician",
                     email: user.emailAddresses?.[0]?.emailAddress || "",
                   };
                 }
@@ -274,15 +328,18 @@ export async function sendInvoiceDeliveryEmail(
                 console.error("Failed to fetch technician data:", techError);
               }
             }
-            
+
             // Generate report PDF
-            const ReportDocument = () => createElement(ReportPdfDocument, { 
-              report: report as any,
-              technician: technicianData,
-            });
-            const reportBuffer = await renderToBuffer(createElement(ReportDocument));
+            const ReportDocument = () =>
+              createElement(ReportPdfDocument, {
+                report: report as any,
+                technician: technicianData,
+              });
+            const reportBuffer = await renderToBuffer(
+              createElement(ReportDocument),
+            );
             const reportBase64 = reportBuffer.toString("base64");
-            
+
             attachments.push({
               Name: `${invoice.jobTitle.trim()} - Report.pdf`,
               Content: reportBase64,
@@ -307,7 +364,7 @@ export async function sendInvoiceDeliveryEmail(
       await postmarkClient.sendEmailWithTemplate({
         From: "adam@vancouverventcleaning.ca",
         To: recipient,
-        TemplateAlias: "invoice-delivery",
+        TemplateAlias: "invoice-delivery-1",
         TemplateModel: templateModel,
         Attachments: attachments,
         TrackOpens: true,

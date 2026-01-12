@@ -102,6 +102,61 @@ export const formatDateStringUTC = (dateInput: string | Date): string => {
   return `${monthName} ${parseInt(day, 10)}, ${year}`;
 };
 
+/**
+ * Format a UTC date string in readable format with time (no timezone conversion)
+ * @param dateInput - Date string in ISO format or Date object
+ * @returns Formatted date string with time (e.g., "January 15, 2024 at 3:45 PM")
+ */
+export const formatDateTimeStringUTC = (dateInput: string | Date): string => {
+  let dateObj: Date;
+
+  if (dateInput instanceof Date) {
+    dateObj = dateInput;
+  } else if (typeof dateInput === "string") {
+    dateObj = new Date(dateInput);
+  } else {
+    console.warn("formatDateTimeStringUTC received invalid input:", dateInput);
+    return "Invalid Date";
+  }
+
+  if (isNaN(dateObj.getTime())) {
+    console.warn("formatDateTimeStringUTC could not parse date:", dateInput);
+    return "Invalid Date";
+  }
+
+  // Extract UTC date components
+  const year = dateObj.getUTCFullYear();
+  const month = dateObj.getUTCMonth();
+  const day = dateObj.getUTCDate();
+  const hours = dateObj.getUTCHours();
+  const minutes = dateObj.getUTCMinutes();
+
+  const monthNames = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  const monthName = monthNames[month];
+
+  // Convert to 12-hour format
+  const isPM = hours >= 12;
+  const displayHours = hours % 12 || 12;
+  const displayMinutes = String(minutes).padStart(2, "0");
+  const ampm = isPM ? "PM" : "AM";
+
+  return `${monthName} ${day}, ${year} at ${displayHours}:${displayMinutes} ${ampm}`;
+};
+
 export function formatAmount(amount: number): string {
   const formatter = new Intl.NumberFormat("en-CA", {
     style: "currency",

@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 // Define public routes that don't require authentication
 const isPublicRoute = createRouteMatcher([
   "/sign-in(.*)",
+  "/pay(.*)",
   "/acceptToken(.*)",
   "/images/(.*)",
   "/favicon.ico",
@@ -22,6 +23,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/downloadPhoto",
   "/api/update-photos",
   "/api/updateTechnicianNotes",
+  "/api/stripe/(.*)",
 ]);
 
 // Define client portal routes

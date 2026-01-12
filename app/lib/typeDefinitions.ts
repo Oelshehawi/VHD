@@ -131,9 +131,42 @@ export interface ClientType {
 }
 
 export interface PaymentInfo {
-  method: "eft" | "e-transfer" | "cheque" | "credit-card" | "other";
+  method:
+    | "eft"
+    | "e-transfer"
+    | "cheque"
+    | "credit-card"
+    | "stripe-card"
+    | "stripe-ach"
+    | "stripe-pad"
+    | "other";
   datePaid: Date;
   notes?: string;
+  stripePaymentIntentId?: string;
+  stripeChargeId?: string;
+  stripeReceiptUrl?: string;
+}
+
+export interface StripePaymentSettings {
+  enabled: boolean;
+  allowCreditCard: boolean;
+  allowBankPayment: boolean;
+  paymentLinkToken?: string;
+  paymentLinkCreatedAt?: Date;
+  paymentLinkExpiresAt?: Date;
+}
+
+export interface StripePaymentStatusEvent {
+  eventType: string;
+  timestamp: Date;
+  details?: string;
+}
+
+export interface StripePaymentStatus {
+  status?: "initiated" | "processing" | "pending" | "succeeded" | "failed";
+  lastUpdated?: Date;
+  paymentMethod?: "card" | "bank";
+  events?: StripePaymentStatusEvent[];
 }
 
 export interface PaymentReminderSettings {
@@ -170,7 +203,12 @@ export interface AuditLogEntry {
     | "availability_deleted"
     | "timeoff_requested"
     | "timeoff_approved"
-    | "timeoff_rejected";
+    | "timeoff_rejected"
+    | "stripe_payment_settings_configured"
+    | "stripe_payment_link_generated"
+    | "stripe_payment_initiated"
+    | "stripe_payment_succeeded"
+    | "stripe_payment_failed";
   timestamp: Date;
   performedBy: string;
   details: {
@@ -199,6 +237,8 @@ export interface InvoiceType {
   clientId: ObjectId | string;
   paymentReminders?: PaymentReminderSettings;
   paymentInfo?: PaymentInfo;
+  stripePaymentSettings?: StripePaymentSettings;
+  stripePaymentStatus?: StripePaymentStatus;
   photos?: PhotoType[];
   signature?: SignatureType;
   callHistory?: CallLogEntry[];

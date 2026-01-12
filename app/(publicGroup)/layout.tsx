@@ -2,7 +2,7 @@ import "../global.css";
 import { Inter } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import type { Metadata, Viewport } from "next";
-
+import { QueryProvider } from "../lib/QueryProvider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -54,16 +54,14 @@ export const viewport: Viewport = {
   themeColor: "#FFFFFF",
 };
 
-export default function Layout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function Layout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider>
       <html lang="en">
         <body className={inter.className}>
+          <QueryProvider>
             <main>{children}</main>
+          </QueryProvider>
         </body>
       </html>
     </ClerkProvider>

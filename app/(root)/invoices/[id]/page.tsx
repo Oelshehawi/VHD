@@ -6,6 +6,7 @@ import { ClientType, InvoiceType } from "../../../lib/typeDefinitions";
 // @ts-ignore
 import { auth } from "@clerk/nextjs/server";
 import { SetBreadcrumbName } from "../../../../_components/layout/SetBreadcrumbName";
+import { getReportStatusByInvoiceId } from "../../../lib/actions/scheduleJobs.actions";
 
 const InvoiceDetailed = async ({
   params,
@@ -20,6 +21,11 @@ const InvoiceDetailed = async ({
 
   const invoice = await fetchInvoiceById(invoiceId);
   const client = await fetchClientById(invoice.clientId);
+
+  // Fetch report status server-side
+  const reportStatus = await getReportStatusByInvoiceId(
+    invoice._id as string,
+  );
 
   return (
     <div className="bg-background min-h-screen">
@@ -38,6 +44,7 @@ const InvoiceDetailed = async ({
               invoice={invoice as InvoiceType}
               client={client as ClientType}
               canManage={canManage}
+              initialReportStatus={reportStatus}
             />
           </Suspense>
         </div>

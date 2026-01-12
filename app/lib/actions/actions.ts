@@ -212,7 +212,28 @@ export async function updateInvoice(invoiceId: any, formData: any) {
 
     const currentInvoice = await Invoice.findById(invoiceId);
 
-    await Invoice.findByIdAndUpdate(invoiceId, formData);
+    // If status is changing from "paid" to something else, clear payment-related data
+    if (
+      currentInvoice?.status === "paid" &&
+      formData.status &&
+      formData.status !== "paid"
+    ) {
+      console.log(
+        `Clearing payment data for invoice ${invoiceId} as status changes from paid to ${formData.status}`,
+      );
+
+      // Use $unset to remove payment-related fields
+      await Invoice.findByIdAndUpdate(invoiceId, {
+        ...formData,
+        $unset: {
+          paymentInfo: 1,
+          stripePaymentStatus: 1,
+        },
+      });
+    } else {
+      // Normal update
+      await Invoice.findByIdAndUpdate(invoiceId, formData);
+    }
 
     let jobsDueSoonUpdate: any = {};
 

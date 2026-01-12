@@ -70,10 +70,45 @@ export const invoiceSchema = new Schema<InvoiceType>({
   paymentInfo: {
     method: {
       type: String,
-      enum: ["eft", "e-transfer", "cheque", "credit-card", "other"],
+      enum: [
+        "eft",
+        "e-transfer",
+        "cheque",
+        "credit-card",
+        "stripe-card",
+        "stripe-ach",
+        "stripe-pad",
+        "other",
+      ],
     },
     datePaid: { type: Date },
     notes: { type: String },
+    stripePaymentIntentId: { type: String },
+    stripeChargeId: { type: String },
+    stripeReceiptUrl: { type: String },
+  },
+  stripePaymentSettings: {
+    enabled: { type: Boolean, default: false },
+    allowCreditCard: { type: Boolean, default: true },
+    allowBankPayment: { type: Boolean, default: false },
+    paymentLinkToken: { type: String },
+    paymentLinkCreatedAt: { type: Date },
+    paymentLinkExpiresAt: { type: Date },
+  },
+  stripePaymentStatus: {
+    status: {
+      type: String,
+      enum: ["initiated", "processing", "pending", "succeeded", "failed"],
+    },
+    lastUpdated: { type: Date },
+    paymentMethod: { type: String }, // "card" or "bank"
+    events: [
+      {
+        eventType: { type: String, required: true },
+        timestamp: { type: Date, required: true },
+        details: { type: String },
+      },
+    ],
   },
   callHistory: { type: [CallLogEntrySchema], default: [] },
 });
@@ -84,6 +119,10 @@ invoiceSchema.index({ status: 1, dateIssued: 1, dateDue: 1 });
 invoiceSchema.index({ dateIssued: 1, status: 1 });
 invoiceSchema.index({ clientId: 1, dateIssued: -1 });
 invoiceSchema.index({ location: 1, status: 1 });
+invoiceSchema.index(
+  { "stripePaymentSettings.paymentLinkToken": 1 },
+  { unique: true, sparse: true },
+);
 
 export const Invoice =
   (models.Invoice as typeof Model<InvoiceType>) ||
