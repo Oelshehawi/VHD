@@ -3,10 +3,9 @@ import connectMongo from "../../../app/lib/connect";
 import {
   Invoice,
   Client,
-  Schedule,
   AuditLog,
 } from "../../../models/reactDataSchema";
-import { getEmailForPurpose } from "../../../app/lib/utils";
+import { getEmailForPurpose, getBaseUrl } from "../../../app/lib/utils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -139,9 +138,7 @@ export default async function handler(
       const isExpired = expiresAt ? new Date() > new Date(expiresAt) : false;
 
       if (!isExpired) {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_APP_URL || "https://vhd-psi.vercel.app";
-        const paymentLinkUrl = `${baseUrl}/pay?token=${invoice.stripePaymentSettings.paymentLinkToken}`;
+        const paymentLinkUrl = `${getBaseUrl()}/pay?token=${invoice.stripePaymentSettings.paymentLinkToken}`;
 
         hasOnlinePaymentBlock = {
           payment_link_url: paymentLinkUrl,

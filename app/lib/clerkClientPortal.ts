@@ -1,6 +1,7 @@
 "use server";
 
 import { clerkClient } from "@clerk/nextjs/server";
+import { getBaseUrl } from "./utils";
 
 /**
  * Generate a client access link using Clerk's email magic link
@@ -52,10 +53,7 @@ export async function generateClientAccessLink(
     }
 
     // Create the reusable access URL using acceptToken with clientId
-    const baseUrl =
-      process.env.NEXT_PUBLIC_APP_URL || "https://vhd-psi.vercel.app";
-
-    const accessUrl = new URL("/acceptToken", baseUrl);
+    const accessUrl = new URL("/acceptToken", getBaseUrl());
     accessUrl.searchParams.set("clientId", clientId);
 
     return {

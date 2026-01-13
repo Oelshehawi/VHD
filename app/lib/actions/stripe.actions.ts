@@ -5,6 +5,7 @@ import connectMongo from "../connect";
 import { Invoice, Client, AuditLog } from "../../../models/reactDataSchema";
 import { revalidatePath } from "next/cache";
 import { StripePaymentSettings, StripePaymentStatus } from "../typeDefinitions";
+import { getBaseUrl } from "../utils";
 
 const PAYMENT_LINK_EXPIRY_DAYS = 30;
 
@@ -142,8 +143,7 @@ export async function generatePaymentLink(
     });
 
     // Generate the payment link URL
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const paymentLink = `${baseUrl}/pay?token=${token}`;
+    const paymentLink = `${getBaseUrl()}/pay?token=${token}`;
 
     revalidatePath(`/invoices/${invoiceId}`);
 
@@ -300,8 +300,7 @@ export async function getPaymentLinkStatus(invoiceId: string): Promise<{
     }
 
     const isExpired = expiresAt ? new Date() > new Date(expiresAt) : false;
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
-    const paymentLink = `${baseUrl}/pay?token=${token}`;
+    const paymentLink = `${getBaseUrl()}/pay?token=${token}`;
 
     return {
       success: true,

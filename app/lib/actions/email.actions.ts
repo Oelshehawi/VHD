@@ -11,7 +11,7 @@ import {
   Report,
 } from "../../../models/reactDataSchema";
 import { DueInvoiceType } from "../typeDefinitions";
-import { getEmailForPurpose } from "../utils";
+import { getEmailForPurpose, getBaseUrl } from "../utils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -247,9 +247,7 @@ export async function sendInvoiceDeliveryEmail(
       console.log("Is expired:", isExpired);
 
       if (!isExpired) {
-        const baseUrl =
-          process.env.NEXT_PUBLIC_APP_URL || "https://vhd-psi.vercel.app";
-        const paymentLinkUrl = `${baseUrl}/pay?token=${invoice.stripePaymentSettings.paymentLinkToken}`;
+        const paymentLinkUrl = `${getBaseUrl()}/pay?token=${invoice.stripePaymentSettings.paymentLinkToken}`;
 
         hasOnlinePaymentBlock = {
           payment_link_url: paymentLinkUrl,

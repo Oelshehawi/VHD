@@ -7,6 +7,20 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Get the base URL for the application.
+ * Priority: NEXT_PUBLIC_APP_URL (production) > NEXT_PUBLIC_VERCEL_URL (preview) > localhost
+ */
+export function getBaseUrl(): string {
+  if (process.env.NEXT_PUBLIC_APP_URL) {
+    return process.env.NEXT_PUBLIC_APP_URL;
+  }
+  if (process.env.NEXT_PUBLIC_VERCEL_URL) {
+    return `https://${process.env.NEXT_PUBLIC_VERCEL_URL}`;
+  }
+  return "http://localhost:3000";
+}
+
+/**
  * Escapes special regex characters in a string to make it safe for MongoDB $regex queries
  * @param str - The string to escape
  * @returns Escaped string safe for use in regex patterns
