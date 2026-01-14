@@ -18,6 +18,10 @@ export const ClientSchema = new Schema<ClientType>({
   isArchived: { type: Boolean, default: false, index: true },
   archiveReason: { type: String },
   archivedAt: { type: Date },
+  // Portal access security fields
+  portalAccessToken: { type: String, index: true },
+  portalAccessTokenExpiry: { type: Date },
+  clerkUserId: { type: String, index: true }, // Cache Clerk user ID for efficient lookups
 });
 
 // Index for client searches

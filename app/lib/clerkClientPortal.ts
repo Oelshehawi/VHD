@@ -1,7 +1,16 @@
 "use server";
 
 import { clerkClient } from "@clerk/nextjs/server";
+import { randomBytes } from "crypto";
 import { getBaseUrl } from "./utils";
+import { Client } from "@/models";
+
+/**
+ * Generate a cryptographically secure access token
+ */
+function generateSecureToken(): string {
+  return randomBytes(32).toString("hex");
+}
 
 /**
  * Generate a client access link using Clerk's email magic link
@@ -52,9 +61,22 @@ export async function generateClientAccessLink(
       userId = newUser.id;
     }
 
-    // Create the reusable access URL using acceptToken with clientId
+    // Generate a secure access token with 30-day expiry
+    const accessToken = generateSecureToken();
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + 30);
+
+    // Store the token and Clerk userId in the Client document
+    await Client.findByIdAndUpdate(clientId, {
+      portalAccessToken: accessToken,
+      portalAccessTokenExpiry: expiryDate,
+      clerkUserId: userId,
+    });
+
+    // Create the reusable access URL with secure token
     const accessUrl = new URL("/acceptToken", getBaseUrl());
     accessUrl.searchParams.set("clientId", clientId);
+    accessUrl.searchParams.set("accessToken", accessToken);
 
     return {
       success: true,
@@ -68,36 +90,102 @@ export async function generateClientAccessLink(
 
 /**
  * Generate a fresh client token for an existing client user
+ * Uses secure token validation and efficient email-based Clerk lookup
  * @param clientId - The client's ID in the database
+ * @param accessToken - The secure access token from the URL
  * @returns A fresh sign-in token for the client
  */
-export async function generateFreshClientToken(clientId: string) {
+export async function generateFreshClientToken(
+  clientId: string,
+  accessToken?: string,
+) {
   try {
     if (!clientId) {
       throw new Error("Client ID is required");
     }
 
+    // Look up the client from database
+    const client = await Client.findById(clientId);
+
+    if (!client) {
+      throw new Error("Client not found");
+    }
+
+    // Validate access token if provided (new secure flow)
+    if (accessToken) {
+      if (client.portalAccessToken !== accessToken) {
+        throw new Error("Invalid access token");
+      }
+
+      if (
+        client.portalAccessTokenExpiry &&
+        new Date() > new Date(client.portalAccessTokenExpiry)
+      ) {
+        throw new Error("Access token has expired");
+      }
+    }
+
     const clerk = await clerkClient();
+    let clerkUserId = client.clerkUserId;
 
-    // Find user by clientId in metadata
-    const users = await clerk.users.getUserList({
-      limit: 100, // Adjust if you have more than 100 clients
-    });
+    // If we have cached Clerk userId, verify it still exists
+    if (clerkUserId) {
+      try {
+        const user = await clerk.users.getUser(clerkUserId);
+        // Verify user still has correct metadata
+        const metadata = user.publicMetadata as {
+          isClientPortalUser?: boolean;
+          clientId?: string;
+        };
+        if (
+          !metadata?.isClientPortalUser ||
+          metadata?.clientId !== clientId
+        ) {
+          clerkUserId = undefined; // Force email lookup
+        }
+      } catch {
+        // User no longer exists, clear cached ID
+        clerkUserId = undefined;
+      }
+    }
 
-    const clientUser = users.data.find(
-      (user) => 
-        user.publicMetadata &&
-        (user.publicMetadata as any).isClientPortalUser === true &&
-        (user.publicMetadata as any).clientId === clientId
-    );
+    // If no cached userId, look up by email (scalable approach)
+    if (!clerkUserId) {
+      const clientEmail = client.emails?.primary || client.email;
 
-    if (!clientUser) {
-      throw new Error("Client not found or not authorized for portal access");
+      if (!clientEmail) {
+        throw new Error("Client has no email address configured");
+      }
+
+      const users = await clerk.users.getUserList({
+        emailAddress: [clientEmail],
+      });
+
+      const clientUser = users.data.find(
+        (user) =>
+          user.publicMetadata &&
+          (user.publicMetadata as { isClientPortalUser?: boolean })
+            .isClientPortalUser === true &&
+          (user.publicMetadata as { clientId?: string }).clientId === clientId,
+      );
+
+      if (!clientUser) {
+        throw new Error(
+          "Client not found or not authorized for portal access",
+        );
+      }
+
+      clerkUserId = clientUser.id;
+
+      // Cache the userId for future lookups
+      await Client.findByIdAndUpdate(clientId, {
+        clerkUserId: clerkUserId,
+      });
     }
 
     // Create a fresh sign-in token for the user
     const signInToken = await clerk.signInTokens.createSignInToken({
-      userId: clientUser.id,
+      userId: clerkUserId,
       expiresInSeconds: 5 * 60, // 5 minutes for security (short-lived)
     });
 
@@ -110,4 +198,3 @@ export async function generateFreshClientToken(clientId: string) {
     throw new Error("Failed to generate access token");
   }
 }
-

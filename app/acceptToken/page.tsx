@@ -25,6 +25,7 @@ function AcceptTokenContent() {
 
   const token = searchParams?.get("client_token");
   const clientId = searchParams?.get("clientId");
+  const accessToken = searchParams?.get("accessToken");
 
 
 
@@ -75,7 +76,7 @@ function AcceptTokenContent() {
         // If we have clientId but no token, generate a fresh token
         if (clientId && !token) {
           try {
-            const result = await generateFreshClientToken(clientId);
+            const result = await generateFreshClientToken(clientId, accessToken || undefined);
             
             if (!result.success || !result.token) {
               throw new Error("Invalid client or unauthorized access");
@@ -138,7 +139,7 @@ function AcceptTokenContent() {
       setError("No access information provided");
       setLoading(false);
     }
-  }, [isLoaded, router, setActive, signIn, token, clientId, user, signOut]);
+  }, [isLoaded, router, setActive, signIn, token, clientId, accessToken, user, signOut]);
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50">

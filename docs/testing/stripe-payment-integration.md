@@ -279,3 +279,371 @@ After testing:
 3. Clear test invoices or mark as test data
 4. Reset webhook endpoints if needed
 5. Clear any test data from database
+
+
+
+---
+
+## Client Portal Authentication Testing
+
+### 11. Client Portal Access Link Generation
+
+**Location:** Client Details Page → Generate Portal Access Link
+
+**Test Steps:**
+
+1. Navigate to a client's detail page
+2. Generate a new client portal access link
+3. Inspect the generated URL
+
+**Expected Results:**
+
+- URL contains `clientId` parameter
+- URL contains `accessToken` parameter (64 character hex string)
+- Client document in database has:
+  - `portalAccessToken` field populated (matches URL token)
+  - `portalAccessTokenExpiry` set to 30 days from now
+  - `clerkUserId` populated (if user was created/exists in Clerk)
+
+### 12. Client Portal Login - Valid Token
+
+**Location:** `/acceptToken?clientId=[id]&accessToken=[token]`
+
+**Test Steps:**
+
+1. Use a freshly generated access link
+2. Click the link or paste URL in browser
+3. Observe the authentication flow
+
+**Expected Results:**
+
+- Loading spinner displays during authentication
+- User is automatically signed in to Clerk
+- Redirects to client portal dashboard
+- No login form required (magic link flow)
+- Clerk sign-in token created with 5-minute expiry (security)
+
+### 13. Client Portal Login - Invalid Token
+
+**Test Steps:**
+
+1. Use a valid URL but modify the `accessToken` parameter
+2. Try accessing `/acceptToken?clientId=[valid]&accessToken=[tampered]`
+
+**Expected Results:**
+
+- Error message: "Invalid access token" or similar
+- User is NOT authenticated
+- No Clerk session created
+- Appropriate error UI displayed
+
+### 14. Client Portal Login - Expired Token
+
+**Test Steps:**
+
+1. Manually set a client's `portalAccessTokenExpiry` to a past date in MongoDB
+2. Try accessing with the original link
+
+**Expected Results:**
+
+- Error message: "Access token has expired"
+- User is NOT authenticated
+- Prompt to request a new access link
+
+### 15. Client Portal Login - Missing Token (Legacy Flow)
+
+**Test Steps:**
+
+1. Access `/acceptToken?clientId=[valid]` without the `accessToken` parameter
+2. Test if legacy authentication still works
+
+**Expected Results:**
+
+- Depends on implementation: either falls back to Clerk-only auth or rejects
+- Document actual behavior for legacy link handling
+
+### 16. Clerk User ID Caching
+
+**Test Steps:**
+
+1. Generate a fresh access link for a new client (no existing Clerk user)
+2. Use the link to authenticate
+3. Check the Client document in MongoDB
+4. Re-authenticate using the same link
+
+**Expected Results:**
+
+- First authentication:
+  - Creates Clerk user (if not exists)
+  - Stores `clerkUserId` in Client document for caching
+  - Uses email-based Clerk lookup (not listing all users)
+- Subsequent authentications:
+  - Uses cached `clerkUserId` (faster lookup)
+  - Verifies user still exists and metadata matches
+  - Falls back to email lookup if cached ID is invalid
+
+### 17. Client Portal Security Edge Cases
+
+**Test Steps:**
+
+1. **Token reuse:** Use the same link multiple times (should work until expiry)
+2. **Concurrent sessions:** Open link in multiple browsers/devices
+3. **Client email change:** Change client email after link generation
+4. **Clerk user deletion:** Delete Clerk user, then try cached userId lookup
+
+**Expected Results:**
+
+- Multiple uses of same token allowed (reusable until expiry)
+- Concurrent sessions should work independently
+- Email change: existing links may fail (depends on Clerk user state)
+- Deleted Clerk user: falls back to email lookup, may create new Clerk user
+
+---
+
+## Report Testing
+
+### 18. Report Creation
+
+**Location:** Reports Page → Create New Report
+
+**Test Steps:**
+
+1. Navigate to Reports section
+2. Click "Create New Report" button
+3. Fill in report details:
+   - Report type
+   - Date range
+   - Associated client(s)
+   - Any other required fields
+4. Save the report
+
+**Expected Results:**
+
+- Report is created successfully
+- Report appears in reports list
+- Audit log entry created
+- All fields are saved correctly
+
+### 19. Report Editing
+
+**Location:** Reports Page → Edit Report
+
+**Test Steps:**
+
+1. Open an existing report
+2. Modify various fields
+3. Save changes
+
+**Expected Results:**
+
+- Changes are persisted
+- Audit log records the modification
+- Report list reflects updated information
+- Edit timestamp is updated
+
+### 20. Report Deletion
+
+**Location:** Reports Page → Delete Report
+
+**Test Steps:**
+
+1. Select a report for deletion
+2. Confirm deletion
+3. Verify report is removed
+
+**Expected Results:**
+
+- Confirmation dialog appears before deletion
+- Report is removed from the system
+- Audit log records deletion
+- Associated data handled appropriately (cascade or orphan handling)
+
+### 21. Report Email Sending
+
+**Location:** Reports Page → Send Report via Email
+
+**Test Steps:**
+
+1. Select a report to send
+2. Enter recipient email(s)
+3. Add any custom message
+4. Send the report
+
+**Expected Results:**
+
+- Email is sent successfully
+- Report PDF is attached (if applicable)
+- Recipient receives email with correct content
+- Audit log records the send action
+- Multiple recipients supported
+
+---
+
+## PDF Generation Testing
+
+### 22. Invoice PDF Generation
+
+**Location:** Invoice Details → Download/Print PDF
+
+**Test Steps:**
+
+1. Navigate to an invoice
+2. Generate/download the PDF
+3. Test with various invoice states:
+   - Draft invoice
+   - Sent invoice
+   - Paid invoice
+   - Invoice with multiple line items
+   - Invoice with discounts
+   - Invoice with GST calculations
+
+**Expected Results:**
+
+- PDF generates without errors
+- All invoice data is correctly displayed
+- GST calculations are accurate
+- Payment status reflected (if paid)
+- Company branding/logo appears correctly
+- Formatting is consistent across invoice types
+
+### 23. Report PDF Generation
+
+**Location:** Reports → Download/Print PDF
+
+**Test Steps:**
+
+1. Navigate to a report
+2. Generate/download the PDF
+3. Test with various report types
+
+**Expected Results:**
+
+- PDF generates without errors
+- Report data is accurately rendered
+- Charts/graphs (if any) render correctly
+- Date ranges are correct
+- Formatting is professional
+
+### 24. Estimate PDF Generation
+
+**Location:** Estimates → Download/Print PDF
+
+**Test Steps:**
+
+1. Navigate to an estimate
+2. Generate/download the PDF
+3. Test with various estimate scenarios:
+   - Simple estimate
+   - Estimate with multiple items
+   - Estimate with optional items
+   - Converted vs unconverted estimates
+
+**Expected Results:**
+
+- PDF generates without errors
+- All estimate details are correct
+- Optional items clearly marked (if applicable)
+- Terms and conditions included
+- Expiry date visible (if applicable)
+
+### 25. PDF Generation Edge Cases
+
+**Test Steps:**
+
+1. **Long content:** Test with invoices/reports with many line items
+2. **Special characters:** Include special characters in descriptions
+3. **Large amounts:** Test with very large dollar amounts
+4. **Unicode:** Test with non-ASCII characters in client names
+5. **Empty states:** Test with minimal data
+
+**Expected Results:**
+
+- Multi-page PDFs render correctly
+- Special characters display properly
+- Large numbers formatted correctly (commas, decimals)
+- Unicode characters render without corruption
+- Empty/minimal data handled gracefully
+
+---
+
+## Reminder System Testing
+
+### 26. Reminder Configuration
+
+**Location:** Invoice Details → Reminder Settings
+
+**Test Steps:**
+
+1. Configure reminder settings for an invoice
+2. Set reminder schedule (days before/after due date)
+3. Select reminder recipients
+4. Save configuration
+
+**Expected Results:**
+
+- Reminder settings are saved
+- Recipients list is correct
+- Schedule is stored properly
+- UI reflects saved configuration
+
+### 27. Reminder Sending
+
+**Test Steps:**
+
+1. Create an invoice with reminders configured
+2. Wait for or trigger the reminder cron job (`/api/cron/process-reminders`)
+3. Verify reminders are sent
+
+**Expected Results:**
+
+- Reminders sent at correct times
+- Correct recipients receive reminders
+- Email content is accurate
+- Audit log records reminder sends
+- Reminder status updated in invoice
+
+---
+
+## Invoice Multiple Recipients
+
+### 28. Multiple Recipients Configuration
+
+**Location:** Invoice → Send Invoice Modal
+
+**Test Steps:**
+
+1. Open Send Invoice modal
+2. Add multiple email recipients
+3. Send the invoice
+
+**Expected Results:**
+
+- Multiple emails can be entered
+- All recipients receive the invoice
+- Each recipient's email is logged
+- Invoice status updates correctly
+
+---
+
+## Integration Scenarios
+
+### 29. Full Client Journey Test
+
+**Test Steps:**
+
+1. Create a new client
+2. Generate client portal access link
+3. Create an invoice for the client
+4. Send invoice via email to multiple recipients
+5. Client accesses portal via link
+6. Client makes payment via Stripe
+7. Generate report including the transaction
+8. Download all PDFs (invoice, report)
+
+**Expected Results:**
+
+- Each step completes successfully
+- Data consistency maintained throughout
+- All audit logs created
+- PDFs reflect accurate current state
+- Client portal shows correct invoice/payment status

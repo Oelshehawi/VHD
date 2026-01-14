@@ -128,6 +128,10 @@ export interface ClientType {
   isArchived?: boolean;
   archiveReason?: string;
   archivedAt?: Date;
+  // Portal access security fields
+  portalAccessToken?: string;
+  portalAccessTokenExpiry?: Date;
+  clerkUserId?: string;
 }
 
 export interface PaymentInfo {
