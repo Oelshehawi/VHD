@@ -171,15 +171,20 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
         data.paymentSettings.allowBankPayment;
 
       if (!hasMultiple) {
-        // Auto-select the single available method
+        // Auto-select the single available method (with validation)
         const singleMethod = data.paymentSettings.allowCreditCard
           ? "card"
-          : "bank";
-        // Use setTimeout to avoid synchronous setState in effect
-        setTimeout(() => {
-          setPaymentMethod(singleMethod);
-        }, 0);
-        createIntentMutation.mutate(singleMethod);
+          : data.paymentSettings.allowBankPayment
+            ? "bank"
+            : null;
+
+        if (singleMethod) {
+          // Use setTimeout to avoid synchronous setState in effect
+          setTimeout(() => {
+            setPaymentMethod(singleMethod);
+          }, 0);
+          createIntentMutation.mutate(singleMethod);
+        }
       }
     }
   }, [
@@ -356,9 +361,16 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
         ? "bank"
         : null);
 
-  const paymentDueDate = new Date(data.invoice.dateIssued);
-
-  paymentDueDate.setDate(paymentDueDate.getDate() + 14);
+  // Parse dateIssued without timezone conversion to avoid date shift
+  const dateIssuedStr =
+    typeof data.invoice.dateIssued === "string"
+      ? data.invoice.dateIssued.split("T")[0] || data.invoice.dateIssued
+      : String(data.invoice.dateIssued);
+  const dateParts = dateIssuedStr.split("-");
+  const year = parseInt(dateParts[0] || "2026", 10);
+  const month = parseInt(dateParts[1] || "1", 10);
+  const day = parseInt(dateParts[2] || "1", 10);
+  const paymentDueDate = new Date(year, month - 1, day + 14);
 
   return (
     <div className="relative min-h-screen bg-gray-50">

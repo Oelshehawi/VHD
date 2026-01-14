@@ -153,6 +153,8 @@ const ReminderConfigModal = ({
     switch (frequency) {
       case "3days":
         return "Every 3 days";
+      case "5days":
+        return "Every 5 days";
       case "7days":
         return "Every 7 days";
       case "14days":

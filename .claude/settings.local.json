@@ -4,7 +4,10 @@
       "Bash(npm run lint:eslint:*)",
       "Bash(npm run lint:types:*)",
       "Bash(npx tsc:*)",
-      "Bash(ls:*)"
+      "Bash(ls:*)",
+      "Read(//home/braille/projects/**)",
+      "Bash(echo:*)",
+      "Bash(tldr search \"getFrequencyLabel\" _components/database/ReminderConfigModal.tsx)"
     ],
     "deny": [],
     "ask": []

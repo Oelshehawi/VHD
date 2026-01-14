@@ -53,6 +53,47 @@ interface AddInvoiceProps {
   clients: ClientType[];
 }
 
+// Calculate next reminder date based on dateIssued and frequency
+function calculateNextReminderDate(
+  dateIssued: string,
+  frequency: string
+): Date {
+  const days =
+    frequency === "3days"
+      ? 3
+      : frequency === "5days"
+        ? 5
+        : frequency === "7days"
+          ? 7
+          : 14;
+
+  const parts = dateIssued.split("-");
+  const year = parseInt(parts[0] || "2026", 10);
+  const month = parseInt(parts[1] || "1", 10);
+  const day = parseInt(parts[2] || "1", 10);
+  const baseDate = new Date(year, month - 1, day);
+  const targetDate = new Date(baseDate.getTime() + days * 24 * 60 * 60 * 1000);
+
+  const now = new Date();
+  const nowLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+  // Advance to next interval if target is in the past
+  while (targetDate < nowLocal) {
+    targetDate.setTime(targetDate.getTime() + days * 24 * 60 * 60 * 1000);
+  }
+
+  // Set to 9 AM local time for the reminder
+  return new Date(
+    targetDate.getFullYear(),
+    targetDate.getMonth(),
+    targetDate.getDate(),
+    9,
+    0,
+    0,
+    0
+  );
+}
+
 interface InvoiceFormValues {
   clientId: string;
   jobTitle: string;
@@ -205,7 +246,14 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
       const invoiceData = {
         ...data,
         paymentReminders: reminderEnabled
-          ? { enabled: true, frequency: reminderFrequency }
+          ? {
+              enabled: true,
+              frequency: reminderFrequency,
+              nextReminderDate: calculateNextReminderDate(
+                data.dateIssued,
+                reminderFrequency
+              ),
+            }
           : { enabled: false, frequency: "none" as const },
       };
       await createInvoice(invoiceData, userName);

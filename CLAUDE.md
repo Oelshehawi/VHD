@@ -4,9 +4,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**VHD** is a Next.js 15-based Progressive Web App for invoice and client management in service-based businesses. It provides comprehensive features for managing clients, invoices, job schedules, employee payroll, availability tracking, and route optimization.
+**VHD** is a Next.js 16-based Progressive Web App for invoice and client management in service-based businesses. It provides comprehensive features for managing clients, invoices, job schedules, employee payroll, availability tracking, and route optimization.
 
-**Key Technologies:** React 19, Next.js 15 (App Router), TypeScript 5.4, MongoDB + Mongoose, Clerk Authentication, Tailwind CSS
+**Key Technologies:** React 19.2, Next.js 16 (App Router), TypeScript 5.4, MongoDB + Mongoose, Clerk Authentication, Tailwind CSS 4, Stripe Payments
 
 **Package Manager:** This project uses **pnpm** (not npm). Always use pnpm for installing dependencies and running scripts.
 
@@ -97,7 +97,7 @@ Components are organized in `_components/` by feature domain:
 - **Image Storage:** Cloudinary (before/after photos, optimization)
 - **Route Optimization:** OpenRoute Service API (scheduling algorithm)
 - **PDF Generation:** @react-pdf/renderer (invoices, receipts, reports)
-- **Payments:** Integrated into invoice workflow
+- **Payments:** Stripe (credit card and PAD payments, client-facing payment page, webhook handling)
 - **Analytics:** Vercel Analytics and Speed Insights
 
 ### Server Actions Pattern
@@ -111,6 +111,7 @@ Server actions are organized by domain in `app/lib/actions/`:
 - `optimization.actions.ts` - Route optimization requests
 - `reminder.actions.ts` - Reminder processing
 - `scheduleJobs.actions.ts` - Job scheduling
+- `stripe.actions.ts` - Stripe payment processing
 
 ### API Route Organization
 
@@ -402,7 +403,7 @@ Both checks must pass before committing. Fix any errors reported by these tools.
 
 ## Environment Variables
 
-Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, OpenRoute):
+Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, OpenRoute, Stripe):
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
@@ -411,6 +412,9 @@ Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, Ope
 - `CLOUDINARY_API_KEY`
 - `POSTMARK_API_TOKEN`
 - `OPENROUTE_API_KEY`
+- `STRIPE_SECRET_KEY`
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
+- `STRIPE_WEBHOOK_SECRET`
 
 ## Date Handling
 

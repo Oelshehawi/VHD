@@ -377,7 +377,12 @@ export default function SendInvoiceModal({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={isLoading || !hasSchedule || !hasReport}
+            disabled={
+              isLoading ||
+              !hasSchedule ||
+              !hasReport ||
+              selectedEmails.length + additionalRecipients.length === 0
+            }
             type="button"
           >
             {isLoading ? (
