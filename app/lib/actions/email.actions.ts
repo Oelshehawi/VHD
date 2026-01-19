@@ -379,7 +379,9 @@ export async function sendInvoiceDeliveryEmail(
       details: {
         newValue: {
           invoiceId: invoice.invoiceId,
+          invoiceMongoId: invoice._id.toString(),
           jobTitle: invoice.jobTitle,
+          clientEmail: emailRecipients.join(", "),
           recipients: emailRecipients,
           includeReport: includeReport,
           clientName: clientDetails.clientName,

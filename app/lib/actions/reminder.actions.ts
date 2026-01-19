@@ -2,6 +2,7 @@
 
 import connectMongo from "../connect";
 import { Invoice, Client, AuditLog } from "../../../models/reactDataSchema";
+import { InvoiceType } from "../typeDefinitions";
 import { getEmailForPurpose } from "../utils";
 import {
   formatAmount,
@@ -127,6 +128,9 @@ export async function configurePaymentReminders(
 
     await Invoice.findByIdAndUpdate(invoiceId, updateData);
 
+    // Get invoice details for better audit context
+    const invoice = await Invoice.findById(invoiceId).lean<InvoiceType>();
+
     // Create audit log entry
     await AuditLog.create({
       invoiceId,
@@ -135,7 +139,14 @@ export async function configurePaymentReminders(
       performedBy: performedBy || "user",
       details: {
         oldValue: oldSettings,
-        newValue: { ...settings, nextReminderDate },
+        newValue: {
+          ...settings,
+          nextReminderDate,
+          invoiceId: invoice?.invoiceId,
+          invoiceMongoId: invoice?._id?.toString() || invoiceId,
+          jobTitle: invoice?.jobTitle, // Add job title for context
+          clientId: invoice?.clientId?.toString?.() || invoice?.clientId,
+        },
         reason: "User configured reminder settings",
       },
       success: true,
@@ -224,8 +235,14 @@ export async function processAutoReminders(): Promise<ProcessResult> {
             timestamp: new Date(),
             performedBy: "system",
             details: {
+              newValue: {
+                invoiceId: invoice.invoiceId,
+                jobTitle: invoice.jobTitle,
+                invoiceMongoId: invoice._id.toString(),
+                clientId: invoice.clientId?.toString?.() || invoice.clientId,
+                nextReminderDate,
+              },
               reason: "Automatic reminder sent via cron job",
-              nextReminderDate,
             },
             success: true,
           });
@@ -260,9 +277,11 @@ export async function sendPaymentReminderEmail(
 ) {
   await connectMongo();
 
+  let invoice: InvoiceType | null = null;
+
   try {
     // Find the invoice
-    const invoice = await Invoice.findById(invoiceId);
+    invoice = await Invoice.findById(invoiceId);
     if (!invoice) {
       return { success: false, error: "Invoice not found" };
     }
@@ -293,11 +312,15 @@ export async function sendPaymentReminderEmail(
     const sequenceText = getSequenceText(reminderSequence);
 
     // Format dates and amounts
-    const issueDateFormatted = formatDateStringUTC(invoice.dateIssued);
+    const issuedDate =
+      invoice.dateIssued instanceof Date
+        ? invoice.dateIssued
+        : new Date(invoice.dateIssued);
+    const issueDateFormatted = formatDateStringUTC(issuedDate);
     const formattedAmount = formatAmount(totalWithTax).replace("$", "");
 
     // Calculate due date using UTC-safe utility
-    const dueDate = calculatePaymentDueDate(invoice.dateIssued);
+    const dueDate = calculatePaymentDueDate(issuedDate);
     const formattedDueDate = formatDateStringUTC(dueDate);
 
     // Check if invoice is overdue
@@ -442,9 +465,18 @@ export async function sendPaymentReminderEmail(
       timestamp: now2,
       performedBy,
       details: {
-        reminderSequence,
-        emailTemplate: "payment-reminder-1",
-        success: true,
+        newValue: {
+          reminderSequence,
+          emailTemplate: "payment-reminder-1",
+          invoiceId: invoice.invoiceId,
+          jobTitle: invoice.jobTitle,
+          invoiceMongoId: invoice._id?.toString?.() || invoiceId,
+          clientId: invoice.clientId?.toString?.() || invoice.clientId,
+        },
+        reason:
+          performedBy === "system"
+            ? "Automatic reminder sent"
+            : "Manual reminder sent",
       },
       success: true,
     });
@@ -464,8 +496,13 @@ export async function sendPaymentReminderEmail(
         timestamp: new Date(),
         performedBy,
         details: {
+          newValue: {
+            invoiceId: invoice?.invoiceId,
+            jobTitle: invoice?.jobTitle,
+            invoiceMongoId: invoice?._id?.toString?.() || invoiceId,
+            clientId: invoice?.clientId?.toString?.() || invoice?.clientId,
+          },
           error: error instanceof Error ? error.message : String(error),
-          success: false,
         },
         success: false,
         errorMessage: error instanceof Error ? error.message : String(error),
@@ -487,9 +524,9 @@ export async function getReminderSettings(invoiceId: string) {
   await connectMongo();
 
   try {
-    const invoiceDoc = await Invoice.findById(invoiceId)
-      .select("paymentReminders")
-      .lean();
+    const invoiceDoc = (await Invoice.findById(invoiceId)
+      .select("paymentReminders invoiceId")
+      .lean()) as InvoiceType | null;
 
     if (!invoiceDoc) {
       return { success: false, error: "Invoice not found" };
@@ -500,7 +537,11 @@ export async function getReminderSettings(invoiceId: string) {
 
     // Get audit logs from separate collection
     const rawAuditLogsDoc = await AuditLog.find({
-      invoiceId,
+      $or: [
+        { invoiceId },
+        { invoiceId: invoiceDoc.invoiceId },
+        { "details.newValue.invoiceMongoId": invoiceId },
+      ],
       action: {
         $in: [
           "reminder_configured",

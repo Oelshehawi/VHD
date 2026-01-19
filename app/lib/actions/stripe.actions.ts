@@ -5,7 +5,7 @@ import connectMongo from "../connect";
 import { Invoice, Client, AuditLog } from "../../../models/reactDataSchema";
 import { revalidatePath } from "next/cache";
 import { StripePaymentSettings, StripePaymentStatus } from "../typeDefinitions";
-import { getBaseUrl } from "../utils";
+import { calculateGST, calculateSubtotal, getBaseUrl } from "../utils";
 
 const PAYMENT_LINK_EXPIRY_DAYS = 30;
 
@@ -54,7 +54,12 @@ export async function configureStripePaymentSettings(
       performedBy,
       details: {
         oldValue: oldSettings,
-        newValue: settings,
+        newValue: {
+          ...settings,
+          invoiceMongoId: invoice._id.toString(),
+          jobTitle: invoice.jobTitle, // Add job title for context
+          clientId: invoice.clientId?.toString?.() || invoice.clientId,
+        },
       },
       success: true,
     });
@@ -137,6 +142,9 @@ export async function generatePaymentLink(
         newValue: {
           tokenGenerated: true,
           expiresAt: expiresAt.toISOString(),
+          invoiceMongoId: invoice._id.toString(),
+          jobTitle: invoice.jobTitle,
+          clientId: invoice.clientId?.toString?.() || invoice.clientId,
         },
       },
       success: true,
@@ -350,6 +358,11 @@ export async function revokePaymentLink(
       timestamp: new Date(),
       performedBy,
       details: {
+        newValue: {
+          invoiceMongoId: invoice._id.toString(),
+          jobTitle: invoice.jobTitle,
+          clientId: invoice.clientId?.toString?.() || invoice.clientId,
+        },
         reason: "Payment link revoked",
       },
       success: true,
@@ -422,6 +435,9 @@ export async function processStripePaymentSuccess(
 
     await invoice.save();
 
+    const subtotal = calculateSubtotal(invoice.items || []);
+    const totalAmount = subtotal + calculateGST(subtotal);
+
     // Create audit log
     await AuditLog.create({
       invoiceId: invoice.invoiceId,
@@ -430,10 +446,16 @@ export async function processStripePaymentSuccess(
       performedBy: "stripe_webhook",
       details: {
         newValue: {
+          amount: totalAmount,
+          paymentMethod: paymentMethodType === "card" ? "card" : "bank",
+          transactionId: paymentIntentId,
           paymentIntentId,
           chargeId,
           paymentMethodType,
           receiptUrl,
+          invoiceMongoId: invoice._id.toString(),
+          jobTitle: invoice.jobTitle,
+          clientId: invoice.clientId?.toString?.() || invoice.clientId,
         },
       },
       success: true,
@@ -486,6 +508,9 @@ export async function logStripePaymentFailure(
 
     await invoice.save();
 
+    const subtotal = calculateSubtotal(invoice.items || []);
+    const totalAmount = subtotal + calculateGST(subtotal);
+
     // Create audit log for failed payment
     await AuditLog.create({
       invoiceId: invoice.invoiceId,
@@ -493,6 +518,14 @@ export async function logStripePaymentFailure(
       timestamp: new Date(),
       performedBy: "stripe_webhook",
       details: {
+        newValue: {
+          amount: totalAmount,
+          paymentMethod: invoice.stripePaymentStatus?.paymentMethod,
+          transactionId: paymentIntentId,
+          invoiceMongoId: invoice._id.toString(),
+          jobTitle: invoice.jobTitle,
+          clientId: invoice.clientId?.toString?.() || invoice.clientId,
+        },
         metadata: {
           paymentIntentId,
           errorMessage,

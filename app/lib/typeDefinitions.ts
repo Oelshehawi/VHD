@@ -409,6 +409,7 @@ export interface DashboardSearchParams {
   actionsDateFrom?: string;
   actionsDateTo?: string;
   actionsSearch?: string;
+  actionsCategory?: string;
   [key: string]: string | undefined;
 }
 

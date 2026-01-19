@@ -550,6 +550,7 @@ export interface DisplayAction {
   formattedTimeTitle: string;
   success: boolean;
   severity: "success" | "info" | "warning" | "error";
+  invoiceId?: string; // Human-readable invoice ID for navigation
   metadata?: {
     clientName?: string;
     jobTitle?: string;
@@ -559,6 +560,7 @@ export interface DisplayAction {
     newValue?: any;
     reason?: string;
     metadata?: any;
+    error?: string;
   };
 }
 
@@ -636,6 +638,8 @@ export const fetchRecentActions = async (
         ? clientMap.get(clientId.toString())
         : undefined;
       const timestamp = new Date(log.timestamp);
+      const jobTitle =
+        log.details?.newValue?.jobTitle || log.details?.metadata?.jobTitle;
       const { formatted, title } = formatTimestamp(timestamp);
 
       // Build rich description based on action type
@@ -681,12 +685,15 @@ export const fetchRecentActions = async (
         formattedTimeTitle: title,
         success: log.success,
         severity: getActionSeverity(log.action),
+        invoiceId: log.invoiceId, // Store the human-readable invoice ID
         metadata: {
           clientName,
+          jobTitle,
         },
         details: {
           newValue: log.details?.newValue,
           reason: log.details?.reason,
+          error: log.details?.error,
           metadata: log.details?.metadata
             ? {
                 ...log.details.metadata,
@@ -746,6 +753,8 @@ export const fetchRecentActions = async (
         if (
           action.details?.newValue?.jobTitle?.toLowerCase().includes(lowerQuery)
         )
+          return true;
+        if (action.metadata?.jobTitle?.toLowerCase().includes(lowerQuery))
           return true;
         // Search in client name
         if (action.metadata?.clientName?.toLowerCase().includes(lowerQuery))

@@ -170,6 +170,7 @@ export async function createInvoice(
       details: {
         newValue: {
           invoiceId: newInvoiceId,
+          invoiceMongoId: newInvoice._id.toString(),
           jobTitle: invoiceData.jobTitle,
           clientId: invoiceData.clientId,
         },
@@ -364,6 +365,9 @@ export async function logJobCall(invoiceId: string, callLog: CallLogEntry) {
         newValue: {
           outcome: callLog.outcome,
           notes: callLog.notes,
+          invoiceMongoId: updatedJob.invoiceId, // MongoDB _id for JobsDueSoon
+          jobTitle: updatedJob.jobTitle,
+          clientId: updatedJob.clientId,
         },
         reason: "Job call logged",
         metadata: {
@@ -421,6 +425,8 @@ export async function logInvoicePaymentCall(
         newValue: {
           outcome: callLog.outcome,
           notes: callLog.notes,
+          invoiceMongoId: updatedInvoice._id.toString(), // Add MongoDB _id
+          jobTitle: updatedInvoice.jobTitle, // Add job title for payment calls
         },
         reason: "Payment call logged",
         metadata: {

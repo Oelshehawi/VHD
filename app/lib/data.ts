@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import connectMongo from "./connect";
 import {
   Client,
@@ -180,9 +181,20 @@ export const fetchInvoiceById = async (invoiceId: string) => {
         price: parseFloat(item.price) || 0,
       }));
 
-    const invoice = await Invoice.findOne({
-      _id: invoiceId,
-    }).lean<InvoiceType>();
+    const isObjectId = mongoose.Types.ObjectId.isValid(invoiceId);
+
+    // Try to find by MongoDB _id first, then by human-readable invoiceId
+    let invoice = isObjectId
+      ? await Invoice.findById(invoiceId).lean<InvoiceType>()
+      : null;
+
+    // If not found and invoiceId looks like a human-readable ID, try searching by invoiceId field
+    if (!invoice && /^[A-Z]+-\d+$/.test(invoiceId)) {
+      invoice = await Invoice.findOne({
+        invoiceId: invoiceId,
+      }).lean<InvoiceType>();
+    }
+
     if (!invoice) {
       throw new Error("Invoice not found");
     }

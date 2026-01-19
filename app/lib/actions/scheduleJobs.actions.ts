@@ -377,6 +377,7 @@ export const updateSchedule = async ({
               jobTitle: schedule.jobTitle,
               location: schedule.location,
               startDateTime: schedule.startDateTime,
+              invoiceMongoId: invoice._id.toString(), // Add MongoDB _id
               ...updateFields,
             },
             reason,
