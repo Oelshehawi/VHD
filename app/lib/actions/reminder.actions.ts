@@ -29,6 +29,23 @@ export interface ProcessResult {
   errors: string[];
 }
 
+export interface ReminderPreview {
+  invoiceId: string;
+  invoiceMongoId: string;
+  jobTitle: string;
+  clientName: string;
+  clientEmail: string;
+  reminderSequence: number;
+  nextReminderDate: string | null;
+  frequency: string;
+}
+
+export interface PreviewResult {
+  wouldProcess: number;
+  previews: ReminderPreview[];
+  errors: string[];
+}
+
 // Configure reminder settings for an invoice
 export async function configurePaymentReminders(
   invoiceId: string,
@@ -163,6 +180,65 @@ export async function configurePaymentReminders(
   }
 }
 
+// Preview automatic reminders (dry-run mode - no emails sent)
+export async function previewAutoReminders(): Promise<PreviewResult> {
+  await connectMongo();
+
+  const result: PreviewResult = {
+    wouldProcess: 0,
+    previews: [],
+    errors: [],
+  };
+
+  try {
+    const now = new Date();
+
+    // Find all invoices with active reminders that are due
+    const dueInvoices = await Invoice.find({
+      "paymentReminders.enabled": true,
+      "paymentReminders.nextReminderDate": { $lte: now },
+      status: { $in: ["pending", "overdue"] },
+    }).populate("clientId");
+
+    result.wouldProcess = dueInvoices.length;
+
+    for (const invoice of dueInvoices) {
+      try {
+        const clientDetails = invoice.clientId as any;
+        const clientEmail = clientDetails
+          ? getEmailForPurpose(clientDetails, "accounting")
+          : null;
+        const reminderHistory = invoice.paymentReminders?.reminderHistory || [];
+        const reminderSequence = reminderHistory.length + 1;
+
+        result.previews.push({
+          invoiceId: invoice.invoiceId,
+          invoiceMongoId: invoice._id.toString(),
+          jobTitle: invoice.jobTitle,
+          clientName: clientDetails?.clientName || "Unknown",
+          clientEmail: clientEmail || "No email found",
+          reminderSequence,
+          nextReminderDate: invoice.paymentReminders?.nextReminderDate
+            ? new Date(invoice.paymentReminders.nextReminderDate).toISOString()
+            : null,
+          frequency: invoice.paymentReminders?.frequency || "none",
+        });
+      } catch (error) {
+        result.errors.push(
+          `Error previewing invoice ${invoice.invoiceId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+    }
+
+    return result;
+  } catch (error) {
+    const errorMsg = `Error in previewAutoReminders: ${error instanceof Error ? error.message : String(error)}`;
+    console.error(errorMsg);
+    result.errors.push(errorMsg);
+    return result;
+  }
+}
+
 // Process automatic reminders (called by cron job)
 export async function processAutoReminders(): Promise<ProcessResult> {
   await connectMongo();
@@ -228,24 +304,7 @@ export async function processAutoReminders(): Promise<ProcessResult> {
             "paymentReminders.nextReminderDate": nextReminderDate,
           });
 
-          // Create audit log entry
-          await AuditLog.create({
-            invoiceId: invoice._id.toString(),
-            action: "reminder_sent_auto",
-            timestamp: new Date(),
-            performedBy: "system",
-            details: {
-              newValue: {
-                invoiceId: invoice.invoiceId,
-                jobTitle: invoice.jobTitle,
-                invoiceMongoId: invoice._id.toString(),
-                clientId: invoice.clientId?.toString?.() || invoice.clientId,
-                nextReminderDate,
-              },
-              reason: "Automatic reminder sent via cron job",
-            },
-            success: true,
-          });
+          // Note: Audit log is already created by sendPaymentReminderEmail
         } else {
           result.errors.push(
             `Failed to send reminder for invoice ${invoice.invoiceId}: ${sendResult.error}`,
@@ -418,7 +477,6 @@ export async function sendPaymentReminderEmail(
           }
         : false,
     };
-
 
     const emailResult = await postmarkClient.sendEmailWithTemplate({
       From: "adam@vancouverventcleaning.ca",

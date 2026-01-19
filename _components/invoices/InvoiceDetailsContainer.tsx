@@ -29,9 +29,7 @@ import { Label } from "../ui/label";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import ArchivedBanner from "../ui/archived-banner";
-import dynamic from "next/dynamic";
-
-const GeneratePDF = dynamic(() => import("../pdf/GeneratePDF"), { ssr: false });
+import LazyPDFButton from "../pdf/LazyPDFButton";
 
 const InvoiceDetailsContainer = ({
   invoice,
@@ -329,12 +327,12 @@ const InvoiceDetailsContainer = ({
             <TabsContent value="documents" className="space-y-3">
               <div className="flex flex-wrap gap-2 sm:gap-3">
                 {invoice.items && invoice.items.length > 0 && invoiceData && (
-                  <GeneratePDF
-                    key={`invoice-${invoice._id}-${invoice.items.length}-${currency}-${overrideBillTo?.name || "default"}`}
+                  <LazyPDFButton
                     pdfData={{ type: "invoice", data: invoiceData }}
                     fileName={`Invoice - ${invoice.jobTitle}.pdf`}
                     buttonText="Invoice PDF"
                     className="inline-flex flex-1 items-center sm:flex-none"
+                    size="sm"
                     showScaleSelector={true}
                   />
                 )}

@@ -1,5 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
-import { processAutoReminders } from "../../../../app/lib/actions/reminder.actions";
+import {
+  processAutoReminders,
+  previewAutoReminders,
+} from "../../../../app/lib/actions/reminder.actions";
 
 export default async function handler(
   req: NextApiRequest,
@@ -18,7 +21,25 @@ export default async function handler(
     }
   }
 
+  // Check for preview mode (dry-run)
+  const isPreview = req.query.preview === "true";
+
   try {
+    if (isPreview) {
+      // Preview mode - just show what would be sent
+      const result = await previewAutoReminders();
+
+      return res.status(200).json({
+        mode: "preview",
+        message: "DRY RUN - No emails were sent",
+        wouldProcess: result.wouldProcess,
+        previews: result.previews,
+        errors: result.errors,
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    // Normal mode - actually send reminders
     const result = await processAutoReminders();
 
     return res.status(200).json({

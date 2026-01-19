@@ -93,11 +93,20 @@ export default function StripePaymentSettingsModal({
   const handleToggleEnabled = async (checked: boolean) => {
     const newSettings = { ...settings, enabled: checked };
     setSettings(newSettings);
-    const saveResult = await saveSettings(newSettings);
+
+    // When enabling, we'll generate link too - use silent mode for settings save
+    const willGenerateLink = checked && (!paymentLink || isExpired);
+    // Always use silent mode when toggling enabled - we'll show toast here instead
+    const saveResult = await saveSettings(newSettings, true);
 
     // Auto-generate payment link when enabling online payments (if no valid link exists)
     if (checked && saveResult?.success && (!paymentLink || isExpired)) {
-      await handleGenerateLink();
+      await handleGenerateLink(true); // silent mode - will show consolidated toast
+    } else if (saveResult?.success) {
+      // Show toast for enable/disable action
+      toast.success(
+        checked ? "Online payments enabled" : "Online payments disabled",
+      );
     }
   };
 
@@ -123,7 +132,10 @@ export default function StripePaymentSettingsModal({
     await saveSettings(newSettings);
   };
 
-  const saveSettings = async (newSettings: StripePaymentSettings) => {
+  const saveSettings = async (
+    newSettings: StripePaymentSettings,
+    silent = false,
+  ) => {
     setIsSaving(true);
     try {
       const result = await configureStripePaymentSettings(
@@ -139,7 +151,9 @@ export default function StripePaymentSettingsModal({
       if (result.success) {
         const updatedSettings = result.settings || newSettings;
         setSettings(updatedSettings);
-        toast.success("Payment settings updated");
+        if (!silent) {
+          toast.success("Payment settings updated");
+        }
         onSettingsUpdate?.(updatedSettings);
         return { success: true, settings: updatedSettings };
       } else {
@@ -157,14 +171,17 @@ export default function StripePaymentSettingsModal({
     }
   };
 
-  const handleGenerateLink = async () => {
+  const handleGenerateLink = async (showConsolidatedToast = false) => {
     setIsGenerating(true);
     try {
       if (!settings.enabled) {
-        const enableResult = await saveSettings({
-          ...settings,
-          enabled: true,
-        });
+        const enableResult = await saveSettings(
+          {
+            ...settings,
+            enabled: true,
+          },
+          true, // silent mode
+        );
         if (!enableResult?.success) {
           return;
         }
@@ -179,7 +196,12 @@ export default function StripePaymentSettingsModal({
         setPaymentLink(result.paymentLink || null);
         setLinkExpiresAt(result.expiresAt || null);
         setIsExpired(false);
-        toast.success("Payment link generated");
+        // Show consolidated toast or individual toast
+        toast.success(
+          showConsolidatedToast
+            ? "Online payments enabled & payment link generated"
+            : "Payment link generated",
+        );
       } else {
         toast.error(result.error || "Failed to generate payment link");
       }
@@ -397,7 +419,7 @@ export default function StripePaymentSettingsModal({
                         </p>
                       )}
                       <Button
-                        onClick={handleGenerateLink}
+                        onClick={() => handleGenerateLink()}
                         disabled={isGenerating}
                         className="bg-darkGreen hover:bg-darkGreen/90 w-full"
                       >

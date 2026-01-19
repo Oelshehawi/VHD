@@ -338,11 +338,14 @@ export async function fetchClientReports(
       _id: report._id.toString(),
       scheduleId: report.scheduleId ? report.scheduleId.toString() : "",
       invoiceId: report.invoiceId ? report.invoiceId.toString() : "",
-      dateCompleted: report.dateCompleted.toLocaleString("en-US", {
-        timeZone: "UTC",
-      }),
+      dateCompleted:
+        report.dateCompleted instanceof Date
+          ? report.dateCompleted.toISOString()
+          : report.dateCompleted,
       lastServiceDate: report.lastServiceDate
-        ? report.lastServiceDate.toLocaleString("en-US", { timeZone: "UTC" })
+        ? report.lastServiceDate instanceof Date
+          ? report.lastServiceDate.toISOString()
+          : report.lastServiceDate
         : "",
       fuelType: report.fuelType || "",
       cookingVolume: report.cookingVolume || "",
@@ -478,14 +481,16 @@ export async function fetchReportDetails(
         typeof reportDoc.invoiceId === "string"
           ? reportDoc.invoiceId
           : reportDoc.invoiceId.toString(),
-      dateCompleted: reportDoc.dateCompleted.toLocaleString("en-US", {
-        timeZone: "UTC",
-      }),
+      dateCompleted:
+        reportDoc.dateCompleted instanceof Date
+          ? reportDoc.dateCompleted.toISOString()
+          : reportDoc.dateCompleted,
       technicianId: reportDoc.technicianId || "",
-      lastServiceDate:
-        reportDoc.lastServiceDate.toLocaleString("en-US", {
-          timeZone: "UTC",
-        }) || "",
+      lastServiceDate: reportDoc.lastServiceDate
+        ? reportDoc.lastServiceDate instanceof Date
+          ? reportDoc.lastServiceDate.toISOString()
+          : reportDoc.lastServiceDate
+        : "",
       fuelType: reportDoc.fuelType || "",
       cookingVolume: reportDoc.cookingVolume || "",
       cookingEquipment: reportDoc.cookingEquipment || {},

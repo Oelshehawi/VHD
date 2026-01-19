@@ -544,7 +544,7 @@ const TabPanel = ({
                                     ? report.invoiceId
                                     : report.invoiceId.toString(),
                                 ) || "Service Report"}{" "}
-                                - {formatDateFns(report.dateCompleted)}
+                                - {formatDateStringUTC(report.dateCompleted)}
                               </div>
                               <div className="text-muted-foreground mt-1 text-sm">
                                 {report.cleaningDetails && (
