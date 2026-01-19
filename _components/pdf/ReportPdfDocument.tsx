@@ -205,6 +205,8 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
 }) => {
   // Note: Don't use React hooks here - this component is rendered server-side for PDF generation
   const styles = createStyles(scale);
+  // Helper function to scale numeric values
+  const s = (value: number) => Math.round(value * scale);
 
   const formatDate = (date: string | Date) => {
     // Parse date safely without timezone conversion
@@ -257,7 +259,14 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
           {/* Header Content */}
           <View style={styles.headerContent}>
             <Text style={styles.reportTitle}>SERVICE REPORT</Text>
-            <Text style={styles.companyTitle}>Vancouver Hood Doctors</Text>
+            <View style={{ alignItems: "flex-end" }}>
+              <Text style={styles.companyTitle}>Vancouver Hood Doctors</Text>
+              <Text
+                style={{ fontSize: s(9), color: "#495057", marginTop: s(2) }}
+              >
+                A division of VHD Enterprises Inc
+              </Text>
+            </View>
           </View>
         </View>
 

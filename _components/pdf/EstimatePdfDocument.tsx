@@ -508,6 +508,17 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
         <View style={scaledStyles.header}>
           <Text style={scaledStyles.headerTitle}>VANCOUVER HOOD DOCTORS</Text>
           <Text style={scaledStyles.headerSubtitle}>ESTIMATE</Text>
+          <Text
+            style={{
+              fontSize: s(9),
+              color: "#ffffff",
+              textAlign: "center",
+              marginTop: s(2),
+              opacity: 0.9,
+            }}
+          >
+            A division of VHD Enterprises Inc
+          </Text>
         </View>
 
         {/* Estimate Details & Client Information */}

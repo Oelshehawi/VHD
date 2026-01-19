@@ -223,7 +223,14 @@ const ReceiptPdfDocument: React.FC<ReceiptPdfDocumentProps> = ({
         {/* Header Content */}
         <View style={styles.headerContent}>
           <Text style={styles.receiptTitle}>PAYMENT RECEIPT</Text>
-          <Text style={styles.companyTitle}>Vancouver Hood Doctors</Text>
+          <View style={{ alignItems: "flex-end" }}>
+            <Text style={styles.companyTitle}>Vancouver Hood Doctors</Text>
+            <Text
+              style={{ fontSize: 9, color: "#495057", marginTop: 2 }}
+            >
+              A division of VHD Enterprises Inc
+            </Text>
+          </View>
         </View>
       </View>
 
