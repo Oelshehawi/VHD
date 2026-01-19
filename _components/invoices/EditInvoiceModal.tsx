@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { updateInvoice } from "../../app/lib/actions/actions";
 import {
-  formatDateToString,
+  formatDateStringUTC,
   calculatePaymentDuration,
   getPaymentMethodDisplay,
 } from "../../app/lib/utils";
@@ -277,7 +277,7 @@ const InlineEditInvoice = ({
           ) : field.name === "dateDue" ? (
             // dateDue is always calculated/read-only, so display formatted value instead of Input
             <div className="bg-muted text-muted-foreground rounded-lg px-3 py-2 text-sm">
-              {formatDateToString(watch("dateDue"))}
+              {formatDateStringUTC(watch("dateDue"))}
             </div>
           ) : field.name === "dateIssued" ? (
             <DatePicker
@@ -312,7 +312,7 @@ const InlineEditInvoice = ({
               placeholder={field.label}
               defaultValue={
                 field.name === "dateDue"
-                  ? formatDateToString(invoice[field.name])
+                  ? formatDateStringUTC(invoice[field.name])
                   : invoice[field.name]
               }
               readOnly={field.readOnly}
@@ -332,7 +332,7 @@ const InlineEditInvoice = ({
             field.name === "notes" && "whitespace-pre-wrap"
           )}>
             {field.name === "dateDue" || field.name === "dateIssued" ? (
-              formatDateToString(invoice[field.name])
+              formatDateStringUTC(invoice[field.name])
             ) : field.name === "frequency" ? (
               getFrequencyDisplay(invoice.frequency)
             ) : field.name === "location" ? (
@@ -443,7 +443,7 @@ const InlineEditInvoice = ({
                       Date Paid:
                     </span>
                     <span className="text-foreground ml-2 text-xs">
-                      {formatDateToString(invoice.paymentInfo.datePaid)}
+                      {formatDateStringUTC(invoice.paymentInfo.datePaid)}
                     </span>
                   </div>
                   {paymentDuration && (

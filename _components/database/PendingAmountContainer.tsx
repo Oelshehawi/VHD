@@ -38,10 +38,10 @@ const PendingAmountContainer = ({
                 <FaDollarSign className="text-primary h-3.5 w-3.5 sm:h-4 sm:w-4" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-primary-foreground truncate text-sm font-bold sm:text-base">
+                <h2 className="text-destructive-foreground truncate text-sm font-bold sm:text-base">
                   Pending Amount
                 </h2>
-                <p className="text-primary-foreground/70 truncate text-[10px] sm:text-xs">
+                <p className="text-destructive-foreground truncate text-[10px] sm:text-xs">
                   Outstanding invoices
                 </p>
               </div>
@@ -63,12 +63,11 @@ const PendingAmountContainer = ({
         </CardContent>
       </Card>
 
-      {open && (
-        <PendingJobsModal
-          pendingInvoices={pendingInvoices}
-          onClose={() => setOpen(false)}
-        />
-      )}
+      <PendingJobsModal
+        pendingInvoices={pendingInvoices}
+        isOpen={open}
+        onClose={() => setOpen(false)}
+      />
     </>
   );
 };

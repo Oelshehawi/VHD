@@ -13,9 +13,11 @@ import {
   FaEnvelope,
   FaHistory,
 } from "react-icons/fa";
+import { Loader2, Link2 } from "lucide-react";
 import { CALL_OUTCOME_LABELS } from "../../app/lib/callLogConstants";
 import CallLogModal from "../database/CallLogModal";
 import CallHistoryModal from "../database/CallHistoryModal";
+import SchedulingLinkDialog from "./SchedulingLinkDialog";
 
 import { TableRow, TableCell } from "../ui/table";
 import { Button } from "../ui/button";
@@ -32,6 +34,9 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
   const router = useRouter();
   const [callLogOpen, setCallLogOpen] = useState(false);
   const [callHistoryOpen, setCallHistoryOpen] = useState(false);
+  const [schedulingLinkOpen, setSchedulingLinkOpen] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isMarkingScheduled, setIsMarkingScheduled] = useState(false);
 
   const getLastCallInfo = () => {
     if (!invoiceData.callHistory || invoiceData.callHistory.length === 0) {
@@ -120,17 +125,28 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
             <DropdownMenuItem
               onClick={async (e) => {
                 e.preventDefault();
+                if (isMarkingScheduled) return;
+                setIsMarkingScheduled(true);
                 try {
                   await updateInvoiceScheduleStatus(invoiceData.invoiceId);
                   toast.success("Invoice marked as scheduled successfully");
                 } catch (error) {
                   console.error("Error marking invoice as scheduled:", error);
                   toast.error("Failed to mark invoice as scheduled");
+                } finally {
+                  setIsMarkingScheduled(false);
                 }
               }}
+              disabled={isMarkingScheduled}
             >
-              <FaCheck className="mr-2 h-4 w-4 text-green-500" />
-              <span>Mark Scheduled</span>
+              {isMarkingScheduled ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin text-green-500" />
+              ) : (
+                <FaCheck className="mr-2 h-4 w-4 text-green-500" />
+              )}
+              <span>
+                {isMarkingScheduled ? "Marking..." : "Mark Scheduled"}
+              </span>
             </DropdownMenuItem>
 
             {invoiceData.callHistory && invoiceData.callHistory.length > 0 && (
@@ -148,18 +164,40 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
 
             <DropdownMenuSeparator />
 
+            {/* Scheduling Link */}
             <DropdownMenuItem
-              disabled={invoiceData.emailSent || !invoiceData.emailExists}
+              onClick={() => setSchedulingLinkOpen(true)}
+              disabled={!invoiceData._id}
+            >
+              <Link2 className="mr-2 h-4 w-4 text-indigo-500" />
+              <span>Get Scheduling Link</span>
+            </DropdownMenuItem>
+
+            <DropdownMenuItem
+              disabled={
+                isSendingEmail ||
+                invoiceData.emailSent ||
+                !invoiceData.emailExists
+              }
               onClick={async (e) => {
                 e.preventDefault();
-                if (invoiceData.emailSent || !invoiceData.emailExists) return;
+                if (
+                  isSendingEmail ||
+                  invoiceData.emailSent ||
+                  !invoiceData.emailExists
+                ) {
+                  return;
+                }
 
                 try {
+                  setIsSendingEmail(true);
                   await sendCleaningReminderEmail(invoiceData);
                   toast.success("Reminder email sent successfully");
                 } catch (error) {
                   console.error("Error sending email:", error);
                   toast.error("Failed to send reminder email");
+                } finally {
+                  setIsSendingEmail(false);
                 }
               }}
               className={
@@ -170,21 +208,27 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
                     : ""
               }
             >
-              <FaEnvelope
-                className={`mr-2 h-4 w-4 ${
-                  invoiceData.emailSent
-                    ? "text-green-500"
-                    : !invoiceData.emailExists
-                      ? "text-muted-foreground"
-                      : "text-orange-500"
-                }`}
-              />
+              {isSendingEmail ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin text-orange-500" />
+              ) : (
+                <FaEnvelope
+                  className={`mr-2 h-4 w-4 ${
+                    invoiceData.emailSent
+                      ? "text-green-500"
+                      : !invoiceData.emailExists
+                        ? "text-muted-foreground"
+                        : "text-orange-500"
+                  }`}
+                />
+              )}
               <span>
-                {invoiceData.emailSent
-                  ? "Email Sent ✓"
-                  : !invoiceData.emailExists
-                    ? "No Email"
-                    : "Send Email"}
+                {isSendingEmail
+                  ? "Sending..."
+                  : invoiceData.emailSent
+                    ? "Email Sent ✓"
+                    : !invoiceData.emailExists
+                      ? "No Email"
+                      : "Send Email"}
               </span>
             </DropdownMenuItem>
           </DropdownMenuContent>
@@ -208,6 +252,14 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
         callHistory={invoiceData.callHistory || []}
         jobTitle={invoiceData.jobTitle}
       />
+      {invoiceData._id && (
+        <SchedulingLinkDialog
+          jobsDueSoonId={invoiceData._id.toString()}
+          jobTitle={invoiceData.jobTitle}
+          isOpen={schedulingLinkOpen}
+          onClose={() => setSchedulingLinkOpen(false)}
+        />
+      )}
     </TableRow>
   );
 };

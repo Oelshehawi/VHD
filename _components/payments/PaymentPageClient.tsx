@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useSearchParams } from "next/navigation";
 import {
   loadStripe,
   type Stripe,
@@ -12,7 +11,10 @@ import { Elements } from "@stripe/react-stripe-js";
 import { Separator } from "../ui/separator";
 import { getStripe } from "../../app/lib/stripeClient";
 import StripePaymentForm from "./StripePaymentForm";
-import { formatDateToString } from "../../app/lib/utils";
+import {
+  formatDateStringUTC,
+  calculatePaymentDueDate,
+} from "../../app/lib/utils";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
 import { Badge } from "../ui/badge";
@@ -144,16 +146,17 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
   });
 
   // Create payment intent mutation
-  const createIntentMutation = useMutation({
-    mutationFn: (method: "card" | "bank") => createPaymentIntent(token, method),
-    onSuccess: (result) => {
-      setClientSecret(result.clientSecret);
-      setPaymentError(null);
-    },
-    onError: (err: Error) => {
-      setPaymentError(err.message || "Failed to initialize payment");
-    },
-  });
+  const { mutate: createIntent, isPending: isCreatingIntent } =
+    useMutation({
+      mutationFn: (method: "card" | "bank") => createPaymentIntent(token, method),
+      onSuccess: (result) => {
+        setClientSecret(result.clientSecret);
+        setPaymentError(null);
+      },
+      onError: (err: Error) => {
+        setPaymentError(err.message || "Failed to initialize payment");
+      },
+    });
 
   // Auto-trigger payment intent when only one payment method is available
   useEffect(() => {
@@ -163,7 +166,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
       !isProcessingResponse(data) &&
       !paymentMethod &&
       !clientSecret &&
-      !createIntentMutation.isPending &&
+      !isCreatingIntent &&
       !paymentSuccess
     ) {
       const hasMultiple =
@@ -179,11 +182,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
             : null;
 
         if (singleMethod) {
-          // Use setTimeout to avoid synchronous setState in effect
-          setTimeout(() => {
-            setPaymentMethod(singleMethod);
-          }, 0);
-          createIntentMutation.mutate(singleMethod);
+          createIntent(singleMethod);
         }
       }
     }
@@ -191,16 +190,16 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
     data,
     paymentMethod,
     clientSecret,
-    createIntentMutation.isPending,
+    isCreatingIntent,
     paymentSuccess,
-    createIntentMutation,
+    createIntent,
   ]);
 
   const handleSelectPaymentMethod = (method: "card" | "bank") => {
     setPaymentMethod(method);
     setClientSecret(null);
     setPaymentError(null);
-    createIntentMutation.mutate(method);
+    createIntent(method);
   };
 
   const handleGoBack = () => {
@@ -251,6 +250,18 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
 
   // Success state
   if (paymentSuccess) {
+    const successPaymentMethod =
+      paymentMethod ??
+      (data &&
+      !isAlreadyPaidResponse(data) &&
+      !isProcessingResponse(data)
+        ? data.paymentSettings.allowCreditCard
+          ? "card"
+          : data.paymentSettings.allowBankPayment
+            ? "bank"
+            : null
+        : null);
+
     return (
       <div className="flex min-h-screen items-center justify-center bg-gray-50 p-4">
         <Card className="w-full max-w-md text-center">
@@ -259,10 +270,10 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
               <FaCheckCircle className="h-8 w-8 text-green-600" />
             </div>
             <h1 className="mb-2 text-xl font-semibold">
-              Payment {paymentMethod === "bank" ? "Initiated" : "Successful"}!
+              Payment {successPaymentMethod === "bank" ? "Initiated" : "Successful"}!
             </h1>
             <p className="text-muted-foreground">
-              {paymentMethod === "bank"
+              {successPaymentMethod === "bank"
                 ? "Your bank payment is being processed. This may take 5-7 business days."
                 : "Thank you for your payment. A receipt has been sent to your email."}
             </p>
@@ -299,7 +310,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
             </Badge>
             {data.datePaid && (
               <p className="text-muted-foreground mt-2 text-sm">
-                Paid on {new Date(data.datePaid).toLocaleDateString()}
+                Paid on {formatDateStringUTC(data.datePaid)}
               </p>
             )}
             {data.receiptUrl && (
@@ -349,8 +360,6 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
   const hasMultiplePaymentMethods =
     data.paymentSettings.allowCreditCard &&
     data.paymentSettings.allowBankPayment;
-  const currentPricing =
-    paymentMethod === "bank" ? data.pricing.ach : data.pricing.card;
 
   // Auto-select if only one payment method available
   const effectivePaymentMethod =
@@ -360,17 +369,11 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
       : data.paymentSettings.allowBankPayment
         ? "bank"
         : null);
+  const currentPricing =
+    effectivePaymentMethod === "bank" ? data.pricing.ach : data.pricing.card;
 
-  // Parse dateIssued without timezone conversion to avoid date shift
-  const dateIssuedStr =
-    typeof data.invoice.dateIssued === "string"
-      ? data.invoice.dateIssued.split("T")[0] || data.invoice.dateIssued
-      : String(data.invoice.dateIssued);
-  const dateParts = dateIssuedStr.split("-");
-  const year = parseInt(dateParts[0] || "2026", 10);
-  const month = parseInt(dateParts[1] || "1", 10);
-  const day = parseInt(dateParts[2] || "1", 10);
-  const paymentDueDate = new Date(year, month - 1, day + 14);
+  // Calculate payment due date using global config (dateIssued + PAYMENT_DUE_DAYS)
+  const paymentDueDate = calculatePaymentDueDate(data.invoice.dateIssued);
 
   return (
     <div className="relative min-h-screen bg-gray-50">
@@ -411,12 +414,10 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                   </Badge>
                   <Badge
                     variant={
-                      new Date(data.invoice.dateDue) < new Date()
-                        ? "destructive"
-                        : "secondary"
+                      paymentDueDate < new Date() ? "destructive" : "secondary"
                     }
                   >
-                    Due {formatDateToString(paymentDueDate)}
+                    Due {formatDateStringUTC(paymentDueDate)}
                   </Badge>
                 </div>
               </CardHeader>
@@ -519,7 +520,8 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     )}
 
                     {/* Loading state for creating payment intent */}
-                    {createIntentMutation.isPending && (
+                    {isCreatingIntent &&
+                      (hasMultiplePaymentMethods || !!clientSecret) && (
                       <div className="py-8 text-center">
                         <Loader2 className="text-darkGreen mx-auto mb-3 h-8 w-8 animate-spin" />
                         <p className="text-muted-foreground text-sm">
@@ -544,7 +546,6 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                         }}
                       >
                         <StripePaymentForm
-                          clientSecret={clientSecret}
                           invoiceTotal={currentPricing.invoiceAmount}
                           processingFee={currentPricing.processingFee}
                           totalAmount={currentPricing.totalAmount}
@@ -558,7 +559,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     {/* Loading indicator when auto-creating payment intent */}
                     {!hasMultiplePaymentMethods &&
                       !clientSecret &&
-                      createIntentMutation.isPending && (
+                      isCreatingIntent && (
                         <div className="py-4 text-center">
                           <Loader2 className="text-darkGreen mx-auto mb-3 h-8 w-8 animate-spin" />
                           <p className="text-muted-foreground text-sm">
@@ -612,7 +613,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                         Date Issued
                       </p>
                       <p className="font-medium">
-                        {formatDateToString(new Date(data.invoice.dateIssued))}
+                        {formatDateStringUTC(data.invoice.dateIssued)}
                       </p>
                     </div>
                     <div>
@@ -620,7 +621,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                         Due Date
                       </p>
                       <p className="font-medium">
-                        {formatDateToString(paymentDueDate)}
+                        {formatDateStringUTC(paymentDueDate)}
                       </p>
                     </div>
                   </div>

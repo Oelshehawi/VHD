@@ -10,9 +10,7 @@ import {
   ScheduleType,
   ClientType,
 } from "./typeDefinitions";
-import {
-  fetchClientById as dataFetchClientById,
-} from "./data";
+import { fetchClientById as dataFetchClientById } from "./data";
 
 /**
  * Fetch technician data by their Clerk ID
@@ -112,9 +110,7 @@ export async function fetchClientUpcomingSchedules(
       invoiceRef: schedule.invoiceRef ? schedule.invoiceRef.toString() : "",
       jobTitle: schedule.jobTitle || "",
       location: schedule.location || "",
-      startDateTime: schedule.startDateTime.toLocaleString("en-US", {
-        timeZone: "UTC",
-      }),
+      startDateTime: schedule.startDateTime.toISOString(),
       assignedTechnicians: schedule.assignedTechnicians || [],
       confirmed: schedule.confirmed || false,
       hours: schedule.hours || 0,
@@ -171,7 +167,6 @@ export async function fetchClientPastSchedules(
     throw new Error("Not authenticated");
   }
 
-
   await connectMongo();
   try {
     const today = new Date();
@@ -194,23 +189,20 @@ export async function fetchClientPastSchedules(
       .lean();
 
     return schedules.map((schedule: any) => {
-      // Find the corresponding invoice to get the dateDue
-      const correspondingInvoice = clientInvoices.find((inv: any) => 
-        inv._id.toString() === schedule.invoiceRef?.toString()
+      // Find the corresponding invoice to get the dateDue (next service date)
+      const correspondingInvoice = clientInvoices.find(
+        (inv: any) => inv._id.toString() === schedule.invoiceRef?.toString(),
       );
-      
+
       const dateDue = correspondingInvoice?.dateDue || null;
+
       return {
         _id: schedule._id.toString(),
         invoiceRef: schedule.invoiceRef ? schedule.invoiceRef.toString() : "",
         jobTitle: schedule.jobTitle || "",
         location: schedule.location || "",
-        startDateTime: schedule.startDateTime.toLocaleString("en-US", {
-          timeZone: "UTC",
-        }),
-        dateDue: dateDue ? dateDue.toLocaleString("en-US", {
-          timeZone: "UTC",
-        }) : null,
+        startDateTime: schedule.startDateTime.toISOString(),
+        dateDue: dateDue instanceof Date ? dateDue.toISOString() : dateDue,
         assignedTechnicians: schedule.assignedTechnicians || [],
         confirmed: schedule.confirmed || false,
         hours: schedule.hours || 0,
@@ -457,9 +449,13 @@ export async function fetchReportDetails(
   }
   await connectMongo();
   try {
-    const report = await Report.findOne({ _id: new ObjectId(reportId) }).lean<ReportType>();
+    const report = await Report.findOne({
+      _id: new ObjectId(reportId),
+    }).lean<ReportType>();
 
-    const invoice = await Invoice.findOne({ _id: report?.invoiceId }).lean<InvoiceType>();
+    const invoice = await Invoice.findOne({
+      _id: report?.invoiceId,
+    }).lean<InvoiceType>();
 
     if (!report || !invoice) {
       console.log("Report not found or does not belong to client");

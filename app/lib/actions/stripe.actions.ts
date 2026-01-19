@@ -266,7 +266,6 @@ export async function getPaymentLinkStatus(invoiceId: string): Promise<{
   await connectMongo();
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const invoice = (await Invoice.findById(invoiceId).lean()) as any;
     if (!invoice) {
       return {
@@ -347,7 +346,7 @@ export async function revokePaymentLink(
     // Create audit log
     await AuditLog.create({
       invoiceId: invoice.invoiceId,
-      action: "stripe_payment_link_generated",
+      action: "stripe_payment_link_revoked",
       timestamp: new Date(),
       performedBy,
       details: {
@@ -384,6 +383,13 @@ export async function processStripePaymentSuccess(
     const invoice = await Invoice.findById(invoiceId);
     if (!invoice) {
       return { success: false, error: "Invoice not found" };
+    }
+
+    if (invoice.paymentInfo?.stripePaymentIntentId === paymentIntentId) {
+      revalidatePath(`/invoices/${invoiceId}`);
+      revalidatePath("/invoices");
+      revalidatePath("/dashboard");
+      return { success: true };
     }
 
     // Update invoice status and payment info
@@ -563,7 +569,6 @@ export async function getStripePaymentStatus(invoiceId: string): Promise<{
   await connectMongo();
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const invoice = (await Invoice.findById(invoiceId).lean()) as any;
     if (!invoice) {
       return { success: false, error: "Invoice not found" };

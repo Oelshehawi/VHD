@@ -67,27 +67,22 @@ const DashboardPage = async ({
       : resolvedSearchParams.year
     : now.getFullYear();
 
-  const [
-    { sessionClaims },
-    amount,
-    pendingInvoices,
-    unscheduledJobs,
-    jobsDueData,
-    recentActions,
-  ] = await Promise.all([
-    auth(),
-    getPendingInvoiceAmount(),
-    getPendingInvoices(),
-    getUnscheduledJobs(),
-    fetchJobsDueData({
-      month: jobsMonth,
-      year: jobsYear,
-    }),
-    fetchRecentActions(actionsDateFrom, adjustedActionsDateTo, actionsSearch),
-  ]);
-
+  const { sessionClaims } = await auth();
   const canManage =
-    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+    (sessionClaims as any)?.isManager?.isManager === true ||
+    (sessionClaims as any)?.metadata?.isManager === true;
+
+  const [amount, pendingInvoices, unscheduledJobs, jobsDueData, recentActions] =
+    await Promise.all([
+      getPendingInvoiceAmount(),
+      getPendingInvoices(),
+      getUnscheduledJobs(),
+      fetchJobsDueData({
+        month: jobsMonth,
+        year: jobsYear,
+      }),
+      fetchRecentActions(actionsDateFrom, adjustedActionsDateTo, actionsSearch),
+    ]);
 
   const overdueInvoices = pendingInvoices.filter(
     (inv) => inv.status === "overdue",

@@ -2,6 +2,7 @@
 
 import { CheckCircleIcon } from "@heroicons/react/24/outline";
 import { CloudRunOptimizationResponse } from "../../../app/lib/schedulingOptimizations.types";
+import { formatDateStringUTC } from "../../../app/lib/utils";
 
 interface OptimizationUnscheduledProps {
   optimizationResult: CloudRunOptimizationResponse;
@@ -37,7 +38,7 @@ export default function OptimizationUnscheduled({
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-medium text-orange-700">
-                    Due: {new Date(job.dateDue || new Date()).toLocaleDateString()}
+                    Due: {formatDateStringUTC(job.dateDue || new Date().toISOString())}
                   </p>
                   <p className="text-xs text-gray-600">
                     {job.coordinates ? 'Coordinates available' : 'No coordinates'}

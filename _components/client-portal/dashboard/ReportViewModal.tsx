@@ -1,10 +1,25 @@
 "use client";
 
-import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { XMarkIcon } from "@heroicons/react/24/outline";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "../../ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../ui/tabs";
+import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
+import { Badge } from "../../ui/badge";
+import { Button } from "../../ui/button";
+import {
+  ClipboardDocumentListIcon,
+  WrenchScrewdriverIcon,
+  SparklesIcon,
+  ClipboardDocumentCheckIcon,
+  ChatBubbleLeftRightIcon,
+} from "@heroicons/react/24/outline";
 import { ReportType } from "../../../app/lib/typeDefinitions";
-import { formatDateFns } from "../../../app/lib/utils";
+import { formatDateStringUTC } from "../../../app/lib/utils";
 
 interface ReportModalProps {
   report: ReportType;
@@ -12,426 +27,700 @@ interface ReportModalProps {
   onClose: () => void;
 }
 
-// Helper function to format inspection items for display
-const formatInspectionValue = (value: string | undefined) => {
-  if (!value) return "N/A";
-  return value;
+// New schema inspection items with labels
+const INSPECTION_LABELS: Record<string, string> = {
+  filtersInPlace: "Filters in place?",
+  filtersListed: "Filters listed?",
+  filtersNeedCleaningMoreOften: "Filters need more frequent cleaning?",
+  filtersNeedReplacement: "Filters need replacement?",
+  ecologyUnitOperational: "Ecology unit operational?",
+  washCycleWorking: "Wash cycle working?",
+  fireSuppressionNozzlesClear: "Fire suppression nozzles clear?",
+  fanTipAccessible: "Fan tip accessible?",
+  safeAccessToFan: "Safe access to fan/roof?",
+  exhaustFanOperational: "Exhaust fan operational?",
+  ecologyUnitRequiresCleaning: "Ecology unit requires cleaning?",
+  ecologyUnitDeficiencies: "Ecology unit deficiencies?",
+  greaseBuildupOnRoof: "Grease buildup on roof?",
+  systemCleanedPerCode: "System cleaned per code?",
+  systemInteriorAccessible: "System interior accessible?",
+  multiStoreyVerticalCleaning: "Multi-storey vertical cleaning?",
+  adequateAccessPanels: "Adequate access panels?",
 };
 
-// Helper function to format boolean values for display
-const formatBooleanValue = (value: boolean | undefined) => {
+// Helper function to get badge variant based on value
+const getInspectionBadgeVariant = (
+  value: string | undefined,
+): "default" | "destructive" | "secondary" | "outline" => {
+  if (value === "Yes") return "default";
+  if (value === "No") return "destructive";
+  return "secondary";
+};
+
+// Helper function to format boolean values
+const formatBooleanValue = (value: boolean | undefined): string => {
   if (value === undefined) return "No";
   return value ? "Yes" : "No";
 };
 
-const ReportModal: React.FC<ReportModalProps> = ({
-  report,
-  isOpen,
-  onClose,
-}) => {
-  const [activeTab, setActiveTab] = useState<
-    "overview" | "equipment" | "inspection" | "cleaning" | "recommendations"
-  >("overview");
+// Helper to get cooking equipment list - supports both old and new schema
+const getCookingEquipmentList = (
+  cookingEquipment: ReportType["cookingEquipment"] | string[] | undefined,
+): string[] => {
+  if (!cookingEquipment) return [];
 
-  const handleTabChange = (tab: typeof activeTab) => {
-    setActiveTab(tab);
-  };
+  // New schema: string array
+  if (Array.isArray(cookingEquipment)) {
+    return cookingEquipment;
+  }
 
-  // Handle clicking outside to close
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
+  // Old schema: object with boolean fields
+  const items: string[] = [];
+  if (cookingEquipment.griddles) items.push("Griddles");
+  if (cookingEquipment.deepFatFryers) items.push("Deep Fat Fryers");
+  if (cookingEquipment.woks) items.push("Woks");
+  if (cookingEquipment.ovens) items.push("Ovens");
+  if (cookingEquipment.flattopGrills) items.push("Flattop Grills");
+  return items;
+};
+
+// Helper to get cleaning items list
+const getCleaningItemsList = (
+  cleaningDetails: ReportType["cleaningDetails"] | undefined,
+): string[] => {
+  if (!cleaningDetails) return [];
+  const items: string[] = [];
+  if (cleaningDetails.hoodCleaned) items.push("Hood");
+  if (cleaningDetails.filtersCleaned) items.push("Filters");
+  if (cleaningDetails.ductworkCleaned) items.push("Ductwork");
+  if (cleaningDetails.fanCleaned) items.push("Fan");
+  return items;
+};
+
+const ReportModal = ({ report, isOpen, onClose }: ReportModalProps) => {
+  const cleaningItems = getCleaningItemsList(report.cleaningDetails);
+  const cookingItems = getCookingEquipmentList(
+    report.cookingEquipment as ReportType["cookingEquipment"] | string[],
+  );
+
+  const handleOpenChange = (open: boolean) => {
+    if (!open) {
       onClose();
     }
   };
 
-  // Format cleaning details
-  const cleaningItems = [];
-  if (report.cleaningDetails?.hoodCleaned) cleaningItems.push("Hood");
-  if (report.cleaningDetails?.filtersCleaned) cleaningItems.push("Filters");
-  if (report.cleaningDetails?.ductworkCleaned) cleaningItems.push("Ductwork");
-  if (report.cleaningDetails?.fanCleaned) cleaningItems.push("Fan");
-
-  // Format cooking equipment
-  const cookingItems = [];
-  if (report.cookingEquipment?.griddles) cookingItems.push("Griddles");
-  if (report.cookingEquipment?.deepFatFryers)
-    cookingItems.push("Deep Fat Fryers");
-  if (report.cookingEquipment?.woks) cookingItems.push("Woks");
-  if (report.cookingEquipment?.ovens) cookingItems.push("Ovens");
-  if (report.cookingEquipment?.flattopGrills) cookingItems.push("Flattop Grills");
-
-  const tabs = [
-    { id: "overview", label: "Overview" },
-    { id: "equipment", label: "Equipment" },
-    { id: "cleaning", label: "Cleaning" },
-    { id: "inspection", label: "Inspection" },
-    { id: "recommendations", label: "Notes" },
-  ];
-
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="bg-black/80 fixed inset-0 z-50 flex items-center justify-center p-4 backdrop-blur-sm"
-          onClick={handleBackdropClick}
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+      <DialogContent className="flex max-h-[85vh] w-full max-w-4xl flex-col overflow-hidden p-0 lg:max-w-5xl">
+        {/* Header */}
+        <DialogHeader className="from-primary to-primary/80 shrink-0 bg-gradient-to-r px-6 py-4">
+          <DialogTitle className="text-primary-foreground text-lg font-semibold">
+            Service Report
+            {report.jobTitle && (
+              <span className="text-primary-foreground/80 ml-2 text-sm font-normal">
+                - {report.jobTitle}
+              </span>
+            )}
+          </DialogTitle>
+        </DialogHeader>
+
+        {/* Tab Navigation */}
+        <Tabs
+          defaultValue="overview"
+          className="flex flex-1 flex-col overflow-hidden"
         >
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            exit={{ scale: 0.95, opacity: 0 }}
-            className="relative max-h-[90vh] w-full max-w-3xl overflow-hidden rounded-lg bg-white shadow-xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="bg-linear-to-r from-green-600 to-green-900 px-4 py-3">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-semibold text-white">
-                  Service Report
-                </h2>
-                <button
-                  onClick={onClose}
-                  className="rounded-full p-1 text-white transition-colors hover:bg-green-800/70"
+          <div className="bg-muted/50 border-border shrink-0 border-b">
+            <div className="overflow-x-auto px-2">
+              <TabsList className="inline-flex h-auto w-max bg-transparent p-0">
+                <TabsTrigger
+                  value="overview"
+                  className="data-[state=active]:border-primary data-[state=active]:text-primary gap-1 rounded-none border-b-2 border-transparent px-2 py-2 text-xs sm:gap-1.5 sm:px-3 sm:py-2.5 sm:text-sm"
                 >
-                  <XMarkIcon className="h-6 w-6" />
-                </button>
-              </div>
+                  <ClipboardDocumentListIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="sm:inline hidden">Overview</span>
+                  <span className="sm:hidden">Info</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="equipment"
+                  className="data-[state=active]:border-primary data-[state=active]:text-primary gap-1 rounded-none border-b-2 border-transparent px-2 py-2 text-xs sm:gap-1.5 sm:px-3 sm:py-2.5 sm:text-sm"
+                >
+                  <WrenchScrewdriverIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="sm:inline hidden">Equipment</span>
+                  <span className="sm:hidden">Equip</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="cleaning"
+                  className="data-[state=active]:border-primary data-[state=active]:text-primary gap-1 rounded-none border-b-2 border-transparent px-2 py-2 text-xs sm:gap-1.5 sm:px-3 sm:py-2.5 sm:text-sm"
+                >
+                  <SparklesIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Clean
+                </TabsTrigger>
+                <TabsTrigger
+                  value="inspection"
+                  className="data-[state=active]:border-primary data-[state=active]:text-primary gap-1 rounded-none border-b-2 border-transparent px-2 py-2 text-xs sm:gap-1.5 sm:px-3 sm:py-2.5 sm:text-sm"
+                >
+                  <ClipboardDocumentCheckIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="sm:inline hidden">Inspection</span>
+                  <span className="sm:hidden">Inspect</span>
+                </TabsTrigger>
+                <TabsTrigger
+                  value="notes"
+                  className="data-[state=active]:border-primary data-[state=active]:text-primary gap-1 rounded-none border-b-2 border-transparent px-2 py-2 text-xs sm:gap-1.5 sm:px-3 sm:py-2.5 sm:text-sm"
+                >
+                  <ChatBubbleLeftRightIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  Notes
+                </TabsTrigger>
+              </TabsList>
             </div>
+          </div>
 
-            {/* Tab Navigation */}
-            <div className="border-b border-gray-200 bg-gray-50">
-              <div className="flex w-full overflow-x-auto">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => handleTabChange(tab.id as any)}
-                    className={`whitespace-nowrap px-3 py-2 text-sm font-medium ${
-                      activeTab === tab.id
-                        ? "border-b-2 border-green-600 text-green-800"
-                        : "text-gray-500 hover:text-gray-700"
-                    }`}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Content */}
-            <div className="max-h-[70vh] overflow-y-auto p-4">
-              {activeTab === "overview" && (
-                <div>
-                  {(report.jobTitle || report.location) && (
-                    <div className="mb-4 rounded-lg border border-gray-200 bg-blue-50 p-3">
-                      <h3 className="mb-2 text-sm font-semibold text-gray-700">
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto">
+            <div className="p-4 sm:p-6">
+              {/* Overview Tab */}
+              <TabsContent value="overview" className="mt-0 space-y-4">
+                {/* Job Information */}
+                {(report.jobTitle || report.location) && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">
                         Job Information
-                      </h3>
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                        {report.jobTitle && (
-                          <p className="text-sm">
-                            <span className="font-medium">Job Title:</span>{" "}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      {report.jobTitle && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Job Title
+                          </span>
+                          <p className="text-foreground text-sm font-medium">
                             {report.jobTitle}
                           </p>
-                        )}
-                        {report.location && (
-                          <p className="text-sm">
-                            <span className="font-medium">Location:</span>{" "}
+                        </div>
+                      )}
+                      {report.location && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Location
+                          </span>
+                          <p className="text-foreground text-sm font-medium">
                             {report.location}
                           </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
 
-                  <div className="mb-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                      <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                {/* Report Details & System Info */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">
                         Report Details
-                      </h3>
-                      <div className="space-y-2">
-                        <p className="text-sm">
-                          <span className="font-medium">Date Completed:</span>{" "}
-                          {formatDateFns(report.dateCompleted)}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <span className="text-muted-foreground text-xs">
+                          Date Completed
+                        </span>
+                        <p className="text-foreground text-sm font-medium">
+                          {formatDateStringUTC(report.dateCompleted)}
                         </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Last Service:</span>{" "}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">
+                          Last Service
+                        </span>
+                        <p className="text-foreground text-sm font-medium">
                           {report.lastServiceDate
-                            ? formatDateFns(report.lastServiceDate)
+                            ? formatDateStringUTC(report.lastServiceDate)
                             : "N/A"}
                         </p>
-                        <p className="text-sm">
-                          <span className="font-medium">
-                            Recommended Frequency:
-                          </span>{" "}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">
+                          Recommended Frequency
+                        </span>
+                        <p className="text-foreground text-sm font-medium">
                           {report.recommendedCleaningFrequency
                             ? `${report.recommendedCleaningFrequency} times per year`
                             : "Not specified"}
                         </p>
                       </div>
-                    </div>
+                    </CardContent>
+                  </Card>
 
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                      <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">
                         System Information
-                      </h3>
-                      <div className="space-y-2">
-                        <p className="text-sm">
-                          <span className="font-medium">Hood Type:</span>{" "}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div>
+                        <span className="text-muted-foreground text-xs">
+                          Hood Type
+                        </span>
+                        <p className="text-foreground text-sm font-medium">
                           {report.equipmentDetails?.hoodType || "Standard Hood"}
                         </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Fuel Type:</span>{" "}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">
+                          Fuel Type
+                        </span>
+                        <p className="text-foreground text-sm font-medium">
                           {report.fuelType || "N/A"}
                         </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Cooking Volume:</span>{" "}
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground text-xs">
+                          Cooking Volume
+                        </span>
+                        <p className="text-foreground text-sm font-medium">
                           {report.cookingVolume || "N/A"}
                         </p>
                       </div>
-                    </div>
-                  </div>
-
-                  <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
-                      Services Performed
-                    </h3>
-                    <div className="space-y-1">
-                      {cleaningItems.length > 0 ? (
-                        <p className="text-sm">
-                          The following were cleaned: {cleaningItems.join(", ")}
-                        </p>
-                      ) : (
-                        <p className="text-sm">
-                          Inspection only, no cleaning was performed.
-                        </p>
-                      )}
-                    </div>
-                  </div>
+                    </CardContent>
+                  </Card>
                 </div>
-              )}
 
-              {activeTab === "equipment" && (
-                <div>
-                  <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
-                      Equipment Details
-                    </h3>
-                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                      <div className="space-y-2">
-                        <p className="text-sm">
-                          <span className="font-medium">Hood Type:</span>{" "}
-                          {report.equipmentDetails?.hoodType || "Not specified"}
-                        </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Filter Type:</span>{" "}
-                          {report.equipmentDetails?.filterType ||
-                            "Not specified"}
-                        </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Ductwork Type:</span>{" "}
-                          {report.equipmentDetails?.ductworkType ||
-                            "Not specified"}
-                        </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Fan Type:</span>{" "}
-                          {report.equipmentDetails?.fanType || "Not specified"}
-                        </p>
+                {/* Services Performed Summary */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">
+                      Services Performed
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {cleaningItems.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {cleaningItems.map((item) => (
+                          <Badge key={item} variant="default">
+                            {item} Cleaned
+                          </Badge>
+                        ))}
                       </div>
-                      <div className="space-y-2">
-                        <p className="text-sm">
-                          <span className="font-medium">Fuel Type:</span>{" "}
-                          {report.fuelType || "Not specified"}
-                        </p>
-                        <p className="text-sm">
-                          <span className="font-medium">Cooking Volume:</span>{" "}
-                          {report.cookingVolume || "Not specified"}
-                        </p>
+                    ) : (
+                      <p className="text-muted-foreground text-sm">
+                        Inspection only, no cleaning was performed.
+                      </p>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              {/* Equipment Tab */}
+              <TabsContent value="equipment" className="mt-0 space-y-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">
+                      Equipment Details
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="space-y-3">
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Hood Type
+                          </span>
+                          <p className="text-foreground text-sm font-medium">
+                            {report.equipmentDetails?.hoodType ||
+                              "Not specified"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Filter Type
+                          </span>
+                          <p className="text-foreground text-sm font-medium">
+                            {report.equipmentDetails?.filterType ||
+                              "Not specified"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Ductwork Type
+                          </span>
+                          <p className="text-foreground text-sm font-medium">
+                            {report.equipmentDetails?.ductworkType ||
+                              "Not specified"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Fan Type
+                          </span>
+                          <p className="text-foreground text-sm font-medium">
+                            {report.equipmentDetails?.fanType ||
+                              "Not specified"}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Fuel Type
+                          </span>
+                          <p className="text-foreground text-sm font-medium">
+                            {report.fuelType || "Not specified"}
+                          </p>
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Cooking Volume
+                          </span>
+                          <p className="text-foreground text-sm font-medium">
+                            {report.cookingVolume || "Not specified"}
+                          </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">
                       Cooking Equipment
-                    </h3>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
                     {cookingItems.length > 0 ? (
-                      <p className="text-sm">
-                        Present: {cookingItems.join(", ")}
-                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {cookingItems.map((item) => (
+                          <Badge key={item} variant="outline">
+                            {item}
+                          </Badge>
+                        ))}
+                      </div>
                     ) : (
-                      <p className="text-sm">
+                      <p className="text-muted-foreground text-sm">
                         No cooking equipment details provided.
                       </p>
                     )}
-                  </div>
-                </div>
-              )}
+                  </CardContent>
+                </Card>
 
-              {activeTab === "cleaning" && (
-                <div>
-                  <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                {/* Ecology Unit (new schema) */}
+                {report.ecologyUnit && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">
+                        Ecology Unit
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground text-sm">
+                          Ecology Unit Present
+                        </span>
+                        <Badge
+                          variant={
+                            report.ecologyUnit.exists ? "default" : "secondary"
+                          }
+                        >
+                          {formatBooleanValue(report.ecologyUnit.exists)}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground text-sm">
+                          Filter Replacement Needed
+                        </span>
+                        <Badge
+                          variant={
+                            report.ecologyUnit.filterReplacementNeeded
+                              ? "destructive"
+                              : "default"
+                          }
+                        >
+                          {formatBooleanValue(
+                            report.ecologyUnit.filterReplacementNeeded,
+                          )}
+                        </Badge>
+                      </div>
+                      {report.ecologyUnit.notes && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Notes
+                          </span>
+                          <p className="text-foreground text-sm">
+                            {report.ecologyUnit.notes}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Access Panels (new schema) */}
+                {report.accessPanels && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">
+                        Access Panels
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-muted-foreground text-sm">
+                          Adequate Access Panels
+                        </span>
+                        <Badge
+                          variant={
+                            report.accessPanels.adequate
+                              ? "default"
+                              : "destructive"
+                          }
+                        >
+                          {formatBooleanValue(report.accessPanels.adequate)}
+                        </Badge>
+                      </div>
+                      {report.accessPanels.notes && (
+                        <div>
+                          <span className="text-muted-foreground text-xs">
+                            Notes
+                          </span>
+                          <p className="text-foreground text-sm">
+                            {report.accessPanels.notes}
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
+
+              {/* Cleaning Tab */}
+              <TabsContent value="cleaning" className="mt-0 space-y-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">
                       Cleaning Details
-                    </h3>
-                    <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                      <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
-                        <span className="text-sm font-medium">
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                      <div className="bg-muted/50 flex items-center justify-between rounded-lg border px-4 py-3">
+                        <span className="text-foreground text-sm font-medium">
                           Hood Cleaned
                         </span>
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                        <Badge
+                          variant={
                             report.cleaningDetails?.hoodCleaned
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
+                              ? "default"
+                              : "secondary"
+                          }
                         >
                           {formatBooleanValue(
                             report.cleaningDetails?.hoodCleaned,
                           )}
-                        </span>
+                        </Badge>
                       </div>
-                      <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
-                        <span className="text-sm font-medium">
+                      <div className="bg-muted/50 flex items-center justify-between rounded-lg border px-4 py-3">
+                        <span className="text-foreground text-sm font-medium">
                           Filters Cleaned
                         </span>
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                        <Badge
+                          variant={
                             report.cleaningDetails?.filtersCleaned
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
+                              ? "default"
+                              : "secondary"
+                          }
                         >
                           {formatBooleanValue(
                             report.cleaningDetails?.filtersCleaned,
                           )}
-                        </span>
+                        </Badge>
                       </div>
-                      <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
-                        <span className="text-sm font-medium">
+                      <div className="bg-muted/50 flex items-center justify-between rounded-lg border px-4 py-3">
+                        <span className="text-foreground text-sm font-medium">
                           Ductwork Cleaned
                         </span>
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                        <Badge
+                          variant={
                             report.cleaningDetails?.ductworkCleaned
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
+                              ? "default"
+                              : "secondary"
+                          }
                         >
                           {formatBooleanValue(
                             report.cleaningDetails?.ductworkCleaned,
                           )}
-                        </span>
+                        </Badge>
                       </div>
-                      <div className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2">
-                        <span className="text-sm font-medium">Fan Cleaned</span>
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
+                      <div className="bg-muted/50 flex items-center justify-between rounded-lg border px-4 py-3">
+                        <span className="text-foreground text-sm font-medium">
+                          Fan Cleaned
+                        </span>
+                        <Badge
+                          variant={
                             report.cleaningDetails?.fanCleaned
-                              ? "bg-green-100 text-green-800"
-                              : "bg-gray-100 text-gray-800"
-                          }`}
+                              ? "default"
+                              : "secondary"
+                          }
                         >
                           {formatBooleanValue(
                             report.cleaningDetails?.fanCleaned,
                           )}
-                        </span>
+                        </Badge>
                       </div>
                     </div>
-                  </div>
-                </div>
-              )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-              {activeTab === "inspection" && (
-                <div className="space-y-4">
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
+              {/* Inspection Tab */}
+              <TabsContent value="inspection" className="mt-0 space-y-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">
                       Inspection Items
-                    </h3>
-                    {report.inspectionItems ? (
-                      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {report.inspectionItems &&
+                    Object.keys(report.inspectionItems).length > 0 ? (
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                         {Object.entries(report.inspectionItems).map(
                           ([key, value]) => {
-                            // Convert camelCase to readable format
-                            const label = key
-                              .replace(/([A-Z])/g, " $1")
-                              .replace(/^./, (str) => str.toUpperCase())
-                              .replace(/([A-Z])\s/g, "$1"); // Fix spaces before capitals
+                            // Skip cost/quantity fields - show only Yes/No/N/A items
+                            if (
+                              key.includes("Cost") ||
+                              key.includes("Required") ||
+                              typeof value !== "string" ||
+                              !["Yes", "No", "N/A"].includes(value)
+                            ) {
+                              return null;
+                            }
+
+                            // Get label from mappings or format camelCase
+                            const label =
+                              INSPECTION_LABELS[key] ||
+                              key
+                                .replace(/([A-Z])/g, " $1")
+                                .replace(/^./, (str) => str.toUpperCase())
+                                .trim();
 
                             return (
                               <div
                                 key={key}
-                                className="flex items-center justify-between rounded-md border border-gray-200 px-3 py-2"
+                                className="bg-muted/50 flex items-center justify-between rounded-lg border px-4 py-3"
                               >
-                                <span className="text-xs font-medium sm:text-sm">
+                                <span className="text-foreground pr-2 text-xs font-medium sm:text-sm">
                                   {label}
                                 </span>
-                                <span
-                                  className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                                    value === "Yes"
-                                      ? "bg-green-100 text-green-800"
-                                      : value === "No"
-                                        ? "bg-red-100 text-red-800"
-                                        : "bg-gray-100 text-gray-800"
-                                  }`}
+                                <Badge
+                                  variant={getInspectionBadgeVariant(value)}
+                                  className="shrink-0"
                                 >
-                                  {formatInspectionValue(value)}
-                                </span>
+                                  {value || "N/A"}
+                                </Badge>
                               </div>
                             );
                           },
                         )}
                       </div>
                     ) : (
-                      <p className="text-sm">
+                      <p className="text-muted-foreground text-sm">
                         No inspection details available.
                       </p>
                     )}
-                  </div>
-                </div>
-              )}
+                  </CardContent>
+                </Card>
 
-              {activeTab === "recommendations" && (
-                <div className="space-y-4">
-                  <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                    <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                {/* Cost/Additional Info from inspection items */}
+                {report.inspectionItems &&
+                  (report.inspectionItems.ecologyUnitCost ||
+                    report.inspectionItems.accessPanelsRequired ||
+                    report.inspectionItems.accessPanelCost) && (
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-sm font-semibold">
+                          Additional Information
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {report.inspectionItems.ecologyUnitCost && (
+                          <div>
+                            <span className="text-muted-foreground text-xs">
+                              Ecology Unit Cost
+                            </span>
+                            <p className="text-foreground text-sm font-medium">
+                              {report.inspectionItems.ecologyUnitCost}
+                            </p>
+                          </div>
+                        )}
+                        {report.inspectionItems.accessPanelsRequired && (
+                          <div>
+                            <span className="text-muted-foreground text-xs">
+                              Access Panels Required
+                            </span>
+                            <p className="text-foreground text-sm font-medium">
+                              {report.inspectionItems.accessPanelsRequired}
+                            </p>
+                          </div>
+                        )}
+                        {report.inspectionItems.accessPanelCost && (
+                          <div>
+                            <span className="text-muted-foreground text-xs">
+                              Access Panel Cost
+                            </span>
+                            <p className="text-foreground text-sm font-medium">
+                              {report.inspectionItems.accessPanelCost}
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  )}
+              </TabsContent>
+
+              {/* Notes Tab */}
+              <TabsContent value="notes" className="mt-0 space-y-4">
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-sm font-semibold">
                       Recommendations
-                    </h3>
-                    <p className="whitespace-pre-wrap text-sm">
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-foreground text-sm whitespace-pre-wrap">
                       {report.recommendations || "No recommendations provided."}
                     </p>
-                  </div>
+                  </CardContent>
+                </Card>
 
-                  {report.comments && (
-                    <div className="rounded-lg border border-gray-200 bg-gray-50 p-3">
-                      <h3 className="mb-2 text-sm font-semibold text-gray-700">
+                {report.comments && (
+                  <Card>
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm font-semibold">
                         Comments
-                      </h3>
-                      <p className="whitespace-pre-wrap text-sm">
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-foreground text-sm whitespace-pre-wrap">
                         {report.comments}
                       </p>
-                    </div>
-                  )}
-                </div>
-              )}
+                    </CardContent>
+                  </Card>
+                )}
+              </TabsContent>
             </div>
+          </div>
+        </Tabs>
 
-            {/* Footer */}
-            <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
-              <div className="flex justify-between">
-                <button
-                  onClick={onClose}
-                  className="rounded-md bg-gray-700 px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
-                >
-                  Close
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+        {/* Footer */}
+        <DialogFooter className="border-border bg-muted/50 shrink-0 border-t px-6 py-3">
+          <Button variant="secondary" onClick={onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

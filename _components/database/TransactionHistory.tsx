@@ -10,6 +10,7 @@ import {
 import { Badge } from "../ui/badge";
 import { Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { formatDateStringUTC } from "../../app/lib/utils";
 
 const TransactionHistory = ({ invoices }: { invoices: any }) => {
   const getStatusVariant = (
@@ -80,7 +81,7 @@ const TransactionHistory = ({ invoices }: { invoices: any }) => {
                       {invoice.dateIssued && (
                         <div className="text-muted-foreground mt-1 flex items-center text-xs">
                           <FaCalendar className="mr-1 h-3 w-3" />
-                          {new Date(invoice.dateIssued).toLocaleDateString()}
+                          {formatDateStringUTC(invoice.dateIssued)}
                         </div>
                       )}
                     </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import { FaPaperPlane, FaHistory } from "react-icons/fa";
 import { Bell, Clock } from "lucide-react";
@@ -61,14 +61,7 @@ export default function PaymentRemindersCard({
   const [isSending, setIsSending] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // Load settings on mount
-  useEffect(() => {
-    if (invoiceId) {
-      loadReminderSettings();
-    }
-  }, [invoiceId]);
-
-  const loadReminderSettings = async () => {
+  const loadReminderSettings = useCallback(async () => {
     try {
       const result = await getReminderSettings(invoiceId);
       if (result.success) {
@@ -85,10 +78,17 @@ export default function PaymentRemindersCard({
     } finally {
       setIsInitialLoading(false);
     }
-  };
+  }, [invoiceId]);
+
+  // Load settings on mount
+  useEffect(() => {
+    if (invoiceId) {
+      loadReminderSettings();
+    }
+  }, [invoiceId, loadReminderSettings]);
 
   const handleFrequencyChange = (value: string) => {
-    const frequency = value as "none" | "3days" | "5days" | "7days" | "14days";
+    const frequency = value as "none" | "3days" | "5days" | "7days";
     setSettings((prev) => ({
       ...prev,
       enabled: frequency !== "none",
@@ -151,8 +151,6 @@ export default function PaymentRemindersCard({
         return "Every 5 days";
       case "7days":
         return "Every 7 days";
-      case "14days":
-        return "Every 14 days";
       default:
         return "None";
     }
@@ -256,7 +254,6 @@ export default function PaymentRemindersCard({
                   <SelectItem value="3days">Every 3 days</SelectItem>
                   <SelectItem value="5days">Every 5 days</SelectItem>
                   <SelectItem value="7days">Every 7 days</SelectItem>
-                  <SelectItem value="14days">Every 14 days</SelectItem>
                 </SelectContent>
               </Select>
             </div>

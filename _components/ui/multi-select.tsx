@@ -118,6 +118,11 @@ interface MultiSelectProps
    */
   onValueChange: (value: string[]) => void;
 
+  /**
+   * Controlled selected values. When provided, the component is controlled.
+   */
+  value?: string[];
+
   /** The default selected values when the component mounts. */
   defaultValue?: string[];
 
@@ -304,6 +309,7 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
       options,
       onValueChange,
       variant,
+      value,
       defaultValue = [],
       placeholder = "Select options",
       animation = 0,
@@ -329,8 +335,10 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
     },
     ref,
   ) => {
-    const [selectedValues, setSelectedValues] =
-      React.useState<string[]>(defaultValue);
+    const isControlled = value !== undefined;
+    const [selectedValues, setSelectedValues] = React.useState<string[]>(
+      value ?? defaultValue,
+    );
     const [isPopoverOpen, setIsPopoverOpen] = React.useState(false);
     const [isAnimating, setIsAnimating] = React.useState(false);
     const [searchValue, setSearchValue] = React.useState("");
@@ -663,7 +671,15 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
     };
 
     React.useEffect(() => {
-      if (!resetOnDefaultValueChange) return;
+      if (!isControlled) return;
+      const nextValue = value || [];
+      if (!arraysEqual(selectedValues, nextValue)) {
+        setSelectedValues(nextValue);
+      }
+    }, [isControlled, value, selectedValues, arraysEqual]);
+
+    React.useEffect(() => {
+      if (isControlled || !resetOnDefaultValueChange) return;
       const prevDefaultValue = prevDefaultValueRef.current;
       if (!arraysEqual(prevDefaultValue, defaultValue)) {
         if (!arraysEqual(selectedValues, defaultValue)) {
@@ -671,7 +687,13 @@ export const MultiSelect = React.forwardRef<MultiSelectRef, MultiSelectProps>(
         }
         prevDefaultValueRef.current = [...defaultValue];
       }
-    }, [defaultValue, selectedValues, arraysEqual, resetOnDefaultValueChange]);
+    }, [
+      defaultValue,
+      selectedValues,
+      arraysEqual,
+      resetOnDefaultValueChange,
+      isControlled,
+    ]);
 
     const getWidthConstraints = () => {
       const defaultMinWidth = screenSize === "mobile" ? "0px" : "200px";

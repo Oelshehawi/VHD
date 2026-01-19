@@ -6,6 +6,7 @@ import {
   rejectPendingTimeOff,
 } from "../../app/lib/actions/availability.actions";
 import { TimeOffRequestType } from "../../app/lib/typeDefinitions";
+import { formatDateStringUTC } from "../../app/lib/utils";
 import { X, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -107,16 +108,8 @@ export function TimeOffApprovalModal({
 
   if (!request) return null;
 
-  const startDate = new Date(request.startDate).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-  const endDate = new Date(request.endDate).toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const startDate = formatDateStringUTC(request.startDate);
+  const endDate = formatDateStringUTC(request.endDate);
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && handleModalClose()}>

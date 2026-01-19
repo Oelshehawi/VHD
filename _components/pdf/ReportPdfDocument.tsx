@@ -12,6 +12,21 @@ import {
 } from "@react-pdf/renderer";
 import { getImageSrc } from "../../app/lib/imageUtils";
 
+const MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
 const createStyles = (scale: number) => {
   const s = (value: number) => Math.round(value * scale);
 
@@ -159,6 +174,7 @@ export interface ReportData {
   };
   ecologyUnit?: {
     exists?: boolean;
+    operational?: boolean;
     filterReplacementNeeded?: boolean;
     notes?: string;
   };
@@ -191,25 +207,39 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
   const styles = createStyles(scale);
 
   const formatDate = (date: string | Date) => {
-    const dateObj = new Date(date);
-    return dateObj
-      .toLocaleDateString("en-US", {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      })
-      .replace(/(\d+)/, (match) => {
-        const num = parseInt(match);
-        const suffix =
-          num % 10 === 1 && num % 100 !== 11
-            ? "st"
-            : num % 10 === 2 && num % 100 !== 12
-              ? "nd"
-              : num % 10 === 3 && num % 100 !== 13
-                ? "rd"
-                : "th";
-        return num + suffix;
-      });
+    // Parse date safely without timezone conversion
+    let dateString: string;
+    if (date instanceof Date) {
+      const year = date.getUTCFullYear();
+      const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+      const day = String(date.getUTCDate()).padStart(2, "0");
+      dateString = `${year}-${month}-${day}`;
+    } else if (typeof date === "string") {
+      dateString = date.includes("T") ? date.split("T")[0]! : date;
+    } else {
+      return "Invalid Date";
+    }
+
+    const parts = dateString.split("-");
+    if (parts.length !== 3) return "Invalid Date";
+
+    const year = parts[0]!;
+    const monthNum = parseInt(parts[1]!, 10);
+    const dayNum = parseInt(parts[2]!, 10);
+
+    const monthName = MONTH_NAMES[monthNum - 1] || "Unknown";
+
+    // Add ordinal suffix
+    const suffix =
+      dayNum % 10 === 1 && dayNum % 100 !== 11
+        ? "st"
+        : dayNum % 10 === 2 && dayNum % 100 !== 12
+          ? "nd"
+          : dayNum % 10 === 3 && dayNum % 100 !== 13
+            ? "rd"
+            : "th";
+
+    return `${monthName} ${dayNum}${suffix}, ${year}`;
   };
 
   return (
@@ -368,7 +398,14 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
           {report.ecologyUnit?.exists && (
             <View style={styles.columnSection}>
               <Text style={styles.sectionTitle}>Ecology Unit</Text>
-              <Text style={styles.infoItem}>Operational: Yes</Text>
+              <Text style={styles.infoItem}>
+                Operational:{" "}
+                {report.ecologyUnit?.operational === undefined
+                  ? "Unknown"
+                  : report.ecologyUnit?.operational
+                    ? "Yes"
+                    : "No"}
+              </Text>
               <Text style={styles.infoItem}>
                 Filter Replacement Needed:{" "}
                 {report.ecologyUnit?.filterReplacementNeeded ? "Yes" : "No"}

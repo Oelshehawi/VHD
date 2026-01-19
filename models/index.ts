@@ -20,3 +20,4 @@ export {
 } from "./schemas/optimization.schema";
 export { AuditLog } from "./schemas/audit.schema";
 export { Availability, TimeOffRequest } from "./schemas/availability.schema";
+export { SchedulingRequest } from "./schemas/schedulingRequest.schema";

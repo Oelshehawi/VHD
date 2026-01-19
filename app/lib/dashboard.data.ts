@@ -17,7 +17,11 @@ import {
   MongoSortStage,
   SalesAggregation,
 } from "./typeDefinitions";
-import { monthNameToNumber } from "./utils";
+import {
+  monthNameToNumber,
+  formatDateShortMonthUTC,
+  formatTimeUTC,
+} from "./utils";
 import { CALL_OUTCOME_LABELS } from "./callLogConstants";
 import { getUserNames } from "./clerkUtils";
 
@@ -44,77 +48,6 @@ export const updateScheduleStatus = async (
   }
 };
 
-export const getScheduledCount = async (invoiceIds: string[]) => {
-  await connectMongo();
-
-  try {
-    const count = await JobsDueSoon.countDocuments({
-      invoiceId: { $in: invoiceIds },
-      isScheduled: true,
-    });
-
-    return count;
-  } catch (error) {
-    console.error("Error getting scheduled count:", error);
-    return 0;
-  }
-};
-
-export const getUnscheduledCount = async (invoiceIds: string[]) => {
-  await connectMongo();
-
-  try {
-    const count = await JobsDueSoon.countDocuments({
-      invoiceId: { $in: invoiceIds },
-      isScheduled: false,
-    });
-
-    return count;
-  } catch (error) {
-    console.error("Error getting unscheduled count:", error);
-    return 0;
-  }
-};
-
-export const checkScheduleStatus = async (
-  dueInvoices: EmailAndNotesCheck[],
-): Promise<DueInvoiceType[]> => {
-  await connectMongo();
-
-  try {
-    const invoiceIds = dueInvoices.map((invoice) => invoice.invoiceId);
-    const schedules = await JobsDueSoon.find({
-      invoiceId: { $in: invoiceIds },
-    });
-
-    const scheduleMap = schedules.reduce(
-      (map, schedule) => {
-        map[schedule.invoiceId] = schedule.isScheduled;
-        return map;
-      },
-      {} as Record<string, boolean>,
-    );
-
-    const updatedInvoices = dueInvoices.map((invoice) => ({
-      ...invoice,
-      _id: invoice.invoiceId,
-      isScheduled: scheduleMap[invoice.invoiceId] || false,
-    }));
-
-    return updatedInvoices;
-  } catch (error) {
-    console.error("Error checking schedule status:", error);
-    return dueInvoices.map((invoice) => ({
-      ...invoice,
-      _id: invoice.invoiceId,
-    }));
-  }
-};
-
-interface EmailAndNotesCheck extends Omit<DueInvoiceType, "_id"> {
-  callHistory?: any[];
-}
-
 export const fetchDueInvoices = async ({
   month,
   year,
@@ -130,17 +63,16 @@ export const fetchDueInvoices = async ({
   const numericYear = typeof year === "string" ? parseInt(year) : year;
 
   try {
+    // First, ensure JobsDueSoon records exist for due invoices
     const dueInvoices = await fetchDueInvoicesFromDB(monthNumber, numericYear);
     if (!dueInvoices || dueInvoices.length === 0) return [];
 
     await createOrUpdateJobsDueSoon(dueInvoices as any[]);
-    const jobsDue = await fetchJobsDue(monthNumber, numericYear);
-    if (!jobsDue || jobsDue.length === 0) return [];
 
-    const processedJobs = processJobsDue(jobsDue);
-    const jobsWithEmailAndNotes =
-      await checkEmailAndNotesPresence(processedJobs);
-    return jobsWithEmailAndNotes.map((job) => ({ ...job, _id: job.invoiceId }));
+    // Fetch jobs with all related data in one consolidated query
+    // (includes _id, emailExists, notesExists, emailSent, callHistory)
+    const jobsDue = await fetchJobsDue(monthNumber, numericYear);
+    return jobsDue as DueInvoiceType[];
   } catch (error) {
     console.error("Database Error:", error);
     return [];
@@ -171,6 +103,16 @@ const fetchDueInvoicesFromDB = async (monthNumber: number, year: number) => {
   ]);
 };
 
+/**
+ * Consolidated aggregation that fetches jobs due with all related data:
+ * - JobsDueSoon _id (for scheduling links)
+ * - Client email existence
+ * - Invoice notes existence
+ * - Properly serialized callHistory
+ *
+ * This eliminates the need for separate checkEmailAndNotesPresence
+ * and checkScheduleStatus queries.
+ */
 const fetchJobsDue = async (monthNumber: number, year: number) => {
   const jobs = await JobsDueSoon.aggregate([
     {
@@ -183,6 +125,7 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
         },
       },
     },
+    // Lookup client for email existence and archive check
     {
       $lookup: {
         from: "clients",
@@ -192,18 +135,75 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
       },
     },
     { $match: { "client.isArchived": { $ne: true } } },
+    // Lookup invoice for notes existence
+    {
+      $lookup: {
+        from: "invoices",
+        let: { invoiceId: "$invoiceId" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: [{ $toString: "$_id" }, "$$invoiceId"],
+              },
+            },
+          },
+          { $project: { notes: 1 } },
+        ],
+        as: "invoice",
+      },
+    },
+    // Add computed fields for email/notes existence
+    {
+      $addFields: {
+        emailExists: {
+          $cond: {
+            if: { $gt: [{ $size: "$client" }, 0] },
+            then: {
+              $and: [
+                { $ne: [{ $arrayElemAt: ["$client.email", 0] }, null] },
+                { $ne: [{ $arrayElemAt: ["$client.email", 0] }, ""] },
+              ],
+            },
+            else: false,
+          },
+        },
+        notesExists: {
+          $cond: {
+            if: { $gt: [{ $size: "$invoice" }, 0] },
+            then: {
+              $and: [
+                { $ne: [{ $arrayElemAt: ["$invoice.notes", 0] }, null] },
+                { $ne: [{ $arrayElemAt: ["$invoice.notes", 0] }, ""] },
+              ],
+            },
+            else: false,
+          },
+        },
+      },
+    },
+    // Remove lookup arrays from final output
+    { $project: { client: 0, invoice: 0 } },
     { $sort: { dateDue: 1 } },
   ]);
 
+  // Serialize and return in DueInvoiceType shape
   return jobs.map((job) => ({
-    ...job,
+    _id: job._id.toString(), // JobsDueSoon _id for scheduling links
+    clientId: job.clientId?.toString(),
+    invoiceId: job.invoiceId,
+    jobTitle: job.jobTitle,
     dateDue: new Date(
       Date.UTC(
         new Date(job.dateDue).getUTCFullYear(),
         new Date(job.dateDue).getUTCMonth(),
         new Date(job.dateDue).getUTCDate(),
       ),
-    ),
+    ).toISOString(),
+    isScheduled: job.isScheduled || false,
+    emailSent: job.emailSent || false,
+    emailExists: job.emailExists || false,
+    notesExists: job.notesExists || false,
     // Properly serialize callHistory to avoid MongoDB ObjectId issues
     callHistory: job.callHistory
       ? job.callHistory.map((call: any) => ({
@@ -225,18 +225,6 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
           duration: call.duration ? Number(call.duration) : null,
         }))
       : [],
-  })) as any[];
-};
-
-const processJobsDue = (jobsDue: JobsDueType[]): EmailAndNotesCheck[] => {
-  return jobsDue.map((job) => ({
-    clientId: job.clientId?.toString() as string,
-    invoiceId: job.invoiceId,
-    jobTitle: job.jobTitle,
-    dateDue: job.dateDue.toISOString(),
-    isScheduled: job.isScheduled,
-    emailSent: job.emailSent,
-    callHistory: (job as any).callHistory || [], // Include call history
   }));
 };
 
@@ -262,67 +250,6 @@ export const createOrUpdateJobsDueSoon = async (dueInvoices: InvoiceType[]) => {
   });
 
   await Promise.all(jobsDueSoonPromises);
-};
-
-export const checkEmailAndNotesPresence = async (
-  dueInvoices: EmailAndNotesCheck[],
-) => {
-  await connectMongo();
-
-  try {
-    const { clients, invoices, jobsDueSoon } =
-      await fetchClientsInvoicesAndJobsDue(dueInvoices);
-    const clientEmailMap = createClientEmailMap(clients);
-    const invoiceNotesMap = createInvoiceNotesMap(invoices);
-    const emailSentMap = createEmailSentMap(jobsDueSoon);
-
-    return dueInvoices.map((invoice) => ({
-      ...invoice,
-      emailExists:
-        clientEmailMap[invoice.clientId?.toString() as string] || false,
-      notesExists: invoiceNotesMap[invoice.invoiceId] || false,
-      emailSent: emailSentMap[invoice.invoiceId] || false,
-    }));
-  } catch (error) {
-    console.error("Error checking email and notes presence:", error);
-    throw new Error("Failed to check email presence for due invoices.");
-  }
-};
-
-const fetchClientsInvoicesAndJobsDue = async (
-  dueInvoices: EmailAndNotesCheck[],
-) => {
-  const clientIds = dueInvoices.map((invoice) => invoice.clientId);
-  const invoiceIds = dueInvoices.map((invoice) => invoice.invoiceId);
-
-  const [clients, invoices, jobsDueSoon] = await Promise.all([
-    Client.find({ _id: { $in: clientIds } }),
-    Invoice.find({ _id: { $in: invoiceIds } }),
-    JobsDueSoon.find({ invoiceId: { $in: invoiceIds } }),
-  ]);
-
-  return { clients, invoices, jobsDueSoon };
-};
-
-const createClientEmailMap = (clients: any[]) => {
-  return clients.reduce<Record<string, boolean>>((map, client) => {
-    map[client._id.toString()] = Boolean(client.email);
-    return map;
-  }, {});
-};
-
-const createInvoiceNotesMap = (invoices: any[]) => {
-  return invoices.reduce<Record<string, boolean>>((map, invoice) => {
-    map[invoice._id.toString()] = Boolean(invoice.notes);
-    return map;
-  }, {});
-};
-
-const createEmailSentMap = (jobsDueSoon: any[]) => {
-  return jobsDueSoon.reduce<Record<string, boolean>>((map, job) => {
-    map[job.invoiceId] = Boolean(job.emailSent);
-    return map;
-  }, {});
 };
 
 export const getClientCount = async () => {
@@ -719,16 +646,10 @@ export const fetchRecentActions = async (
         const location = log.details.newValue.location || "";
         const hours = log.details.newValue.hours || 0;
         const dateTime = new Date(log.details.newValue.startDateTime);
-        const formattedDate = dateTime.toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
+        const formattedDate = formatDateShortMonthUTC(dateTime, {
+          includeYear: true,
         });
-        const formattedTime = dateTime.toLocaleTimeString("en-US", {
-          hour: "2-digit",
-          minute: "2-digit",
-          hour12: true,
-        });
+        const formattedTime = formatTimeUTC(dateTime);
         description = `Schedule Created: ${jobTitle} at ${location} on ${formattedDate} at ${formattedTime} for ${hours}h`;
       } else if (log.action === "schedule_confirmed" && log.details?.newValue) {
         const jobTitle = log.details.newValue.jobTitle || "Untitled";
@@ -896,10 +817,8 @@ const formatTimestamp = (date: Date): { formatted: string; title: string } => {
   } else if (diffInDays >= 1 && diffInDays < 7) {
     formatted = `${diffInDays}d ago`;
   } else {
-    formatted = date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: date.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
+    formatted = formatDateShortMonthUTC(date, {
+      includeYear: date.getUTCFullYear() !== now.getFullYear(),
     });
   }
 
@@ -986,7 +905,7 @@ export interface JobsDueDataType {
 
 /**
  * Combined server function to fetch all jobs due data in a single request.
- * Replaces 4 separate function calls with 1 to reduce network requests.
+ * fetchDueInvoices now returns complete data with _id, emailExists, notesExists.
  */
 export const fetchJobsDueData = async ({
   month,
@@ -996,15 +915,14 @@ export const fetchJobsDueData = async ({
   year: string | number;
 }): Promise<JobsDueDataType> => {
   try {
-    // Fetch invoices with schedule status (combines fetchDueInvoices + checkScheduleStatus)
-    const dueInvoices = await fetchDueInvoices({ month, year });
-    const invoicesWithSchedule = await checkScheduleStatus(dueInvoices);
+    // fetchDueInvoices now returns complete data with JobsDueSoon _id
+    const invoicesWithSchedule = await fetchDueInvoices({ month, year });
 
     if (!Array.isArray(invoicesWithSchedule)) {
       throw new Error("Failed to load invoices");
     }
 
-    // Calculate counts from the already-fetched data instead of making 2 extra DB queries
+    // Calculate counts from the already-fetched data
     const scheduledCount = invoicesWithSchedule.filter(
       (invoice) => invoice.isScheduled,
     ).length;

@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useTransition, useOptimistic, useMemo } from "react";
+import {
+  useState,
+  useTransition,
+  useOptimistic,
+  useMemo,
+  useCallback,
+} from "react";
 import {
   PendingInvoiceType,
   PaymentInfo,
@@ -36,11 +42,13 @@ interface ExtendedPendingInvoiceType extends PendingInvoiceType {
 
 interface PendingJobsModalProps {
   pendingInvoices: ExtendedPendingInvoiceType[];
+  isOpen: boolean;
   onClose: () => void;
 }
 
 const PendingJobsModalContent = ({
   pendingInvoices,
+  isOpen,
   onClose,
 }: PendingJobsModalProps) => {
   const [isPending, startTransition] = useTransition();
@@ -209,9 +217,19 @@ const PendingJobsModalContent = ({
     );
   }, [optimisticInvoices, searchQuery]);
 
+  // Handle modal close properly to allow animation to complete
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) {
+        onClose();
+      }
+    },
+    [onClose],
+  );
+
   return (
     <>
-      <Dialog open={true} onOpenChange={(open) => !open && onClose()}>
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="max-h-[85vh] w-full max-w-4xl overflow-hidden p-0">
           <DialogHeader className="space-y-4 p-6 pb-4">
             <DialogTitle className="text-xl font-bold">
@@ -424,11 +442,13 @@ const PendingJobsModalContent = ({
 
 const PendingJobsModal = ({
   pendingInvoices,
+  isOpen,
   onClose,
 }: PendingJobsModalProps) => {
   return (
     <PendingJobsModalContent
       pendingInvoices={pendingInvoices}
+      isOpen={isOpen}
       onClose={onClose}
     />
   );

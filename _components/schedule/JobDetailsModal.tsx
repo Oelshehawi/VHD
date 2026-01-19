@@ -45,6 +45,7 @@ import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Card, CardContent } from "../ui/card";
 import { format } from "date-fns-tz";
+import { formatDateStringUTC } from "../../app/lib/utils";
 import JobConfirmationModal from "./JobConfirmationModal";
 
 interface JobDetailsModalProps {
@@ -318,7 +319,7 @@ export default function JobDetailsModal({
   };
 
   return (
-    <Dialog open={isOpen && !!job} onOpenChange={handleModalClose}>
+    <Dialog open={isOpen} onOpenChange={handleModalClose}>
       <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
         <DialogHeader>
           <div className="flex items-start justify-between">
@@ -581,9 +582,7 @@ export default function JobDetailsModal({
                     </h3>
                     <p className="text-muted-foreground text-sm">
                       Report completed on{" "}
-                      {new Date(
-                        existingReportData.dateCompleted,
-                      ).toLocaleDateString()}
+                      {formatDateStringUTC(existingReportData.dateCompleted)}
                     </p>
                   </div>
 

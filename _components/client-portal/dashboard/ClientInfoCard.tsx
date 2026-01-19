@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { PhoneIcon, EnvelopeIcon, UserIcon } from "@heroicons/react/24/outline";
+import { Card, CardContent, CardHeader, CardTitle } from "../../ui/card";
 
 interface ClientInfoCardProps {
   clientName: string;
@@ -19,42 +20,57 @@ const ClientInfoCard = ({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="overflow-hidden rounded-xl bg-white shadow-sm"
     >
-      <div className="bg-linear-to-r from-green-600 to-green-900 px-6 py-4">
-        <h2 className="text-xl font-semibold text-white">Client Information</h2>
-      </div>
-      <div className="space-y-4 p-6">
-        <div className="flex items-center">
-          <div className="mr-3 rounded-full bg-blue-50 p-2">
-            <UserIcon className="h-5 w-5 text-blue-600" />
+      <Card className="overflow-hidden py-0">
+        <CardHeader className="from-primary to-primary/80 rounded-t-xl bg-gradient-to-r py-4">
+          <CardTitle className="text-primary-foreground text-center text-xl">
+            Client Information
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4 py-4">
+          <div className="flex items-center">
+            <div className="bg-primary/10 mr-3 shrink-0 rounded-full p-2">
+              <UserIcon className="text-primary h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-muted-foreground text-sm">Name</p>
+              <p
+                className="text-foreground truncate font-medium"
+                title={clientName}
+              >
+                {clientName}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Name</p>
-            <p className="font-medium text-gray-900">{clientName}</p>
-          </div>
-        </div>
 
-        <div className="flex items-center">
-          <div className="mr-3 rounded-full bg-blue-50 p-2">
-            <PhoneIcon className="h-5 w-5 text-blue-600" />
+          <div className="flex items-center">
+            <div className="bg-primary/10 mr-3 shrink-0 rounded-full p-2">
+              <PhoneIcon className="text-primary h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-muted-foreground text-sm">Phone</p>
+              <p
+                className="text-foreground truncate font-medium"
+                title={phoneNumber}
+              >
+                {phoneNumber}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Phone</p>
-            <p className="font-medium text-gray-900">{phoneNumber}</p>
-          </div>
-        </div>
 
-        <div className="flex items-center">
-          <div className="mr-3 rounded-full bg-blue-50 p-2">
-            <EnvelopeIcon className="h-5 w-5 text-blue-600" />
+          <div className="flex items-center">
+            <div className="bg-primary/10 mr-3 shrink-0 rounded-full p-2">
+              <EnvelopeIcon className="text-primary h-5 w-5" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-muted-foreground text-sm">Email</p>
+              <p className="text-foreground truncate font-medium" title={email}>
+                {email}
+              </p>
+            </div>
           </div>
-          <div>
-            <p className="text-sm text-gray-500">Email</p>
-            <p className="font-medium text-gray-900">{email}</p>
-          </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </motion.div>
   );
 };

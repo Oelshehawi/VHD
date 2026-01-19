@@ -44,6 +44,30 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const updatePaymentStatusSafely = async (
+    invoiceId: string,
+    status: "initiated" | "processing" | "pending" | "succeeded" | "failed",
+    paymentMethod: "card" | "bank",
+    eventType: string,
+    eventDetails?: string,
+  ) => {
+    try {
+      await updateStripePaymentStatus(
+        invoiceId,
+        status,
+        paymentMethod,
+        eventType,
+        eventDetails,
+      );
+    } catch (error) {
+      console.error(
+        `Failed to update payment status for invoice ${invoiceId}:`,
+        error,
+      );
+      throw error;
+    }
+  };
+
   // Handle the event
   try {
     switch (event.type) {
@@ -89,6 +113,9 @@ export async function POST(request: NextRequest) {
 
         if (!result.success) {
           console.error("Failed to process payment success:", result.error);
+          throw new Error(
+            result.error || "Failed to process payment intent success",
+          );
         }
 
         console.log(`Payment succeeded for invoice ${invoiceId}`);
@@ -136,7 +163,7 @@ export async function POST(request: NextRequest) {
           paymentIntent.metadata.paymentMethod === "bank" ? "bank" : "card";
 
         if (invoiceId) {
-          await updateStripePaymentStatus(
+          await updatePaymentStatusSafely(
             invoiceId,
             "initiated",
             paymentMethod,
@@ -154,7 +181,7 @@ export async function POST(request: NextRequest) {
           paymentIntent.metadata.paymentMethod === "bank" ? "bank" : "card";
 
         if (invoiceId) {
-          await updateStripePaymentStatus(
+          await updatePaymentStatusSafely(
             invoiceId,
             "processing",
             paymentMethod,
@@ -178,7 +205,7 @@ export async function POST(request: NextRequest) {
             paymentIntent.metadata.paymentMethod === "bank" ? "bank" : "card";
 
           if (invoiceId) {
-            await updateStripePaymentStatus(
+            await updatePaymentStatusSafely(
               invoiceId,
               "pending",
               paymentMethod,

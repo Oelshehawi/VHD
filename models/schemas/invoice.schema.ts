@@ -27,6 +27,7 @@ export const invoiceSchema = new Schema<InvoiceType>({
   invoiceId: { type: String, required: true },
   jobTitle: { type: String, required: true },
   dateIssued: { type: Date, required: true },
+  // Date due is when the job is due to be done again for the client
   dateDue: { type: Date, required: true },
   items: [
     {

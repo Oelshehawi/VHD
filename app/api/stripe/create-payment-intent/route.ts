@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
 import connectMongo from "../../../lib/connect";
 import { Invoice, Client } from "../../../../models/reactDataSchema";
 import {
@@ -107,7 +108,7 @@ export async function POST(request: NextRequest) {
     const client = await Client.findById(invoice.clientId);
     const clientEmail = client?.emails?.accounting || client?.email;
 
-    const paymentIntentParams: any = {
+    const paymentIntentParams: Stripe.PaymentIntentCreateParams = {
       amount: calculation.totalAmount,
       currency: "cad",
       payment_method_types: paymentMethodTypes,
@@ -138,8 +139,11 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    const paymentIntent =
-      await stripe.paymentIntents.create(paymentIntentParams);
+    const idempotencyKey = `payment_intent_${invoice._id.toString()}_${paymentMethod}_${Date.now()}`;
+    const paymentIntent = await stripe.paymentIntents.create(
+      paymentIntentParams,
+      { idempotencyKey },
+    );
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
@@ -152,7 +156,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Failed to create payment intent",
-        details: error instanceof Error ? error.message : "Unknown error",
       },
       { status: 500 },
     );

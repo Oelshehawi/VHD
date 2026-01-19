@@ -11,7 +11,8 @@ import {
   Report,
 } from "../../../models/reactDataSchema";
 import { DueInvoiceType } from "../typeDefinitions";
-import { getEmailForPurpose, getBaseUrl } from "../utils";
+import { getEmailForPurpose, getBaseUrl, formatDateStringUTC } from "../utils";
+import { generateSchedulingToken } from "./autoScheduling.actions";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -53,29 +54,30 @@ export async function sendCleaningReminderEmail(
       return { success: false, error: "Client email not found" };
     }
 
-    // Format the due date
-    let utcDate: Date;
-    if (invoice.dateDue instanceof Date) {
-      utcDate = new Date(
-        invoice.dateDue.getTime() + invoice.dateDue.getTimezoneOffset() * 60000,
-      );
-    } else {
-      utcDate = new Date(invoice.dateDue);
-    }
+    // Format the due date using UTC-safe utility
+    const formattedDate = formatDateStringUTC(invoice.dateDue);
 
-    const formattedDate = utcDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    // Find JobsDueSoon to generate scheduling link
+    const jobsDueSoon = await JobsDueSoon.findOne({ invoiceId: invoiceId });
+    let hasSchedulingLink: any = false;
+
+    if (jobsDueSoon) {
+      // Generate scheduling token and link
+      const schedulingToken = await generateSchedulingToken(
+        jobsDueSoon._id.toString(),
+      );
+      const schedulingLink = `${getBaseUrl()}/client-portal/schedule?token=${schedulingToken}`;
+      hasSchedulingLink = {
+        scheduling_link: schedulingLink,
+      };
+    }
 
     // Send email using Postmark
     const client = new postmark.ServerClient(process.env.POSTMARK_CLIENT);
-
     await client.sendEmailWithTemplate({
       From: "adam@vancouverventcleaning.ca",
       To: clientEmail,
-      TemplateAlias: "cleaning-due-reminder",
+      TemplateAlias: "cleaning-due-reminder-1",
       TemplateModel: {
         due_date: formattedDate,
         jobTitle: invoice.jobTitle,
@@ -83,6 +85,8 @@ export async function sendCleaningReminderEmail(
         contact_email: "adam@vancouverventcleaning.ca",
         header_title: "Hood & Vent Cleaning Reminder",
         email_title: "Hood & Vent Cleaning Reminder",
+        // Client self-scheduling link
+        scheduling_link: hasSchedulingLink,
       },
       TrackOpens: true,
       MessageStream: "outbound",
@@ -226,15 +230,13 @@ export async function sendInvoiceDeliveryEmail(
     // Check for Stripe payment link
     let hasOnlinePaymentBlock: any = false;
 
-    // Debug logging
     console.log(
-      "Invoice stripePaymentSettings:",
-      invoice.stripePaymentSettings,
+      "Online payment enabled:",
+      Boolean(invoice.stripePaymentSettings?.enabled),
     );
-    console.log("Payment enabled:", invoice.stripePaymentSettings?.enabled);
     console.log(
-      "Payment token exists:",
-      !!invoice.stripePaymentSettings?.paymentLinkToken,
+      "Payment link token present:",
+      Boolean(invoice.stripePaymentSettings?.paymentLinkToken),
     );
 
     if (
@@ -243,8 +245,7 @@ export async function sendInvoiceDeliveryEmail(
     ) {
       const expiresAt = invoice.stripePaymentSettings.paymentLinkExpiresAt;
       const isExpired = expiresAt ? new Date() > new Date(expiresAt) : false;
-      console.log("Payment link expires at:", expiresAt);
-      console.log("Is expired:", isExpired);
+      console.log("Payment link active:", !isExpired);
 
       if (!isExpired) {
         const paymentLinkUrl = `${getBaseUrl()}/pay?token=${invoice.stripePaymentSettings.paymentLinkToken}`;
@@ -253,11 +254,10 @@ export async function sendInvoiceDeliveryEmail(
           payment_link_url: paymentLinkUrl,
         };
 
-        console.log("Generated payment link URL:", paymentLinkUrl);
       }
     }
 
-    console.log("Final hasOnlinePaymentBlock:", hasOnlinePaymentBlock);
+    console.log("Online payment block included:", Boolean(hasOnlinePaymentBlock));
 
     // Prepare template model
     const templateModel: Record<string, any> = {
@@ -308,8 +308,8 @@ export async function sendInvoiceDeliveryEmail(
 
             if (reportData.technicianId) {
               try {
-                const users: any = await clerkClient();
-                const user = await users.users.getUser(reportData.technicianId);
+                const clerk = await clerkClient();
+                const user = await clerk.users.getUser(reportData.technicianId);
                 if (user) {
                   technicianData = {
                     id: user.id,

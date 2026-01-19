@@ -7,38 +7,53 @@ import { formatDateFns } from "../../app/lib/utils";
 import { toPublicId } from "../../app/lib/imageUtils";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
-// Import zoom plugin
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
-// Import fullscreen plugin
 import Fullscreen from "yet-another-react-lightbox/plugins/fullscreen";
-// Import download plugin
 import Download from "yet-another-react-lightbox/plugins/download";
-// Import thumbnails plugin
 import Thumbnails from "yet-another-react-lightbox/plugins/thumbnails";
 import "yet-another-react-lightbox/plugins/thumbnails.css";
-// Import counter plugin
 import Counter from "yet-another-react-lightbox/plugins/counter";
 import "yet-another-react-lightbox/plugins/counter.css";
-// Import captions plugin
 import Captions from "yet-another-react-lightbox/plugins/captions";
 import "yet-another-react-lightbox/plugins/captions.css";
-// Import CSS module
-import styles from "./lightbox.module.css";
+import Slideshow from "yet-another-react-lightbox/plugins/slideshow";
+
+// Must match next.config.ts image sizes for Next.js image optimization
+const NEXT_IMAGE_SIZES = [64, 128, 256]; // imageSizes from next.config.ts
+const NEXT_DEVICE_SIZES = [320, 640, 1024, 1440, 1920, 2560]; // deviceSizes from next.config.ts
+const ALL_SIZES = [...NEXT_IMAGE_SIZES, ...NEXT_DEVICE_SIZES].sort(
+  (a, b) => a - b,
+);
+
+// Generate Next.js optimized image URL
+function nextImageUrl(src: string, size: number): string {
+  return `/_next/image?url=${encodeURIComponent(src)}&w=${size}&q=75`;
+}
 
 interface MediaDisplayProps {
   photos: PhotoType[];
   signature: SignatureType | null;
 }
 
+interface Slide {
+  src: string;
+  width: number;
+  height: number;
+  srcSet: { src: string; width: number; height: number }[];
+  title: string;
+  description: string;
+  downloadUrl?: string;
+  downloadFilename?: string;
+}
+
 export default function MediaDisplay({
   photos = [],
   signature,
 }: MediaDisplayProps) {
-  // State for lightbox
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
 
-  // Filter photos by type - memoize to prevent infinite loop
+  // Filter photos by type
   const beforePhotos = useMemo(
     () => photos.filter((photo) => photo.type === "before"),
     [photos],
@@ -49,66 +64,78 @@ export default function MediaDisplay({
     [photos],
   );
 
-  // Helper function to build optimized Cloudinary URL
-  const getOptimizedUrl = useCallback((url: string): string => {
+  // Build Cloudinary URL from photo URL (base URL without transformations for Next.js optimization)
+  const getCloudinaryUrl = useCallback((url: string): string => {
     const publicId = toPublicId(url);
-    if (!publicId) return url; // Fallback to original URL if extraction fails
-
-    return `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/f_auto,q_auto,dpr_auto,w_1600/${publicId}`;
+    if (!publicId) return url;
+    return `https://res.cloudinary.com/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload/${publicId}`;
   }, []);
 
-  // Prepare slides for the lightbox - derived data, no state needed
+  // Create slide with Next.js image optimization srcSet (works with Zoom plugin)
+  const createSlide = useCallback(
+    (url: string, title: string, description: string, filename: string) => {
+      const cloudinaryUrl = getCloudinaryUrl(url);
+      const maxWidth = 2560; // Full resolution - matches original Cloudinary image size
+      return {
+        src: nextImageUrl(cloudinaryUrl, maxWidth),
+        width: maxWidth,
+        height: Math.round(maxWidth * 0.75), // 4:3 aspect ratio
+        srcSet: ALL_SIZES.filter((size) => size <= maxWidth).map((size) => ({
+          src: nextImageUrl(cloudinaryUrl, size),
+          width: size,
+          height: Math.round(size * 0.75),
+        })),
+        title,
+        description,
+        downloadUrl: cloudinaryUrl, // Original URL for download
+        downloadFilename: filename,
+      } as Slide;
+    },
+    [getCloudinaryUrl],
+  );
+
+  // Prepare slides for lightbox with Next.js optimization
   const slides = useMemo(() => {
-    const newSlides: Array<{
-      src: string;
-      title?: string;
-      description?: string;
-      downloadUrl?: string;
-      downloadFilename?: string;
-    }> = [];
+    const newSlides: ReturnType<typeof createSlide>[] = [];
 
     // Add before photos
-    if (beforePhotos && beforePhotos.length > 0) {
-      beforePhotos.forEach((photo, idx) => {
-        const optimizedUrl = getOptimizedUrl(photo.url);
-        newSlides.push({
-          src: optimizedUrl,
-          title: "Before Photo",
-          description: `Uploaded on: ${formatDateFns(photo.timestamp)}`,
-          downloadUrl: optimizedUrl,
-          downloadFilename: `before-photo-${idx + 1}.jpg`,
-        });
-      });
-    }
+    beforePhotos.forEach((photo, idx) => {
+      newSlides.push(
+        createSlide(
+          photo.url,
+          "Before Photo",
+          `Uploaded on: ${formatDateFns(photo.timestamp)}`,
+          `before-photo-${idx + 1}.jpg`,
+        ),
+      );
+    });
 
     // Add after photos
-    if (afterPhotos && afterPhotos.length > 0) {
-      afterPhotos.forEach((photo, idx) => {
-        const optimizedUrl = getOptimizedUrl(photo.url);
-        newSlides.push({
-          src: optimizedUrl,
-          title: "After Photo",
-          description: `Uploaded on: ${formatDateFns(photo.timestamp)}`,
-          downloadUrl: optimizedUrl,
-          downloadFilename: `after-photo-${idx + 1}.jpg`,
-        });
-      });
-    }
+    afterPhotos.forEach((photo, idx) => {
+      newSlides.push(
+        createSlide(
+          photo.url,
+          "After Photo",
+          `Uploaded on: ${formatDateFns(photo.timestamp)}`,
+          `after-photo-${idx + 1}.jpg`,
+        ),
+      );
+    });
 
-    // Add signature if available
+    // Add signature
     if (signature) {
-      const optimizedUrl = getOptimizedUrl(signature.url);
-      newSlides.push({
-        src: optimizedUrl,
-        title: "Signature",
-        description: `Signed by: ${signature.signerName} on ${formatDateFns(signature.timestamp)}`,
-        downloadUrl: optimizedUrl,
-        downloadFilename: `signature-${signature.signerName.replace(/\s+/g, "-").toLowerCase()}.jpg`,
-      });
+      newSlides.push(
+        createSlide(
+          signature.url,
+          "Signature",
+          `Signed by: ${signature.signerName} on ${formatDateFns(signature.timestamp)}`,
+          `signature-${signature.signerName.replace(/\s+/g, "-").toLowerCase()}.jpg`,
+        ),
+      );
     }
 
     return newSlides;
-  }, [beforePhotos, afterPhotos, signature, getOptimizedUrl]);
+  }, [beforePhotos, afterPhotos, signature, createSlide]);
 
   // Function to open lightbox at specific index
   const openLightbox = useCallback((photoIndex: number) => {
@@ -168,15 +195,15 @@ export default function MediaDisplay({
                 <div className="mb-6">
                   <h4 className="mb-2 font-medium">Before</h4>
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                    {beforePhotos.map((photo, index) => (
+                    {beforePhotos.map((photo, idx) => (
                       <div
-                        key={index}
+                        key={idx}
                         className="group relative aspect-video cursor-pointer overflow-hidden rounded-lg"
-                        onClick={() => openLightbox(beforeStartIndex + index)}
+                        onClick={() => openLightbox(beforeStartIndex + idx)}
                       >
                         <CldImage
                           src={toPublicId(photo.url)!}
-                          alt={`Before photo ${index + 1}`}
+                          alt={`Before photo ${idx + 1}`}
                           width={800}
                           height={600}
                           crop="fill"
@@ -197,15 +224,15 @@ export default function MediaDisplay({
                 <div>
                   <h4 className="mb-2 font-medium">After</h4>
                   <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                    {afterPhotos.map((photo, index) => (
+                    {afterPhotos.map((photo, idx) => (
                       <div
-                        key={index}
+                        key={idx}
                         className="group relative aspect-video cursor-pointer overflow-hidden rounded-lg"
-                        onClick={() => openLightbox(afterStartIndex + index)}
+                        onClick={() => openLightbox(afterStartIndex + idx)}
                       >
                         <CldImage
                           src={toPublicId(photo.url)!}
-                          alt={`After photo ${index + 1}`}
+                          alt={`After photo ${idx + 1}`}
                           width={800}
                           height={600}
                           crop="fill"
@@ -225,123 +252,150 @@ export default function MediaDisplay({
         </div>
       )}
 
-      {/* Enhanced Lightbox for improved image viewing */}
-      <div className={styles.lightboxContainer}>
-        <Lightbox
-          index={index}
-          open={open}
-          close={() => setOpen(false)}
-          slides={slides}
-          plugins={[Zoom, Fullscreen, Download, Thumbnails, Counter, Captions]}
-          zoom={{
-            maxZoomPixelRatio: 6,
-            zoomInMultiplier: 2,
-            doubleTapDelay: 300,
-            doubleClickDelay: 300,
-            keyboardMoveDistance: 50,
-            wheelZoomDistanceFactor: 100,
-            pinchZoomDistanceFactor: 100,
-            scrollToZoom: true,
-          }}
-          counter={{
-            separator: " of ",
-            container: {
-              style: {
-                backgroundColor: "rgba(0, 0, 0, 0.5)",
-                borderRadius: "20px",
-                left: "50%",
-                transform: "translateX(-50%)",
-                fontWeight: "500",
-                fontSize: "14px",
-              },
+      {/* Lightbox with Next.js image optimization */}
+      <Lightbox
+        index={index}
+        open={open}
+        close={() => setOpen(false)}
+        slides={slides}
+        plugins={[
+          Zoom,
+          Fullscreen,
+          Download,
+          Thumbnails,
+          Counter,
+          Captions,
+          Slideshow,
+        ]}
+        zoom={{
+          maxZoomPixelRatio: 6,
+          zoomInMultiplier: 2,
+          doubleTapDelay: 300,
+          doubleClickDelay: 300,
+          keyboardMoveDistance: 50,
+          wheelZoomDistanceFactor: 100,
+          pinchZoomDistanceFactor: 100,
+          scrollToZoom: true,
+        }}
+        slideshow={{
+          autoplay: false,
+          delay: 3000,
+        }}
+        counter={{
+          separator: " of ",
+          container: {
+            style: {
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
+              borderRadius: "20px",
+              left: "50%",
+              transform: "translateX(-50%)",
+              fontWeight: "500",
+              fontSize: "14px",
             },
-          }}
-          carousel={{
-            finite: false,
-            preload: 2,
-            padding: "16px",
-            spacing: "30%",
-            imageFit: "contain",
-          }}
-          thumbnails={{
-            width: 120,
-            height: 80,
-            padding: 4,
-            position: "bottom",
-            borderRadius: 4,
-          }}
-          captions={{
-            showToggle: true,
-            descriptionTextAlign: "center",
-            descriptionMaxLines: 3,
-          }}
-          download={
-            slides.length > 0
-              ? {
-                  download: ({ slide }) => {
-                    const a = document.createElement("a");
-                    a.href = slide.src;
-                    a.download = (slide as any).downloadFilename || "image.jpg";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  },
-                }
-              : undefined
-          }
-          styles={{
-            root: {
-              "--yarl__color_backdrop": "rgba(0, 0, 0, 0.9)",
-              "--yarl__slide_title_color": "#fff",
-              "--yarl__slide_description_color": "#ccc",
-            },
-          }}
-          render={{
-            iconZoomIn: () => (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="h-7 w-7"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5zm8.25-3.75a.75.75 0 01.75.75v2.25h2.25a.75.75 0 010 1.5h-2.25v2.25a.75.75 0 01-1.5 0v-2.25H7.5a.75.75 0 010-1.5h2.25V7.5a.75.75 0 01.75-.75z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            ),
-            iconZoomOut: () => (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="h-7 w-7"
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5zm6 0a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5a.75.75 0 01-.75-.75z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            ),
-            iconDownload: () => (
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className={`h-7 w-7 ${styles.downloadButton}`}
-              >
-                <path
-                  fillRule="evenodd"
-                  d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z"
-                  clipRule="evenodd"
-                />
-              </svg>
-            ),
-          }}
-        />
-      </div>
+          },
+        }}
+        carousel={{
+          finite: false,
+          preload: 2,
+          padding: "16px",
+          spacing: "30%",
+          imageFit: "contain",
+        }}
+        thumbnails={{
+          width: 120,
+          height: 80,
+          padding: 4,
+          position: "bottom",
+          borderRadius: 4,
+        }}
+        captions={{
+          showToggle: true,
+          descriptionTextAlign: "center",
+          descriptionMaxLines: 3,
+        }}
+        download={
+          slides.length > 0
+            ? {
+                download: ({ slide }) => {
+                  const downloadUrl = slide.downloadUrl || slide.src;
+                  const filename = slide.downloadFilename || "image.jpg";
+                  void (async () => {
+                    try {
+                      const response = await fetch(downloadUrl);
+                      if (!response.ok) {
+                        throw new Error("Failed to fetch image");
+                      }
+                      const blob = await response.blob();
+                      const objectUrl = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = objectUrl;
+                      a.download = filename;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(objectUrl);
+                    } catch {
+                      window.open(downloadUrl, "_blank");
+                    }
+                  })();
+                },
+              }
+            : undefined
+        }
+        styles={{
+          root: {
+            "--yarl__color_backdrop": "rgba(0, 0, 0, 0.9)",
+            "--yarl__slide_title_color": "#fff",
+            "--yarl__slide_description_color": "#ccc",
+            "--yarl__portal_zindex": 10000, // CSS variable for portal z-index - above dialogs (z-50)
+            pointerEvents: "auto", // Ensure lightbox is interactive when body has pointer-events: none
+          },
+        }}
+        render={{
+          iconZoomIn: () => (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-7 w-7"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5zm8.25-3.75a.75.75 0 01.75.75v2.25h2.25a.75.75 0 010 1.5h-2.25v2.25a.75.75 0 01-1.5 0v-2.25H7.5a.75.75 0 010-1.5h2.25V7.5a.75.75 0 01.75-.75z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ),
+          iconZoomOut: () => (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-7 w-7"
+            >
+              <path
+                fillRule="evenodd"
+                d="M10.5 3.75a6.75 6.75 0 100 13.5 6.75 6.75 0 000-13.5zM2.25 10.5a8.25 8.25 0 1114.59 5.28l4.69 4.69a.75.75 0 11-1.06 1.06l-4.69-4.69A8.25 8.25 0 012.25 10.5zm6 0a.75.75 0 01.75-.75h4.5a.75.75 0 010 1.5h-4.5a.75.75 0 01-.75-.75z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ),
+          iconDownload: () => (
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              className="h-7 w-7"
+            >
+              <path
+                fillRule="evenodd"
+                d="M12 2.25a.75.75 0 01.75.75v11.69l3.22-3.22a.75.75 0 111.06 1.06l-4.5 4.5a.75.75 0 01-1.06 0l-4.5-4.5a.75.75 0 111.06-1.06l3.22 3.22V3a.75.75 0 01.75-.75zm-9 13.5a.75.75 0 01.75.75v2.25a1.5 1.5 0 001.5 1.5h13.5a1.5 1.5 0 001.5-1.5V16.5a.75.75 0 011.5 0v2.25a3 3 0 01-3 3H5.25a3 3 0 01-3-3V16.5a.75.75 0 01.75-.75z"
+                clipRule="evenodd"
+              />
+            </svg>
+          ),
+        }}
+      />
     </>
   );
 }

@@ -1,7 +1,7 @@
 "use server";
 
 import { clerkClient } from "@clerk/nextjs/server";
-import { randomBytes } from "crypto";
+import * as crypto from "crypto";
 import { getBaseUrl } from "./utils";
 import { Client } from "@/models";
 
@@ -9,7 +9,7 @@ import { Client } from "@/models";
  * Generate a cryptographically secure access token
  */
 function generateSecureToken(): string {
-  return randomBytes(32).toString("hex");
+  return crypto.randomBytes(32).toString("hex");
 }
 
 /**
@@ -97,11 +97,14 @@ export async function generateClientAccessLink(
  */
 export async function generateFreshClientToken(
   clientId: string,
-  accessToken?: string,
+  accessToken: string,
 ) {
   try {
     if (!clientId) {
       throw new Error("Client ID is required");
+    }
+    if (!accessToken || accessToken.trim().length === 0) {
+      throw new Error("Invalid access token");
     }
 
     // Look up the client from database
@@ -111,18 +114,28 @@ export async function generateFreshClientToken(
       throw new Error("Client not found");
     }
 
-    // Validate access token if provided (new secure flow)
-    if (accessToken) {
-      if (client.portalAccessToken !== accessToken) {
-        throw new Error("Invalid access token");
-      }
+    if (!client.portalAccessToken) {
+      throw new Error("Invalid access token");
+    }
 
-      if (
-        client.portalAccessTokenExpiry &&
-        new Date() > new Date(client.portalAccessTokenExpiry)
-      ) {
-        throw new Error("Access token has expired");
-      }
+    const storedHash = crypto
+      .createHash("sha256")
+      .update(client.portalAccessToken, "utf8")
+      .digest();
+    const providedHash = crypto
+      .createHash("sha256")
+      .update(accessToken, "utf8")
+      .digest();
+
+    if (!crypto.timingSafeEqual(storedHash, providedHash)) {
+      throw new Error("Invalid access token");
+    }
+
+    if (
+      client.portalAccessTokenExpiry &&
+      new Date() > new Date(client.portalAccessTokenExpiry)
+    ) {
+      throw new Error("Access token has expired");
     }
 
     const clerk = await clerkClient();

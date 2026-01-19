@@ -137,8 +137,7 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching payment page data:", error);
     return NextResponse.json(
       {
-        error: "Failed to fetch payment page data",
-        details: error instanceof Error ? error.message : "Unknown error",
+        error: "An internal server error occurred",
       },
       { status: 500 },
     );

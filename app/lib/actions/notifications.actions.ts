@@ -9,11 +9,12 @@ import {
   Notification,
 } from "../../../models/notificationSchema";
 import { NotificationTypeEnum, NOTIFICATION_TYPES } from "../typeDefinitions";
+import { requireAdmin } from "../auth/utils";
 
 webpush.setVapidDetails(
   "mailto:oelshehawi@gmail.com",
   process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
+  process.env.VAPID_PRIVATE_KEY!,
 );
 
 // ============ Push Subscription Actions ============
@@ -38,7 +39,7 @@ export async function subscribeUser(sub: {
         endpoint: sub.endpoint,
         keys: sub.keys,
       },
-      { upsert: true, new: true }
+      { upsert: true, new: true },
     );
 
     return { success: true };
@@ -87,7 +88,11 @@ export async function getNotifications(limit: number = 20) {
     };
   } catch (error) {
     console.error("Error fetching notifications:", error);
-    return { success: false, error: "Failed to fetch notifications", notifications: [] };
+    return {
+      success: false,
+      error: "Failed to fetch notifications",
+      notifications: [],
+    };
   }
 }
 
@@ -123,7 +128,7 @@ export async function markAsRead(notificationId: string) {
 
     await Notification.findOneAndUpdate(
       { _id: notificationId, userId },
-      { readAt: new Date() }
+      { readAt: new Date() },
     );
 
     revalidatePath("/dashboard");
@@ -145,7 +150,7 @@ export async function markAllAsRead() {
 
     await Notification.updateMany(
       { userId, readAt: null },
-      { readAt: new Date() }
+      { readAt: new Date() },
     );
 
     revalidatePath("/dashboard");
@@ -173,6 +178,7 @@ export async function createNotification({
     scheduleId?: string;
     clientId?: string;
     estimateId?: string;
+    schedulingRequestId?: string;
     link?: string;
   };
 }) {
@@ -202,7 +208,7 @@ export async function createNotification({
             body,
             icon: "/icon_192.png",
             data: metadata,
-          })
+          }),
         );
       } catch (pushError: any) {
         // If subscription is expired/invalid, remove it
@@ -213,7 +219,10 @@ export async function createNotification({
       }
     }
 
-    return { success: true, notification: JSON.parse(JSON.stringify(notification)) };
+    return {
+      success: true,
+      notification: JSON.parse(JSON.stringify(notification)),
+    };
   } catch (error) {
     console.error("Error creating notification:", error);
     return { success: false, error: "Failed to create notification" };
@@ -237,5 +246,107 @@ export async function sendTestNotification(message: string) {
   } catch (error) {
     console.error("Error sending test notification:", error);
     return { success: false, error: "Failed to send notification" };
+  }
+}
+
+// Get manager user IDs from Clerk (users with isManager public metadata)
+async function getManagerUserIds(): Promise<string[]> {
+  try {
+    const { clerkClient } = await import("@clerk/nextjs/server");
+    const clerk = await clerkClient();
+
+    // Fetch all users (Clerk limits to 500 by default)
+    const users = await clerk.users.getUserList({ limit: 500 });
+
+    // Filter to users with isManager metadata
+    const managerIds = users.data
+      .filter((user) => {
+        const metadata = user.publicMetadata as
+          | { isManager?: boolean }
+          | undefined;
+        return metadata?.isManager === true;
+      })
+      .map((user) => user.id);
+
+    return managerIds;
+  } catch (error) {
+    console.error("Error fetching manager users from Clerk:", error);
+    return [];
+  }
+}
+
+// Create scheduling request notification for all managers
+export async function createSchedulingRequestNotification({
+  schedulingRequestId,
+  clientName,
+  jobTitle,
+  primaryDate,
+  primaryTime,
+}: {
+  schedulingRequestId: string;
+  clientName: string;
+  jobTitle: string;
+  primaryDate: string;
+  primaryTime: string;
+}) {
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      return { success: false, error: "Unauthorized" };
+    }
+
+    await connectMongo();
+
+    // Get manager user IDs from Clerk
+    const managerIds = await getManagerUserIds();
+
+    if (managerIds.length === 0) {
+      console.warn("No managers found to notify for scheduling request");
+      return { success: true };
+    }
+
+    const results = await Promise.all(
+      managerIds.map((userId) =>
+        createNotification({
+          userId,
+          title: `Scheduling Request: ${clientName}`,
+          body: `${jobTitle} - ${primaryDate} at ${primaryTime}`,
+          type: NOTIFICATION_TYPES.SCHEDULING_REQUEST,
+          metadata: {
+            schedulingRequestId,
+          },
+        }),
+      ),
+    );
+
+    return { success: results.every((r) => r.success) };
+  } catch (error) {
+    console.error("Error creating scheduling request notification:", error);
+    return { success: false, error: "Failed to create notification" };
+  }
+}
+
+// Dismiss scheduling request notifications when request is confirmed
+export async function dismissSchedulingRequestNotification(
+  schedulingRequestId: string,
+) {
+  try {
+    await requireAdmin();
+
+    await connectMongo();
+
+    await Notification.deleteMany({
+      type: NOTIFICATION_TYPES.SCHEDULING_REQUEST,
+      "metadata.schedulingRequestId": schedulingRequestId,
+    });
+
+    revalidatePath("/dashboard");
+    return { success: true };
+  } catch (error) {
+    console.error("Error dismissing scheduling request notification:", error);
+    if (error instanceof Error && error.message.startsWith("Unauthorized")) {
+      return { success: false, error: "Unauthorized" };
+    }
+    return { success: false, error: "Failed to dismiss notification" };
   }
 }

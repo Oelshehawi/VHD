@@ -14,7 +14,7 @@ import {
 } from "../ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { InvoiceType } from "../../app/lib/typeDefinitions";
-import { formatDateToString } from "../../app/lib/utils";
+import { formatDateStringUTC } from "../../app/lib/utils";
 
 interface InvoiceSearchSelectProps {
   invoices: InvoiceType[];
@@ -81,7 +81,7 @@ export function InvoiceSearchSelect({
               {invoices.map((invoice) => (
                 <CommandItem
                   key={invoice._id?.toString()}
-                  value={`${invoice.jobTitle} ${formatDateToString(invoice.dateIssued as string | Date)}`}
+                  value={`${invoice.jobTitle} ${formatDateStringUTC(invoice.dateIssued as string | Date)}`}
                   onSelect={() => {
                     const invoiceId = invoice._id?.toString() || "";
                     setValue(invoiceId);
@@ -100,7 +100,7 @@ export function InvoiceSearchSelect({
                   <div className="flex flex-1 items-center justify-between">
                     <span className="font-medium">{invoice.jobTitle}</span>
                     <span className="text-muted-foreground ml-2 text-xs">
-                      {formatDateToString(invoice.dateIssued as string | Date)}
+                      {formatDateStringUTC(invoice.dateIssued as string | Date)}
                     </span>
                   </div>
                 </CommandItem>

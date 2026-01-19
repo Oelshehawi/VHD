@@ -4,6 +4,7 @@ import { ClerkProvider } from "@clerk/nextjs";
 import { Inter } from "next/font/google";
 import { Toaster } from "sonner";
 import ClientPortalFooter from "../../_components/client-portal/layout/ClientPortalFooter";
+import { ThemeProvider } from "../../_components/theme-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -23,18 +24,25 @@ export default async function ClientPortalLayout({
 }) {
   return (
     <ClerkProvider>
-      <html lang="en">
+      <html lang="en" suppressHydrationWarning>
         <body className={inter.className}>
-          <Toaster position="top-center" />
-          <div className="flex min-h-screen flex-col">
-            {/* Main content */}
-            <main className="flex-1 px-4 py-8 md:px-8 lg:px-12 overflow-hidden">
-              {children}
-            </main>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+          >
+            <Toaster position="top-center" />
+            <div className="bg-background flex min-h-screen flex-col">
+              {/* Main content */}
+              <main className="flex-1 overflow-hidden">
+                {children}
+              </main>
 
-            {/* Footer */}
-            <ClientPortalFooter />
-          </div>
+              {/* Footer */}
+              <ClientPortalFooter />
+            </div>
+          </ThemeProvider>
         </body>
       </html>
     </ClerkProvider>

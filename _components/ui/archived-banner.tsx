@@ -2,6 +2,7 @@
 
 import { AlertCircle } from "lucide-react";
 import { Alert, AlertDescription } from "../ui/alert";
+import { formatDateStringUTC } from "../../app/lib/utils";
 
 interface ArchivedBannerProps {
   entity: "client" | "invoice";
@@ -16,12 +17,7 @@ export default function ArchivedBanner({
 }: ArchivedBannerProps) {
   const formatDate = (date: string | Date | undefined) => {
     if (!date) return "";
-    const d = new Date(date);
-    return d.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    return formatDateStringUTC(date);
   };
 
   return (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { PaymentInfo } from "../../app/lib/typeDefinitions";
 import { FaCreditCard, FaStickyNote } from "react-icons/fa";
 import { toast } from "sonner";
@@ -39,7 +39,7 @@ export default function PaymentModal({
     handleSubmit,
     reset,
     setValue,
-    watch,
+    control,
     formState: { errors },
   } = useForm<PaymentInfo>({
     defaultValues: {
@@ -49,7 +49,8 @@ export default function PaymentModal({
     },
   });
 
-  const watchedDatePaid = watch("datePaid");
+  const watchedDatePaid = useWatch({ control, name: "datePaid" });
+  const watchedMethod = useWatch({ control, name: "method" });
 
   const onFormSubmit = (data: PaymentInfo) => {
     if (!data.datePaid) {
@@ -114,7 +115,7 @@ export default function PaymentModal({
               Payment Method <span className="text-destructive">*</span>
             </label>
             <Select
-              value={watch("method")}
+              value={watchedMethod}
               onValueChange={(val) =>
                 setValue("method", val as PaymentInfo["method"], {
                   shouldValidate: true,

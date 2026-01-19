@@ -200,6 +200,7 @@ export const ReportSchema = new Schema<ReportType>({
   },
   ecologyUnit: {
     exists: { type: Boolean, default: false },
+    operational: { type: Boolean },
     filterReplacementNeeded: { type: Boolean, default: false },
     notes: { type: String },
   },
@@ -245,6 +246,13 @@ export const jobsDueSoonSchema = new Schema<DueInvoiceType>({
     required: true,
   },
   callHistory: { type: [CallLogEntrySchema], default: [] },
+  // Client self-scheduling fields
+  schedulingToken: { type: String, index: true },
+  schedulingTokenExpiry: { type: Date },
+  schedulingRequestId: {
+    type: ObjectId,
+    ref: "SchedulingRequest",
+  },
 });
 
 // JobsDueSoon indexes

@@ -76,7 +76,11 @@ function AcceptTokenContent() {
         // If we have clientId but no token, generate a fresh token
         if (clientId && !token) {
           try {
-            const result = await generateFreshClientToken(clientId, accessToken || undefined);
+            if (!accessToken) {
+              throw new Error("Missing access token");
+            }
+
+            const result = await generateFreshClientToken(clientId, accessToken);
             
             if (!result.success || !result.token) {
               throw new Error("Invalid client or unauthorized access");

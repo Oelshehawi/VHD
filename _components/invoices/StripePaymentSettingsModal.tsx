@@ -9,6 +9,7 @@ import {
   FaCreditCard,
   FaUniversity,
 } from "react-icons/fa";
+import { formatDateStringUTC } from "@/app/lib/utils";
 import { StripePaymentSettings } from "../../app/lib/typeDefinitions";
 import {
   configureStripePaymentSettings,
@@ -131,13 +132,21 @@ export default function StripePaymentSettingsModal({
       );
 
       if (result.success) {
+        const updatedSettings = result.settings || newSettings;
+        setSettings(updatedSettings);
         toast.success("Payment settings updated");
-        onSettingsUpdate?.(newSettings);
+        onSettingsUpdate?.(updatedSettings);
+        return { success: true, settings: updatedSettings };
       } else {
         toast.error(result.error || "Failed to update settings");
+        return { success: false, error: result.error };
       }
     } catch (error) {
       toast.error("Failed to update settings");
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
     } finally {
       setIsSaving(false);
     }
@@ -146,6 +155,16 @@ export default function StripePaymentSettingsModal({
   const handleGenerateLink = async () => {
     setIsGenerating(true);
     try {
+      if (!settings.enabled) {
+        const enableResult = await saveSettings({
+          ...settings,
+          enabled: true,
+        });
+        if (!enableResult?.success) {
+          return;
+        }
+      }
+
       const result = await generatePaymentLink(
         invoiceId,
         user?.fullName || user?.id || "unknown",
@@ -155,10 +174,6 @@ export default function StripePaymentSettingsModal({
         setPaymentLink(result.paymentLink || null);
         setLinkExpiresAt(result.expiresAt || null);
         setIsExpired(false);
-        // Also enable Stripe payments if not already
-        if (!settings.enabled) {
-          setSettings((prev) => ({ ...prev, enabled: true }));
-        }
         toast.success("Payment link generated");
       } else {
         toast.error(result.error || "Failed to generate payment link");
@@ -198,11 +213,7 @@ export default function StripePaymentSettingsModal({
   };
 
   const formatDate = (date: Date | string) => {
-    return new Date(date).toLocaleDateString("en-CA", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return formatDateStringUTC(date);
   };
 
   const isPaid = invoiceStatus === "paid";

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useForm, useFieldArray } from "react-hook-form";
+import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import {
   FaPlus,
   FaFileInvoice,
@@ -71,7 +71,6 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
     handleSubmit,
     reset,
     control,
-    watch,
     formState: { errors },
   } = useForm<EstimateFormValues>({
     defaultValues: {
@@ -84,6 +83,9 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
     control,
     name: "items",
   });
+
+  // Watch items for live total calculation
+  const watchedItems = useWatch({ control, name: "items" });
 
   const { isProcessing, debouncedSubmit } = useDebounceSubmit({
     onSubmit: async (data: EstimateFormValues) => {
@@ -148,8 +150,9 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
   });
 
   const calculateTotal = () => {
-    return fields.reduce((total, field, index) => {
-      const price = Number(watch(`items.${index}.price`)) || 0;
+    if (!watchedItems) return 0;
+    return watchedItems.reduce((total, item) => {
+      const price = Number(item?.price) || 0;
       return total + price;
     }, 0);
   };

@@ -9,6 +9,7 @@ import {
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { ScrollArea } from "../ui/scroll-area";
+import { formatDateStringUTC } from "../../app/lib/utils";
 
 interface InvoiceSelectionModalProps {
   invoices: any[];
@@ -30,8 +31,12 @@ const InvoiceSelectionModal = ({
     // Since invoices are already sorted by date (newest first),
     // the first one we encounter for each location will be the most recent
     invoices.forEach((invoice) => {
-      if (!locationMap.has(invoice.location)) {
-        locationMap.set(invoice.location.trim(), invoice);
+      const rawLocation =
+        typeof invoice?.location === "string" ? invoice.location : "";
+      const key = rawLocation.trim() || String(invoice?._id ?? "");
+
+      if (!locationMap.has(key)) {
+        locationMap.set(key, invoice);
       }
     });
 
@@ -55,6 +60,14 @@ const InvoiceSelectionModal = ({
                 <li
                   key={invoice._id}
                   onClick={() => onSelect(invoice)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter" || event.key === " ") {
+                      event.preventDefault();
+                      onSelect(invoice);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={0}
                   className="border-border hover:bg-muted cursor-pointer rounded-md border p-3 transition-colors"
                 >
                   <div className="flex justify-between">
@@ -63,7 +76,7 @@ const InvoiceSelectionModal = ({
                     </span>
                     <span className="text-muted-foreground text-sm">
                       {invoice.dateIssued
-                        ? new Date(invoice.dateIssued).toLocaleDateString()
+                        ? formatDateStringUTC(invoice.dateIssued)
                         : "No date"}
                     </span>
                   </div>

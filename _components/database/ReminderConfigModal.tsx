@@ -157,8 +157,6 @@ const ReminderConfigModal = ({
         return "Every 5 days";
       case "7days":
         return "Every 7 days";
-      case "14days":
-        return "Every 14 days";
       default:
         return "None";
     }
@@ -231,7 +229,6 @@ const ReminderConfigModal = ({
                     <SelectItem value="3days">Every 3 days</SelectItem>
                     <SelectItem value="5days">Every 5 days</SelectItem>
                     <SelectItem value="7days">Every 7 days</SelectItem>
-                    <SelectItem value="14days">Every 14 days</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

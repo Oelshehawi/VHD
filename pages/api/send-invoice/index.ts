@@ -5,7 +5,11 @@ import {
   Client,
   AuditLog,
 } from "../../../models/reactDataSchema";
-import { getEmailForPurpose, getBaseUrl } from "../../../app/lib/utils";
+import {
+  getEmailForPurpose,
+  getBaseUrl,
+  formatDateStringUTC,
+} from "../../../app/lib/utils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -81,17 +85,45 @@ export default async function handler(
         : String(invoiceData.dateIssued);
     const datePart = dateStr.split("T")[0] || dateStr;
     const parts = datePart.split("-");
-    const baseYear = parseInt(parts[0], 10);
-    const baseMonth = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
-    const baseDay = parseInt(parts[2], 10);
+    if (parts.length < 3) {
+      return res.status(400).json({
+        message: "Invalid dateIssued format (expected YYYY-MM-DD)",
+      });
+    }
+    const baseYear = parseInt(parts[0] || "", 10);
+    const baseMonth = parseInt(parts[1] || "", 10) - 1; // JS months are 0-indexed
+    const baseDay = parseInt(parts[2] || "", 10);
+
+    const hasValidParts =
+      Number.isFinite(baseYear) &&
+      Number.isFinite(baseMonth) &&
+      Number.isFinite(baseDay) &&
+      baseMonth >= 0 &&
+      baseMonth <= 11 &&
+      baseDay >= 1 &&
+      baseDay <= 31;
+
+    if (!hasValidParts) {
+      return res.status(400).json({
+        message: "Invalid dateIssued value",
+      });
+    }
 
     // Create date in local timezone
     const issueDate = new Date(baseYear, baseMonth, baseDay);
+    if (
+      Number.isNaN(issueDate.getTime()) ||
+      issueDate.getFullYear() !== baseYear ||
+      issueDate.getMonth() !== baseMonth ||
+      issueDate.getDate() !== baseDay
+    ) {
+      return res.status(400).json({
+        message: "Invalid dateIssued value",
+      });
+    }
     const dueDate = new Date(issueDate);
     dueDate.setDate(dueDate.getDate() + 14);
 
-    // Import and use formatDateStringUTC to avoid timezone shift
-    const { formatDateStringUTC } = require("../../../app/lib/utils");
     const formattedDueDate = formatDateStringUTC(dueDate);
 
     // Prepare invoice data for PDF generation
@@ -164,7 +196,7 @@ export default async function handler(
     const emailResult = await postmarkClient.sendEmailWithTemplate({
       From: "adam@vancouverventcleaning.ca",
       To: clientEmail,
-      TemplateAlias: "invoice-delivery", // New template to be created in Postmark
+      TemplateAlias: "invoice-delivery-1", // New template to be created in Postmark
       TemplateModel: templateModel,
       Attachments: [
         {

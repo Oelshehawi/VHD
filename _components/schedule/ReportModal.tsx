@@ -2,7 +2,7 @@
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
-import { format } from "date-fns";
+import { format, parseISO, subMonths } from "date-fns";
 import { Check, X, Minus, RotateCcw, Loader2 } from "lucide-react";
 import {
   ReportType,
@@ -82,6 +82,7 @@ interface ReportFormData {
   recommendations: string;
   ecologyUnit: {
     exists: boolean;
+    operational?: boolean;
     filterReplacementNeeded: boolean;
     notes: string;
   };
@@ -216,6 +217,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         recommendations: "",
         ecologyUnit: {
           exists: false,
+          operational: undefined,
           filterReplacementNeeded: false,
           notes: "",
         },
@@ -227,6 +229,14 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
     });
 
   const watchedInspectionItems = watch("inspectionItems");
+  const watchedCleaningDetails = watch("cleaningDetails");
+  const selectedCleaningDetails = useMemo(
+    () =>
+      Object.entries(watchedCleaningDetails || {})
+        .filter(([, value]) => value === true)
+        .map(([key]) => key),
+    [watchedCleaningDetails],
+  );
 
   // Load report data into form - defined as useCallback to be used in useEffect
   const loadReportIntoForm = useCallback(
@@ -293,6 +303,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         },
         ecologyUnit: {
           exists: report.ecologyUnit?.exists || false,
+          operational: report.ecologyUnit?.operational,
           filterReplacementNeeded:
             report.ecologyUnit?.filterReplacementNeeded || false,
           notes: report.ecologyUnit?.notes || "",
@@ -710,16 +721,20 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                                   const baseDateStr =
                                     getValues("dateCompleted") ||
                                     format(new Date(), "yyyy-MM-dd");
-                                  const [year, month, day] = baseDateStr
-                                    .split("-")
-                                    .map(Number);
-                                  let targetMonth = month! - months;
-                                  let targetYear = year!;
-                                  while (targetMonth <= 0) {
-                                    targetMonth += 12;
-                                    targetYear -= 1;
-                                  }
-                                  const targetDateStr = `${targetYear}-${String(targetMonth).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+                                  const parsedBase = parseISO(baseDateStr);
+                                  const safeBase = Number.isNaN(
+                                    parsedBase.getTime(),
+                                  )
+                                    ? new Date()
+                                    : parsedBase;
+                                  const targetDate = subMonths(
+                                    safeBase,
+                                    months,
+                                  );
+                                  const targetDateStr = format(
+                                    targetDate,
+                                    "yyyy-MM-dd",
+                                  );
                                   return (
                                     <button
                                       key={months}
@@ -916,11 +931,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                           },
                           { label: "Fan Cleaned", value: "fanCleaned" },
                         ]}
-                        defaultValue={Object.entries(
-                          watch("cleaningDetails") || {},
-                        )
-                          .filter(([, v]) => v === true)
-                          .map(([k]) => k)}
+                        value={selectedCleaningDetails}
                         onValueChange={(values) => {
                           setValue("cleaningDetails", {
                             hoodCleaned: values.includes("hoodCleaned"),

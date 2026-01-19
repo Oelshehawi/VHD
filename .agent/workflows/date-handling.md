@@ -44,7 +44,7 @@ const formatted = date.toLocaleDateString(); // Wrong day possible
 
 ## When Calculating Future Dates
 
-When calculating dates (e.g., reminders), extract year/month/day from the source date string first:
+When calculating dates (e.g., reminders), extract year/month/day from the source date string first. Creating `Date` objects with component arguments is acceptable **only for internal date arithmetic** — never use those `Date` objects for display or to convert/persist values. And **never** use `new Date(dateString)` for display or persistence-sensitive logic.
 
 ```typescript
 const dateStr =
@@ -53,12 +53,34 @@ const dateStr =
     : String(invoice.dateIssued);
 const datePart = dateStr.split("T")[0] || dateStr;
 const parts = datePart.split("-");
-const baseYear = parseInt(parts[0], 10);
-const baseMonth = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
-const baseDay = parseInt(parts[2], 10);
+if (parts.length !== 3) {
+  throw new Error("Invalid date format (expected YYYY-MM-DD)");
+}
 
-// Now use these values to create a Date
+const [yearStr, monthStr, dayStr] = parts;
+const baseYear = Number.parseInt(yearStr || "", 10);
+const baseMonth = Number.parseInt(monthStr || "", 10) - 1; // JS months are 0-indexed
+const baseDay = Number.parseInt(dayStr || "", 10);
+
+const isValidNumber =
+  Number.isFinite(baseYear) && Number.isFinite(baseMonth) && Number.isFinite(baseDay);
+const isValidRange =
+  baseMonth >= 0 && baseMonth <= 11 && baseDay >= 1 && baseDay <= 31;
+
+if (!isValidNumber || !isValidRange) {
+  throw new Error("Malformed date parts; unable to safely parse date");
+}
+
+// Now use these values to create a Date for internal arithmetic only
 const localDate = new Date(baseYear, baseMonth, baseDay);
+if (
+  Number.isNaN(localDate.getTime()) ||
+  localDate.getFullYear() !== baseYear ||
+  localDate.getMonth() !== baseMonth ||
+  localDate.getDate() !== baseDay
+) {
+  throw new Error("Invalid calendar date; refusing to compute with it");
+}
 ```
 
 ## Summary

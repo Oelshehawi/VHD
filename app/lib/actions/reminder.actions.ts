@@ -3,7 +3,12 @@
 import connectMongo from "../connect";
 import { Invoice, Client, AuditLog } from "../../../models/reactDataSchema";
 import { getEmailForPurpose } from "../utils";
-import { formatAmount, formatDateStringUTC, getBaseUrl } from "../utils";
+import {
+  formatAmount,
+  formatDateStringUTC,
+  calculatePaymentDueDate,
+  getBaseUrl,
+} from "../utils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -291,15 +296,9 @@ export async function sendPaymentReminderEmail(
     const issueDateFormatted = formatDateStringUTC(invoice.dateIssued);
     const formattedAmount = formatAmount(totalWithTax).replace("$", "");
 
-    // Calculate due date (14 days from issue date)
-    const issueDate = new Date(invoice.dateIssued);
-    const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + 14);
-    const formattedDueDate = dueDate.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
+    // Calculate due date using UTC-safe utility
+    const dueDate = calculatePaymentDueDate(invoice.dateIssued);
+    const formattedDueDate = formatDateStringUTC(dueDate);
 
     // Check if invoice is overdue
     const now = new Date();
@@ -403,7 +402,7 @@ export async function sendPaymentReminderEmail(
     const emailResult = await postmarkClient.sendEmailWithTemplate({
       From: "adam@vancouverventcleaning.ca",
       To: clientEmail,
-      TemplateAlias: "payment-reminder",
+      TemplateAlias: "payment-reminder-1",
       TemplateModel: templateModel,
       Attachments: [
         {
@@ -421,7 +420,7 @@ export async function sendPaymentReminderEmail(
     const now2 = new Date();
     const reminderEntry = {
       sentAt: now2.toISOString(), // Convert to string for client serialization
-      emailTemplate: "payment-reminder",
+      emailTemplate: "payment-reminder-1",
       success: true,
       sequence: reminderSequence,
       // Explicitly create a plain object without any MongoDB properties
@@ -444,7 +443,7 @@ export async function sendPaymentReminderEmail(
       performedBy,
       details: {
         reminderSequence,
-        emailTemplate: "payment-reminder",
+        emailTemplate: "payment-reminder-1",
         success: true,
       },
       success: true,

@@ -1,5 +1,6 @@
 import { AvailabilityType } from "../typeDefinitions";
 import { formatTimeRange12hr } from "./timeFormatUtils";
+import { formatDateStringUTC } from "../utils";
 
 /**
  * Check if a technician is unavailable on a specific date
@@ -12,6 +13,13 @@ export function isTechnicianUnavailable(
   startTime?: string, // HH:mm format
   endTime?: string,   // HH:mm format
 ): boolean {
+  const toMinutes = (time: string) => {
+    const [hoursPart, minutesPart] = time.split(":");
+    const hours = Number(hoursPart);
+    const minutes = Number(minutesPart ?? 0);
+    return hours * 60 + minutes;
+  };
+
   const dayOfWeek = date.getDay();
   const year = date.getFullYear();
   const month = date.getMonth();
@@ -36,13 +44,20 @@ export function isTechnicianUnavailable(
 
         // If times provided, check time conflict
         if (startTime && endTime) {
-          const [blockStart] = block.startTime.split(":").map(Number);
-          const [blockEnd] = block.endTime.split(":").map(Number);
-          const [reqStart] = startTime.split(":").map(Number);
-          const [reqEnd] = endTime.split(":").map(Number);
+          const blockStart = toMinutes(block.startTime);
+          const blockEnd = toMinutes(block.endTime);
+          const reqStart = toMinutes(startTime);
+          const reqEnd = toMinutes(endTime);
 
           // Check for time overlap
-          if (reqStart && reqEnd && blockStart && blockEnd && reqStart < blockEnd && reqEnd > blockStart) {
+          if (
+            !Number.isNaN(reqStart) &&
+            !Number.isNaN(reqEnd) &&
+            !Number.isNaN(blockStart) &&
+            !Number.isNaN(blockEnd) &&
+            reqStart < blockEnd &&
+            reqEnd > blockStart
+          ) {
             return true;
           }
         } else {
@@ -59,13 +74,20 @@ export function isTechnicianUnavailable(
 
       // If times provided, check time conflict
       if (startTime && endTime) {
-        const [blockStart] = block.startTime.split(":").map(Number);
-        const [blockEnd] = block.endTime.split(":").map(Number);
-        const [reqStart] = startTime.split(":").map(Number);
-        const [reqEnd] = endTime.split(":").map(Number);
+        const blockStart = toMinutes(block.startTime);
+        const blockEnd = toMinutes(block.endTime);
+        const reqStart = toMinutes(startTime);
+        const reqEnd = toMinutes(endTime);
 
         // Check for time overlap
-        if (reqStart && reqEnd && blockStart && blockEnd && reqStart < blockEnd && reqEnd > blockStart) {
+        if (
+          !Number.isNaN(reqStart) &&
+          !Number.isNaN(reqEnd) &&
+          !Number.isNaN(blockStart) &&
+          !Number.isNaN(blockEnd) &&
+          reqStart < blockEnd &&
+          reqEnd > blockStart
+        ) {
           return true;
         }
       } else {
@@ -186,12 +208,7 @@ export function formatAvailability(block: AvailabilityType): string {
   }
 
   if (block.specificDate) {
-    const date = new Date(block.specificDate);
-    const dateStr = date.toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    const dateStr = formatDateStringUTC(block.specificDate);
     if (block.isFullDay) {
       return dateStr;
     }

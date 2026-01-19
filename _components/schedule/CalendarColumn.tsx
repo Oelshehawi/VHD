@@ -13,8 +13,6 @@ import {
 import JobItem from "./JobItem";
 import JobDetailsModal from "./JobDetailsModal";
 import {
-  calculateJobDurationFromPrice,
-  convertMinutesToHours,
   cn,
 } from "../../app/lib/utils";
 import { isTechnicianUnavailable } from "../../app/lib/utils/availabilityUtils";

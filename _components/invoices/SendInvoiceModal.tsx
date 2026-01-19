@@ -117,6 +117,12 @@ export default function SendInvoiceModal({
   // Add recipient
   const handleAddRecipient = () => {
     const email = newRecipient.trim().toLowerCase();
+    const normalizedSelectedEmails = selectedEmails.map((selectedEmail) =>
+      selectedEmail.toLowerCase(),
+    );
+    const normalizedAdditionalRecipients = additionalRecipients.map(
+      (recipient) => recipient.toLowerCase(),
+    );
 
     if (!email) {
       setEmailError("Please enter an email address");
@@ -128,12 +134,12 @@ export default function SendInvoiceModal({
       return;
     }
 
-    if (selectedEmails.includes(email)) {
+    if (normalizedSelectedEmails.includes(email)) {
       setEmailError("This email is already selected");
       return;
     }
 
-    if (additionalRecipients.includes(email)) {
+    if (normalizedAdditionalRecipients.includes(email)) {
       setEmailError("This email has already been added");
       return;
     }

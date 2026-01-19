@@ -450,7 +450,10 @@ const formatted = date.toLocaleDateString(); // Wrong day possible
 ### Available Utility Functions
 
 - `formatDateStringUTC(dateInput)` - Formats date as "January 10, 2026" without timezone conversion
-- `formatDateToString(dateInput)` - Similar formatting, also timezone-safe
+- `formatDateTimeStringUTC(dateInput)` - Formats date with time as "January 10, 2026 at 3:45 PM"
+- `calculatePaymentDueDate(dateIssued)` - Returns a Date object 14 days after the issued date
+
+**ESLint Rule:** The codebase has an ESLint rule that warns against using `toLocaleDateString()`. Use the UTC-safe utilities above instead.
 
 For more details, see the workflow: `.agent/workflows/date-handling.md`
 

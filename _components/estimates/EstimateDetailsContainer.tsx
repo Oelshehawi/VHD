@@ -75,7 +75,7 @@ const EstimateDetailsContainer = ({
   const pdfKey = `${estimate._id}-${estimate.prospectInfo?.businessName}-${estimate.items.length}-${total}`;
   const estimateData: EstimateData = {
     estimateNumber: estimate.estimateNumber,
-    createdDate: new Date(estimate.createdDate).toLocaleDateString(),
+    createdDate: formatDateStringUTC(estimate.createdDate),
     clientName,
     contactPerson: estimate.prospectInfo?.contactPerson,
     email: estimate.prospectInfo?.email,

@@ -12,7 +12,6 @@ import { FaLock } from "react-icons/fa";
 import { Loader2 } from "lucide-react";
 
 interface StripePaymentFormProps {
-  clientSecret: string;
   invoiceTotal: string;
   processingFee: string;
   totalAmount: string;
@@ -63,10 +62,41 @@ export default function StripePaymentForm({
           // ACH payments may be in processing state
           onSuccess();
         } else if (paymentIntent.status === "requires_action") {
-          // Handle 3D Secure or other authentication
-          setErrorMessage("Additional authentication required");
+          if (!paymentIntent.client_secret) {
+            const message = "Payment authentication failed";
+            setErrorMessage(message);
+            onError(message);
+            return;
+          }
+
+          const { error: actionError, paymentIntent: nextIntent } =
+            await stripe.handleNextAction({
+              clientSecret: paymentIntent.client_secret,
+            });
+
+          if (actionError) {
+            const message = actionError.message || "Authentication failed";
+            setErrorMessage(message);
+            onError(message);
+            return;
+          }
+
+          const finalIntent = nextIntent || paymentIntent;
+
+          if (
+            finalIntent.status === "succeeded" ||
+            finalIntent.status === "processing"
+          ) {
+            onSuccess();
+          } else {
+            const message = `Payment status: ${finalIntent.status}`;
+            setErrorMessage(message);
+            onError(message);
+          }
         } else {
-          setErrorMessage(`Payment status: ${paymentIntent.status}`);
+          const message = `Payment status: ${paymentIntent.status}`;
+          setErrorMessage(message);
+          onError(message);
         }
       }
     } catch (err) {

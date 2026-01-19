@@ -6,6 +6,10 @@ import { useState } from "react";
 import JobDetailsModal from "./JobDetailsModal";
 import { Input } from "../ui/input";
 import { Card } from "../ui/card";
+import {
+  formatDateShortMonthUTC,
+  formatTimeUTC,
+} from "@/app/lib/utils";
 
 const JobSearchSelect = ({
   placeholder,
@@ -68,19 +72,14 @@ const JobSearchSelect = ({
             {filteredJobs.map((job: ScheduleType) => {
               const jobDate = new Date(job.startDateTime);
               const isCurrentYear =
-                jobDate.getFullYear() === new Date().getFullYear();
+                jobDate.getUTCFullYear() === new Date().getFullYear();
 
-              const formattedDate = jobDate.toLocaleDateString("en-CA", {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-                year: isCurrentYear ? undefined : "numeric",
+              const formattedDate = formatDateShortMonthUTC(jobDate, {
+                includeWeekday: true,
+                includeYear: !isCurrentYear,
               });
 
-              const formattedTime = jobDate.toLocaleTimeString("en-CA", {
-                hour: "numeric",
-                minute: "numeric",
-              });
+              const formattedTime = formatTimeUTC(jobDate);
 
               return (
                 <li

@@ -319,6 +319,7 @@ export interface ReportType {
   };
   ecologyUnit?: {
     exists: boolean;
+    operational?: boolean;
     filterReplacementNeeded: boolean;
     notes?: string;
   };
@@ -366,6 +367,10 @@ export interface DueInvoiceType {
   emailExists?: boolean;
   notesExists?: boolean;
   callHistory?: CallLogEntry[];
+  // Client self-scheduling fields
+  schedulingToken?: string;
+  schedulingTokenExpiry?: Date | string;
+  schedulingRequestId?: ObjectId | string;
 }
 
 export interface YearlySalesData {
@@ -616,6 +621,7 @@ export const NOTIFICATION_TYPES = {
   INVOICE_OVERDUE: "invoice_overdue",
   SCHEDULE_UPDATE: "schedule_update",
   ESTIMATE_STATUS: "estimate_status",
+  SCHEDULING_REQUEST: "scheduling_request",
   SYSTEM: "system",
 } as const;
 
@@ -648,8 +654,109 @@ export interface NotificationType {
     scheduleId?: string;
     clientId?: string;
     estimateId?: string;
+    schedulingRequestId?: string; // For scheduling request notifications
     link?: string; // Direct link to navigate to
   };
   createdAt?: Date;
   updatedAt?: Date;
+}
+
+// =============================================================================
+// Client Auto-Scheduling Types
+// =============================================================================
+
+// Exact time representation (replaces TimeWindow)
+export interface RequestedTime {
+  hour: number; // 0-23
+  minute: number; // 0-59
+}
+
+export type SchedulingRequestStatus =
+  | "pending"
+  | "confirmed"
+  | "alternatives_sent"
+  | "expired"
+  | "cancelled";
+
+export interface TimeSelection {
+  date: Date | string;
+  requestedTime: RequestedTime; // Exact time requested
+}
+
+export interface SuggestedUsual {
+  dayOfWeek: number; // 0-6 (Sunday-Saturday)
+  wasSelected: boolean;
+}
+
+export interface SchedulingRequestType {
+  _id?: ObjectId | string;
+  clientId: ObjectId | string | ClientType;
+  invoiceId: ObjectId | string | InvoiceType;
+  jobsDueSoonId: ObjectId | string;
+
+  // Client selections
+  primarySelection: TimeSelection;
+  backupSelection: TimeSelection;
+
+  // Confirmation details
+  addressConfirmed: boolean;
+  parkingNotes?: string;
+  accessNotes?: string;
+  specialInstructions?: string;
+  preferredContact: "phone" | "email" | "either" | "other";
+  customContactMethod?: string;
+  onSiteContactName?: string;
+  onSiteContactPhone?: string;
+
+  // "Your usual" tracking
+  suggestedUsual?: SuggestedUsual;
+
+  // Status
+  status: SchedulingRequestStatus;
+  requestedAt: Date | string;
+
+  // Manager review
+  reviewedAt?: Date | string;
+  reviewedBy?: string;
+  reviewNotes?: string;
+
+  // Confirmation
+  confirmedScheduleId?: ObjectId | string;
+  confirmedDate?: Date | string;
+  confirmedTime?: RequestedTime; // Exact confirmed time
+
+  // Alternatives offered
+  alternativesOffered?: TimeSelection[];
+
+  // Notification tracking
+  confirmationEmailSent?: boolean;
+  confirmationEmailSentAt?: Date | string;
+
+  // Timestamps
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+// Day availability for exact time + duration
+export interface DayAvailability {
+  date: string; // YYYY-MM-DD format
+  available: boolean;
+  conflictReason?: string; // e.g., "Fully booked", "Technicians busy"
+}
+
+export interface ClientSchedulingPattern {
+  usualDayOfWeek: number; // 0-6 (Sunday-Saturday)
+  usualTime: RequestedTime; // Exact usual time, e.g., { hour: 9, minute: 0 }
+  confidence: number; // 0-1 based on consistency of past schedules
+}
+
+export interface SchedulingContext {
+  valid: boolean;
+  jobsDueSoon?: DueInvoiceType;
+  client?: ClientType;
+  invoice?: InvoiceType;
+  pattern?: ClientSchedulingPattern;
+  availableDays?: DayAvailability[]; // Days available for the requested time
+  error?: string;
+  existingRequest?: SchedulingRequestType; // Populated when request already submitted
 }

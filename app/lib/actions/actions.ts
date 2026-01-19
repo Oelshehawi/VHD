@@ -224,7 +224,7 @@ export async function updateInvoice(invoiceId: any, formData: any) {
 
       // Use $unset to remove payment-related fields
       await Invoice.findByIdAndUpdate(invoiceId, {
-        ...formData,
+        $set: formData,
         $unset: {
           paymentInfo: 1,
           stripePaymentStatus: 1,

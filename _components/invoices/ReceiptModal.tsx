@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { Input } from "../ui/input";
+import { formatDateStringUTC } from "../../app/lib/utils";
 
 interface ReceiptModalProps {
   isOpen: boolean;
@@ -43,26 +44,9 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
     return `${year}-${month}-${day}`;
   });
 
-  const formatDate = (dateString: string) => {
-    // Parse the date string as local date to avoid timezone issues
-    const parts = dateString.split("-");
-    if (parts.length !== 3) return dateString; // fallback if format is unexpected
-
-    const year = parseInt(parts[0]!, 10);
-    const month = parseInt(parts[1]!, 10);
-    const day = parseInt(parts[2]!, 10);
-
-    const date = new Date(year, month - 1, day); // month is 0-indexed
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
   const completeReceiptData: ReceiptData = {
     ...receiptData,
-    datePaid: formatDate(paymentDate || ""),
+    datePaid: formatDateStringUTC(paymentDate || ""),
     paymentMethod: paymentMethod,
   };
 

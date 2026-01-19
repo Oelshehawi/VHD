@@ -48,11 +48,6 @@ const MONTHS = [
 
 const YEARS = Array.from({ length: 8 }, (_, i) => 2023 + i);
 
-// Helper function to serialize objects
-const serializeData = <T,>(data: T): T => {
-  return JSON.parse(JSON.stringify(data));
-};
-
 const JobsDueContainer = ({
   jobsDueData,
 }: {
@@ -141,15 +136,15 @@ const JobsDueContainer = ({
 
     return {
       totalDue: total,
-      displayInvoices: serializeData(display),
-      scheduledInvoices: serializeData(scheduled),
+      displayInvoices: display,
+      scheduledInvoices: scheduled,
       scheduledCount,
       unscheduledCount,
     };
   }, [jobsDueData, scheduledParam]);
 
   return (
-    <Card className="flex h-full gap-0 max-h-[calc(100vh-120px)] w-full flex-col py-0 shadow-sm">
+    <Card className="flex h-full max-h-[calc(100vh-120px)] w-full flex-col gap-0 py-0 shadow-sm">
       <CardHeader className="bg-muted/40 border-border border-b p-4 pb-4 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

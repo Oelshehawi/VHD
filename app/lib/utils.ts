@@ -7,6 +7,42 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 /**
+ * Global business rule: Number of days after invoice dateIssued when payment is due.
+ * All invoices are due for payment within this many days of being issued.
+ */
+export const PAYMENT_DUE_DAYS = 14;
+
+/**
+ * Calculate the payment due date based on the invoice's dateIssued.
+ * Uses PAYMENT_DUE_DAYS global config to add days to the issued date.
+ * @param dateIssued - The date the invoice was issued (string in YYYY-MM-DD format or Date object)
+ * @returns Date object representing when payment is due
+ */
+export function calculatePaymentDueDate(dateIssued: string | Date): Date {
+  let dateStr: string;
+
+  if (dateIssued instanceof Date) {
+    // Extract date parts without timezone conversion
+    const year = dateIssued.getUTCFullYear();
+    const month = String(dateIssued.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(dateIssued.getUTCDate()).padStart(2, "0");
+    dateStr = `${year}-${month}-${day}`;
+  } else {
+    // Handle string input - extract date part if it's ISO format
+    dateStr = dateIssued.includes("T") ? dateIssued.split("T")[0]! : dateIssued;
+  }
+
+  // Parse date parts manually to avoid timezone issues
+  const parts = dateStr.split("-");
+  const year = parseInt(parts[0] || String(new Date().getFullYear()), 10);
+  const month = parseInt(parts[1] || "1", 10);
+  const day = parseInt(parts[2] || "1", 10);
+
+  // Create UTC date and add PAYMENT_DUE_DAYS
+  return new Date(Date.UTC(year, month - 1, day + PAYMENT_DUE_DAYS));
+}
+
+/**
  * Get the base URL for the application.
  * Priority: NEXT_PUBLIC_APP_URL (production) > NEXT_PUBLIC_VERCEL_URL (preview) > localhost
  */
@@ -37,6 +73,48 @@ export const formatDate = (dateString: any) => {
 
   return `${month}/${day}/${year}`;
 };
+
+const UTC_MONTH_NAMES = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+const UTC_WEEKDAY_NAMES = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
+
+const UTC_WEEKDAY_SHORT_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const UTC_MONTH_SHORT_NAMES = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
 
 /**
  * Format a UTC date string in readable format exactly as stored (no timezone conversion)
@@ -97,23 +175,155 @@ export const formatDateStringUTC = (dateInput: string | Date): string => {
   const month = dateParts[1]!;
   const day = dateParts[2]!;
 
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-
-  const monthName = monthNames[parseInt(month, 10) - 1];
+  const monthName = UTC_MONTH_NAMES[parseInt(month, 10) - 1];
   return `${monthName} ${parseInt(day, 10)}, ${year}`;
+};
+
+const getUtcDateParts = (dateInput: string | Date) => {
+  let dateString: string | undefined;
+
+  if (dateInput instanceof Date) {
+    const year = dateInput.getUTCFullYear();
+    const month = String(dateInput.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(dateInput.getUTCDate()).padStart(2, "0");
+    dateString = `${year}-${month}-${day}`;
+  } else if (typeof dateInput === "string") {
+    if (dateInput.includes(",")) {
+      const datePart = dateInput.split(",")[0] || "";
+      const date = new Date(datePart);
+      if (!isNaN(date.getTime())) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        dateString = `${year}-${month}-${day}`;
+      }
+    } else if (dateInput.includes("T")) {
+      dateString = dateInput.split("T")[0];
+    } else {
+      dateString = dateInput;
+    }
+  } else {
+    return null;
+  }
+
+  if (!dateString) {
+    return null;
+  }
+
+  const dateParts = dateString.split("-");
+  if (dateParts.length !== 3) {
+    return null;
+  }
+
+  const year = parseInt(dateParts[0] || "", 10);
+  const month = parseInt(dateParts[1] || "", 10);
+  const day = parseInt(dateParts[2] || "", 10);
+
+  if (!year || !month || !day) {
+    return null;
+  }
+
+  const weekdayIndex = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+
+  return {
+    year,
+    month,
+    day,
+    weekdayIndex,
+  };
+};
+
+export const formatDateWithWeekdayUTC = (dateInput: string | Date): string => {
+  const parts = getUtcDateParts(dateInput);
+  if (!parts) {
+    return "Invalid Date";
+  }
+
+  const weekday = UTC_WEEKDAY_NAMES[parts.weekdayIndex];
+  const monthName = UTC_MONTH_NAMES[parts.month - 1];
+
+  return `${weekday}, ${monthName} ${parts.day}, ${parts.year}`;
+};
+
+export const formatDateMonthDayUTC = (dateInput: string | Date): string => {
+  const parts = getUtcDateParts(dateInput);
+  if (!parts) {
+    return "Invalid Date";
+  }
+
+  const monthName = UTC_MONTH_NAMES[parts.month - 1];
+  return `${monthName} ${parts.day}`;
+};
+
+export const formatDateShortUTC = (dateInput: string | Date): string => {
+  const parts = getUtcDateParts(dateInput);
+  if (!parts) {
+    return "Invalid Date";
+  }
+
+  const weekday = UTC_WEEKDAY_SHORT_NAMES[parts.weekdayIndex];
+  return `${weekday} ${parts.month}/${parts.day}`;
+};
+
+/**
+ * Format a UTC date with short month name (no timezone conversion)
+ * @param dateInput - Date string in ISO format or Date object
+ * @param options - { includeYear: boolean, includeWeekday: boolean }
+ * @returns Formatted date string (e.g., "Jan 15", "Jan 15, 2024", "Mon, Jan 15")
+ */
+export const formatDateShortMonthUTC = (
+  dateInput: string | Date,
+  options?: { includeYear?: boolean; includeWeekday?: boolean },
+): string => {
+  const parts = getUtcDateParts(dateInput);
+  if (!parts) {
+    return "Invalid Date";
+  }
+
+  const monthName = UTC_MONTH_SHORT_NAMES[parts.month - 1];
+  const weekday = UTC_WEEKDAY_SHORT_NAMES[parts.weekdayIndex];
+
+  let result = "";
+  if (options?.includeWeekday) {
+    result = `${weekday}, ${monthName} ${parts.day}`;
+  } else {
+    result = `${monthName} ${parts.day}`;
+  }
+
+  if (options?.includeYear) {
+    result += `, ${parts.year}`;
+  }
+
+  return result;
+};
+
+/**
+ * Format a UTC time (no timezone conversion)
+ * @param dateInput - Date string in ISO format or Date object
+ * @returns Formatted time string (e.g., "3:45 PM")
+ */
+export const formatTimeUTC = (dateInput: string | Date): string => {
+  let dateObj: Date;
+
+  if (dateInput instanceof Date) {
+    dateObj = dateInput;
+  } else {
+    dateObj = new Date(dateInput);
+  }
+
+  if (isNaN(dateObj.getTime())) {
+    return "Invalid Time";
+  }
+
+  const hours = dateObj.getUTCHours();
+  const minutes = dateObj.getUTCMinutes();
+
+  const isPM = hours >= 12;
+  const displayHours = hours % 12 || 12;
+  const displayMinutes = String(minutes).padStart(2, "0");
+  const ampm = isPM ? "PM" : "AM";
+
+  return `${displayHours}:${displayMinutes} ${ampm}`;
 };
 
 /**
@@ -192,55 +402,6 @@ export const isNumberKey = (evt: any) => {
     return false;
   }
   return true;
-};
-
-export const formatDateToString = (dateInput: string | Date) => {
-  // Handle both string and Date inputs
-  let dateString: string | undefined;
-
-  if (dateInput instanceof Date) {
-    // Convert Date object to YYYY-MM-DD format
-    dateString = dateInput.toISOString().split("T")[0];
-  } else if (typeof dateInput === "string") {
-    // If it's already a string, use it directly or extract date part if it's datetime
-    dateString = dateInput.includes("T") ? dateInput.split("T")[0] : dateInput;
-  } else {
-    // Fallback for invalid input
-    console.warn("formatDateToString received invalid input:", dateInput);
-    return "Invalid Date";
-  }
-
-  const dateParts = dateString!.split("-");
-  if (dateParts.length !== 3) {
-    console.warn(
-      "formatDateToString received invalid date format:",
-      dateString,
-    );
-    return "Invalid Date";
-  }
-
-  const year = dateParts[0]!;
-  const month = dateParts[1]!;
-  const day = dateParts[2]!;
-
-  const monthNames = [
-    "January",
-    "February",
-    "March",
-    "April",
-    "May",
-    "June",
-    "July",
-    "August",
-    "September",
-    "October",
-    "November",
-    "December",
-  ];
-
-  const monthName = monthNames[parseInt(month as string, 10) - 1]; // subtract 1 because array is zero-indexed
-
-  return `${monthName} ${parseInt(day as string, 10)}, ${year}`; // parseInt removes leading zeros from the day
 };
 
 export const isTextKey = (evt: any) => {

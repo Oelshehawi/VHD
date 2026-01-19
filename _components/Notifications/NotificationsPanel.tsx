@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCheck, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -13,10 +14,13 @@ import {
   markAsRead,
   markAllAsRead,
 } from "../../app/lib/actions/notifications.actions";
+import { getSchedulingRequestById } from "../../app/lib/actions/autoScheduling.actions";
 import {
   NotificationType,
   NOTIFICATION_TYPES,
+  SchedulingRequestType,
 } from "../../app/lib/typeDefinitions";
+import SchedulingReviewModal from "../dashboard/SchedulingReviewModal";
 
 interface NotificationsPanelProps {
   onClose: () => void;
@@ -28,6 +32,7 @@ const typeIcons: Record<string, string> = {
   [NOTIFICATION_TYPES.INVOICE_OVERDUE]: "⚠️",
   [NOTIFICATION_TYPES.SCHEDULE_UPDATE]: "🔄",
   [NOTIFICATION_TYPES.ESTIMATE_STATUS]: "📋",
+  [NOTIFICATION_TYPES.SCHEDULING_REQUEST]: "📆",
   [NOTIFICATION_TYPES.SYSTEM]: "🔔",
 };
 
@@ -36,6 +41,11 @@ export default function NotificationsPanel({
 }: NotificationsPanelProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
+
+  // State for scheduling review modal
+  const [selectedSchedulingRequest, setSelectedSchedulingRequest] =
+    useState<SchedulingRequestType | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch notifications with TanStack Query
   const { data: notifications = [], isLoading } = useQuery({
@@ -50,7 +60,6 @@ export default function NotificationsPanel({
   const markAsReadMutation = useMutation({
     mutationFn: (notificationId: string) => markAsRead(notificationId),
     onMutate: async (notificationId) => {
-      // Optimistic update
       await queryClient.cancelQueries({ queryKey: ["notifications"] });
       const previousNotifications = queryClient.getQueryData<
         NotificationType[]
@@ -67,12 +76,10 @@ export default function NotificationsPanel({
       return { previousNotifications };
     },
     onSuccess: () => {
-      // Invalidate both queries to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ["notifications"] });
       queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
     },
     onError: (err, notificationId, context) => {
-      // Rollback on error
       if (context?.previousNotifications) {
         queryClient.setQueryData(
           ["notifications"],
@@ -118,7 +125,26 @@ export default function NotificationsPanel({
       markAsReadMutation.mutate(notification._id);
     }
 
-    // Navigate to related page
+    // Handle scheduling request notifications - open modal directly
+    if (
+      notification.type === NOTIFICATION_TYPES.SCHEDULING_REQUEST &&
+      notification.metadata?.schedulingRequestId
+    ) {
+      try {
+        const result = await getSchedulingRequestById(
+          notification.metadata.schedulingRequestId,
+        );
+        if (result.success && result.request) {
+          setSelectedSchedulingRequest(result.request);
+          setIsModalOpen(true);
+        }
+      } catch (error) {
+        console.error("Failed to load scheduling request:", error);
+      }
+      return;
+    }
+
+    // Navigate to related page for other notification types
     if (notification.metadata?.link) {
       onClose();
       router.push(notification.metadata.link);
@@ -137,107 +163,135 @@ export default function NotificationsPanel({
     }
   };
 
+  const handleModalClose = () => {
+    setIsModalOpen(false);
+    setSelectedSchedulingRequest(null);
+    // Refetch notifications after closing modal (request may have been confirmed)
+    queryClient.invalidateQueries({ queryKey: ["notifications"] });
+    queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
+    queryClient.invalidateQueries({ queryKey: ["schedulingRequests"] });
+  };
+
   const unreadCount = notifications.filter(
     (n: NotificationType) => !n.readAt,
   ).length;
 
   return (
-    <div className="flex flex-col">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border px-4 py-3">
-        <div>
-          <h3 className="font-semibold text-foreground">Notifications</h3>
-          {unreadCount > 0 && (
-            <p className="text-xs text-muted-foreground">{unreadCount} unread</p>
-          )}
-        </div>
-        {unreadCount > 0 && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => markAllAsReadMutation.mutate()}
-            disabled={markAllAsReadMutation.isPending}
-            className="text-xs text-primary hover:text-primary/90"
-          >
-            <CheckCheck className="mr-1 h-3 w-3" />
-            Mark all read
-          </Button>
-        )}
-      </div>
-
-      {/* Notification List */}
-      <ScrollArea className="h-96">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-border border-t-primary" />
-          </div>
-        ) : notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <span className="text-4xl">🔔</span>
-            <p className="mt-2 text-sm">No notifications yet</p>
-          </div>
-        ) : (
+    <>
+      <div className="flex flex-col">
+        {/* Header */}
+        <div className="border-border flex items-center justify-between border-b px-4 py-3">
           <div>
-            {notifications.map(
-              (notification: NotificationType, index: number) => (
-                <div key={notification._id}>
-                  <button
-                    type="button"
-                    onClick={() => handleNotificationClick(notification)}
-                    className={`w-full px-4 py-3 text-left transition-colors hover:bg-muted ${
-                      !notification.readAt ? "bg-primary/10" : ""
-                    }`}
-                  >
-                    <div className="flex gap-3">
-                      <span className="text-lg">
-                        {typeIcons[notification.type] || "🔔"}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-start justify-between gap-2">
-                          <p
-                            className={`text-sm ${
-                              !notification.readAt
-                                ? "font-semibold text-foreground"
-                                : "font-medium text-foreground"
-                            }`}
-                          >
-                            {notification.title}
-                          </p>
-                          {!notification.readAt && (
-                            <Badge
-                              variant="default"
-                              className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary p-0"
-                            />
-                          )}
-                        </div>
-                        <p className="mt-0.5 line-clamp-2 text-sm text-muted-foreground">
-                          {notification.body}
-                        </p>
-                        <div className="mt-1 flex items-center gap-2">
-                          <span className="text-xs text-muted-foreground">
-                            {notification.createdAt
-                              ? formatDistanceToNow(
-                                  new Date(notification.createdAt),
-                                  {
-                                    addSuffix: true,
-                                  },
-                                )
-                              : ""}
-                          </span>
-                          {notification.metadata?.link && (
-                            <ExternalLink className="h-3 w-3 text-muted-foreground" />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </button>
-                  {index < notifications.length - 1 && <Separator />}
-                </div>
-              ),
+            <h3 className="text-foreground font-semibold">Notifications</h3>
+            {unreadCount > 0 && (
+              <p className="text-muted-foreground text-xs">
+                {unreadCount} unread
+              </p>
             )}
           </div>
-        )}
-      </ScrollArea>
-    </div>
+          {unreadCount > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => markAllAsReadMutation.mutate()}
+              disabled={markAllAsReadMutation.isPending}
+              className="text-primary hover:text-primary/90 text-xs"
+            >
+              <CheckCheck className="mr-1 h-3 w-3" />
+              Mark all read
+            </Button>
+          )}
+        </div>
+
+        {/* Notification List */}
+        <ScrollArea className="h-96">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="border-border border-t-primary h-6 w-6 animate-spin rounded-full border-2" />
+            </div>
+          ) : notifications.length === 0 ? (
+            <div className="text-muted-foreground flex flex-col items-center justify-center py-12">
+              <span className="text-4xl">🔔</span>
+              <p className="mt-2 text-sm">No notifications yet</p>
+            </div>
+          ) : (
+            <div>
+              {notifications.map(
+                (notification: NotificationType, index: number) => (
+                  <div key={notification._id}>
+                    <button
+                      type="button"
+                      onClick={() => handleNotificationClick(notification)}
+                      className={`hover:bg-muted w-full px-4 py-3 text-left transition-colors ${
+                        !notification.readAt ? "bg-primary/10" : ""
+                      }`}
+                    >
+                      <div className="flex gap-3">
+                        <span className="text-lg">
+                          {typeIcons[notification.type] || "🔔"}
+                        </span>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p
+                              className={`text-sm ${
+                                !notification.readAt
+                                  ? "text-foreground font-semibold"
+                                  : "text-foreground font-medium"
+                              }`}
+                            >
+                              {notification.title}
+                            </p>
+                            {!notification.readAt && (
+                              <Badge
+                                variant="default"
+                                className="bg-primary mt-1.5 h-2 w-2 shrink-0 rounded-full p-0"
+                              />
+                            )}
+                          </div>
+                          <p className="text-muted-foreground mt-0.5 line-clamp-2 text-sm">
+                            {notification.body}
+                          </p>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-muted-foreground text-xs">
+                              {notification.createdAt
+                                ? formatDistanceToNow(
+                                    new Date(notification.createdAt),
+                                    {
+                                      addSuffix: true,
+                                    },
+                                  )
+                                : ""}
+                            </span>
+                            {notification.metadata?.link && (
+                              <ExternalLink className="text-muted-foreground h-3 w-3" />
+                            )}
+                            {notification.type ===
+                              NOTIFICATION_TYPES.SCHEDULING_REQUEST && (
+                              <span className="text-primary text-xs font-medium">
+                                Click to review
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                    {index < notifications.length - 1 && <Separator />}
+                  </div>
+                ),
+              )}
+            </div>
+          )}
+        </ScrollArea>
+      </div>
+
+      {/* Scheduling Review Modal */}
+      {selectedSchedulingRequest && (
+        <SchedulingReviewModal
+          request={selectedSchedulingRequest}
+          onClose={handleModalClose}
+          isOpen={isModalOpen}
+        />
+      )}
+    </>
   );
 }

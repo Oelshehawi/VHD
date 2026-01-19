@@ -16,7 +16,8 @@ import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
 import {
   calculateGST,
   calculateSubtotal,
-  formatDateToString,
+  calculatePaymentDueDate,
+  formatDateStringUTC,
   getEmailForPurpose,
 } from "../../app/lib/utils";
 import { sendInvoiceDeliveryEmail } from "../../app/lib/actions/email.actions";
@@ -116,15 +117,9 @@ const InvoiceDetailsContainer = ({
   const clientEmail =
     getEmailForPurpose(client, "primary") || client.email || "";
 
-  // Calculate due date (14 days from issue date)
-  const issueDate = new Date(invoice.dateIssued);
-  const dueDate = new Date(issueDate);
-  dueDate.setDate(dueDate.getDate() + 14);
-  const formattedDueDate = dueDate.toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // Calculate due date using UTC-safe utility
+  const dueDate = calculatePaymentDueDate(invoice.dateIssued as string | Date);
+  const formattedDueDate = formatDateStringUTC(dueDate);
 
   // Prepare invoice data for PDF generation
   const invoiceData = useMemo(() => {
@@ -186,7 +181,7 @@ const InvoiceDetailsContainer = ({
 
     return {
       invoiceId: invoice.invoiceId,
-      dateIssued: formatDateToString(invoice.dateIssued as string),
+      dateIssued: formatDateStringUTC(invoice.dateIssued as string),
       dateDue: formattedDueDate,
       jobTitle: invoice.jobTitle,
       location: invoice.location,
@@ -507,7 +502,7 @@ const InvoiceDetailsContainer = ({
                               );
                               const gstCAD = calculateGST(subtotalCAD);
                               const totalCAD = subtotalCAD + gstCAD;
-                              const totalUSD = totalCAD / exchangeRate;
+                              const totalUSD = totalCAD * exchangeRate;
                               return (
                                 <div className="bg-primary/10 mt-2 rounded p-2 text-xs">
                                   <div className="text-primary font-medium">
