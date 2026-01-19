@@ -40,6 +40,7 @@ const NotificationSchema = new Schema<NotificationType>(
       scheduleId: { type: String },
       clientId: { type: String },
       estimateId: { type: String },
+      schedulingRequestId: { type: String },
       link: { type: String }, // Optional direct link to navigate to
     },
   },

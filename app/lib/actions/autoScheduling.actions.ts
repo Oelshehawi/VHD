@@ -20,9 +20,10 @@ import {
   InvoiceType,
   ScheduleType,
   DayAvailability,
+  NOTIFICATION_TYPES,
 } from "../typeDefinitions";
 import {
-  createSchedulingRequestNotification,
+  createNotification,
   dismissSchedulingRequestNotification,
 } from "./notifications.actions";
 
@@ -35,6 +36,32 @@ const DEFAULT_CONTACT_MODEL = {
   phone_number: CONTACT_PHONE,
   contact_email: CONTACT_EMAIL,
 };
+
+// Get manager user IDs from Clerk (users with isManager public metadata)
+async function getManagerUserIds(): Promise<string[]> {
+  try {
+    const { clerkClient } = await import("@clerk/nextjs/server");
+    const clerk = await clerkClient();
+
+    // Fetch all users (Clerk limits to 500 by default)
+    const users = await clerk.users.getUserList({ limit: 500 });
+
+    // Filter to users with isManager metadata
+    const managerIds = users.data
+      .filter((user) => {
+        const metadata = user.publicMetadata as
+          | { isManager?: boolean }
+          | undefined;
+        return metadata?.isManager === true;
+      })
+      .map((user) => user.id);
+
+    return managerIds;
+  } catch (error) {
+    console.error("Error fetching manager users from Clerk:", error);
+    return [];
+  }
+}
 
 // Helper to format time for emails
 const formatTimeForEmail = (time: RequestedTime): string => {
@@ -67,6 +94,7 @@ async function sendSchedulingConfirmationEmail(params: {
       To: clientEmail,
       TemplateAlias: "scheduling-confirmation",
       TemplateModel: {
+        header_title: "Your Service is Scheduled",
         client_name: params.client.clientName,
         job_title: params.invoice.jobTitle,
         location: params.invoice.location,
@@ -114,6 +142,7 @@ async function sendSchedulingAlternativesEmail(params: {
       To: clientEmail,
       TemplateAlias: "scheduling-alternatives",
       TemplateModel: {
+        header_title: "Alternative Service Times",
         client_name: params.client.clientName,
         job_title: params.invoice.jobTitle,
         location: params.invoice.location,
@@ -400,17 +429,36 @@ export async function createSchedulingRequest(data: {
         return `${displayHour}:${time.minute.toString().padStart(2, "0")} ${period}`;
       };
 
-      await createSchedulingRequestNotification({
-        schedulingRequestId: request._id.toString(),
-        clientName: client.clientName,
-        jobTitle: invoice.jobTitle,
-        primaryDate: formatDateStringUTC(data.primarySelection.date),
-        primaryTime: formatTime(data.primarySelection.requestedTime),
-      });
+      const managerIds = await getManagerUserIds();
+
+      if (managerIds.length === 0) {
+        console.warn("No managers found to notify for scheduling request");
+      } else {
+        const results = await Promise.all(
+          managerIds.map((userId) =>
+            createNotification({
+              userId,
+              title: `Scheduling Request: ${client.clientName}`,
+              body: `${invoice.jobTitle} - ${formatDateStringUTC(
+                data.primarySelection.date,
+              )} at ${formatTime(data.primarySelection.requestedTime)}`,
+              type: NOTIFICATION_TYPES.SCHEDULING_REQUEST,
+              metadata: {
+                schedulingRequestId: request._id.toString(),
+              },
+            }),
+          ),
+        );
+
+        if (!results.every((result) => result.success)) {
+          console.warn(
+            "One or more scheduling request notifications failed to send",
+          );
+        }
+      }
     }
 
-    revalidatePath("/dashboard");
-    revalidatePath("/client-portal/dashboard");
+    // revalidatePath("/dashboard");
 
     return { success: true, requestId: request._id.toString() };
   } catch (error) {
@@ -456,7 +504,7 @@ export async function getSchedulingRequestById(requestId: string): Promise<{
     await requireAdmin();
     const request = await SchedulingRequest.findById(requestId)
       .populate("clientId", "clientName email emails phoneNumber")
-      .populate("invoiceId", "jobTitle location estimatedHours")
+      .populate("invoiceId", "jobTitle location estimatedHours items notes")
       .lean();
 
     if (!request) {
@@ -694,5 +742,238 @@ export async function refreshAvailabilityAction(
   } catch (error) {
     console.error("Error refreshing availability:", error);
     return [];
+  }
+}
+
+/**
+ * Get all invoices for a client to allow selection when confirming scheduling.
+ * Returns invoices sorted by most recent first.
+ */
+export async function getClientInvoicesForScheduling(
+  clientId: string,
+): Promise<{
+  success: boolean;
+  invoices?: InvoiceType[];
+  error?: string;
+}> {
+  await connectMongo();
+
+  try {
+    await requireAdmin();
+
+    const invoices = await Invoice.find({ clientId })
+      .sort({ dateIssued: -1 })
+      .lean();
+
+    return {
+      success: true,
+      invoices: JSON.parse(JSON.stringify(invoices)),
+    };
+  } catch (error) {
+    console.error("Error getting client invoices:", error);
+    return { success: false, error: "Failed to get client invoices" };
+  }
+}
+
+interface InvoiceItemData {
+  description: string;
+  details?: string;
+  price: number;
+}
+
+interface ConfirmWithInvoiceData {
+  requestId: string;
+  confirmedDate: string;
+  confirmedTime: RequestedTime;
+  sourceInvoiceId: string; // The invoice to copy data from
+  internalNotes?: string;
+}
+
+/**
+ * Confirm a scheduling request and create a NEW invoice + schedule.
+ * Copies ALL data from the selected source invoice including paymentReminders.
+ */
+export async function confirmSchedulingWithInvoice(
+  data: ConfirmWithInvoiceData,
+): Promise<{
+  success: boolean;
+  invoiceId?: string;
+  scheduleId?: string;
+  error?: string;
+}> {
+  await connectMongo();
+
+  try {
+    const { userId } = await requireAdmin();
+
+    // Fetch the source invoice to copy from
+    const sourceInvoice = (await Invoice.findById(
+      data.sourceInvoiceId,
+    ).lean()) as InvoiceType | null;
+    if (!sourceInvoice) {
+      return { success: false, error: "Source invoice not found" };
+    }
+
+    const request = (await SchedulingRequest.findById(data.requestId)
+      .populate("clientId", "clientName email emails phoneNumber prefix _id")
+      .lean()) as SchedulingRequestType | null;
+
+    if (!request) {
+      return { success: false, error: "Scheduling request not found" };
+    }
+
+    if (request.status !== "pending") {
+      return { success: false, error: "Request has already been processed" };
+    }
+
+    const client = request.clientId as ClientType;
+
+    // Generate the next invoice number using the client's prefix
+    const clientPrefix = (client as any).prefix;
+    const latestInvoice = await Invoice.findOne({ clientId: client._id })
+      .sort({ invoiceId: -1 })
+      .lean();
+
+    let newInvoiceNumber = 0;
+    if (latestInvoice) {
+      const latestId = (latestInvoice as any).invoiceId as string;
+      const parts = latestId.split("-");
+      const lastPart = parts[parts.length - 1];
+      if (lastPart) {
+        const latestNumber = parseInt(lastPart, 10);
+        if (!isNaN(latestNumber)) {
+          newInvoiceNumber = latestNumber + 1;
+        }
+      }
+    }
+
+    const invoiceIdStr = `${clientPrefix}-${newInvoiceNumber.toString().padStart(3, "0")}`;
+
+    // Calculate dates - dateIssued is today, dateDue based on frequency
+    const dateIssued = new Date(data.confirmedDate);
+    const frequency = sourceInvoice.frequency || 2;
+    const monthsToAdd = Math.floor(12 / frequency);
+    const dateDue = new Date(dateIssued);
+    dateDue.setUTCMonth(dateDue.getUTCMonth() + monthsToAdd);
+
+    // Create the new invoice copying ALL fields from source
+    const newInvoice = new Invoice({
+      invoiceId: invoiceIdStr,
+      clientId: client._id,
+      // Copy all job-related fields from source
+      jobTitle: sourceInvoice.jobTitle,
+      location: sourceInvoice.location,
+      items:
+        sourceInvoice.items?.map((item) => ({
+          description: item.description,
+          details: item.details || "",
+          price: item.price,
+        })) || [],
+      notes: sourceInvoice.notes || "",
+      frequency: frequency,
+      // Set new dates
+      dateIssued,
+      dateDue,
+      status: "pending",
+      // Copy payment reminder settings from source
+      paymentReminders: sourceInvoice.paymentReminders
+        ? {
+            enabled: sourceInvoice.paymentReminders.enabled,
+            frequency: sourceInvoice.paymentReminders.frequency,
+            // Reset timing-related fields for the new invoice
+            nextReminderDate: undefined,
+            lastReminderSent: undefined,
+            reminderHistory: [],
+          }
+        : undefined,
+    } as any);
+
+    await newInvoice.save();
+
+    // Calculate start time based on confirmed time
+    const startDateTime = new Date(data.confirmedDate);
+    startDateTime.setUTCHours(
+      data.confirmedTime.hour,
+      data.confirmedTime.minute,
+      0,
+      0,
+    );
+
+    // Create the schedule linked to the new invoice
+    const scheduleData = {
+      invoiceRef: newInvoice._id,
+      jobTitle: sourceInvoice.jobTitle,
+      location: sourceInvoice.location,
+      startDateTime,
+      assignedTechnicians: [],
+      confirmed: false,
+      hours: (sourceInvoice as any)?.estimatedHours || 4,
+      onSiteContact: {
+        name: request.onSiteContactName || "",
+        phone: request.onSiteContactPhone || "",
+      },
+      accessInstructions: [
+        request.parkingNotes,
+        request.accessNotes,
+        request.specialInstructions,
+      ]
+        .filter(Boolean)
+        .join("\n"),
+    };
+
+    const schedule = new Schedule(scheduleData as unknown as ScheduleType);
+    await schedule.save();
+
+    // Send confirmation email
+    const emailResult = await sendSchedulingConfirmationEmail({
+      client,
+      invoice: sourceInvoice,
+      confirmedDate: startDateTime,
+      confirmedTime: data.confirmedTime,
+    });
+
+    if (!emailResult.success) {
+      console.warn(
+        "Scheduling confirmation email failed:",
+        emailResult.error || "Unknown error",
+      );
+    }
+
+    // Update the scheduling request
+    await SchedulingRequest.findByIdAndUpdate(data.requestId, {
+      status: "confirmed",
+      reviewedAt: new Date(),
+      reviewedBy: userId,
+      reviewNotes: data.internalNotes,
+      confirmedScheduleId: schedule._id,
+      confirmedDate: new Date(data.confirmedDate),
+      confirmedTime: data.confirmedTime,
+      confirmationEmailSent: emailResult.success,
+      confirmationEmailSentAt: emailResult.success ? new Date() : undefined,
+    });
+
+    // Update JobsDueSoon to mark as scheduled
+    await JobsDueSoon.findByIdAndUpdate(request.jobsDueSoonId, {
+      isScheduled: true,
+    });
+
+    // Dismiss the scheduling request notification
+    await dismissSchedulingRequestNotification(data.requestId);
+
+    revalidatePath("/dashboard");
+    revalidatePath("/schedule");
+    revalidatePath("/invoices");
+
+    return {
+      success: true,
+      invoiceId: invoiceIdStr,
+      scheduleId: schedule._id.toString(),
+    };
+  } catch (error) {
+    console.error("Error confirming scheduling with invoice:", error);
+    return {
+      success: false,
+      error: "Failed to confirm scheduling request",
+    };
   }
 }

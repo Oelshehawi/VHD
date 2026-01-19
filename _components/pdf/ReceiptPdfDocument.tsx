@@ -339,6 +339,9 @@ const ReceiptPdfDocument: React.FC<ReceiptPdfDocumentProps> = ({
       <View style={styles.footer}>
         <Text style={styles.footerText}>604-273-8717</Text>
         <Text style={styles.footerText}>
+          A division of VHD Enterprises Inc
+        </Text>
+        <Text style={styles.footerText}>
           <Link
             src="http://vancouverventcleaning.ca"
             style={{ color: "white", textDecoration: "none" }}

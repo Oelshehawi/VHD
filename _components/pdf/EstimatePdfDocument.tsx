@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Font,
   Image,
+  Link,
 } from "@react-pdf/renderer";
 
 const styles = StyleSheet.create({
@@ -271,7 +272,7 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
       fontFamily: "Helvetica",
       fontSize: s(10),
       paddingTop: s(20),
-      paddingBottom: s(28),
+      paddingBottom: s(60),
       paddingHorizontal: s(26),
       color: "#000",
       position: "relative",
@@ -491,6 +492,23 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
       marginLeft: s(11),
       fontStyle: "italic",
     },
+    footer: {
+      position: "absolute",
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: s(35),
+      backgroundColor: "#003e29",
+      flexDirection: "row",
+      justifyContent: "space-between",
+      alignItems: "center",
+      paddingHorizontal: s(20),
+    },
+    footerText: {
+      fontSize: s(10),
+      color: "white",
+      fontFamily: "Helvetica",
+    },
   });
   return (
     <Document>
@@ -612,7 +630,7 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
               </Text>
             </View>
             <View style={scaledStyles.gstRow}>
-              <Text style={scaledStyles.gstNumber}>GST# 814301065</Text>
+              <Text style={scaledStyles.gstNumber}>GST# 71219 0768 RT0001</Text>
               <Text style={scaledStyles.gstRate}>GST (5%):</Text>
               <Text style={scaledStyles.gstAmount}>
                 ${estimateData.gst.toFixed(2)}
@@ -685,6 +703,26 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
           <Text style={scaledStyles.termsText}>
             {estimateData.terms ||
               "Payment is due upon completion of service. Prices subject to change if scope of work differs from initial assessment."}
+          </Text>
+        </View>
+
+        {/* Footer */}
+        <View style={scaledStyles.footer}>
+          <Text style={scaledStyles.footerText}>604-273-8717</Text>
+          <Text style={scaledStyles.footerText}>
+            A division of VHD Enterprises Inc
+          </Text>
+          <Text style={scaledStyles.footerText}>
+            <Link
+              src="http://vancouverventcleaning.ca"
+              style={{
+                color: "white",
+                textDecoration: "none",
+                fontFamily: "Helvetica",
+              }}
+            >
+              vancouverventcleaning.ca
+            </Link>
           </Text>
         </View>
       </Page>

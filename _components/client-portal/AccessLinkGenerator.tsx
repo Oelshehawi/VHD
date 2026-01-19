@@ -3,6 +3,10 @@
 import { useState } from "react";
 import { generateClientAccessLink } from "../../app/lib/clerkClientPortal";
 import { toast } from "sonner";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { Copy } from "lucide-react";
 
 interface AccessLinkGeneratorProps {
   clientId: string;
@@ -56,57 +60,54 @@ export default function AccessLinkGenerator({
 
   return (
     <div className="space-y-4">
-      <div>
-        <label
-          htmlFor="clientEmail"
-          className="mb-1 block text-sm font-medium text-gray-700"
-        >
-          Client Email Address
-        </label>
+      <div className="space-y-2">
+        <Label htmlFor="clientEmail">Client Email Address</Label>
         <div className="flex gap-2">
-          <input
+          <Input
             id="clientEmail"
             type="email"
             value={clientEmail}
             onChange={(e) => setClientEmail(e.target.value)}
             placeholder="client@example.com"
-            className="block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-blue-500 focus:outline-none focus:ring-blue-500 sm:text-sm"
             disabled={isGenerating}
+            className="flex-1"
           />
-          <button
+          <Button
             onClick={handleGenerateAccess}
             disabled={isGenerating || !clientEmail}
-            className="rounded bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 disabled:opacity-50"
           >
             {isGenerating ? "Generating..." : "Generate Access Link"}
-          </button>
+          </Button>
         </div>
-        {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
+        {error && (
+          <p className="text-sm text-destructive">{error}</p>
+        )}
       </div>
 
       {accessLink && (
-        <div className="mt-4 rounded bg-gray-100 p-3">
-          <p className="mb-2 font-medium">Client Access Link:</p>
+        <div className="space-y-3 rounded-lg border bg-muted/50 p-4">
+          <Label className="text-base font-medium">Client Access Link</Label>
           <div className="flex items-center gap-2">
-            <input
+            <Input
               type="text"
               readOnly
               value={accessLink}
-              className="flex-1 rounded border p-2 text-sm"
+              className="flex-1 font-mono text-sm"
             />
-            <button
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => {
                 navigator.clipboard.writeText(accessLink);
                 toast.success("Link copied to clipboard!");
               }}
-              className="rounded bg-gray-200 px-3 py-1 text-gray-800 hover:bg-gray-300"
             >
-              Copy
-            </button>
+              <Copy className="h-4 w-4" />
+            </Button>
           </div>
-          <p className="mt-2 text-sm text-gray-600">
+          <p className="text-muted-foreground text-sm">
             This link is reusable - clients can use it multiple times and bookmark it. Share it with your client at{" "}
-            {clientEmail}.
+            <span className="font-medium">{clientEmail}</span>.
           </p>
         </div>
       )}

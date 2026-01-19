@@ -8,6 +8,7 @@ const isPublicRoute = createRouteMatcher([
   "/images/(.*)",
   "/favicon.ico",
   "/client-portal/auth-error",
+  "/client-portal/schedule(.*)",
   "/api/geocode",
   "/api/optimization",
   "/api/distance-matrix",

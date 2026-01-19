@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { CheckCheck, ExternalLink } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -20,10 +19,10 @@ import {
   NOTIFICATION_TYPES,
   SchedulingRequestType,
 } from "../../app/lib/typeDefinitions";
-import SchedulingReviewModal from "../dashboard/SchedulingReviewModal";
 
 interface NotificationsPanelProps {
   onClose: () => void;
+  onOpenSchedulingModal?: (request: SchedulingRequestType) => void;
 }
 
 const typeIcons: Record<string, string> = {
@@ -38,14 +37,10 @@ const typeIcons: Record<string, string> = {
 
 export default function NotificationsPanel({
   onClose,
+  onOpenSchedulingModal,
 }: NotificationsPanelProps) {
   const router = useRouter();
   const queryClient = useQueryClient();
-
-  // State for scheduling review modal
-  const [selectedSchedulingRequest, setSelectedSchedulingRequest] =
-    useState<SchedulingRequestType | null>(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
 
   // Fetch notifications with TanStack Query
   const { data: notifications = [], isLoading } = useQuery({
@@ -120,28 +115,29 @@ export default function NotificationsPanel({
   });
 
   const handleNotificationClick = async (notification: NotificationType) => {
-    // Mark as read if not already
-    if (!notification.readAt && notification._id) {
-      markAsReadMutation.mutate(notification._id);
-    }
-
     // Handle scheduling request notifications - open modal directly
+    // Don't mark as read - these stay unread until the request is confirmed
     if (
       notification.type === NOTIFICATION_TYPES.SCHEDULING_REQUEST &&
-      notification.metadata?.schedulingRequestId
+      notification.metadata?.schedulingRequestId &&
+      onOpenSchedulingModal
     ) {
       try {
         const result = await getSchedulingRequestById(
           notification.metadata.schedulingRequestId,
         );
         if (result.success && result.request) {
-          setSelectedSchedulingRequest(result.request);
-          setIsModalOpen(true);
+          onOpenSchedulingModal(result.request);
         }
       } catch (error) {
         console.error("Failed to load scheduling request:", error);
       }
       return;
+    }
+
+    // Mark as read for non-scheduling-request notifications
+    if (!notification.readAt && notification._id) {
+      markAsReadMutation.mutate(notification._id);
     }
 
     // Navigate to related page for other notification types
@@ -161,15 +157,6 @@ export default function NotificationsPanel({
       onClose();
       router.push(`/estimates/${notification.metadata.estimateId}`);
     }
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-    setSelectedSchedulingRequest(null);
-    // Refetch notifications after closing modal (request may have been confirmed)
-    queryClient.invalidateQueries({ queryKey: ["notifications"] });
-    queryClient.invalidateQueries({ queryKey: ["unreadCount"] });
-    queryClient.invalidateQueries({ queryKey: ["schedulingRequests"] });
   };
 
   const unreadCount = notifications.filter(
@@ -283,15 +270,6 @@ export default function NotificationsPanel({
           )}
         </ScrollArea>
       </div>
-
-      {/* Scheduling Review Modal */}
-      {selectedSchedulingRequest && (
-        <SchedulingReviewModal
-          request={selectedSchedulingRequest}
-          onClose={handleModalClose}
-          isOpen={isModalOpen}
-        />
-      )}
     </>
   );
 }

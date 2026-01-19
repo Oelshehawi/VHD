@@ -473,7 +473,7 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
               </View>
             </View>
             <View style={scaledStyles.totalRow}>
-              <Text style={scaledStyles.totalLabel}>GST# 814301065 (5%):</Text>
+              <Text style={scaledStyles.totalLabel}>GST# 71219 0768 RT0001 (5%):</Text>
               <View style={{ flexDirection: "row", alignItems: "baseline" }}>
                 <Text style={scaledStyles.totalValue}>
                   ${invoiceData.gst.toFixed(2)} {invoiceData.currency || "CAD"}
@@ -556,6 +556,9 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
         {/* Footer */}
         <View style={scaledStyles.footer}>
           <Text style={scaledStyles.footerText}>604-273-8717</Text>
+          <Text style={scaledStyles.footerText}>
+            A division of VHD Enterprises Inc
+          </Text>
           <Text style={scaledStyles.footerText}>
             <Link
               src="http://vancouverventcleaning.ca"

@@ -75,17 +75,20 @@ function AcceptTokenContent() {
         
         // If we have clientId but no token, generate a fresh token
         if (clientId && !token) {
-          try {
-            if (!accessToken) {
-              throw new Error("Missing access token");
-            }
+          // Legacy link detection - clientId without accessToken
+          if (!accessToken) {
+            setError("This access link uses an older format that is no longer supported. Please email us to request a new portal access link.");
+            setLoading(false);
+            return;
+          }
 
+          try {
             const result = await generateFreshClientToken(clientId, accessToken);
-            
+
             if (!result.success || !result.token) {
               throw new Error("Invalid client or unauthorized access");
             }
-            
+
             authToken = result.token;
           } catch (tokenError) {
             console.error("Error generating token for clientId:", tokenError);
