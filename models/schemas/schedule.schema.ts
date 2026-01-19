@@ -99,18 +99,13 @@ export const ReportSchema = new Schema<ReportType>({
     flattopGrills: Boolean,
   },
   inspectionItems: {
+    // Current UI items (9) - keep defaults
     filtersInPlace: {
       type: String,
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
     },
-    filtersListed: { type: String, enum: ["Yes", "No", "N/A"], default: "N/A" },
     filtersNeedCleaningMoreOften: {
-      type: String,
-      enum: ["Yes", "No", "N/A"],
-      default: "N/A",
-    },
-    filtersNeedReplacement: {
       type: String,
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
@@ -130,11 +125,6 @@ export const ReportSchema = new Schema<ReportType>({
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
     },
-    fanTipAccessible: {
-      type: String,
-      enum: ["Yes", "No", "N/A"],
-      default: "N/A",
-    },
     safeAccessToFan: {
       type: String,
       enum: ["Yes", "No", "N/A"],
@@ -145,33 +135,7 @@ export const ReportSchema = new Schema<ReportType>({
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
     },
-    ecologyUnitRequiresCleaning: {
-      type: String,
-      enum: ["Yes", "No", "N/A"],
-      default: "N/A",
-    },
-    ecologyUnitCost: { type: String },
-    ecologyUnitDeficiencies: {
-      type: String,
-      enum: ["Yes", "No", "N/A"],
-      default: "N/A",
-    },
     greaseBuildupOnRoof: {
-      type: String,
-      enum: ["Yes", "No", "N/A"],
-      default: "N/A",
-    },
-    systemCleanedPerCode: {
-      type: String,
-      enum: ["Yes", "No", "N/A"],
-      default: "N/A",
-    },
-    systemInteriorAccessible: {
-      type: String,
-      enum: ["Yes", "No", "N/A"],
-      default: "N/A",
-    },
-    multiStoreyVerticalCleaning: {
       type: String,
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
@@ -181,8 +145,15 @@ export const ReportSchema = new Schema<ReportType>({
       enum: ["Yes", "No", "N/A"],
       default: "N/A",
     },
-    accessPanelsRequired: { type: String },
-    accessPanelCost: { type: String },
+    // Legacy items (no defaults - only stored if explicitly set for backwards compatibility)
+    filtersListed: { type: String, enum: ["Yes", "No", "N/A"] },
+    filtersNeedReplacement: { type: String, enum: ["Yes", "No", "N/A"] },
+    fanTipAccessible: { type: String, enum: ["Yes", "No", "N/A"] },
+    ecologyUnitRequiresCleaning: { type: String, enum: ["Yes", "No", "N/A"] },
+    ecologyUnitDeficiencies: { type: String, enum: ["Yes", "No", "N/A"] },
+    systemCleanedPerCode: { type: String, enum: ["Yes", "No", "N/A"] },
+    systemInteriorAccessible: { type: String, enum: ["Yes", "No", "N/A"] },
+    multiStoreyVerticalCleaning: { type: String, enum: ["Yes", "No", "N/A"] },
   },
   recommendedCleaningFrequency: { type: Number },
   comments: { type: String },

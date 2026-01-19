@@ -93,7 +93,12 @@ export default function StripePaymentSettingsModal({
   const handleToggleEnabled = async (checked: boolean) => {
     const newSettings = { ...settings, enabled: checked };
     setSettings(newSettings);
-    await saveSettings(newSettings);
+    const saveResult = await saveSettings(newSettings);
+
+    // Auto-generate payment link when enabling online payments (if no valid link exists)
+    if (checked && saveResult?.success && (!paymentLink || isExpired)) {
+      await handleGenerateLink();
+    }
   };
 
   const handleToggleCreditCard = async (checked: boolean) => {

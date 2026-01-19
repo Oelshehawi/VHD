@@ -407,10 +407,15 @@ export async function processStripePaymentSuccess(
 
     // Update invoice status and payment info
     // stripe-pad = Canadian Pre-authorized Debit
+    // Store datePaid as UTC midnight to prevent timezone-related date shifts
+    const now = new Date();
+    const datePaidUTC = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
     invoice.status = "paid";
     invoice.paymentInfo = {
       method: paymentMethodType === "card" ? "stripe-card" : "stripe-pad",
-      datePaid: new Date(),
+      datePaid: datePaidUTC,
       notes: `Stripe Payment - Intent: ${paymentIntentId}`,
       stripePaymentIntentId: paymentIntentId,
       stripeChargeId: chargeId,

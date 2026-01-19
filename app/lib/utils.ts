@@ -596,7 +596,8 @@ export function getEmailForPurpose(
 }
 
 /**
- * Calculate payment duration from invoice issued date to payment date (UTC-based)
+ * Calculate payment timing relative to due date (UTC-based)
+ * Compares payment date to due date (issued + PAYMENT_DUE_DAYS) not issued date
  * Fixes timezone issues by working with UTC date components only
  */
 export function calculatePaymentDuration(
@@ -643,20 +644,28 @@ export function calculatePaymentDuration(
   const paidDay = parseInt(paidParts[2]!, 10);
 
   // Create UTC dates at midnight to avoid timezone issues
-  const issuedUTC = new Date(Date.UTC(issuedYear, issuedMonth - 1, issuedDay));
+  // Calculate due date as issued date + PAYMENT_DUE_DAYS
+  const dueDateUTC = new Date(
+    Date.UTC(issuedYear, issuedMonth - 1, issuedDay + PAYMENT_DUE_DAYS),
+  );
   const paidUTC = new Date(Date.UTC(paidYear, paidMonth - 1, paidDay));
 
-  const diffTime = paidUTC.getTime() - issuedUTC.getTime();
+  // Calculate difference from due date (not issued date)
+  const diffTime = paidUTC.getTime() - dueDateUTC.getTime();
   const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-  if (diffDays === 0) return { text: "Paid same day", days: 0 };
-  if (diffDays === 1) return { text: "Paid next day", days: 1 };
-  if (diffDays < 0)
+  if (diffDays === 0) return { text: "Paid on time", days: 0 };
+  if (diffDays < 0) {
+    const daysEarly = Math.abs(diffDays);
     return {
-      text: `Paid ${Math.abs(diffDays)} days early`,
+      text: `Paid ${daysEarly} day${daysEarly === 1 ? "" : "s"} early`,
       days: diffDays,
     };
-  return { text: `Paid after ${diffDays} days`, days: diffDays };
+  }
+  return {
+    text: `Paid ${diffDays} day${diffDays === 1 ? "" : "s"} late`,
+    days: diffDays,
+  };
 }
 
 /**

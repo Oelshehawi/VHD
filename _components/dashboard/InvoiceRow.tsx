@@ -18,6 +18,7 @@ import { CALL_OUTCOME_LABELS } from "../../app/lib/callLogConstants";
 import CallLogModal from "../database/CallLogModal";
 import CallHistoryModal from "../database/CallHistoryModal";
 import SchedulingLinkDialog from "./SchedulingLinkDialog";
+import SendCleaningReminderDialog from "./SendCleaningReminderDialog";
 
 import { TableRow, TableCell } from "../ui/table";
 import { Button } from "../ui/button";
@@ -35,6 +36,7 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
   const [callLogOpen, setCallLogOpen] = useState(false);
   const [callHistoryOpen, setCallHistoryOpen] = useState(false);
   const [schedulingLinkOpen, setSchedulingLinkOpen] = useState(false);
+  const [sendEmailOpen, setSendEmailOpen] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isMarkingScheduled, setIsMarkingScheduled] = useState(false);
 
@@ -66,7 +68,18 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
             {invoiceData.notesExists && (
               <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500 shadow-sm"></div>
             )}
-            <span className="truncate font-medium">{invoiceData.jobTitle}</span>
+            <span
+              className={`truncate font-medium ${
+                invoiceData.emailSent
+                  ? "text-green-600 dark:text-green-500"
+                  : ""
+              }`}
+            >
+              {invoiceData.jobTitle}
+            </span>
+            {invoiceData.emailSent && (
+              <FaEnvelope className="h-3 w-3 shrink-0 text-green-500" />
+            )}
           </div>
           {lastCall && (
             <div className="flex items-center gap-2 text-xs">
@@ -174,37 +187,18 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              disabled={
-                isSendingEmail ||
-                invoiceData.emailSent ||
-                !invoiceData.emailExists
-              }
-              onClick={async (e) => {
-                e.preventDefault();
-                if (
-                  isSendingEmail ||
-                  invoiceData.emailSent ||
-                  !invoiceData.emailExists
-                ) {
+              disabled={isSendingEmail || !invoiceData.emailExists}
+              onClick={() => {
+                if (isSendingEmail || !invoiceData.emailExists) {
                   return;
                 }
-
-                try {
-                  setIsSendingEmail(true);
-                  await sendCleaningReminderEmail(invoiceData);
-                  toast.success("Reminder email sent successfully");
-                } catch (error) {
-                  console.error("Error sending email:", error);
-                  toast.error("Failed to send reminder email");
-                } finally {
-                  setIsSendingEmail(false);
-                }
+                setSendEmailOpen(true);
               }}
               className={
-                invoiceData.emailSent
-                  ? "cursor-default text-green-600 focus:text-green-600"
-                  : !invoiceData.emailExists
-                    ? "text-muted-foreground cursor-not-allowed opacity-50"
+                !invoiceData.emailExists
+                  ? "text-muted-foreground cursor-not-allowed opacity-50"
+                  : invoiceData.emailSent
+                    ? "text-green-600 focus:text-green-600"
                     : ""
               }
             >
@@ -260,6 +254,25 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
           onClose={() => setSchedulingLinkOpen(false)}
         />
       )}
+      <SendCleaningReminderDialog
+        isOpen={sendEmailOpen}
+        onClose={() => setSendEmailOpen(false)}
+        onSend={async (includeSchedulingLink) => {
+          try {
+            setIsSendingEmail(true);
+            await sendCleaningReminderEmail(invoiceData, includeSchedulingLink);
+            toast.success("Reminder email sent successfully");
+          } catch (error) {
+            console.error("Error sending email:", error);
+            toast.error("Failed to send reminder email");
+          } finally {
+            setIsSendingEmail(false);
+          }
+        }}
+        jobTitle={invoiceData.jobTitle}
+        isSending={isSendingEmail}
+        emailAlreadySent={invoiceData.emailSent}
+      />
     </TableRow>
   );
 };

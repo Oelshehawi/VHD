@@ -14,7 +14,7 @@ import DeleteModal from "../DeleteModal";
 import EditJobModal from "./EditJobModal";
 import ReportModal from "./ReportModal";
 import EstimatePhotosTab from "./EstimatePhotosTab";
-import GeneratePDF, { type PDFData } from "../pdf/GeneratePDF";
+import LazyPDFButton, { type PDFData } from "../pdf/LazyPDFButton";
 import MediaDisplay from "../invoices/MediaDisplay";
 import {
   X,
@@ -654,12 +654,13 @@ export default function JobDetailsModal({
                     </Button>
 
                     <div className="flex items-center justify-between gap-2">
-                      <GeneratePDF
+                      <LazyPDFButton
                         pdfData={createReportPDFData(existingReportData)}
                         fileName={`Report - ${job.jobTitle}.pdf`}
                         buttonText="Download Report PDF"
                         className="flex-1"
                         showScaleSelector
+                        iconType="download"
                       />
 
                       {canManage && (

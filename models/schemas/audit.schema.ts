@@ -36,6 +36,7 @@ export const AuditLogSchema = new Schema<AuditLogEntry>({
       "schedule_updated",
       "stripe_payment_settings_configured",
       "stripe_payment_link_generated",
+      "stripe_payment_link_revoked",
       "stripe_payment_initiated",
       "stripe_payment_succeeded",
       "stripe_payment_failed",

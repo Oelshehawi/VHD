@@ -275,26 +275,22 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
           <Text style={styles.sectionTitle}>Report Information</Text>
           <View style={styles.infoRow}>
             <Text style={styles.infoItem}>
-              <Text style={styles.boldText}>Report ID:</Text>{" "}
-              {String(report._id)}
-            </Text>
-            <Text style={styles.infoItem}>
               <Text style={styles.boldText}>Date Completed:</Text>{" "}
               {formatDate(report.dateCompleted)}
             </Text>
-          </View>
-          <View style={styles.infoRow}>
             <Text style={styles.infoItem}>
               <Text style={styles.boldText}>Technician:</Text>{" "}
               {technician.fullName}
             </Text>
-            {report.lastServiceDate && (
+          </View>
+          {report.lastServiceDate && (
+            <View style={styles.infoRow}>
               <Text style={styles.infoItem}>
                 <Text style={styles.boldText}>Last Service Date:</Text>{" "}
                 {formatDate(report.lastServiceDate)}
               </Text>
-            )}
-          </View>
+            </View>
+          )}
           {(report.jobTitle || report.location) && (
             <View style={styles.infoRow}>
               {report.jobTitle && (
@@ -398,14 +394,11 @@ const ReportPdfDocument: React.FC<ReportPdfDocumentProps> = ({
           {report.ecologyUnit?.exists && (
             <View style={styles.columnSection}>
               <Text style={styles.sectionTitle}>Ecology Unit</Text>
-              <Text style={styles.infoItem}>
-                Operational:{" "}
-                {report.ecologyUnit?.operational === undefined
-                  ? "Unknown"
-                  : report.ecologyUnit?.operational
-                    ? "Yes"
-                    : "No"}
-              </Text>
+              {report.ecologyUnit?.operational !== undefined && (
+                <Text style={styles.infoItem}>
+                  Operational: {report.ecologyUnit?.operational ? "Yes" : "No"}
+                </Text>
+              )}
               <Text style={styles.infoItem}>
                 Filter Replacement Needed:{" "}
                 {report.ecologyUnit?.filterReplacementNeeded ? "Yes" : "No"}

@@ -419,8 +419,6 @@ export async function sendPaymentReminderEmail(
         : false,
     };
 
-    // Debug log to verify template data
-    console.log("Payment Reminder Template Model:", templateModel);
 
     const emailResult = await postmarkClient.sendEmailWithTemplate({
       From: "adam@vancouverventcleaning.ca",

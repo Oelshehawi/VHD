@@ -575,10 +575,10 @@ export const createOrUpdateReport = async (reportData: ReportType) => {
         JSON.stringify(reportData.accessPanels, null, 2),
       );
 
-      // Update existing report
+      // Update existing report - use $set to completely replace fields (prevents old data from persisting)
       existingReport = await Report.findByIdAndUpdate(
         existingReport._id,
-        reportData,
+        { $set: reportData },
         { new: true },
       );
 

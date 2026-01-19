@@ -193,7 +193,13 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
             : schedule.invoiceRef.toString(),
         jobTitle: schedule.jobTitle || "",
         location: schedule.location || "",
-        dateCompleted: new Date().toISOString().split("T")[0],
+        dateCompleted: (() => {
+          const now = new Date();
+          const year = now.getFullYear();
+          const month = String(now.getMonth() + 1).padStart(2, "0");
+          const day = String(now.getDate()).padStart(2, "0");
+          return `${year}-${month}-${day}`;
+        })(),
         technicianId: defaultTechnicianId,
         lastServiceDate: "",
         fuelType: "",
@@ -279,11 +285,14 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         jobTitle: schedule.jobTitle || "",
         location: schedule.location || "",
         dateCompleted: report.dateCompleted
-          ? new Date(report.dateCompleted).toISOString().split("T")[0]
-          : new Date().toISOString().split("T")[0],
+          ? String(report.dateCompleted).split("T")[0]
+          : (() => {
+              const now = new Date();
+              return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+            })(),
         technicianId: report.technicianId || defaultTechnicianId,
         lastServiceDate: report.lastServiceDate
-          ? new Date(report.lastServiceDate).toISOString().split("T")[0]
+          ? String(report.lastServiceDate).split("T")[0]
           : "",
         fuelType: report.fuelType || "",
         cookingVolume: report.cookingVolume || "",
@@ -412,16 +421,23 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         cookingEquipmentObject[item] = true;
       });
 
+      // Parse date strings as UTC to prevent timezone shifts
+      // data.dateCompleted is "YYYY-MM-DD" format from date input
+      const parseAsUTC = (dateStr: string): string => {
+        const [year, month, day] = dateStr.split("-").map(Number);
+        return new Date(Date.UTC(year!, month! - 1, day!)).toISOString();
+      };
+
       const apiData = {
         _id: existingReportId,
         scheduleId: data.scheduleId,
         invoiceId: data.invoiceId,
         jobTitle: data.jobTitle,
         location: data.location,
-        dateCompleted: new Date(data.dateCompleted).toISOString(),
+        dateCompleted: parseAsUTC(data.dateCompleted),
         technicianId: data.technicianId,
         lastServiceDate: data.lastServiceDate
-          ? new Date(data.lastServiceDate).toISOString()
+          ? parseAsUTC(data.lastServiceDate)
           : undefined,
         fuelType: data.fuelType || undefined,
         cookingVolume: data.cookingVolume || undefined,
@@ -683,7 +699,14 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                           render={({ field }) => (
                             <DatePicker
                               date={
-                                field.value ? new Date(field.value) : undefined
+                                field.value
+                                  ? (() => {
+                                      const [y, m, d] = field.value
+                                        .split("-")
+                                        .map(Number);
+                                      return new Date(y!, m! - 1, d!);
+                                    })()
+                                  : undefined
                               }
                               onSelect={(date) =>
                                 field.onChange(
@@ -705,7 +728,12 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                               <DatePicker
                                 date={
                                   field.value
-                                    ? new Date(field.value)
+                                    ? (() => {
+                                        const [y, m, d] = field.value
+                                          .split("-")
+                                          .map(Number);
+                                        return new Date(y!, m! - 1, d!);
+                                      })()
                                     : undefined
                                 }
                                 onSelect={(date) =>

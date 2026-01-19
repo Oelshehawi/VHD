@@ -26,10 +26,12 @@ import { clerkClient } from "@clerk/nextjs/server";
 /**
  * Send a cleaning reminder email using Postmark
  * @param dueInvoiceData Information about the due invoice
+ * @param includeSchedulingLink Whether to include the scheduling link (default: true)
  * @returns Object with status and message
  */
 export async function sendCleaningReminderEmail(
   dueInvoiceData: DueInvoiceType,
+  includeSchedulingLink: boolean = true,
 ) {
   await connectMongo();
 
@@ -57,19 +59,21 @@ export async function sendCleaningReminderEmail(
     // Format the due date using UTC-safe utility
     const formattedDate = formatDateStringUTC(invoice.dateDue);
 
-    // Find JobsDueSoon to generate scheduling link
-    const jobsDueSoon = await JobsDueSoon.findOne({ invoiceId: invoiceId });
+    // Find JobsDueSoon to generate scheduling link (only if requested)
     let hasSchedulingLink: any = false;
 
-    if (jobsDueSoon) {
-      // Generate scheduling token and link
-      const schedulingToken = await generateSchedulingToken(
-        jobsDueSoon._id.toString(),
-      );
-      const schedulingLink = `${getBaseUrl()}/client-portal/schedule?token=${schedulingToken}`;
-      hasSchedulingLink = {
-        scheduling_link: schedulingLink,
-      };
+    if (includeSchedulingLink) {
+      const jobsDueSoon = await JobsDueSoon.findOne({ invoiceId: invoiceId });
+      if (jobsDueSoon) {
+        // Generate scheduling token and link
+        const schedulingToken = await generateSchedulingToken(
+          jobsDueSoon._id.toString(),
+        );
+        const schedulingLink = `${getBaseUrl()}/client-portal/schedule?token=${schedulingToken}`;
+        hasSchedulingLink = {
+          scheduling_link: schedulingLink,
+        };
+      }
     }
 
     // Send email using Postmark
@@ -253,11 +257,13 @@ export async function sendInvoiceDeliveryEmail(
         hasOnlinePaymentBlock = {
           payment_link_url: paymentLinkUrl,
         };
-
       }
     }
 
-    console.log("Online payment block included:", Boolean(hasOnlinePaymentBlock));
+    console.log(
+      "Online payment block included:",
+      Boolean(hasOnlinePaymentBlock),
+    );
 
     // Prepare template model
     const templateModel: Record<string, any> = {
