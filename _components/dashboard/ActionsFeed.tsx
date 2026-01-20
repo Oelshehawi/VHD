@@ -36,6 +36,7 @@ import { Calendar } from "../ui/calendar";
 import { Badge } from "../ui/badge";
 import { ScrollArea } from "../ui/scroll-area";
 import { Avatar, AvatarFallback } from "../ui/avatar";
+import ActionFilterPills from "./ActionFilterPills";
 
 interface ActionsFeedProps {
   searchParams: DashboardSearchParams;
@@ -688,9 +689,21 @@ export default function ActionsFeed({
   const [selectedCategory, setSelectedCategory] =
     useState<string>(initialCategory);
 
+  // Parse pill filters from URL
+  const initialPills = useMemo(() => {
+    const pills = searchParams.actionsPills;
+    return pills ? pills.split(",").filter(Boolean) : [];
+  }, [searchParams.actionsPills]);
+
+  const [selectedPills, setSelectedPills] = useState<string[]>(initialPills);
+
   useEffect(() => {
     setSelectedCategory(initialCategory);
   }, [initialCategory]);
+
+  useEffect(() => {
+    setSelectedPills(initialPills);
+  }, [initialPills]);
 
   // Update URL with debounced search query
   const updateSearchQuery = useDebouncedCallback((query: string) => {
@@ -727,12 +740,47 @@ export default function ActionsFeed({
     } else {
       params.delete("actionsCategory");
     }
+    // Clear pills when category changes
+    params.delete("actionsPills");
+    setSelectedPills([]);
     router.replace(`${pathname}?${params.toString()}`);
   };
 
-  // Client-side filtering by category
+  const handlePillToggle = (pillValues: string[]) => {
+    const params = new URLSearchParams(window.location.search);
+    let newPills: string[];
+
+    // Check if any of the pill values are already selected
+    const isSelected = pillValues.some((v) => selectedPills.includes(v));
+
+    if (isSelected) {
+      // Remove all pill values from selection
+      newPills = selectedPills.filter((p) => !pillValues.includes(p));
+    } else {
+      // Add all pill values to selection
+      newPills = [...selectedPills, ...pillValues];
+    }
+
+    setSelectedPills(newPills);
+    if (newPills.length > 0) {
+      params.set("actionsPills", newPills.join(","));
+    } else {
+      params.delete("actionsPills");
+    }
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  const handleClearPills = () => {
+    setSelectedPills([]);
+    const params = new URLSearchParams(window.location.search);
+    params.delete("actionsPills");
+    router.replace(`${pathname}?${params.toString()}`);
+  };
+
+  // Client-side filtering by category and pills
   const filteredActions = useMemo(() => {
     return recentActions.filter((action: DisplayAction) => {
+      // First filter by category
       if (selectedCategory !== "all") {
         if (
           selectedCategory === "invoices" &&
@@ -779,9 +827,15 @@ export default function ActionsFeed({
         )
           return false;
       }
+
+      // Then filter by selected pills (if any)
+      if (selectedPills.length > 0) {
+        return selectedPills.includes(action.action);
+      }
+
       return true;
     });
-  }, [recentActions, selectedCategory]);
+  }, [recentActions, selectedCategory, selectedPills]);
 
   return (
     <Card className="flex h-full max-h-[calc(100vh-120px)] min-h-0 flex-col gap-0 overflow-hidden py-0 shadow-sm">
@@ -859,6 +913,14 @@ export default function ActionsFeed({
             </div>
           </div>
         </div>
+
+        {/* Filter Pills */}
+        <ActionFilterPills
+          selectedCategory={selectedCategory}
+          selectedPills={selectedPills}
+          onPillToggle={handlePillToggle}
+          onClearAll={handleClearPills}
+        />
 
         {/* Search Bar */}
         <div className="relative min-w-0 flex-1">

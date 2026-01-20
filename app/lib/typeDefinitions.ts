@@ -410,6 +410,7 @@ export interface DashboardSearchParams {
   actionsDateTo?: string;
   actionsSearch?: string;
   actionsCategory?: string;
+  actionsPills?: string; // Comma-separated filter pill values
   [key: string]: string | undefined;
 }
 
