@@ -105,7 +105,7 @@ function ShimmerBlock({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-md bg-muted/60",
+        "bg-muted/60 relative overflow-hidden rounded-md",
         className,
       )}
       aria-hidden="true"
@@ -125,17 +125,32 @@ function ShimmerBlock({
   );
 }
 
+// Module-level flag to track if header animation has already played
+// This prevents re-animation when transitioning from skeleton to loaded content
+let headerHasAnimated = false;
+
 function PaymentPageHeader({ reduceMotion }: { reduceMotion: boolean }) {
+  // Skip animation if it has already played (e.g., during skeleton phase)
+  const skipAnimation = headerHasAnimated;
+
+  // Mark animation as played after the first render
+  if (!headerHasAnimated) {
+    headerHasAnimated = true;
+  }
+
   return (
     <motion.header
       className="bg-darkGreen relative z-10 border-b border-white/10"
-      initial={{ opacity: 0, y: reduceMotion ? 0 : -8 }}
+      initial={skipAnimation ? false : { opacity: 0, y: reduceMotion ? 0 : -8 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: reduceMotion ? 0 : 0.3, ease: "easeOut" }}
+      transition={{
+        duration: reduceMotion || skipAnimation ? 0 : 0.3,
+        ease: "easeOut",
+      }}
     >
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4">
         <div className="flex min-w-0 items-center gap-3">
-          <div className="bg-white/10 ring-white/20 flex h-9 w-9 items-center justify-center rounded-full ring-1">
+          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-white/10 ring-1 ring-white/20">
             <Image
               src="/images/logo.png"
               alt=""
@@ -146,12 +161,10 @@ function PaymentPageHeader({ reduceMotion }: { reduceMotion: boolean }) {
             />
           </div>
           <div className="min-w-0">
-            <p className="text-balance text-sm font-semibold text-white">
+            <p className="text-sm font-semibold text-balance text-white">
               Vancouver Hood Doctors
             </p>
-            <p className="text-xs text-emerald-100/80">
-              Secure Payment Portal
-            </p>
+            <p className="text-xs text-emerald-100/80">Secure Payment Portal</p>
           </div>
         </div>
         <div className="hidden items-center gap-2 text-xs text-emerald-100/90 md:flex">
@@ -182,7 +195,7 @@ function PaymentPageShell({
     <div className="relative min-h-screen bg-gray-50">
       <a
         href="#payment-main"
-        className="sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:left-4 focus-visible:top-4 focus-visible:z-50 focus-visible:rounded-md focus-visible:bg-white focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:font-semibold focus-visible:text-darkGreen focus-visible:shadow"
+        className="focus-visible:text-darkGreen sr-only focus-visible:not-sr-only focus-visible:absolute focus-visible:top-4 focus-visible:left-4 focus-visible:z-50 focus-visible:rounded-md focus-visible:bg-white focus-visible:px-3 focus-visible:py-2 focus-visible:text-sm focus-visible:font-semibold focus-visible:shadow"
       >
         Skip to main content
       </a>
@@ -221,33 +234,54 @@ function PaymentPageSkeleton({ reduceMotion }: { reduceMotion: boolean }) {
       <p className="sr-only" role="status" aria-live="polite">
         Loading payment details…
       </p>
-      <div
-        className="grid gap-6 lg:grid-cols-2 lg:gap-10"
-        aria-hidden="true"
-      >
+      <div className="grid gap-6 lg:grid-cols-2 lg:gap-10" aria-hidden="true">
         <div className="space-y-6">
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <ShimmerBlock className="h-5 w-28 rounded-full" reduceMotion={reduceMotion} />
-                <ShimmerBlock className="h-5 w-32 rounded-full" reduceMotion={reduceMotion} />
+                <ShimmerBlock
+                  className="h-5 w-28 rounded-full"
+                  reduceMotion={reduceMotion}
+                />
+                <ShimmerBlock
+                  className="h-5 w-32 rounded-full"
+                  reduceMotion={reduceMotion}
+                />
               </div>
             </CardHeader>
             <CardContent>
-              <ShimmerBlock className="mb-2 h-3 w-32" reduceMotion={reduceMotion} />
-              <ShimmerBlock className="mb-4 h-5 w-48" reduceMotion={reduceMotion} />
+              <ShimmerBlock
+                className="mb-2 h-3 w-32"
+                reduceMotion={reduceMotion}
+              />
+              <ShimmerBlock
+                className="mb-4 h-5 w-48"
+                reduceMotion={reduceMotion}
+              />
               <Separator className="my-4" />
               <div className="space-y-2">
                 {Array.from({ length: 2 }).map((_, index) => (
                   <div key={index} className="flex justify-between">
-                    <ShimmerBlock className="h-3 w-20" reduceMotion={reduceMotion} />
-                    <ShimmerBlock className="h-3 w-16" reduceMotion={reduceMotion} />
+                    <ShimmerBlock
+                      className="h-3 w-20"
+                      reduceMotion={reduceMotion}
+                    />
+                    <ShimmerBlock
+                      className="h-3 w-16"
+                      reduceMotion={reduceMotion}
+                    />
                   </div>
                 ))}
                 <Separator className="my-2" />
                 <div className="flex justify-between">
-                  <ShimmerBlock className="h-5 w-24" reduceMotion={reduceMotion} />
-                  <ShimmerBlock className="h-5 w-24" reduceMotion={reduceMotion} />
+                  <ShimmerBlock
+                    className="h-5 w-24"
+                    reduceMotion={reduceMotion}
+                  />
+                  <ShimmerBlock
+                    className="h-5 w-24"
+                    reduceMotion={reduceMotion}
+                  />
                 </div>
               </div>
             </CardContent>
@@ -256,15 +290,30 @@ function PaymentPageSkeleton({ reduceMotion }: { reduceMotion: boolean }) {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center gap-2">
-                <ShimmerBlock className="h-4 w-4 rounded-full" reduceMotion={reduceMotion} />
-                <ShimmerBlock className="h-4 w-28" reduceMotion={reduceMotion} />
+                <ShimmerBlock
+                  className="h-4 w-4 rounded-full"
+                  reduceMotion={reduceMotion}
+                />
+                <ShimmerBlock
+                  className="h-4 w-28"
+                  reduceMotion={reduceMotion}
+                />
               </div>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
-                <ShimmerBlock className="h-12 w-full rounded-lg" reduceMotion={reduceMotion} />
-                <ShimmerBlock className="h-12 w-full rounded-lg" reduceMotion={reduceMotion} />
-                <ShimmerBlock className="h-10 w-full rounded-lg" reduceMotion={reduceMotion} />
+                <ShimmerBlock
+                  className="h-12 w-full rounded-lg"
+                  reduceMotion={reduceMotion}
+                />
+                <ShimmerBlock
+                  className="h-12 w-full rounded-lg"
+                  reduceMotion={reduceMotion}
+                />
+                <ShimmerBlock
+                  className="h-10 w-full rounded-lg"
+                  reduceMotion={reduceMotion}
+                />
               </div>
             </CardContent>
           </Card>
@@ -274,8 +323,14 @@ function PaymentPageSkeleton({ reduceMotion }: { reduceMotion: boolean }) {
           <Card>
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <ShimmerBlock className="h-4 w-32" reduceMotion={reduceMotion} />
-                <ShimmerBlock className="h-8 w-28 rounded-full" reduceMotion={reduceMotion} />
+                <ShimmerBlock
+                  className="h-4 w-32"
+                  reduceMotion={reduceMotion}
+                />
+                <ShimmerBlock
+                  className="h-8 w-28 rounded-full"
+                  reduceMotion={reduceMotion}
+                />
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -284,15 +339,27 @@ function PaymentPageSkeleton({ reduceMotion }: { reduceMotion: boolean }) {
               <ShimmerBlock className="h-4 w-24" reduceMotion={reduceMotion} />
               <ShimmerBlock className="h-5 w-52" reduceMotion={reduceMotion} />
               <div className="grid grid-cols-2 gap-4">
-                <ShimmerBlock className="h-10 w-full" reduceMotion={reduceMotion} />
-                <ShimmerBlock className="h-10 w-full" reduceMotion={reduceMotion} />
+                <ShimmerBlock
+                  className="h-10 w-full"
+                  reduceMotion={reduceMotion}
+                />
+                <ShimmerBlock
+                  className="h-10 w-full"
+                  reduceMotion={reduceMotion}
+                />
               </div>
               <Separator />
               <div className="space-y-2">
                 {Array.from({ length: 3 }).map((_, index) => (
                   <div key={index} className="flex justify-between">
-                    <ShimmerBlock className="h-3 w-24" reduceMotion={reduceMotion} />
-                    <ShimmerBlock className="h-3 w-16" reduceMotion={reduceMotion} />
+                    <ShimmerBlock
+                      className="h-3 w-24"
+                      reduceMotion={reduceMotion}
+                    />
+                    <ShimmerBlock
+                      className="h-3 w-16"
+                      reduceMotion={reduceMotion}
+                    />
                   </div>
                 ))}
               </div>
@@ -301,9 +368,18 @@ function PaymentPageSkeleton({ reduceMotion }: { reduceMotion: boolean }) {
 
           <Card>
             <CardContent className="space-y-2 pt-6">
-              <ShimmerBlock className="mx-auto h-3 w-48" reduceMotion={reduceMotion} />
-              <ShimmerBlock className="mx-auto h-4 w-40" reduceMotion={reduceMotion} />
-              <ShimmerBlock className="mx-auto h-3 w-24" reduceMotion={reduceMotion} />
+              <ShimmerBlock
+                className="mx-auto h-3 w-48"
+                reduceMotion={reduceMotion}
+              />
+              <ShimmerBlock
+                className="mx-auto h-4 w-40"
+                reduceMotion={reduceMotion}
+              />
+              <ShimmerBlock
+                className="mx-auto h-3 w-24"
+                reduceMotion={reduceMotion}
+              />
             </CardContent>
           </Card>
         </div>
@@ -416,17 +492,16 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
   });
 
   // Create payment intent mutation
-  const { mutate: createIntent, isPending: isCreatingIntent } =
-    useMutation({
-      mutationFn: (method: "card" | "bank") => createPaymentIntent(token, method),
-      onSuccess: (result) => {
-        setClientSecret(result.clientSecret);
-        setPaymentError(null);
-      },
-      onError: (err: Error) => {
-        setPaymentError(err.message || "Failed to initialize payment");
-      },
-    });
+  const { mutate: createIntent, isPending: isCreatingIntent } = useMutation({
+    mutationFn: (method: "card" | "bank") => createPaymentIntent(token, method),
+    onSuccess: (result) => {
+      setClientSecret(result.clientSecret);
+      setPaymentError(null);
+    },
+    onError: (err: Error) => {
+      setPaymentError(err.message || "Failed to initialize payment");
+    },
+  });
 
   // Auto-trigger payment intent when only one payment method is available
   useEffect(() => {
@@ -505,7 +580,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     aria-hidden="true"
                   />
                 </div>
-                <h1 className="text-balance mb-2 text-xl font-semibold">
+                <h1 className="mb-2 text-xl font-semibold text-balance">
                   Payment Link Error
                 </h1>
                 <p className="text-muted-foreground" role="alert">
@@ -526,9 +601,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
   if (paymentSuccess) {
     const successPaymentMethod =
       paymentMethod ??
-      (data &&
-      !isAlreadyPaidResponse(data) &&
-      !isProcessingResponse(data)
+      (data && !isAlreadyPaidResponse(data) && !isProcessingResponse(data)
         ? data.paymentSettings.allowCreditCard
           ? "card"
           : data.paymentSettings.allowBankPayment
@@ -548,9 +621,10 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     aria-hidden="true"
                   />
                 </div>
-                <h1 className="text-balance mb-2 text-xl font-semibold">
+                <h1 className="mb-2 text-xl font-semibold text-balance">
                   Payment{" "}
-                  {successPaymentMethod === "bank" ? "Initiated" : "Successful"}!
+                  {successPaymentMethod === "bank" ? "Initiated" : "Successful"}
+                  !
                 </h1>
                 <p className="text-muted-foreground">
                   {successPaymentMethod === "bank"
@@ -588,7 +662,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     aria-hidden="true"
                   />
                 </div>
-                <h1 className="text-balance mb-2 text-xl font-semibold">
+                <h1 className="mb-2 text-xl font-semibold text-balance">
                   Invoice Already Paid
                 </h1>
                 <p className="text-muted-foreground">
@@ -608,7 +682,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="View Receipt (opens in a new tab)"
-                    className="mt-4 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-2"
+                    className="mt-4 inline-flex items-center gap-2 text-sm text-blue-600 hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-600/40 focus-visible:ring-offset-2 focus-visible:outline-none"
                   >
                     <FaReceipt className="h-4 w-4" aria-hidden="true" />
                     View Receipt
@@ -636,7 +710,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     aria-hidden="true"
                   />
                 </div>
-                <h1 className="text-balance mb-2 text-xl font-semibold">
+                <h1 className="mb-2 text-xl font-semibold text-balance">
                   Payment Processing
                 </h1>
                 <p className="text-muted-foreground">
@@ -722,11 +796,11 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
               </CardHeader>
               <CardContent>
                 {data.client && (
-                  <p className="text-muted-foreground mb-1 break-words text-sm">
+                  <p className="text-muted-foreground mb-1 text-sm break-words">
                     {data.client.clientName}
                   </p>
                 )}
-                <p className="mb-4 break-words font-medium">
+                <p className="mb-4 font-medium break-words">
                   {data.invoice.jobTitle}
                 </p>
 
@@ -756,8 +830,11 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
           <motion.div variants={motionConfig.card} layout>
             <Card>
               <CardHeader className="pb-3">
-                <h2 className="text-balance flex items-center gap-2 text-base font-semibold leading-none">
-                  <FaLock className="h-4 w-4 text-green-600" aria-hidden="true" />
+                <h2 className="flex items-center gap-2 text-base leading-none font-semibold text-balance">
+                  <FaLock
+                    className="h-4 w-4 text-green-600"
+                    aria-hidden="true"
+                  />
                   Secure Payment
                 </h2>
               </CardHeader>
@@ -786,10 +863,10 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                           aria-hidden="true"
                         />
                         <div className="min-w-0 text-left">
-                          <p className="break-words font-medium">
+                          <p className="font-medium break-words">
                             Credit or Debit Card
                           </p>
-                          <p className="text-muted-foreground break-words text-xs">
+                          <p className="text-muted-foreground text-xs break-words">
                             Processing fee: {cardProcessingFeeLabel} (2.9% +
                             $0.30)
                           </p>
@@ -806,10 +883,10 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                           aria-hidden="true"
                         />
                         <div className="min-w-0 text-left">
-                          <p className="break-words font-medium">
+                          <p className="font-medium break-words">
                             Bank Payment (EFT)
                           </p>
-                          <p className="text-muted-foreground break-words text-xs">
+                          <p className="text-muted-foreground text-xs break-words">
                             Processing fee: {achProcessingFeeLabel} (0.8%, max
                             $5) • 5-7 days
                           </p>
@@ -858,7 +935,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                             initial="hidden"
                             animate="show"
                             exit="exit"
-                            className="rounded-lg border border-dashed border-muted-foreground/30 bg-muted/30 p-4 text-center"
+                            className="border-muted-foreground/30 bg-muted/30 rounded-lg border border-dashed p-4 text-center"
                           >
                             <div
                               className="text-muted-foreground flex items-center justify-center gap-2 text-sm"
@@ -927,7 +1004,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-balance min-w-0 text-base font-semibold leading-none">
+                  <h2 className="min-w-0 text-base leading-none font-semibold text-balance">
                     Invoice Details
                   </h2>
                   <Button variant="outline" size="sm" asChild>
@@ -952,7 +1029,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     <p className="text-muted-foreground text-xs uppercase">
                       Service
                     </p>
-                    <p className="break-words font-medium">
+                    <p className="font-medium break-words">
                       {data.invoice.jobTitle}
                     </p>
                   </div>
@@ -961,7 +1038,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     <p className="text-muted-foreground text-xs uppercase">
                       Location
                     </p>
-                    <p className="break-words font-medium">
+                    <p className="font-medium break-words">
                       {data.invoice.location}
                     </p>
                   </div>
@@ -1041,7 +1118,9 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                     </div>
                     <div className="flex justify-between pt-2 font-semibold">
                       <span>Total</span>
-                      <span>{formatCurrency(data.invoice.invoiceTotal, true)}</span>
+                      <span>
+                        {formatCurrency(data.invoice.invoiceTotal, true)}
+                      </span>
                     </div>
                   </div>
                 </div>
