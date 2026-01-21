@@ -21,5 +21,3 @@ export {
 export { AuditLog } from "./schemas/audit.schema";
 export { Availability, TimeOffRequest } from "./schemas/availability.schema";
 export { SchedulingRequest } from "./schemas/schedulingRequest.schema";
-export { AppVersion } from "./schemas/appVersion.schema";
-export type { IAppVersion } from "./schemas/appVersion.schema";
