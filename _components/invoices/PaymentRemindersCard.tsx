@@ -1,12 +1,14 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { FaPaperPlane, FaHistory } from "react-icons/fa";
 import { Bell, Clock } from "lucide-react";
 import {
   PaymentReminderSettings,
   AuditLogEntry,
+  ClientType,
 } from "../../app/lib/typeDefinitions";
 import {
   configurePaymentReminders,
@@ -34,7 +36,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "../ui/alert-dialog";
 import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
@@ -43,12 +44,22 @@ import { Label } from "../ui/label";
 
 interface PaymentRemindersCardProps {
   invoiceId: string;
+  client?: ClientType;
 }
 
 export default function PaymentRemindersCard({
   invoiceId,
+  client,
 }: PaymentRemindersCardProps) {
   const { user } = useUser();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const pathnameValue = pathname ?? "/";
+  const searchParamsValue = useMemo(
+    () => searchParams ?? new URLSearchParams(),
+    [searchParams],
+  );
   const [settings, setSettings] = useState<PaymentReminderSettings>({
     enabled: false,
     frequency: "none",
@@ -60,6 +71,9 @@ export default function PaymentRemindersCard({
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [selectedEmail, setSelectedEmail] = useState<string>("");
+  const [showReminderDialog, setShowReminderDialog] = useState(false);
+  const [activeTab, setActiveTab] = useState("settings");
 
   const loadReminderSettings = useCallback(async () => {
     try {
@@ -80,12 +94,82 @@ export default function PaymentRemindersCard({
     }
   }, [invoiceId]);
 
+  // Get all available client emails
+  const availableEmails = useMemo(() => {
+    const emails: { type: string; email: string }[] = [];
+    if (client) {
+      if (client.emails) {
+        if (client.emails.primary)
+          emails.push({ type: "Primary", email: client.emails.primary });
+        if (
+          client.emails.accounting &&
+          client.emails.accounting !== client.emails.primary
+        ) {
+          emails.push({ type: "Accounting", email: client.emails.accounting });
+        }
+        if (
+          client.emails.scheduling &&
+          client.emails.scheduling !== client.emails.primary &&
+          client.emails.scheduling !== client.emails.accounting
+        ) {
+          emails.push({ type: "Scheduling", email: client.emails.scheduling });
+        }
+      } else if (client.email) {
+        emails.push({ type: "Primary", email: client.email });
+      }
+    }
+    return emails;
+  }, [client]);
+
+  const defaultEmail = useMemo(() => {
+    if (availableEmails.length === 0) return "";
+    return (
+      availableEmails.find((email) => email.type === "Accounting")?.email ||
+      availableEmails[0]?.email ||
+      ""
+    );
+  }, [availableEmails]);
+
+  const selectedEmailValue = useMemo(() => {
+    if (!selectedEmail) return defaultEmail;
+    const isValid = availableEmails.some(
+      (email) => email.email === selectedEmail,
+    );
+    return isValid ? selectedEmail : defaultEmail;
+  }, [availableEmails, defaultEmail, selectedEmail]);
+
   // Load settings on mount
   useEffect(() => {
     if (invoiceId) {
       loadReminderSettings();
     }
   }, [invoiceId, loadReminderSettings]);
+
+  useEffect(() => {
+    const tab = searchParamsValue.get("remindersTab");
+    setActiveTab(tab === "history" ? "history" : "settings");
+  }, [searchParamsValue]);
+
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    const params = new URLSearchParams(searchParamsValue.toString());
+    if (value === "settings") {
+      params.delete("remindersTab");
+    } else {
+      params.set("remindersTab", value);
+    }
+    const query = params.toString();
+    router.replace(query ? `${pathnameValue}?${query}` : pathnameValue);
+  };
+
+  const handleDialogOpenChange = (open: boolean) => {
+    setShowReminderDialog(open);
+    if (open) {
+      setSelectedEmail(selectedEmailValue || defaultEmail);
+    } else {
+      setSelectedEmail("");
+    }
+  };
 
   const handleFrequencyChange = (value: string) => {
     const frequency = value as "none" | "3days" | "5days" | "7days";
@@ -128,10 +212,22 @@ export default function PaymentRemindersCard({
     setIsSending(true);
     try {
       const userName = user?.fullName || user?.firstName || "User";
-      const result = await sendPaymentReminderEmail(invoiceId, userName);
+      const recipientEmail = selectedEmailValue || defaultEmail;
+      if (!recipientEmail) {
+        toast.error("No recipient email found for this client");
+        setIsSending(false);
+        return;
+      }
+      const result = await sendPaymentReminderEmail(
+        invoiceId,
+        userName,
+        recipientEmail,
+      );
       if (result.success) {
         toast.success("Reminder sent successfully");
         await loadReminderSettings();
+        setShowReminderDialog(false); // Close dialog on success
+        setSelectedEmail(""); // Reset for next time
       } else {
         toast.error(result.error || "Failed to send reminder");
       }
@@ -190,10 +286,10 @@ export default function PaymentRemindersCard({
       <Card className="p-4 sm:p-6">
         <div className="flex items-center gap-3">
           <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
-            <Bell className="text-primary h-5 w-5" />
+            <Bell className="text-primary h-5 w-5" aria-hidden="true" />
           </div>
-          <div className="text-muted-foreground text-sm">
-            Loading reminders...
+          <div className="text-muted-foreground text-sm" role="status">
+            Loading reminders…
           </div>
         </div>
       </Card>
@@ -204,9 +300,9 @@ export default function PaymentRemindersCard({
     <Card className="p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 flex items-center gap-3">
-        <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
-          <Bell className="text-primary h-5 w-5" />
-        </div>
+          <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+            <Bell className="text-primary h-5 w-5" aria-hidden="true" />
+          </div>
         <div>
           <h3 className="text-foreground font-semibold">Payment Reminders</h3>
           <p className="text-muted-foreground text-xs">
@@ -217,7 +313,7 @@ export default function PaymentRemindersCard({
         </div>
       </div>
 
-      <Tabs defaultValue="settings" className="w-full">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
         <TabsList className="mb-4 grid w-full grid-cols-2">
           <TabsTrigger value="settings" className="text-xs">
             Settings
@@ -231,7 +327,7 @@ export default function PaymentRemindersCard({
           {/* Current Status */}
           {settings.nextReminderDate && (
             <div className="bg-muted/50 flex items-center gap-2 rounded-md border p-3">
-              <Clock className="text-muted-foreground h-4 w-4" />
+              <Clock className="text-muted-foreground h-4 w-4" aria-hidden="true" />
               <span className="text-sm">
                 Next reminder: {formatDateStringUTC(settings.nextReminderDate)}
               </span>
@@ -241,12 +337,14 @@ export default function PaymentRemindersCard({
           {/* Frequency and Start From Selection - Same Row */}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-2">
-              <Label className="text-sm">Frequency</Label>
+              <Label className="text-sm" htmlFor="reminder-frequency">
+                Frequency
+              </Label>
               <Select
                 value={settings.frequency}
                 onValueChange={handleFrequencyChange}
               >
-                <SelectTrigger>
+                <SelectTrigger id="reminder-frequency">
                   <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
                 <SelectContent>
@@ -259,14 +357,16 @@ export default function PaymentRemindersCard({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-sm">Start From</Label>
+              <Label className="text-sm" htmlFor="reminder-start-from">
+                Start From
+              </Label>
               <Select
                 value={startFrom}
                 onValueChange={(value) =>
                   setStartFrom(value as "today" | "dateIssued")
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id="reminder-start-from">
                   <SelectValue placeholder="Select start" />
                 </SelectTrigger>
                 <SelectContent>
@@ -289,28 +389,32 @@ export default function PaymentRemindersCard({
             size="sm"
             className="w-full"
           >
-            {isLoading ? "Saving..." : "Save Settings"}
+            {isLoading ? "Saving…" : "Save Settings"}
           </Button>
 
           <Separator />
 
-          {/* Manual Send Button with AlertDialog */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button
-                disabled={isSending}
-                variant="secondary"
-                size="sm"
-                className="w-full gap-2"
-              >
-                {isSending ? (
-                  <FaPaperPlane className="h-3 w-3 animate-spin" />
-                ) : (
-                  <FaPaperPlane className="h-3 w-3" />
-                )}
-                Send Reminder Now
-              </Button>
-            </AlertDialogTrigger>
+          {/* Manual Send Button */}
+          <Button
+            disabled={isSending || availableEmails.length === 0}
+            variant="secondary"
+            size="sm"
+            className="w-full gap-2"
+            onClick={() => setShowReminderDialog(true)}
+          >
+            {isSending ? (
+              <FaPaperPlane className="h-3 w-3 animate-spin" aria-hidden="true" />
+            ) : (
+              <FaPaperPlane className="h-3 w-3" aria-hidden="true" />
+            )}
+            Send Reminder Now
+          </Button>
+
+          {/* Reminder Dialog */}
+          <AlertDialog
+            open={showReminderDialog}
+            onOpenChange={handleDialogOpenChange}
+          >
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Send Payment Reminder?</AlertDialogTitle>
@@ -319,9 +423,66 @@ export default function PaymentRemindersCard({
                   client.
                 </AlertDialogDescription>
               </AlertDialogHeader>
+
+              {availableEmails.length > 1 && (
+                <div className="px-6 pb-4">
+                  <Label
+                    className="mb-2 block text-sm font-medium"
+                    htmlFor="email-select"
+                  >
+                    Select recipient email
+                  </Label>
+                  <Select
+                    value={selectedEmailValue || ""}
+                    onValueChange={setSelectedEmail}
+                  >
+                    <SelectTrigger id="email-select">
+                      <SelectValue placeholder="Select email" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableEmails.map((emailEntry) => (
+                        <SelectItem
+                          key={emailEntry.email}
+                          value={emailEntry.email}
+                        >
+                          {emailEntry.type}: {emailEntry.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    Reminder will be sent to:{" "}
+                    <strong>{selectedEmailValue || "Select an email"}</strong>
+                  </p>
+                </div>
+              )}
+
+              {availableEmails.length === 1 && (
+                <div className="px-6 pb-4">
+                  <p className="text-muted-foreground text-sm">
+                    Reminder will be sent to: <strong>{defaultEmail}</strong>
+                  </p>
+                </div>
+              )}
+
+              {availableEmails.length === 0 && (
+                <div className="px-6 pb-4">
+                  <p className="text-muted-foreground text-sm">
+                    No recipient email is available for this client.
+                  </p>
+                </div>
+              )}
+
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleSendReminder}>
+                <AlertDialogAction
+                  onClick={handleSendReminder}
+                  disabled={
+                    isSending ||
+                    availableEmails.length === 0 ||
+                    !selectedEmailValue
+                  }
+                >
                   Send Reminder
                 </AlertDialogAction>
               </AlertDialogFooter>
@@ -332,7 +493,10 @@ export default function PaymentRemindersCard({
         <TabsContent value="history" className="mt-0">
           {reminderLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center">
-              <FaHistory className="text-muted-foreground/50 mb-2 h-6 w-6" />
+              <FaHistory
+                className="text-muted-foreground/50 mb-2 h-6 w-6"
+                aria-hidden="true"
+              />
               <p className="text-muted-foreground text-sm">
                 No reminder history yet
               </p>

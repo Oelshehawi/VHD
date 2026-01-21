@@ -5,6 +5,7 @@ import {
   processStripePaymentSuccess,
   logStripePaymentFailure,
   updateStripePaymentStatus,
+  logStripeChargeEvent,
 } from "../../../lib/actions/stripe.actions";
 
 export async function POST(request: NextRequest) {
@@ -144,6 +145,22 @@ export async function POST(request: NextRequest) {
       case "charge.succeeded": {
         // Log successful charge (for ACH/PAD payments which may succeed later)
         const charge = event.data.object as Stripe.Charge;
+        const paymentIntentId = charge.payment_intent as string | null;
+
+        if (paymentIntentId) {
+          const paymentIntent =
+            await stripe.paymentIntents.retrieve(paymentIntentId);
+          const invoiceId = paymentIntent.metadata.invoiceId;
+
+          if (invoiceId) {
+            await logStripeChargeEvent(invoiceId, "charge.succeeded", {
+              chargeId: charge.id,
+              paymentIntentId,
+              amount: charge.amount,
+              currency: charge.currency,
+            });
+          }
+        }
         console.log(`Charge succeeded: ${charge.id}`);
         break;
       }
@@ -151,6 +168,22 @@ export async function POST(request: NextRequest) {
       case "charge.refunded": {
         // Handle refunds if needed in the future
         const charge = event.data.object as Stripe.Charge;
+        const paymentIntentId = charge.payment_intent as string | null;
+
+        if (paymentIntentId) {
+          const paymentIntent =
+            await stripe.paymentIntents.retrieve(paymentIntentId);
+          const invoiceId = paymentIntent.metadata.invoiceId;
+
+          if (invoiceId) {
+            await logStripeChargeEvent(invoiceId, "charge.refunded", {
+              chargeId: charge.id,
+              paymentIntentId,
+              amount: charge.amount,
+              currency: charge.currency,
+            });
+          }
+        }
         console.log(`Charge refunded: ${charge.id}`);
         break;
       }

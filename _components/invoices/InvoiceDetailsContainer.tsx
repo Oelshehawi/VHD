@@ -546,7 +546,10 @@ const InvoiceDetailsContainer = ({
         <div className="space-y-4 sm:space-y-6 md:col-span-2 lg:col-span-1">
           <ClientDetails client={client} canManage={canManage} />
           {canManage && (
-            <PaymentRemindersCard invoiceId={invoice._id as string} />
+            <PaymentRemindersCard
+              invoiceId={invoice._id as string}
+              client={client}
+            />
           )}
         </div>
       </div>

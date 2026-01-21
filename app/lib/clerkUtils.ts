@@ -7,7 +7,7 @@ const userNameCache = new Map<string, string>();
 
 /**
  * Get user name from Clerk by user ID
- * @param userId - Clerk user ID (e.g., "user_2mqv5uvRlgBoXqWxPj3j1tAKXcE")
+ * @param userId - Clerk user ID (e.g., "user_xxxxxxxxxxx")
  * @returns User's full name or user ID as fallback
  */
 export async function getUserName(userId: string): Promise<string> {

@@ -297,12 +297,25 @@ export async function sendInvoiceDeliveryEmail(
         const schedules = await Schedule.find({ invoiceRef: invoiceId }).lean();
         if (schedules && schedules.length > 0) {
           const scheduleIds = schedules.map((s: any) => s._id.toString());
-          const report = await Report.findOne({
+          const report = (await Report.findOne({
             scheduleId: { $in: scheduleIds },
-          }).lean();
+          }).lean()) as { scheduleId?: { toString?: () => string } | string } | null;
 
           if (report) {
-            const reportData = report as any;
+            // Include job title and location from the matching schedule, if available
+            const reportScheduleId = report.scheduleId?.toString?.() || report.scheduleId;
+            const scheduleData =
+              (reportScheduleId
+                ? schedules.find(
+                    (schedule: any) =>
+                      schedule?._id?.toString?.() === reportScheduleId,
+                  )
+                : undefined) || schedules[0];
+            const reportData = {
+              ...report,
+              jobTitle: scheduleData?.jobTitle || "",
+              location: scheduleData?.location || "",
+            } as any;
             // Fetch technician data for report PDF
             let technicianData = {
               id: reportData.technicianId || "",

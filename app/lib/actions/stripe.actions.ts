@@ -583,12 +583,93 @@ export async function updateStripePaymentStatus(
 
     await invoice.save();
 
+    if (status === "initiated" || status === "processing" || status === "pending") {
+      await AuditLog.create({
+        invoiceId: invoice.invoiceId,
+        action:
+          status === "initiated"
+            ? "stripe_payment_initiated"
+            : "payment_status_changed",
+        timestamp: new Date(),
+        performedBy: "stripe_webhook",
+        details: {
+          newValue: {
+            status,
+            paymentMethod,
+            eventType,
+            invoiceMongoId: invoice._id.toString(),
+            jobTitle: invoice.jobTitle,
+            clientId: invoice.clientId?.toString?.() || invoice.clientId,
+          },
+          metadata: eventDetails ? { eventDetails } : undefined,
+        },
+        success: true,
+      });
+    }
+
     // Revalidate the invoice page to show updated status
     revalidatePath(`/invoices/${invoiceId}`);
 
     return { success: true };
   } catch (error) {
     console.error("Error updating Stripe payment status:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}
+
+/**
+ * Log charge-level Stripe webhook events in the audit log
+ */
+export async function logStripeChargeEvent(
+  invoiceId: string,
+  eventType: "charge.succeeded" | "charge.refunded",
+  details: {
+    chargeId: string;
+    paymentIntentId?: string;
+    amount?: number | null;
+    currency?: string | null;
+  },
+): Promise<{ success: boolean; error?: string }> {
+  await connectMongo();
+
+  try {
+    const invoice = await Invoice.findById(invoiceId);
+    if (!invoice) {
+      return { success: false, error: "Invoice not found" };
+    }
+
+    await AuditLog.create({
+      invoiceId: invoice.invoiceId,
+      action: "payment_status_changed",
+      timestamp: new Date(),
+      performedBy: "stripe_webhook",
+      details: {
+        newValue: {
+          eventType,
+          chargeId: details.chargeId,
+          paymentIntentId: details.paymentIntentId,
+          amountCents: details.amount ?? undefined,
+          currency: details.currency ?? undefined,
+          invoiceMongoId: invoice._id.toString(),
+          jobTitle: invoice.jobTitle,
+          clientId: invoice.clientId?.toString?.() || invoice.clientId,
+        },
+        metadata: {
+          eventDetails:
+            eventType === "charge.refunded"
+              ? "Charge refunded"
+              : "Charge succeeded",
+        },
+      },
+      success: true,
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error("Error logging Stripe charge event:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",

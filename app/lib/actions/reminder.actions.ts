@@ -333,6 +333,7 @@ export async function processAutoReminders(): Promise<ProcessResult> {
 export async function sendPaymentReminderEmail(
   invoiceId: string,
   performedBy: string = "user",
+  recipientEmail?: string,
 ) {
   await connectMongo();
 
@@ -351,8 +352,28 @@ export async function sendPaymentReminderEmail(
       return { success: false, error: "Client not found" };
     }
 
-    // Get appropriate email for accounting purposes
-    const clientEmail = getEmailForPurpose(clientDetails, "accounting");
+    const allowedEmails = [
+      clientDetails.emails?.primary,
+      clientDetails.emails?.accounting,
+      clientDetails.emails?.scheduling,
+      clientDetails.email,
+    ]
+      .filter(Boolean)
+      .map((email) => String(email).trim().toLowerCase());
+
+    if (recipientEmail) {
+      const normalizedRecipient = recipientEmail.trim().toLowerCase();
+      if (!allowedEmails.includes(normalizedRecipient)) {
+        return {
+          success: false,
+          error: "Recipient email is not associated with this client",
+        };
+      }
+    }
+
+    // Use provided recipient email or fall back to accounting email
+    const clientEmail =
+      recipientEmail || getEmailForPurpose(clientDetails, "accounting");
     if (!clientEmail) {
       return { success: false, error: "Client email not found" };
     }
