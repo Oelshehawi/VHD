@@ -221,7 +221,11 @@ export async function createInvoice(
   revalidatePath("/invoices");
 }
 
-export async function updateInvoice(invoiceId: any, formData: any) {
+export async function updateInvoice(
+  invoiceId: any,
+  formData: any,
+  performedBy: string = "user",
+) {
   await connectMongo();
   try {
     // Trim all string fields to remove leading/trailing spaces
@@ -247,6 +251,9 @@ export async function updateInvoice(invoiceId: any, formData: any) {
     }
 
     const currentInvoice = await Invoice.findById(invoiceId);
+    const oldStatus = currentInvoice?.status;
+    const newStatus = formData.status;
+    const statusChanged = newStatus && oldStatus !== newStatus;
 
     // If status is changing from "paid" to something else, clear payment-related data
     if (
@@ -269,6 +276,31 @@ export async function updateInvoice(invoiceId: any, formData: any) {
     } else {
       // Normal update
       await Invoice.findByIdAndUpdate(invoiceId, formData);
+    }
+
+    // Create audit log entry for status changes
+    if (statusChanged) {
+      await AuditLog.create({
+        invoiceId: currentInvoice?.invoiceId || invoiceId,
+        action: "payment_status_changed",
+        timestamp: new Date(),
+        performedBy,
+        details: {
+          oldValue: { status: oldStatus },
+          newValue: {
+            status: newStatus,
+            invoiceMongoId: invoiceId.toString(),
+            jobTitle: currentInvoice?.jobTitle,
+            paymentInfo: formData.paymentInfo,
+          },
+          reason: `Status changed from ${oldStatus} to ${newStatus}`,
+          metadata: {
+            clientId: currentInvoice?.clientId,
+            jobTitle: currentInvoice?.jobTitle,
+          },
+        },
+        success: true,
+      });
     }
 
     let jobsDueSoonUpdate: any = {};
@@ -301,6 +333,7 @@ export async function updateInvoice(invoiceId: any, formData: any) {
 
   revalidatePath(`/invoices/${invoiceId}`);
 }
+
 
 export async function getMostRecentInvoice(clientId: string) {
   await connectMongo();
