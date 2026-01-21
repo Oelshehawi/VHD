@@ -1,9 +1,29 @@
-import { fetchHolidays, fetchTechnicianAvailability, fetchTimeOffRequests } from "../../lib/data";
+import {
+  fetchHolidays,
+  fetchTechnicianAvailability,
+  fetchTimeOffRequests,
+} from "../../lib/data";
 import { fetchAllScheduledJobsWithShifts } from "../../lib/scheduleAndShifts";
 import { auth } from "@clerk/nextjs/server";
-import { ScheduleType, TimeOffRequestType } from "../../../app/lib/typeDefinitions";
+import {
+  ScheduleType,
+  TimeOffRequestType,
+} from "../../../app/lib/typeDefinitions";
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
+
+const timed = async <T,>(
+  label: string,
+  fn: () => Promise<T>,
+): Promise<T> => {
+  const start = Date.now();
+  try {
+    return await fn();
+  } finally {
+    const duration = Date.now() - start;
+    console.log(`[schedule] ${label} ${duration}ms`);
+  }
+};
 
 const Schedule = async ({
   searchParams,
@@ -17,17 +37,109 @@ const Schedule = async ({
   const view = resolvedSearchParams?.view || "week";
   const date = resolvedSearchParams?.date || null;
 
+  const parseDateOnlyToUTC = (dateString?: string): Date | undefined => {
+    if (!dateString) return undefined;
+    const datePart = dateString.split("T")[0] || dateString;
+    const [yearStr, monthStr, dayStr] = datePart.split("-");
+    if (!yearStr || !monthStr || !dayStr) return undefined;
+
+    const year = Number.parseInt(yearStr, 10);
+    const monthIndex = Number.parseInt(monthStr, 10) - 1;
+    const day = Number.parseInt(dayStr, 10);
+
+    const isValidNumber =
+      Number.isFinite(year) &&
+      Number.isFinite(monthIndex) &&
+      Number.isFinite(day);
+    const isValidRange =
+      monthIndex >= 0 && monthIndex <= 11 && day >= 1 && day <= 31;
+    if (!isValidNumber || !isValidRange) return undefined;
+
+    const parsed = new Date(Date.UTC(year, monthIndex, day, 0, 0, 0, 0));
+    if (
+      Number.isNaN(parsed.getTime()) ||
+      parsed.getUTCFullYear() !== year ||
+      parsed.getUTCMonth() !== monthIndex ||
+      parsed.getUTCDate() !== day
+    )
+      return undefined;
+
+    return parsed;
+  };
+
+  // Calculate date range for fetching specific to the current view
+  let rangeStart: Date | undefined;
+  let rangeEnd: Date | undefined;
+
+  const now = new Date();
+  const fallbackDate = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0),
+  );
+  const targetDate = parseDateOnlyToUTC(date || undefined) || fallbackDate;
+
+  // "month" view: Fetch from start to end of current month
+  // We add a buffer of some days before/after to handle edge cases or adjacent weeks in some calendar views if needed
+  if (view === "month") {
+    // Start of month
+    rangeStart = new Date(
+      Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), 1),
+    );
+    // End of month
+    rangeEnd = new Date(
+      Date.UTC(
+        targetDate.getUTCFullYear(),
+        targetDate.getUTCMonth() + 1,
+      0,
+      23,
+      59,
+      59,
+      999,
+      ),
+    );
+
+    // Add 1 week buffer before/after for partial weeks in calendar grid
+    rangeStart.setUTCDate(rangeStart.getUTCDate() - 7);
+    rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 7);
+  } else if (view === "week") {
+    // For week view, we can just grab the surrounding weeks
+    // Simple heuristic: +/- 2 weeks from target date
+    rangeStart = new Date(targetDate);
+    rangeStart.setUTCDate(targetDate.getUTCDate() - 14);
+    rangeStart.setUTCHours(0, 0, 0, 0);
+
+    rangeEnd = new Date(targetDate);
+    rangeEnd.setUTCDate(targetDate.getUTCDate() + 14);
+    rangeEnd.setUTCHours(23, 59, 59, 999);
+  } else if (view === "day") {
+    // Day view (or "agenda"?). Just grab the day +/- 1 day buffer
+    rangeStart = new Date(targetDate);
+    rangeStart.setUTCDate(targetDate.getUTCDate() - 2);
+    rangeStart.setUTCHours(0, 0, 0, 0);
+
+    rangeEnd = new Date(targetDate);
+    rangeEnd.setUTCDate(targetDate.getUTCDate() + 2);
+    rangeEnd.setUTCHours(23, 59, 59, 999);
+  }
+
   // Fetch all data in parallel for better performance
   // Invoices are now lazy-loaded in AddJob modal via TanStack Query
-  const [scheduledJobsResult, holidays, availability, authResult, technicians, timeOffRequests] =
-    await Promise.all([
-      fetchAllScheduledJobsWithShifts(),
-      fetchHolidays(),
-      fetchTechnicianAvailability(),
-      auth(),
-      getTechnicians(),
-      fetchTimeOffRequests("approved"),
-    ]);
+  const [
+    scheduledJobsResult,
+    holidays,
+    availability,
+    authResult,
+    technicians,
+    timeOffRequests,
+  ] = await Promise.all([
+    timed("scheduledJobs", () =>
+      fetchAllScheduledJobsWithShifts(rangeStart, rangeEnd),
+    ),
+    timed("holidays", () => fetchHolidays()),
+    timed("availability", () => fetchTechnicianAvailability()),
+    timed("auth", () => auth()),
+    timed("technicians", () => getTechnicians()),
+    timed("timeOffRequests", () => fetchTimeOffRequests("approved")),
+  ]);
 
   let scheduledJobs: ScheduleType[] = scheduledJobsResult;
   const { sessionClaims, userId }: any = authResult;

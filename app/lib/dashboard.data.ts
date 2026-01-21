@@ -63,44 +63,14 @@ export const fetchDueInvoices = async ({
   const numericYear = typeof year === "string" ? parseInt(year) : year;
 
   try {
-    // First, ensure JobsDueSoon records exist for due invoices
-    const dueInvoices = await fetchDueInvoicesFromDB(monthNumber, numericYear);
-    if (!dueInvoices || dueInvoices.length === 0) return [];
-
-    await createOrUpdateJobsDueSoon(dueInvoices as any[]);
-
-    // Fetch jobs with all related data in one consolidated query
-    // (includes _id, emailExists, notesExists, emailSent, callHistory)
+    // JobsDueSoon records are now created at invoice creation time,
+    // so we can directly fetch from JobsDueSoon without syncing
     const jobsDue = await fetchJobsDue(monthNumber, numericYear);
     return jobsDue as DueInvoiceType[];
   } catch (error) {
     console.error("Database Error:", error);
     return [];
   }
-};
-
-const fetchDueInvoicesFromDB = async (monthNumber: number, year: number) => {
-  return await Invoice.aggregate([
-    {
-      $match: {
-        $expr: {
-          $and: [
-            { $eq: [{ $year: "$dateDue" }, year] },
-            { $eq: [{ $month: "$dateDue" }, monthNumber] },
-          ],
-        },
-      },
-    },
-    {
-      $lookup: {
-        from: "clients",
-        localField: "clientId",
-        foreignField: "_id",
-        as: "client",
-      },
-    },
-    { $match: { "client.isArchived": { $ne: true } } },
-  ]);
 };
 
 /**
@@ -114,14 +84,18 @@ const fetchDueInvoicesFromDB = async (monthNumber: number, year: number) => {
  * and checkScheduleStatus queries.
  */
 const fetchJobsDue = async (monthNumber: number, year: number) => {
+  // Construct date range for the target month (UTC)
+  // Month is 1-indexed (1-12)
+  const startDate = new Date(Date.UTC(year, monthNumber - 1, 1, 0, 0, 0, 0));
+  const endDate = new Date(Date.UTC(year, monthNumber, 0, 23, 59, 59, 999));
+
   const jobs = await JobsDueSoon.aggregate([
     {
       $match: {
-        $expr: {
-          $and: [
-            { $eq: [{ $year: "$dateDue" }, year] },
-            { $eq: [{ $month: "$dateDue" }, monthNumber] },
-          ],
+        // Use direct range query to utilize index on dateDue
+        dateDue: {
+          $gte: startDate,
+          $lte: endDate,
         },
       },
     },
@@ -228,66 +202,13 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
   }));
 };
 
-export const createOrUpdateJobsDueSoon = async (dueInvoices: InvoiceType[]) => {
-  await connectMongo();
 
-  const jobsDueSoonPromises = dueInvoices.map(async (invoice) => {
-    const { _id, jobTitle, dateDue, clientId } = invoice;
-    const existingJob = await JobsDueSoon.findOne({
-      invoiceId: _id.toString(),
-    });
 
-    if (!existingJob) {
-      await JobsDueSoon.create({
-        clientId,
-        invoiceId: _id.toString(),
-        jobTitle,
-        dateDue,
-        isScheduled: false,
-        emailSent: false,
-      });
-    }
-  });
-
-  await Promise.all(jobsDueSoonPromises);
-};
-
-export const getClientCount = async () => {
-  await connectMongo();
-  try {
-    return await Client.countDocuments({ isArchived: { $ne: true } });
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch client count");
-  }
-};
-
-export const getOverDueInvoiceAmount = async () => {
-  await connectMongo();
-  try {
-    const result = await Invoice.aggregate([
-      { $match: { status: "overdue" } },
-      {
-        $lookup: {
-          from: "clients",
-          localField: "clientId",
-          foreignField: "_id",
-          as: "client",
-        },
-      },
-      { $match: { "client.isArchived": { $ne: true } } },
-      { $unwind: "$items" },
-      { $group: { _id: null, totalAmount: { $sum: "$items.price" } } },
-    ]);
-    const baseAmount = result.length > 0 ? result[0].totalAmount : 0;
-    return baseAmount + baseAmount * 0.05;
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch overdue invoice amount");
-  }
-};
-
-export const getPendingInvoiceAmount = async () => {
+/**
+ * Combined function to fetch both pending invoices and total amount in a single query
+ * Uses $facet to get both results from one aggregation pipeline
+ */
+export const getPendingInvoicesData = async () => {
   await connectMongo();
   try {
     const now = new Date();
@@ -304,50 +225,6 @@ export const getPendingInvoiceAmount = async () => {
     );
 
     const result = await Invoice.aggregate([
-      {
-        $match: {
-          status: { $in: ["pending", "overdue"] },
-          dateIssued: { $lte: today },
-        },
-      },
-      {
-        $lookup: {
-          from: "clients",
-          localField: "clientId",
-          foreignField: "_id",
-          as: "client",
-        },
-      },
-      { $match: { "client.isArchived": { $ne: true } } },
-      { $unwind: "$items" },
-      { $group: { _id: null, totalAmount: { $sum: "$items.price" } } },
-    ]);
-    const baseAmount = result.length > 0 ? result[0].totalAmount : 0;
-
-    return baseAmount + baseAmount * 0.05;
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to fetch pending invoice amount");
-  }
-};
-
-export const getPendingInvoices = async () => {
-  await connectMongo();
-  try {
-    const now = new Date();
-    // Use Eastern Time for business logic (adjust timezone as needed)
-    const easternTime = new Date(
-      now.toLocaleString("en-US", { timeZone: "America/Toronto" }),
-    );
-    const today = new Date(
-      Date.UTC(
-        easternTime.getFullYear(),
-        easternTime.getMonth(),
-        easternTime.getDate(),
-      ),
-    );
-
-    const pendingInvoices = await Invoice.aggregate([
       {
         $match: {
           status: { $in: ["pending", "overdue"] },
@@ -369,31 +246,58 @@ export const getPendingInvoices = async () => {
                     { $ne: [{ $type: "$email" }, "missing"] },
                   ],
                 },
+                isArchived: 1,
               },
             },
           ],
           as: "client",
         },
       },
+      { $match: { "client.isArchived": { $ne: true } } },
       {
-        $addFields: {
-          emailExists: {
-            $cond: {
-              if: { $gt: [{ $size: "$client" }, 0] },
-              then: { $arrayElemAt: ["$client.hasValidEmail", 0] },
-              else: false,
+        $facet: {
+          invoices: [
+            {
+              $addFields: {
+                emailExists: {
+                  $cond: {
+                    if: { $gt: [{ $size: "$client" }, 0] },
+                    then: { $arrayElemAt: ["$client.hasValidEmail", 0] },
+                    else: false,
+                  },
+                },
+              },
             },
-          },
+            { $sort: { dateIssued: 1 } },
+          ],
+          totalAmount: [
+            { $unwind: "$items" },
+            { $group: { _id: null, total: { $sum: "$items.price" } } },
+          ],
         },
       },
-      { $sort: { dateIssued: 1 } },
     ]);
 
-    return formatPendingInvoices(pendingInvoices);
+    const invoices = formatPendingInvoices(result[0]?.invoices || []);
+    const baseAmount = result[0]?.totalAmount[0]?.total || 0;
+    const totalAmount = baseAmount + baseAmount * 0.05; // Add 5% GST
+
+    return { invoices, totalAmount };
   } catch (error) {
     console.error("Database Error:", error);
-    throw new Error("Failed to fetch pending invoices");
+    throw new Error("Failed to fetch pending invoices data");
   }
+};
+
+// Keep these for backward compatibility if needed elsewhere
+export const getPendingInvoiceAmount = async () => {
+  const { totalAmount } = await getPendingInvoicesData();
+  return totalAmount;
+};
+
+export const getPendingInvoices = async () => {
+  const { invoices } = await getPendingInvoicesData();
+  return invoices;
 };
 
 const formatPendingInvoices = (invoices: any[]) => {
@@ -591,8 +495,10 @@ export const fetchRecentActions = async (
     };
 
     // Fetch recent audit logs based on date range
+    // Limit to 500 to prevent performance issues with large tables
     let auditLogs = await AuditLog.find(query)
       .sort({ timestamp: -1 })
+      .limit(500)
       .lean()
       .exec();
 

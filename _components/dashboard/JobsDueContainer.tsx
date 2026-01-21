@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo } from "react";
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import { JobsDueDataType } from "../../app/lib/dashboard.data";
+import { useMemo, useTransition, useState } from "react";
+import type { JobsDueDataType } from "../../app/lib/dashboard.data";
+import { fetchJobsDueData } from "../../app/lib/dashboard.data";
 import InvoiceRow from "./InvoiceRow";
 import { FaClock, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import ScheduledJobsBox from "./ScheduledJobsBox";
@@ -49,57 +49,57 @@ const MONTHS = [
 const YEARS = Array.from({ length: 8 }, (_, i) => 2023 + i);
 
 const JobsDueContainer = ({
-  jobsDueData,
+  initialJobsDueData,
+  initialMonth,
+  initialYear,
 }: {
-  jobsDueData: JobsDueDataType;
+  initialJobsDueData: JobsDueDataType;
+  initialMonth: string;
+  initialYear: number;
 }) => {
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const [month, setMonth] = useState<string>(initialMonth);
+  const [year, setYear] = useState<number>(initialYear);
+  const [jobsDueData, setJobsDueData] =
+    useState<JobsDueDataType>(initialJobsDueData);
+  const [scheduledFilter, setScheduledFilter] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
 
-  // Calculate current date at render time
-  const currentDate = new Date();
-  const currentMonth = MONTHS[currentDate.getMonth()];
-  const currentYear = currentDate.getFullYear();
+  const requestJobsDue = (nextMonth: string, nextYear: number) => {
+    setMonth(nextMonth);
+    setYear(nextYear);
 
-  // Read from URL params using useSearchParams hook
-  const monthParam = searchParams?.get("month") || null;
-  const yearParam = searchParams?.get("year") || null;
-  const scheduledParam = searchParams?.get("scheduled") || null;
-
-  // Use URL params or default to current month/year
-  const month = (monthParam || currentMonth) as string;
-  const year: number = yearParam ? parseInt(yearParam) : currentYear;
-
-  // Update URL using router.replace() - only fires when user explicitly changes values
-  const updateUrl = (newMonth: string, newYear: number) => {
-    const params = new URLSearchParams(searchParams?.toString() || "");
-    params.set("month", newMonth);
-    params.set("year", newYear.toString());
-    if (scheduledParam) params.set("scheduled", scheduledParam);
-
-    // router.replace() does client-side navigation, no full refresh
-    router.replace(`${pathname}?${params.toString()}`);
+    startTransition(async () => {
+      const newData = await fetchJobsDueData({
+        month: nextMonth,
+        year: nextYear,
+      });
+      setJobsDueData(newData);
+    });
   };
 
   // Handler for month selection
   const handleMonthChange = (selectedMonth: string) => {
-    updateUrl(selectedMonth, year);
+    requestJobsDue(selectedMonth, year);
   };
 
   // Handler for year selection
   const handleYearChange = (selectedYear: string) => {
-    const yearNum = parseInt(selectedYear);
-    updateUrl(month, yearNum);
+    const yearNum = Number.parseInt(selectedYear, 10);
+    if (Number.isNaN(yearNum)) {
+      return;
+    }
+    requestJobsDue(month, yearNum);
   };
 
   // Handler for month navigation arrows
   const navigateMonth = (offset: number) => {
     const currentMonthIndex = MONTHS.indexOf(month);
-    const currentYearNum = year;
-
-    let newMonthIndex = currentMonthIndex + offset;
-    let newYear = currentYearNum;
+    const safeMonthIndex =
+      currentMonthIndex === -1
+        ? Math.max(0, MONTHS.indexOf(initialMonth))
+        : currentMonthIndex;
+    let newMonthIndex = safeMonthIndex + offset;
+    let newYear = year;
 
     if (newMonthIndex < 0) {
       newMonthIndex = 11;
@@ -110,7 +110,7 @@ const JobsDueContainer = ({
     }
 
     const newMonthStr = MONTHS[newMonthIndex]!;
-    updateUrl(newMonthStr, newYear);
+    requestJobsDue(newMonthStr, newYear);
   };
 
   // Use jobsDueData directly - no TanStack Query
@@ -126,7 +126,7 @@ const JobsDueContainer = ({
 
     // Filter for display based on isScheduled - default to showing unscheduled
     const display = invoicesWithSchedule.filter((invoice) =>
-      scheduledParam === "true" ? invoice?.isScheduled : !invoice?.isScheduled,
+      scheduledFilter === "true" ? invoice?.isScheduled : !invoice?.isScheduled,
     );
 
     // Get scheduled invoices for the modal
@@ -141,7 +141,7 @@ const JobsDueContainer = ({
       scheduledCount,
       unscheduledCount,
     };
-  }, [jobsDueData, scheduledParam]);
+  }, [jobsDueData, scheduledFilter]);
 
   return (
     <Card className="flex h-full max-h-[calc(100vh-120px)] w-full flex-col gap-0 py-0 shadow-sm">
@@ -163,7 +163,11 @@ const JobsDueContainer = ({
 
         <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="flex flex-1 items-center gap-2">
-            <Select value={month} onValueChange={handleMonthChange}>
+            <Select
+              value={month}
+              onValueChange={handleMonthChange}
+              disabled={isPending}
+            >
               <SelectTrigger className="bg-background w-[130px]">
                 <SelectValue placeholder="Month" />
               </SelectTrigger>
@@ -176,7 +180,11 @@ const JobsDueContainer = ({
               </SelectContent>
             </Select>
 
-            <Select value={year.toString()} onValueChange={handleYearChange}>
+            <Select
+              value={year.toString()}
+              onValueChange={handleYearChange}
+              disabled={isPending}
+            >
               <SelectTrigger className="bg-background w-[100px]">
                 <SelectValue placeholder="Year" />
               </SelectTrigger>
@@ -197,6 +205,7 @@ const JobsDueContainer = ({
               onClick={() => navigateMonth(-1)}
               title="Previous Month"
               className="bg-background cursor-pointer"
+              disabled={isPending}
             >
               <FaChevronLeft className="h-4 w-4" />
             </Button>
@@ -206,6 +215,7 @@ const JobsDueContainer = ({
               onClick={() => navigateMonth(1)}
               title="Next Month"
               className="bg-background cursor-pointer"
+              disabled={isPending}
             >
               <FaChevronRight className="h-4 w-4" />
             </Button>
@@ -222,7 +232,11 @@ const JobsDueContainer = ({
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
-          <TableBody>
+          <TableBody
+            className={`transition-opacity duration-200 ${
+              isPending ? "pointer-events-none opacity-50" : ""
+            }`}
+          >
             {displayInvoices.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={3} className="h-64 text-center">

@@ -86,6 +86,29 @@ export async function createClient(clientData: ClientType) {
   revalidatePath("/dashboard");
 }
 
+// Helper to create JobsDueSoon record when invoice is created
+export async function createJobsDueSoonForInvoice(
+  invoiceId: string,
+  clientId: string,
+  jobTitle: string,
+  dateDue: Date,
+) {
+  await connectMongo();
+  try {
+    await JobsDueSoon.create({
+      clientId,
+      invoiceId,
+      jobTitle,
+      dateDue,
+      isScheduled: false,
+      emailSent: false,
+    });
+  } catch (error) {
+    console.error("Error creating JobsDueSoon record:", error);
+    // Don't throw - this is a non-critical operation
+  }
+}
+
 export async function deleteInvoice(invoiceId: string) {
   await connectMongo();
   try {
@@ -160,6 +183,18 @@ export async function createInvoice(
 
     const newInvoice = new Invoice(newInvoiceData);
     await newInvoice.save();
+
+    // Create JobsDueSoon record if invoice has dateDue
+    if (invoiceData.dateDue) {
+      await createJobsDueSoonForInvoice(
+        newInvoice._id.toString(),
+        invoiceData.clientId,
+        invoiceData.jobTitle || "",
+        invoiceData.dateDue instanceof Date
+          ? invoiceData.dateDue
+          : new Date(invoiceData.dateDue),
+      );
+    }
 
     // Create audit log entry
     await AuditLog.create({

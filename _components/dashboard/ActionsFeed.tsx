@@ -1,11 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
-import { useDebouncedCallback } from "use-debounce";
 import { DisplayAction } from "../../app/lib/dashboard.data";
-import { DashboardSearchParams } from "../../app/lib/typeDefinitions";
 import { FaCalendarAlt, FaSearch } from "react-icons/fa";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -38,7 +35,6 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 
 interface ActionsFeedProps {
-  searchParams: DashboardSearchParams;
   recentActions: DisplayAction[];
 }
 
@@ -74,22 +70,6 @@ function getActionLabel(action: string): string {
   return labels[action] || action;
 }
 
-function getBadgeVariant(
-  severity: string,
-): "default" | "secondary" | "destructive" | "outline" {
-  switch (severity) {
-    case "success":
-      return "default"; // green-ish in default theme usually, or we can use custom classes
-    case "info":
-      return "secondary";
-    case "warning":
-      return "secondary"; // Warning usually needs custom color
-    case "error":
-      return "destructive";
-    default:
-      return "outline";
-  }
-}
 
 function getBadgeClassName(severity: string): string {
   switch (severity) {
@@ -168,16 +148,16 @@ function ActionCard({ action }: { action: DisplayAction }) {
     action.invoiceId ||
     "invoice";
 
-  const wrapperClassName = `group bg-card relative rounded-lg border border-transparent p-4 transition-shadow transition-colors duration-200 hover:shadow-sm focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:outline-none ${
+  const wrapperClassName = `group bg-card relative rounded-xl border p-4 transition-all duration-200 ${
     canNavigate
-      ? "hover:border-primary/20 hover:bg-primary/5 cursor-pointer"
-      : "hover:bg-muted/50"
+      ? "hover:border-primary/50 hover:bg-primary/5 hover:shadow-md cursor-pointer border-border/60"
+      : "hover:bg-muted/30 border-border/40"
   }`;
 
   const content = (
     <div className="relative space-y-3">
       {/* Header: Who + When + Action Type */}
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between sm:gap-3">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6 shrink-0">
@@ -194,10 +174,10 @@ function ActionCard({ action }: { action: DisplayAction }) {
           </div>
         </div>
 
-        {/* Action badge in top-right */}
+        {/* Action badge in top-right (or below on mobile) */}
         <Badge
           variant="secondary"
-          className={`shrink-0 text-[10px] ${getBadgeClassName(action.severity)}`}
+          className={`shrink-0 self-start text-[10px] sm:self-auto ${getBadgeClassName(action.severity)}`}
         >
           {getActionLabel(action.action)}
         </Badge>
@@ -577,7 +557,9 @@ function DirectActionContent({
     const jobTitle =
       action.metadata?.jobTitle || action.details?.newValue?.jobTitle;
     const error =
-      action.details?.error || action.details?.newValue?.error || "Unknown error";
+      action.details?.error ||
+      action.details?.newValue?.error ||
+      "Unknown error";
 
     return (
       <div className="space-y-1.5">
@@ -649,90 +631,33 @@ function DirectActionContent({
 }
 
 export default function ActionsFeed({
-  searchParams,
   recentActions,
 }: ActionsFeedProps) {
-  const router = useRouter();
-  const pathname = usePathname();
+  const now = new Date();
+  const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+  const defaultTo = new Date(now.getFullYear(), now.getMonth() + 1, 0);
 
-  // Parse date range from searchParams
-  const dateRange: DateRange | undefined = useMemo(() => {
-    const now = new Date();
-    const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
-    const defaultTo = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  // Client-side state for filters
+  const [dateRange, setDateRange] = useState<DateRange | undefined>({
+    from: defaultFrom,
+    to: defaultTo,
+  });
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
-    const from = searchParams.actionsDateFrom
-      ? new Date(searchParams.actionsDateFrom)
-      : defaultFrom;
-    const to = searchParams.actionsDateTo
-      ? new Date(searchParams.actionsDateTo)
-      : defaultTo;
-
-    // Validate dates
-    if (isNaN(from.getTime()) || isNaN(to.getTime())) {
-      return { from: defaultFrom, to: defaultTo };
-    }
-
-    return { from, to };
-  }, [searchParams.actionsDateFrom, searchParams.actionsDateTo]);
-
-  // Parse search query from searchParams
-  const searchQuery = searchParams.actionsSearch || "";
-
-  const initialCategory = useMemo(() => {
-    const category = searchParams.actionsCategory;
-    return category && category in ACTION_CATEGORIES ? category : "all";
-  }, [searchParams.actionsCategory]);
-
-  // Local state for category filter (synced with URL)
-  const [selectedCategory, setSelectedCategory] =
-    useState<string>(initialCategory);
-
-  useEffect(() => {
-    setSelectedCategory(initialCategory);
-  }, [initialCategory]);
-
-  // Update URL with debounced search query
-  const updateSearchQuery = useDebouncedCallback((query: string) => {
-    const params = new URLSearchParams(window.location.search);
-    if (query.trim()) {
-      params.set("actionsSearch", query);
-    } else {
-      params.delete("actionsSearch");
-    }
-    router.replace(`${pathname}?${params.toString()}`);
-  }, 500);
-
-  // Update date range in URL
+  // Update date range (client-side only)
   const handleDateRangeChange = (range: DateRange | undefined) => {
-    const params = new URLSearchParams(window.location.search);
-    if (range?.from) {
-      params.set("actionsDateFrom", range.from.toISOString());
-    } else {
-      params.delete("actionsDateFrom");
-    }
-    if (range?.to) {
-      params.set("actionsDateTo", range.to.toISOString());
-    } else {
-      params.delete("actionsDateTo");
-    }
-    router.replace(`${pathname}?${params.toString()}`);
+    setDateRange(range);
   };
 
   const handleCategoryChange = (value: string) => {
     setSelectedCategory(value);
-    const params = new URLSearchParams(window.location.search);
-    if (value && value !== "all") {
-      params.set("actionsCategory", value);
-    } else {
-      params.delete("actionsCategory");
-    }
-    router.replace(`${pathname}?${params.toString()}`);
   };
 
-  // Client-side filtering by category
+  // Client-side filtering by category, date range, and search query
   const filteredActions = useMemo(() => {
     return recentActions.filter((action: DisplayAction) => {
+      // Filter by category
       if (selectedCategory !== "all") {
         if (
           selectedCategory === "invoices" &&
@@ -779,16 +704,55 @@ export default function ActionsFeed({
         )
           return false;
       }
+
+      // Filter by date range
+      if (dateRange?.from || dateRange?.to) {
+        const actionDate = new Date(action.timestamp);
+        if (dateRange.from && actionDate < dateRange.from) return false;
+        if (dateRange.to) {
+          // Include the entire end date
+          const endDate = new Date(dateRange.to);
+          endDate.setHours(23, 59, 59, 999);
+          if (actionDate > endDate) return false;
+        }
+      }
+
+      // Filter by search query
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase();
+        const matchesDescription = action.description
+          .toLowerCase()
+          .includes(query);
+        const matchesJobTitle =
+          action.details?.newValue?.jobTitle?.toLowerCase().includes(query) ||
+          action.metadata?.jobTitle?.toLowerCase().includes(query);
+        const matchesClientName = action.metadata?.clientName
+          ?.toLowerCase()
+          .includes(query);
+        const matchesPerformedBy = action.performedByName
+          ?.toLowerCase()
+          .includes(query);
+
+        if (
+          !matchesDescription &&
+          !matchesJobTitle &&
+          !matchesClientName &&
+          !matchesPerformedBy
+        ) {
+          return false;
+        }
+      }
+
       return true;
     });
-  }, [recentActions, selectedCategory]);
+  }, [recentActions, selectedCategory, dateRange, searchQuery]);
 
   return (
     <Card className="flex h-full max-h-[calc(100vh-120px)] min-h-0 flex-col gap-0 overflow-hidden py-0 shadow-sm">
       <CardHeader className="bg-muted/40 shrink-0 border-b p-3 pb-3 sm:p-4 sm:pb-4 lg:p-6 lg:pb-4">
         {/* Title Section with Category and Date Picker */}
         <div className="mb-3 sm:mb-4">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0 flex-1">
               <CardTitle className="truncate text-lg sm:text-xl">
                 Recent Activity
@@ -799,7 +763,7 @@ export default function ActionsFeed({
             </div>
 
             {/* Category and Date Picker - Compact size */}
-            <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <div className="flex w-full shrink-0 justify-between gap-1.5 sm:w-auto sm:justify-start sm:gap-2">
               <Select
                 value={selectedCategory}
                 onValueChange={handleCategoryChange}
@@ -871,8 +835,8 @@ export default function ActionsFeed({
             name="actionsSearch"
             autoComplete="off"
             placeholder="Search actions…"
-            defaultValue={searchQuery}
-            onChange={(e) => updateSearchQuery(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             aria-label="Search actions"
             className="bg-background h-9 min-w-0 pl-8 text-sm sm:h-10 sm:pl-9 sm:text-base"
           />
@@ -886,7 +850,7 @@ export default function ActionsFeed({
               <p>No actions found matching your criteria</p>
             </div>
           ) : (
-            <div className="grid gap-3 p-4 lg:grid-cols-2 lg:gap-4">
+            <div className="grid gap-4 p-4 lg:grid-cols-2 lg:gap-4">
               {filteredActions.map((action: DisplayAction) => (
                 <ActionCard key={action._id} action={action} />
               ))}

@@ -9,13 +9,25 @@ import { clerkClient } from "@clerk/nextjs/server";
 
 /**
  * Fetch all scheduled jobs with their shifts.
+ * Supports optional date range filtering for performance.
  */
-export const fetchAllScheduledJobsWithShifts = async (): Promise<
-  ScheduleType[]
-> => {
+export const fetchAllScheduledJobsWithShifts = async (
+  rangeStart?: Date,
+  rangeEnd?: Date,
+): Promise<ScheduleType[]> => {
   await connectMongo();
   try {
-    const scheduledJobs = await Schedule.find().lean();
+    const query: any = {};
+
+    // Apply date range filter if provided
+    if (rangeStart && rangeEnd) {
+      query.startDateTime = {
+        $gte: rangeStart,
+        $lte: rangeEnd,
+      };
+    }
+
+    const scheduledJobs = await Schedule.find(query).lean();
     return scheduledJobs.map((job: any) => ({
       _id: job._id.toString(),
       invoiceRef: job.invoiceRef.toString(),
@@ -123,7 +135,6 @@ export const fetchAllPayrollPeriods = async (): Promise<
     throw new Error("Failed to fetch payroll periods");
   }
 };
-
 
 /**
  * Fetch a technician by ID.

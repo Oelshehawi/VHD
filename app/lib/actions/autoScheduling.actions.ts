@@ -26,6 +26,7 @@ import {
   createNotification,
   dismissSchedulingRequestNotification,
 } from "./notifications.actions";
+import { createJobsDueSoonForInvoice } from "./actions";
 
 const postmark = require("postmark");
 
@@ -889,6 +890,14 @@ export async function confirmSchedulingWithInvoice(
     } as any);
 
     await newInvoice.save();
+
+    // Create JobsDueSoon record for the new invoice
+    await createJobsDueSoonForInvoice(
+      newInvoice._id.toString(),
+      client._id.toString(),
+      sourceInvoice.jobTitle || "",
+      dateDue,
+    );
 
     // Calculate start time based on confirmed time
     const startDateTime = new Date(data.confirmedDate);

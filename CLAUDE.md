@@ -113,14 +113,6 @@ Server actions are organized by domain in `app/lib/actions/`:
 - `scheduleJobs.actions.ts` - Job scheduling
 - `stripe.actions.ts` - Stripe payment processing
 
-### API Route Organization
-
-API routes use folder structure with `index.ts`:
-
-- `pages/api/[kebab-case-name]/index.ts`
-- Examples: `updateTechnicianNotes/`, `sendInvoice/`, `cloudinaryUpload/`
-- Include auth checks at route start
-- Return consistent JSON with proper HTTP status codes
 
 ## Key Code Patterns and Conventions
 
@@ -135,8 +127,6 @@ API routes use folder structure with `index.ts`:
 
 #### Server Components (Async Functions)
 
-- **Call server functions directly** - they are "use server" by default
-- **Error Handling:** Use try/catch or let errors propagate to Suspense boundaries
 - **Close to Consumption:** Keep fetch calls near where data is used
 
 ```typescript
@@ -147,135 +137,6 @@ export const DashboardPage = async () => {
 };
 ```
 
-#### Client Components (with TanStack Query)
-
-- **MUST use TanStack Query** for all data fetching in client components
-- **Never call server functions during initial render** - creates fetch waterfalls and violates RSC contracts
-- **Import and use `useQuery` hook** for caching, refetching, and loading states
-- **Query keys must reference dependencies** - changes trigger refetches automatically
-
-**Basic Pattern:**
-
-```typescript
-"use client";
-import { useQuery } from "@tanstack/react-query";
-import { fetchServerFunction } from "@/app/lib/actions";
-
-export function MyComponent({ filterValue, dateRange }) {
-  const { data, isLoading, error } = useQuery({
-    queryKey: ["myData", filterValue, dateRange], // Include all deps - triggers refetch on change
-    queryFn: async () => {
-      return await fetchServerFunction(filterValue, dateRange);
-    },
-  });
-
-  if (isLoading) return <LoadingSkeleton />;
-  if (error) return <ErrorState error={error} />;
-  return <div>{/* render data */}</div>;
-}
-```
-
-**Advanced Pattern with Debouncing (for search/date inputs):**
-
-```typescript
-"use client";
-import { useState, useRef, useCallback, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
-
-export function SearchableComponent() {
-  const [searchInput, setSearchInput] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
-  const debounceTimeoutRef = useRef<NodeJS.Timeout>();
-
-  // Debounce search: 500ms delay before state updates
-  const handleSearchChange = useCallback((value: string) => {
-    setSearchInput(value);
-    clearTimeout(debounceTimeoutRef.current);
-    debounceTimeoutRef.current = setTimeout(() => {
-      setDebouncedSearch(value);
-    }, 500);
-  }, []);
-
-  // Fetch uses debouncedSearch, not live input
-  const { data, isLoading } = useQuery({
-    queryKey: ["items", debouncedSearch],
-    queryFn: async () => await searchItems(debouncedSearch),
-  });
-
-  return (
-    <>
-      <input value={searchInput} onChange={(e) => handleSearchChange(e.target.value)} />
-      {isLoading && <Skeleton />}
-      {!isLoading && <Results data={data} />}
-    </>
-  );
-}
-```
-
-**Date Picker Pattern (avoid refetch on arrow clicks):**
-
-- Use `onBlur` instead of `onChange` on date inputs to prevent rapid refetches
-- Debounce date changes (300ms) so only final date value triggers refetch
-- Never refetch on native date picker arrow clicks
-
-```typescript
-const handleDateBlur = (e: React.FocusEvent<HTMLInputElement>) => {
-  const newDate = e.target.value;
-  dateDebounceTimeoutRef.current = setTimeout(() => {
-    setDate(newDate); // This state change triggers query refetch
-  }, 300);
-};
-
-<input type="date" onBlur={handleDateBlur} />
-```
-
-**QueryProvider Setup (Required):**
-The app requires a `QueryProvider` wrapper at the root to avoid serialization errors:
-
-```typescript
-// app/lib/QueryProvider.tsx (client component)
-"use client";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-
-const queryClient = new QueryClient();
-
-export function QueryProvider({ children }: { children: React.ReactNode }) {
-  return (
-    <QueryClientProvider client={queryClient}>
-      {children}
-    </QueryClientProvider>
-  );
-}
-
-// app/(root)/layout.tsx - use QueryProvider instead of QueryClientProvider
-<QueryProvider>
-  {children}
-</QueryProvider>
-```
-
-#### Best Practices
-
-- **Server Components**: Initial page loads, authentication, SEO-critical data
-- **Client + TanStack Query**: User interactions, filters, dynamic parameters, tabs, modal data
-- **Query Key Dependencies**: Always include filters, search, dates in queryKey - auto-triggers refetch
-- **Loading States**: Show skeleton loaders during load, NOT "no data" messages
-- **Debouncing**: Use timeouts for search (500ms) and date changes (300ms) to prevent excessive API calls
-- **Pattern**: Server fetches initial data → passes to client → client uses TanStack for interactive updates
-- **CRITICAL**: Never call server functions during client component render (violates RSC pattern)
-
-### Component Structure
-
-```typescript
-interface ComponentNameProps {
-  prop1: string;
-  prop2?: number;
-  onAction?: (value: string) => void;
-}
-
-export default function ComponentName({ prop1, prop2, onAction }: ComponentNameProps) {
-  return <div>{prop1}</div>;
-}
-```
 
 ### Form Handling
 
@@ -289,22 +150,6 @@ export default function ComponentName({ prop1, prop2, onAction }: ComponentNameP
 - **Framer Motion** for animations
 - Prettier plugin for Tailwind class sorting
 
-## Development Workflow
-
-### Before Making Changes
-
-1. Understand the current codebase thoroughly
-2. Plan complex tasks with clear, manageable steps
-3. Identify dependencies and potential edge cases
-4. Consider backward compatibility
-
-### Implementation
-
-1. Follow Single Responsibility Principle
-2. Create new files when needed to maintain separation of concerns
-3. Test changes incrementally
-4. Ensure all TypeScript types are correctly defined
-5. Use proper authentication/authorization checks in API routes
 
 ### Code Quality Verification
 
@@ -323,15 +168,7 @@ Both checks must pass before committing. Fix any errors reported by these tools.
 - Type safety with strict TypeScript checking
 - Code style consistency
 - Potential bugs caught early
-- Better code quality overall
-
-### Git Practices
-
-- Keep commits focused and descriptive
-- Use conventional commit messages
-- Commit related changes together
-- Run `pnpm run lint:types` and `pnpm run lint:eslint` before committing
-- Review changes before committing
+-
 
 ## Important Architectural Considerations
 
@@ -397,8 +234,6 @@ Both checks must pass before committing. Fix any errors reported by these tools.
 
 ### Client Portal
 
-- Separate authentication context via Clerk
-- Limited view of invoices and reports
 - Route group `(clientPortal)` for client-specific pages
 
 ## Environment Variables
@@ -416,35 +251,7 @@ Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, Ope
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `STRIPE_WEBHOOK_SECRET`
 
-## Date Handling
 
-**Critical Rule:** Dates in this project should always be displayed **as stored** without using JavaScript `new Date()` constructor for display purposes, to avoid timezone shifts.
-
-### Why This Matters
-
-- The database stores dates in UTC or as ISO strings
-- Using `new Date(dateString)` can shift the date by a day depending on the user's timezone
-- For example, "2026-01-10" becomes "2026-01-09 16:00:00" in PST when parsed as a Date
-
-### Correct Approach
-
-```typescript
-// Use the utility function for displaying dates
-import { formatDateStringUTC } from "@/app/lib/utils";
-const displayDate = formatDateStringUTC(dateValue); // Returns "January 10, 2026"
-
-// Or parse date strings directly by splitting
-const dateStr = "2026-01-10T00:00:00.000Z";
-const datePart = dateStr.split("T")[0]; // "2026-01-10"
-const [year, month, day] = datePart.split("-");
-```
-
-### Avoid This
-
-```typescript
-// Don't use new Date() for display purposes - this may shift the date!
-const date = new Date(dateString);
-const formatted = date.toLocaleDateString(); // Wrong day possible
 ```
 
 ### Available Utility Functions
@@ -457,38 +264,4 @@ const formatted = date.toLocaleDateString(); // Wrong day possible
 
 For more details, see the workflow: `.agent/workflows/date-handling.md`
 
-## Debugging Tips
 
-- **Type Errors:** Run `pnpm run lint:types` to catch TypeScript issues
-- **Database Issues:** Verify `MONGODB_URI` is correct and accessible
-- **API Failures:** Check browser DevTools Network tab for response status and body
-- **Authentication Issues:** Verify Clerk keys are set and user has correct role in Clerk dashboard
-- **PDF Generation Issues:** Check component props and data structure match @react-pdf/renderer requirements
-- **Route Optimization:** Test with `pnpm run test-openroute` before deploying changes
-
-## File Naming Conventions
-
-- **Components:** PascalCase (`ComponentName.tsx`)
-- **API Routes:** kebab-case in folder names (`api-route-name/`)
-- **Server Actions:** camelCase (`actionName.ts`)
-- **Data Fetchers:** descriptive camelCase (`clientData.ts`, `invoiceData.ts`)
-- **Utilities:** camelCase (`utility.ts`)
-- **Hooks:** camelCase starting with `use` (`useClientData.ts`)
-
-## Recent Project Developments
-
-Recent commits show focus on:
-
-- Analytics and audit logging with user tracking
-- Employee availability system improvements
-- Invoice and schedule enhancements
-- Mobile view optimizations (calendar month view on mobile)
-- Technician location tracking
-- Recent actions fetching for dashboards
-
-## Testing
-
-- Route optimization tests: `pnpm run test-optimization`
-- OpenRoute integration tests: `pnpm run test-openroute`
-- Manual testing across desktop and mobile views (PWA-enabled)
-- Edge cases: payment tracking, availability conflicts, timezone handling

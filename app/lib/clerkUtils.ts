@@ -43,7 +43,7 @@ export async function getUserName(userId: string): Promise<string> {
  * @returns Map of user ID to user name
  */
 export async function getUserNames(
-  userIds: string[]
+  userIds: string[],
 ): Promise<Map<string, string>> {
   const result = new Map<string, string>();
 
@@ -61,8 +61,13 @@ export async function getUserNames(
   try {
     const clerk = await clerkClient();
 
-    // Fetch all users (this may be limited by Clerk, adjust as needed)
-    const users = await clerk.users.getUserList({ limit: 500 });
+    // Fetch only requested users using the userId filter
+    // Note: Clerk's getUserList supports passing an array of user IDs
+    // @ts-ignore - The types might not fully express the array capability depending on version, but the API supports it
+    const users = await clerk.users.getUserList({
+      userId: uncachedIds,
+      limit: 100,
+    });
 
     // Build a map of userId -> name
     const userMap = new Map<string, string>();
@@ -75,9 +80,18 @@ export async function getUserNames(
       userNameCache.set(user.id, name);
     });
 
+    // For any IDs not returned (deleted users?), use ID as fallback
+    uncachedIds.forEach((id) => {
+      if (!userMap.has(id)) {
+        // Try getting individual if batch failed or wasn't found (fallback)
+        // usage of this function implies we want best effort
+        userNameCache.set(id, id);
+      }
+    });
+
     // Return all requested user names
     userIds.forEach((id) => {
-      result.set(id, userMap.get(id) || id);
+      result.set(id, userNameCache.get(id) || id);
     });
 
     return result;

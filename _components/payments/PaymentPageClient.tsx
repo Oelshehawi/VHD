@@ -125,26 +125,14 @@ function ShimmerBlock({
   );
 }
 
-// Module-level flag to track if header animation has already played
-// This prevents re-animation when transitioning from skeleton to loaded content
-let headerHasAnimated = false;
-
 function PaymentPageHeader({ reduceMotion }: { reduceMotion: boolean }) {
-  // Skip animation if it has already played (e.g., during skeleton phase)
-  const skipAnimation = headerHasAnimated;
-
-  // Mark animation as played after the first render
-  if (!headerHasAnimated) {
-    headerHasAnimated = true;
-  }
-
   return (
     <motion.header
       className="bg-darkGreen relative z-10 border-b border-white/10"
-      initial={skipAnimation ? false : { opacity: 0, y: reduceMotion ? 0 : -8 }}
+      initial={reduceMotion ? false : { opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{
-        duration: reduceMotion || skipAnimation ? 0 : 0.3,
+        duration: reduceMotion ? 0 : 0.3,
         ease: "easeOut",
       }}
     >

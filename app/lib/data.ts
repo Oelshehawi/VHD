@@ -512,6 +512,7 @@ export const fetchHolidays = async (): Promise<Holiday[]> => {
   try {
     const response = await fetch(
       `https://canada-holidays.ca/api/v1/provinces/BC`,
+      { cache: "no-store" },
     );
 
     if (!response.ok) {

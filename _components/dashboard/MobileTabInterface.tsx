@@ -1,19 +1,13 @@
 "use client";
 
-import ActionsFeed from "./ActionsFeed";
-import JobsDueContainer from "./JobsDueContainer";
-import { DashboardSearchParams } from "../../app/lib/typeDefinitions";
-import { JobsDueDataType, DisplayAction } from "../../app/lib/dashboard.data";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 
 export default function MobileTabInterface({
-  searchParams,
-  jobsDueData,
-  recentActions,
+  jobsDueContent,
+  activityTabContent,
 }: {
-  searchParams: DashboardSearchParams;
-  jobsDueData: JobsDueDataType;
-  recentActions: DisplayAction[];
+  jobsDueContent: React.ReactNode;
+  activityTabContent: React.ReactNode;
 }) {
   return (
     <div className="flex h-full flex-col lg:hidden">
@@ -25,16 +19,11 @@ export default function MobileTabInterface({
 
         <div className="flex-1 overflow-hidden">
           <TabsContent value="jobs" className="mt-0 h-full border-0 p-0">
-            <div className="h-full">
-              <JobsDueContainer jobsDueData={jobsDueData} />
-            </div>
+            <div className="h-full">{jobsDueContent}</div>
           </TabsContent>
 
           <TabsContent value="activity" className="mt-0 h-full border-0 p-0">
-            <ActionsFeed
-              searchParams={searchParams}
-              recentActions={recentActions}
-            />
+            {activityTabContent}
           </TabsContent>
         </div>
       </Tabs>
