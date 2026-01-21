@@ -53,12 +53,12 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Check if payment is processing
+    // Check if payment is actually in-flight (bank transfer processing)
+    // Note: "initiated" only means a PaymentIntent was created - user can retry
+    // Only block for "processing" or "pending" (actual bank debit in progress)
     if (
       invoice.stripePaymentStatus?.status &&
-      ["initiated", "processing", "pending"].includes(
-        invoice.stripePaymentStatus.status,
-      )
+      ["processing", "pending"].includes(invoice.stripePaymentStatus.status)
     ) {
       return NextResponse.json({
         processing: true,
