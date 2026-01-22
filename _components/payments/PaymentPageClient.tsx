@@ -875,8 +875,8 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                             Bank Payment (EFT)
                           </p>
                           <p className="text-muted-foreground text-xs break-words">
-                            Processing fee: {achProcessingFeeLabel} (0.8%, max
-                            $5) • 5-7 days
+                            Processing fee: {achProcessingFeeLabel} (1.0% +
+                            $0.40, max $5) • 5-7 days
                           </p>
                         </div>
                       </Button>

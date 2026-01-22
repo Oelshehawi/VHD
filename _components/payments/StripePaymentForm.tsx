@@ -59,7 +59,7 @@ export default function StripePaymentForm({
         if (paymentIntent.status === "succeeded") {
           onSuccess();
         } else if (paymentIntent.status === "processing") {
-          // ACH payments may be in processing state
+          // Bank payments may be in processing state
           onSuccess();
         } else if (paymentIntent.status === "requires_action") {
           if (!paymentIntent.client_secret) {
@@ -118,7 +118,10 @@ export default function StripePaymentForm({
         </div>
         <div className="flex justify-between text-sm">
           <span className="text-muted-foreground">
-            Processing Fee ({paymentMethod === "card" ? "2.9% + $0.30" : "0.8%"}
+            Processing Fee (
+            {paymentMethod === "card"
+              ? "2.9% + $0.30"
+              : "1.0% + $0.40 (max $5)"}
             )
           </span>
           <span className="font-medium">${processingFee} CAD</span>

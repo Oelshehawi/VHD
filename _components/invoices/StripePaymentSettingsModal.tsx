@@ -322,7 +322,7 @@ export default function StripePaymentSettingsModal({
                           Canadian Bank (PAD)
                         </p>
                         <p className="text-muted-foreground text-xs">
-                          Fee: 0.8% capped at $5 (5-7 day processing)
+                          Fee: 1.0% + $0.40 (max $5) (5-7 day processing)
                         </p>
                       </div>
                     </div>
