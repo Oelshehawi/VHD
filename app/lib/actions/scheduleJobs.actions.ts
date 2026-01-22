@@ -514,7 +514,7 @@ export async function searchScheduledJobs(query: string, limit = 20) {
   const trimmed = query.trim();
   if (!trimmed) return [];
 
-  const { sessionClaims, userId } = auth();
+  const { sessionClaims, userId } = await auth();
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
 

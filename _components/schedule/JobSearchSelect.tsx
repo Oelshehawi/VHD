@@ -93,11 +93,12 @@ const JobSearchSelect = ({
           <ul className="max-h-60 overflow-y-auto">
             {results.map((job: ScheduleType) => {
               const jobDate = job.startDateTime;
+              if (!jobDate) return null;
               const dateString =
                 typeof jobDate === "string"
                   ? jobDate.split("T")[0]
                   : jobDate.toISOString().split("T")[0];
-              const jobYear = Number(dateString.split("-")[0] || "");
+              const jobYear = Number(dateString?.split("-")[0] || "");
               const currentYear = new Date().getUTCFullYear();
               const isCurrentYear =
                 Number.isFinite(jobYear) && jobYear === currentYear;
