@@ -16,7 +16,8 @@
     "cloudinary:shrink:real": "tsx scripts/cloudinary-shrink.ts --dry-run=false --prefix=\"vhd-app\" --limit=10000 --thresholdMB=2 --skip-verify=false",
     "cloudinary:shrink:fast": "tsx scripts/cloudinary-shrink.ts --dry-run=false --prefix=\"vhd-app\" --limit=10000 --thresholdMB=2 --skip-verify=true",
     "migrate:user-ids": "node --env-file=.env --import=tsx scripts/migrate-user-ids.ts",
-    "migrate:user-ids:execute": "node --env-file=.env --import=tsx scripts/migrate-user-ids.ts --execute"
+    "migrate:user-ids:execute": "node --env-file=.env --import=tsx scripts/migrate-user-ids.ts --execute",
+    "check-jobs-due-soon": "tsx scripts/check-jobs-due-soon.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.36.3",

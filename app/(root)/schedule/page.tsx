@@ -12,19 +12,6 @@ import {
 import CalendarOptions from "../../../_components/schedule/CalendarOptions";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
 
-const timed = async <T,>(
-  label: string,
-  fn: () => Promise<T>,
-): Promise<T> => {
-  const start = Date.now();
-  try {
-    return await fn();
-  } finally {
-    const duration = Date.now() - start;
-    console.log(`[schedule] ${label} ${duration}ms`);
-  }
-};
-
 const Schedule = async ({
   searchParams,
 }: {
@@ -73,7 +60,15 @@ const Schedule = async ({
 
   const now = new Date();
   const fallbackDate = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0, 0),
+    Date.UTC(
+      now.getUTCFullYear(),
+      now.getUTCMonth(),
+      now.getUTCDate(),
+      0,
+      0,
+      0,
+      0,
+    ),
   );
   const targetDate = parseDateOnlyToUTC(date || undefined) || fallbackDate;
 
@@ -89,11 +84,11 @@ const Schedule = async ({
       Date.UTC(
         targetDate.getUTCFullYear(),
         targetDate.getUTCMonth() + 1,
-      0,
-      23,
-      59,
-      59,
-      999,
+        0,
+        23,
+        59,
+        59,
+        999,
       ),
     );
 
@@ -131,14 +126,12 @@ const Schedule = async ({
     technicians,
     timeOffRequests,
   ] = await Promise.all([
-    timed("scheduledJobs", () =>
-      fetchAllScheduledJobsWithShifts(rangeStart, rangeEnd),
-    ),
-    timed("holidays", () => fetchHolidays()),
-    timed("availability", () => fetchTechnicianAvailability()),
-    timed("auth", () => auth()),
-    timed("technicians", () => getTechnicians()),
-    timed("timeOffRequests", () => fetchTimeOffRequests("approved")),
+    fetchAllScheduledJobsWithShifts(rangeStart, rangeEnd),
+    fetchHolidays(),
+    fetchTechnicianAvailability(),
+    auth(),
+    getTechnicians(),
+    fetchTimeOffRequests("approved"),
   ]);
 
   let scheduledJobs: ScheduleType[] = scheduledJobsResult;

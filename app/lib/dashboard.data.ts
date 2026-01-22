@@ -1,6 +1,7 @@
 "use server";
 
 import connectMongo from "./connect";
+import mongoose from "mongoose";
 import {
   Client,
   Invoice,
@@ -201,8 +202,6 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
       : [],
   }));
 };
-
-
 
 /**
  * Combined function to fetch both pending invoices and total amount in a single query
@@ -455,6 +454,7 @@ export interface DisplayAction {
   success: boolean;
   severity: "success" | "info" | "warning" | "error";
   invoiceId?: string; // Human-readable invoice ID for navigation
+  invoiceExists?: boolean;
   metadata?: {
     clientName?: string;
     jobTitle?: string;
@@ -505,6 +505,8 @@ export const fetchRecentActions = async (
     // Fetch client names for metadata
     const clientIds = new Set<string>();
     const userIds = new Set<string>();
+    const invoiceMongoIds = new Set<string>();
+    const invoiceIds = new Set<string>();
 
     auditLogs.forEach((log) => {
       if (log.details?.newValue?.clientId) {
@@ -516,6 +518,15 @@ export const fetchRecentActions = async (
       // Collect all unique user IDs for Clerk lookup
       if (log.performedBy) {
         userIds.add(log.performedBy);
+      }
+      if (log.details?.newValue?.invoiceMongoId) {
+        invoiceMongoIds.add(log.details.newValue.invoiceMongoId);
+      }
+      if (log.details?.newValue?.invoiceId) {
+        invoiceIds.add(log.details.newValue.invoiceId);
+      }
+      if (log.invoiceId) {
+        invoiceIds.add(log.invoiceId);
       }
     });
 
@@ -533,6 +544,33 @@ export const fetchRecentActions = async (
     // Fetch user names from Clerk
     const userNameMap = await getUserNames(Array.from(userIds));
 
+    const invoiceObjectIds = Array.from(invoiceMongoIds)
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    const invoiceQuery: Array<Record<string, unknown>> = [];
+    if (invoiceObjectIds.length > 0) {
+      invoiceQuery.push({ _id: { $in: invoiceObjectIds } });
+    }
+    if (invoiceIds.size > 0) {
+      invoiceQuery.push({ invoiceId: { $in: Array.from(invoiceIds) } });
+    }
+
+    const existingInvoices =
+      invoiceQuery.length > 0
+        ? await Invoice.find({ $or: invoiceQuery })
+            .select("_id invoiceId")
+            .lean()
+            .exec()
+        : [];
+
+    const existingMongoIdSet = new Set(
+      existingInvoices.map((inv: any) => inv._id.toString()),
+    );
+    const existingInvoiceIdSet = new Set(
+      existingInvoices.map((inv: any) => inv.invoiceId),
+    );
+
     // Process audit logs
     const displayActions: DisplayAction[] = auditLogs.map((log) => {
       // Try to get clientId from newValue first, then from metadata
@@ -547,6 +585,13 @@ export const fetchRecentActions = async (
       const jobTitle =
         log.details?.newValue?.jobTitle || log.details?.metadata?.jobTitle;
       const { formatted, title } = formatTimestamp(timestamp);
+      const invoiceMongoId = log.details?.newValue?.invoiceMongoId;
+      const invoiceId = log.invoiceId || log.details?.newValue?.invoiceId;
+      const invoiceExists = invoiceMongoId
+        ? existingMongoIdSet.has(invoiceMongoId)
+        : invoiceId
+          ? existingInvoiceIdSet.has(invoiceId)
+          : false;
 
       // Build rich description based on action type
       let description = formatActionDescription(log.action, clientName);
@@ -592,6 +637,7 @@ export const fetchRecentActions = async (
         success: log.success,
         severity: getActionSeverity(log.action),
         invoiceId: log.invoiceId, // Store the human-readable invoice ID
+        invoiceExists,
         metadata: {
           clientName,
           jobTitle,

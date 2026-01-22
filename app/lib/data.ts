@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import connectMongo from "./connect";
+import { unstable_cache } from "next/cache";
 import {
   Client,
   Invoice,
@@ -509,35 +510,45 @@ export async function fetchInvoicesPages(
 }
 
 export const fetchHolidays = async (): Promise<Holiday[]> => {
-  try {
-    const response = await fetch(
-      `https://canada-holidays.ca/api/v1/provinces/BC`,
-      { cache: "no-store" },
-    );
+  const WEEK_SECONDS = 60 * 60 * 24 * 7;
 
-    if (!response.ok) {
-      throw new Error("Failed to fetch holidays");
-    }
+  const fetchHolidaysCached = unstable_cache(
+    async () => {
+      try {
+        const response = await fetch(
+          `https://canada-holidays.ca/api/v1/provinces/BC`,
+          { next: { revalidate: WEEK_SECONDS } },
+        );
 
-    const data: HolidayResponse = await response.json();
+        if (!response.ok) {
+          throw new Error("Failed to fetch holidays");
+        }
 
-    // Mark statutory holidays
-    const statutoryHolidays = data.province.holidays.map((holiday) => ({
-      ...holiday,
-      type: "statutory" as const,
-    }));
+        const data: HolidayResponse = await response.json();
 
-    // Combine statutory holidays with observances
-    const allHolidays = [...statutoryHolidays, ...OBSERVANCES];
+        // Mark statutory holidays
+        const statutoryHolidays = data.province.holidays.map((holiday) => ({
+          ...holiday,
+          type: "statutory" as const,
+        }));
 
-    // Sort by date
-    return allHolidays.sort(
-      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
-    );
-  } catch (error) {
-    console.error("Error fetching holidays:", error);
-    return [];
-  }
+        // Combine statutory holidays with observances
+        const allHolidays = [...statutoryHolidays, ...OBSERVANCES];
+
+        // Sort by date
+        return allHolidays.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime(),
+        );
+      } catch (error) {
+        console.error("Error fetching holidays:", error);
+        return [];
+      }
+    },
+    ["fetchHolidays"],
+    { revalidate: WEEK_SECONDS },
+  );
+
+  return fetchHolidaysCached();
 };
 
 /**

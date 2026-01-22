@@ -396,7 +396,6 @@ const Header = ({
           {/* Search */}
           <div className="w-32 min-w-0 flex-1 sm:w-48 md:w-64 lg:w-80 lg:flex-none">
             <SearchSelect
-              scheduledJobs={scheduledJobs}
               placeholder="Search jobs..."
               technicians={technicians}
               canManage={canManage}

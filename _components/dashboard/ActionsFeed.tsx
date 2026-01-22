@@ -70,7 +70,6 @@ function getActionLabel(action: string): string {
   return labels[action] || action;
 }
 
-
 function getBadgeClassName(severity: string): string {
   switch (severity) {
     case "success":
@@ -141,7 +140,8 @@ function ActionCard({ action }: { action: DisplayAction }) {
   // Priority: MongoDB _id from details > audit log invoiceId
   const invoiceId =
     action.details?.newValue?.invoiceMongoId || action.invoiceId;
-  const canNavigate = isInvoiceAction && Boolean(invoiceId);
+  const invoiceExists = action.invoiceExists ?? true;
+  const canNavigate = isInvoiceAction && Boolean(invoiceId) && invoiceExists;
   const invoiceLabel =
     action.details?.newValue?.jobTitle ||
     action.details?.newValue?.invoiceId ||
@@ -196,6 +196,11 @@ function ActionCard({ action }: { action: DisplayAction }) {
           <Badge variant="destructive" className="text-[10px]">
             Failed
           </Badge>
+        )}
+        {isInvoiceAction && !invoiceExists && (
+          <span className="text-muted-foreground text-xs">
+            Invoice no longer exists
+          </span>
         )}
         {canNavigate && (
           <span className="text-muted-foreground text-xs opacity-0 transition-opacity group-hover:opacity-100">
@@ -630,9 +635,7 @@ function DirectActionContent({
   return <div className="text-sm font-medium">{action.description}</div>;
 }
 
-export default function ActionsFeed({
-  recentActions,
-}: ActionsFeedProps) {
+export default function ActionsFeed({ recentActions }: ActionsFeedProps) {
   const now = new Date();
   const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
   const defaultTo = new Date(now.getFullYear(), now.getMonth() + 1, 0);

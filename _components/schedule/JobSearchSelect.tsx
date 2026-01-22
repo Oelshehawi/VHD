@@ -1,26 +1,22 @@
 "use client";
-import { Search, Calendar } from "lucide-react";
+import { Search, Calendar, Loader2 } from "lucide-react";
 import clsx from "clsx";
 import { ScheduleType, TechnicianType } from "../../app/lib/typeDefinitions";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import JobDetailsModal from "./JobDetailsModal";
 import { Input } from "../ui/input";
 import { Card } from "../ui/card";
-import {
-  formatDateShortMonthUTC,
-  formatTimeUTC,
-} from "@/app/lib/utils";
+import { searchScheduledJobs } from "../../app/lib/actions/scheduleJobs.actions";
+import { formatDateShortMonthUTC, formatTimeUTC } from "@/app/lib/utils";
 
 const JobSearchSelect = ({
   placeholder,
   className,
-  scheduledJobs,
   technicians,
   canManage = true,
 }: {
   placeholder: string;
   className?: string;
-  scheduledJobs: ScheduleType[];
   technicians: TechnicianType[];
   canManage?: boolean;
 }) => {
@@ -29,6 +25,8 @@ const JobSearchSelect = ({
   const [openDropdown, setOpenDropdown] = useState(false);
 
   const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ScheduleType[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleClick = (job: ScheduleType) => {
     setOpenDropdown(false);
@@ -43,17 +41,41 @@ const JobSearchSelect = ({
       setOpenDropdown(false);
     }
   };
-  const filteredJobs = scheduledJobs
-    .filter((job) => {
-      return job?.jobTitle?.toLowerCase().includes(query.toLowerCase());
-    })
-    .sort((a, b) => {
-      // Sort by startDateTime descending (latest first)
-      return (
-        new Date(b.startDateTime).getTime() -
-        new Date(a.startDateTime).getTime()
-      );
-    });
+
+  useEffect(() => {
+    let isActive = true;
+    const trimmed = query.trim();
+
+    if (!trimmed) {
+      setResults([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+    setOpenDropdown(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const jobs = await searchScheduledJobs(trimmed, 25);
+        if (isActive) {
+          setResults(jobs as ScheduleType[]);
+        }
+      } catch (error) {
+        console.error("Failed to search jobs:", error);
+        if (isActive) {
+          setResults([]);
+        }
+      } finally {
+        if (isActive) setIsLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   return (
     <div className={clsx("relative flex w-full flex-col", className)}>
@@ -66,13 +88,19 @@ const JobSearchSelect = ({
           className="pl-9"
         />
       </div>
-      {openDropdown && filteredJobs?.length > 0 && (
+      {openDropdown && (isLoading || results.length > 0) && (
         <Card className="absolute top-full left-0 z-50 mt-1 w-full gap-0 py-0 shadow-xl">
           <ul className="max-h-60 overflow-y-auto">
-            {filteredJobs.map((job: ScheduleType) => {
-              const jobDate = new Date(job.startDateTime);
+            {results.map((job: ScheduleType) => {
+              const jobDate = job.startDateTime;
+              const dateString =
+                typeof jobDate === "string"
+                  ? jobDate.split("T")[0]
+                  : jobDate.toISOString().split("T")[0];
+              const jobYear = Number(dateString.split("-")[0] || "");
+              const currentYear = new Date().getUTCFullYear();
               const isCurrentYear =
-                jobDate.getUTCFullYear() === new Date().getFullYear();
+                Number.isFinite(jobYear) && jobYear === currentYear;
 
               const formattedDate = formatDateShortMonthUTC(jobDate, {
                 includeWeekday: true,
@@ -107,7 +135,20 @@ const JobSearchSelect = ({
                 </li>
               );
             })}
+            {isLoading && (
+              <li className="text-muted-foreground flex items-center gap-2 px-4 py-3 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Searching…
+              </li>
+            )}
           </ul>
+        </Card>
+      )}
+      {openDropdown && !isLoading && results.length === 0 && query.trim() && (
+        <Card className="absolute top-full left-0 z-50 mt-1 w-full gap-0 py-3 shadow-xl">
+          <div className="text-muted-foreground px-4 text-sm">
+            No jobs found
+          </div>
         </Card>
       )}
       {selectedJob && (

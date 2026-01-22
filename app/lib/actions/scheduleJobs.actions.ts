@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath } from "next/cache";
+import { revalidatePath, unstable_cache } from "next/cache";
 import connectMongo from "../connect";
 import {
   Schedule,
@@ -14,7 +14,7 @@ import {
   ReportType,
   InvoiceType,
 } from "../typeDefinitions";
-import { clerkClient } from "@clerk/nextjs/server";
+import { clerkClient, auth } from "@clerk/nextjs/server";
 import { calculateJobDurationFromPrice, minutesToPayrollHours } from "../utils";
 import { v2 as cloudinary } from "cloudinary";
 
@@ -480,19 +480,59 @@ export const updateJob = async ({
 };
 
 export async function getTechnicians() {
-  const users: any = await clerkClient();
-  const userList = await users.users.getUserList({
-    limit: 100,
-  });
+  const WEEK_SECONDS = 60 * 60 * 24 * 7;
 
-  const technicians = userList.data.filter(
-    (user: any) => user.publicMetadata.isTechnician === true,
+  const getTechniciansCached = unstable_cache(
+    async () => {
+      const users: any = await clerkClient();
+      const userList = await users.users.getUserList({
+        limit: 100,
+      });
+
+      const technicians = userList.data.filter(
+        (user: any) => user.publicMetadata.isTechnician === true,
+      );
+      return technicians.map((user: any) => ({
+        id: user.id,
+        name: user.fullName,
+        hourlyRate: user.publicMetadata.hourlyRate,
+      }));
+    },
+    ["getTechnicians"],
+    { revalidate: WEEK_SECONDS },
   );
-  return technicians.map((user: any) => ({
-    id: user.id,
-    name: user.fullName,
-    hourlyRate: user.publicMetadata.hourlyRate,
-  }));
+
+  return getTechniciansCached();
+}
+
+const escapeRegex = (value: string) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+export async function searchScheduledJobs(query: string, limit = 20) {
+  await connectMongo();
+
+  const trimmed = query.trim();
+  if (!trimmed) return [];
+
+  const { sessionClaims, userId } = auth();
+  const canManage =
+    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+
+  const regex = new RegExp(escapeRegex(trimmed), "i");
+  const match: any = {
+    $or: [{ jobTitle: regex }, { location: regex }],
+  };
+
+  if (!canManage && userId) {
+    match.assignedTechnicians = userId;
+  }
+
+  const jobs = await Schedule.find(match)
+    .sort({ startDateTime: -1 })
+    .limit(Math.min(Math.max(limit, 1), 50))
+    .lean<ScheduleType[]>();
+
+  return JSON.parse(JSON.stringify(jobs));
 }
 
 export const updateShiftHoursBatch = async (

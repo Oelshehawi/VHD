@@ -112,8 +112,9 @@ export async function createJobsDueSoonForInvoice(
 export async function deleteInvoice(invoiceId: string) {
   await connectMongo();
   try {
-    const job = await JobsDueSoon.findOne({ invoiceId: invoiceId });
+    const job = await JobsDueSoon.findOne({ invoiceId: invoiceId.toString() });
     if (job) {
+      console.log(`Deleting JobsDueSoon record for invoice ${invoiceId}`);
       await JobsDueSoon.findByIdAndDelete(job._id);
     }
     const scheduledJob = await Schedule.findOne({ invoiceRef: invoiceId });
@@ -305,24 +306,58 @@ export async function updateInvoice(
 
     let jobsDueSoonUpdate: any = {};
 
-    if (
-      formData.dateIssued &&
-      formData.dateIssued !== currentInvoice?.dateIssued
-    ) {
-      const newDateDue = calculateDueDate(
-        formData.dateIssued,
-        formData.frequency,
-      );
-      jobsDueSoonUpdate.dateDue = newDateDue;
+    if (formData.dateIssued) {
+      const getDateParts = (value: any) => {
+        const dateStr =
+          value instanceof Date ? value.toISOString() : String(value);
+        const datePart = dateStr.split("T")[0] || dateStr;
+        const parts = datePart.split("-");
+        if (parts.length !== 3) return null;
+        const [yearStr, monthStr, dayStr] = parts;
+        const year = Number.parseInt(yearStr || "", 10);
+        const month = Number.parseInt(monthStr || "", 10) - 1;
+        const day = Number.parseInt(dayStr || "", 10);
+        const isValidNumber =
+          Number.isFinite(year) &&
+          Number.isFinite(month) &&
+          Number.isFinite(day);
+        const isValidRange = month >= 0 && month <= 11 && day >= 1 && day <= 31;
+        if (!isValidNumber || !isValidRange) return null;
+        return { year, month, day };
+      };
+
+      const nextParts = getDateParts(formData.dateIssued);
+      const currentParts = currentInvoice?.dateIssued
+        ? getDateParts(currentInvoice.dateIssued)
+        : null;
+      const dateChanged =
+        !currentParts ||
+        !nextParts ||
+        currentParts.year !== nextParts.year ||
+        currentParts.month !== nextParts.month ||
+        currentParts.day !== nextParts.day;
+
+      if (dateChanged && nextParts) {
+        const frequency = formData.frequency ?? currentInvoice?.frequency;
+        const nextDateIssued = new Date(
+          Date.UTC(nextParts.year, nextParts.month, nextParts.day),
+        );
+        const newDateDue = calculateDueDate(nextDateIssued, frequency);
+        if (newDateDue) {
+          jobsDueSoonUpdate.dateDue = newDateDue;
+        }
+      }
     }
 
     if (formData.jobTitle && formData.jobTitle !== currentInvoice?.jobTitle) {
       jobsDueSoonUpdate.jobTitle = formData.jobTitle;
     }
 
+    console.log(`Updating JobsDueSoon record for invoice ${invoiceId}`);
+
     if (Object.keys(jobsDueSoonUpdate).length > 0) {
       await JobsDueSoon.findOneAndUpdate(
-        { invoiceId: invoiceId },
+        { invoiceId: invoiceId.toString() },
         jobsDueSoonUpdate,
       );
     }
@@ -333,7 +368,6 @@ export async function updateInvoice(
 
   revalidatePath(`/invoices/${invoiceId}`);
 }
-
 
 export async function getMostRecentInvoice(clientId: string) {
   await connectMongo();
