@@ -7,6 +7,7 @@ import {
   useMemo,
   useCallback,
 } from "react";
+import { useUser } from "@clerk/nextjs";
 import {
   PendingInvoiceType,
   PaymentInfo,
@@ -51,6 +52,7 @@ const PendingJobsModalContent = ({
   isOpen,
   onClose,
 }: PendingJobsModalProps) => {
+  const { user } = useUser();
   const [isPending, startTransition] = useTransition();
   const [showPaymentModal, setShowPaymentModal] = useState<string | null>(null);
   const [showReminderModal, setShowReminderModal] = useState<string | null>(
@@ -116,6 +118,12 @@ const PendingJobsModalContent = ({
       setOptimisticInvoice({ id: invoiceId, status: newStatus });
 
       try {
+        const performedBy =
+          user?.fullName ||
+          user?.firstName ||
+          user?.primaryEmailAddress?.emailAddress ||
+          user?.id ||
+          "user";
         const updateData: any = { status: newStatus };
 
         // Add payment info if provided
@@ -127,8 +135,7 @@ const PendingJobsModalContent = ({
           };
         }
 
-        const updateInvoiceStatus = updateInvoice.bind(null, invoiceId);
-        await updateInvoiceStatus(updateData);
+        await updateInvoice(invoiceId, updateData, performedBy);
 
         toast.success("Status updated successfully!");
         setShowPaymentModal(null);

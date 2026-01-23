@@ -134,6 +134,10 @@ function ActionCard({ action }: { action: DisplayAction }) {
   const isInvoiceAction =
     action.action.includes("invoice") ||
     action.action.includes("reminder") ||
+    action.action.includes("stripe_payment") ||
+    action.action.includes("payment_status") ||
+    action.action.includes("payment_info") ||
+    action.action.includes("call_logged_payment") ||
     action.action.includes("stripe_payment_settings");
 
   // Get the correct invoice ID for navigation
@@ -285,7 +289,11 @@ function DirectActionContent({
     const formattedAmount = Number.isFinite(parsedAmount)
       ? formatAmount(parsedAmount)
       : null;
-    const status = getPaymentStatus(action.action);
+    const status =
+      action.action === "payment_status_changed" &&
+      action.details?.newValue?.status
+        ? action.details.newValue.status
+        : getPaymentStatus(action.action);
     const method = action.details?.newValue?.paymentMethod || "card";
     const reference =
       action.details?.newValue?.transactionId ||

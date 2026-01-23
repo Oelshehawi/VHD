@@ -1,6 +1,7 @@
 // @ts-nocheck
 "use client";
 import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 import { useForm } from "react-hook-form";
 import { updateInvoice } from "../../app/lib/actions/actions";
 import {
@@ -52,7 +53,17 @@ const InlineEditInvoice = ({
   toggleEdit: () => void;
   canManage: boolean;
 }) => {
-  const updateInvoiceWithId = updateInvoice.bind(null, invoice._id);
+  const { user } = useUser();
+  const updateInvoiceWithId = (data: any) =>
+    updateInvoice(
+      invoice._id,
+      data,
+      user?.fullName ||
+        user?.firstName ||
+        user?.primaryEmailAddress?.emailAddress ||
+        user?.id ||
+        "user",
+    );
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [dateIssuedValue, setDateIssuedValue] = useState<Date | undefined>(
@@ -327,10 +338,12 @@ const InlineEditInvoice = ({
         </div>
       ) : (
         <div className="ml-6">
-          <div className={cn(
-            "bg-muted text-foreground rounded-lg px-3 py-2 text-sm",
-            field.name === "notes" && "whitespace-pre-wrap"
-          )}>
+          <div
+            className={cn(
+              "bg-muted text-foreground rounded-lg px-3 py-2 text-sm",
+              field.name === "notes" && "whitespace-pre-wrap",
+            )}
+          >
             {field.name === "dateDue" || field.name === "dateIssued" ? (
               formatDateStringUTC(invoice[field.name])
             ) : field.name === "frequency" ? (
