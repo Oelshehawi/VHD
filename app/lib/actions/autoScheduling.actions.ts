@@ -27,6 +27,13 @@ import {
   dismissSchedulingRequestNotification,
 } from "./notifications.actions";
 import { createJobsDueSoonForInvoice } from "./actions";
+import {
+  calculateDateDueFromParts,
+  calculateNextReminderDateFromParts,
+  parseDateParts,
+  toUtcDateFromParts,
+} from "../utils/datePartsUtils";
+import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
 
 const postmark = require("postmark");
 
@@ -552,9 +559,23 @@ export async function confirmSchedulingRequest(
     const invoice = request.invoiceId as InvoiceType;
     const client = request.clientId as ClientType;
 
+    const confirmedParts = parseDateParts(confirmedDate);
+    if (!confirmedParts) {
+      return { success: false, error: "Invalid confirmed date" };
+    }
+
     // Calculate start time based on confirmed time
-    const startDateTime = new Date(confirmedDate);
-    startDateTime.setUTCHours(confirmedTime.hour, confirmedTime.minute, 0, 0);
+    const startDateTime = new Date(
+      Date.UTC(
+        confirmedParts.year,
+        confirmedParts.month - 1,
+        confirmedParts.day,
+        confirmedTime.hour,
+        confirmedTime.minute,
+        0,
+        0,
+      ),
+    );
 
     // Create the schedule
     const scheduleData = {
@@ -603,11 +624,21 @@ export async function confirmSchedulingRequest(
       reviewedBy: userId,
       reviewNotes: notes,
       confirmedScheduleId: schedule._id,
-      confirmedDate: new Date(confirmedDate),
+      confirmedDate: toUtcDateFromParts(confirmedParts),
       confirmedTime,
       confirmationEmailSent: emailResult.success,
       confirmationEmailSentAt: emailResult.success ? new Date() : undefined,
     });
+
+    const schedulesForInvoice = await Schedule.countDocuments({
+      invoiceRef: schedule.invoiceRef,
+    });
+    if (schedulesForInvoice === 1) {
+      await syncInvoiceDateIssuedAndJobsDueSoon({
+        invoiceId: schedule.invoiceRef.toString(),
+        dateIssued: startDateTime,
+      });
+    }
 
     // Update JobsDueSoon to mark as scheduled
     await JobsDueSoon.findByIdAndUpdate(request.jobsDueSoonId, {
@@ -850,12 +881,16 @@ export async function confirmSchedulingWithInvoice(
 
     const invoiceIdStr = `${clientPrefix}-${newInvoiceNumber.toString().padStart(3, "0")}`;
 
-    // Calculate dates - dateIssued is today, dateDue based on frequency
-    const dateIssued = new Date(data.confirmedDate);
+    const confirmedParts = parseDateParts(data.confirmedDate);
+    if (!confirmedParts) {
+      return { success: false, error: "Invalid confirmed date" };
+    }
+
+    // Calculate dates - dateIssued is confirmed date, dateDue based on frequency
+    const dateIssued = toUtcDateFromParts(confirmedParts);
     const frequency = sourceInvoice.frequency || 2;
-    const monthsToAdd = Math.floor(12 / frequency);
-    const dateDue = new Date(dateIssued);
-    dateDue.setUTCMonth(dateDue.getUTCMonth() + monthsToAdd);
+    const dateDue =
+      calculateDateDueFromParts(confirmedParts, frequency) ?? dateIssued;
 
     // Create the new invoice copying ALL fields from source
     const newInvoice = new Invoice({
@@ -882,7 +917,15 @@ export async function confirmSchedulingWithInvoice(
             enabled: sourceInvoice.paymentReminders.enabled,
             frequency: sourceInvoice.paymentReminders.frequency,
             // Reset timing-related fields for the new invoice
-            nextReminderDate: undefined,
+            nextReminderDate:
+              sourceInvoice.paymentReminders.enabled &&
+              sourceInvoice.paymentReminders.frequency &&
+              sourceInvoice.paymentReminders.frequency !== "none"
+                ? calculateNextReminderDateFromParts(
+                    confirmedParts,
+                    sourceInvoice.paymentReminders.frequency,
+                  )
+                : undefined,
             lastReminderSent: undefined,
             reminderHistory: [],
           }
@@ -900,12 +943,16 @@ export async function confirmSchedulingWithInvoice(
     );
 
     // Calculate start time based on confirmed time
-    const startDateTime = new Date(data.confirmedDate);
-    startDateTime.setUTCHours(
-      data.confirmedTime.hour,
-      data.confirmedTime.minute,
-      0,
-      0,
+    const startDateTime = new Date(
+      Date.UTC(
+        confirmedParts.year,
+        confirmedParts.month - 1,
+        confirmedParts.day,
+        data.confirmedTime.hour,
+        data.confirmedTime.minute,
+        0,
+        0,
+      ),
     );
 
     // Create the schedule linked to the new invoice
@@ -955,7 +1002,7 @@ export async function confirmSchedulingWithInvoice(
       reviewedBy: userId,
       reviewNotes: data.internalNotes,
       confirmedScheduleId: schedule._id,
-      confirmedDate: new Date(data.confirmedDate),
+      confirmedDate: toUtcDateFromParts(confirmedParts),
       confirmedTime: data.confirmedTime,
       confirmationEmailSent: emailResult.success,
       confirmationEmailSentAt: emailResult.success ? new Date() : undefined,

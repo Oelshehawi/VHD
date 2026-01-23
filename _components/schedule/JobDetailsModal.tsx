@@ -533,26 +533,6 @@ export default function JobDetailsModal({
                   </CardContent>
                 </Card>
               )}
-
-              {/* Actions */}
-              {canManage && (
-                <div className="border-border flex flex-col gap-3 border-t pt-4 sm:flex-row">
-                  <Button
-                    onClick={() => setActiveView("edit")}
-                    variant="outline"
-                  >
-                    <Pencil className="mr-2 h-4 w-4" />
-                    Edit Job
-                  </Button>
-
-                  <DeleteModal
-                    deleteText="Are you sure you want to delete this job?"
-                    deleteDesc="This action cannot be undone."
-                    deletionId={job._id as string}
-                    deletingValue="job"
-                  />
-                </div>
-              )}
             </TabsContent>
 
             <TabsContent value="media" className="p-6">
@@ -739,6 +719,22 @@ export default function JobDetailsModal({
             </TabsContent>
           </div>
         </Tabs>
+
+        {/* Fixed Footer for Details View */}
+        {activeView === "details" && canManage && (
+          <div className="border-border bg-background flex justify-end gap-3 border-t px-6 py-4">
+            <Button onClick={() => setActiveView("edit")} variant="outline">
+              <Pencil className="mr-2 h-4 w-4" />
+              Edit Job
+            </Button>
+            <DeleteModal
+              deleteText="Are you sure you want to delete this job?"
+              deleteDesc="This action cannot be undone."
+              deletionId={job._id as string}
+              deletingValue="job"
+            />
+          </div>
+        )}
 
         {/* ReportModal - shown conditionally */}
         {showReportModal && (

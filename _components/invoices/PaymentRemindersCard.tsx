@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { FaPaperPlane, FaHistory } from "react-icons/fa";
 import { Bell, Clock } from "lucide-react";
 import {
@@ -12,7 +12,7 @@ import {
 } from "../../app/lib/typeDefinitions";
 import {
   configurePaymentReminders,
-  getReminderSettings,
+  getReminderAuditLogs,
   sendPaymentReminderEmail,
 } from "../../app/lib/actions/reminder.actions";
 import { toast } from "sonner";
@@ -45,54 +45,53 @@ import { Label } from "../ui/label";
 interface PaymentRemindersCardProps {
   invoiceId: string;
   client?: ClientType;
+  initialSettings?: PaymentReminderSettings;
 }
 
 export default function PaymentRemindersCard({
   invoiceId,
   client,
+  initialSettings,
 }: PaymentRemindersCardProps) {
   const { user } = useUser();
   const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  const pathnameValue = pathname ?? "/";
-  const searchParamsValue = useMemo(
-    () => searchParams ?? new URLSearchParams(),
-    [searchParams],
+
+  // Initialize from server-provided data (no initial fetch needed)
+  const [settings, setSettings] = useState<PaymentReminderSettings>(
+    initialSettings || { enabled: false, frequency: "none" },
   );
-  const [settings, setSettings] = useState<PaymentReminderSettings>({
-    enabled: false,
-    frequency: "none",
-  });
   const [startFrom, setStartFrom] = useState<"today" | "dateIssued">(
     "dateIssued",
   );
+
+  // Audit logs are lazy-loaded when history tab is clicked
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
+  const [isAuditLogsLoaded, setIsAuditLogsLoaded] = useState(false);
+  const [isLoadingAuditLogs, setIsLoadingAuditLogs] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [selectedEmail, setSelectedEmail] = useState<string>("");
   const [showReminderDialog, setShowReminderDialog] = useState(false);
   const [activeTab, setActiveTab] = useState("settings");
 
-  const loadReminderSettings = useCallback(async () => {
+  // Lazy-load audit logs when history tab is selected
+  const loadAuditLogs = useCallback(async () => {
+    if (isAuditLogsLoaded || isLoadingAuditLogs) return;
+
+    setIsLoadingAuditLogs(true);
     try {
-      const result = await getReminderSettings(invoiceId);
+      const result = await getReminderAuditLogs(invoiceId);
       if (result.success) {
-        setSettings(
-          result.data?.paymentReminders || {
-            enabled: false,
-            frequency: "none",
-          },
-        );
-        setAuditLogs(result.data?.auditLogs || []);
+        setAuditLogs(result.data || []);
       }
     } catch (error) {
-      console.error("Error loading reminder settings:", error);
+      console.error("Error loading audit logs:", error);
     } finally {
-      setIsInitialLoading(false);
+      setIsLoadingAuditLogs(false);
+      setIsAuditLogsLoaded(true);
     }
-  }, [invoiceId]);
+  }, [invoiceId, isAuditLogsLoaded, isLoadingAuditLogs]);
 
   // Get all available client emails
   const availableEmails = useMemo(() => {
@@ -138,28 +137,12 @@ export default function PaymentRemindersCard({
     return isValid ? selectedEmail : defaultEmail;
   }, [availableEmails, defaultEmail, selectedEmail]);
 
-  // Load settings on mount
-  useEffect(() => {
-    if (invoiceId) {
-      loadReminderSettings();
-    }
-  }, [invoiceId, loadReminderSettings]);
-
-  useEffect(() => {
-    const tab = searchParamsValue.get("remindersTab");
-    setActiveTab(tab === "history" ? "history" : "settings");
-  }, [searchParamsValue]);
-
   const handleTabChange = (value: string) => {
     setActiveTab(value);
-    const params = new URLSearchParams(searchParamsValue.toString());
-    if (value === "settings") {
-      params.delete("remindersTab");
-    } else {
-      params.set("remindersTab", value);
+    // Lazy-load audit logs when switching to history tab
+    if (value === "history") {
+      loadAuditLogs();
     }
-    const query = params.toString();
-    router.replace(query ? `${pathnameValue}?${query}` : pathnameValue);
   };
 
   const handleDialogOpenChange = (open: boolean) => {
@@ -196,7 +179,10 @@ export default function PaymentRemindersCard({
 
       if (result.success) {
         toast.success("Reminder settings updated");
-        await loadReminderSettings();
+        // Refresh server data to get updated settings from server
+        router.refresh();
+        // Invalidate audit logs cache so they reload on next view
+        setIsAuditLogsLoaded(false);
       } else {
         toast.error(result.error || "Failed to update settings");
       }
@@ -225,9 +211,12 @@ export default function PaymentRemindersCard({
       );
       if (result.success) {
         toast.success("Reminder sent successfully");
-        await loadReminderSettings();
-        setShowReminderDialog(false); // Close dialog on success
-        setSelectedEmail(""); // Reset for next time
+        // Refresh server data to get updated settings
+        router.refresh();
+        // Invalidate audit logs cache
+        setIsAuditLogsLoaded(false);
+        setShowReminderDialog(false);
+        setSelectedEmail("");
       } else {
         toast.error(result.error || "Failed to send reminder");
       }
@@ -281,28 +270,13 @@ export default function PaymentRemindersCard({
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
     );
 
-  if (isInitialLoading) {
-    return (
-      <Card className="p-4 sm:p-6">
-        <div className="flex items-center gap-3">
-          <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
-            <Bell className="text-primary h-5 w-5" aria-hidden="true" />
-          </div>
-          <div className="text-muted-foreground text-sm" role="status">
-            Loading reminders…
-          </div>
-        </div>
-      </Card>
-    );
-  }
-
   return (
     <Card className="p-4 sm:p-6">
       {/* Header */}
       <div className="mb-4 flex items-center gap-3">
-          <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
-            <Bell className="text-primary h-5 w-5" aria-hidden="true" />
-          </div>
+        <div className="bg-primary/10 flex h-10 w-10 items-center justify-center rounded-lg">
+          <Bell className="text-primary h-5 w-5" aria-hidden="true" />
+        </div>
         <div>
           <h3 className="text-foreground font-semibold">Payment Reminders</h3>
           <p className="text-muted-foreground text-xs">
@@ -313,13 +287,17 @@ export default function PaymentRemindersCard({
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
+      <Tabs
+        value={activeTab}
+        onValueChange={handleTabChange}
+        className="w-full"
+      >
         <TabsList className="mb-4 grid w-full grid-cols-2">
           <TabsTrigger value="settings" className="text-xs">
             Settings
           </TabsTrigger>
           <TabsTrigger value="history" className="text-xs">
-            History {reminderLogs.length > 0 && `(${reminderLogs.length})`}
+            History
           </TabsTrigger>
         </TabsList>
 
@@ -327,7 +305,10 @@ export default function PaymentRemindersCard({
           {/* Current Status */}
           {settings.nextReminderDate && (
             <div className="bg-muted/50 flex items-center gap-2 rounded-md border p-3">
-              <Clock className="text-muted-foreground h-4 w-4" aria-hidden="true" />
+              <Clock
+                className="text-muted-foreground h-4 w-4"
+                aria-hidden="true"
+              />
               <span className="text-sm">
                 Next reminder: {formatDateStringUTC(settings.nextReminderDate)}
               </span>
@@ -403,7 +384,10 @@ export default function PaymentRemindersCard({
             onClick={() => setShowReminderDialog(true)}
           >
             {isSending ? (
-              <FaPaperPlane className="h-3 w-3 animate-spin" aria-hidden="true" />
+              <FaPaperPlane
+                className="h-3 w-3 animate-spin"
+                aria-hidden="true"
+              />
             ) : (
               <FaPaperPlane className="h-3 w-3" aria-hidden="true" />
             )}
@@ -491,7 +475,12 @@ export default function PaymentRemindersCard({
         </TabsContent>
 
         <TabsContent value="history" className="mt-0">
-          {reminderLogs.length === 0 ? (
+          {isLoadingAuditLogs ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center">
+              <div className="border-primary mb-2 h-6 w-6 animate-spin rounded-full border-b-2"></div>
+              <p className="text-muted-foreground text-sm">Loading history…</p>
+            </div>
+          ) : reminderLogs.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center">
               <FaHistory
                 className="text-muted-foreground/50 mb-2 h-6 w-6"

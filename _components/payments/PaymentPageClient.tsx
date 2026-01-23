@@ -855,7 +855,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                             Credit or Debit Card
                           </p>
                           <p className="text-muted-foreground text-xs break-words">
-                            Processing fee: {cardProcessingFeeLabel} (2.9% +
+                            Processing fee: {cardProcessingFeeLabel} (2.4% +
                             $0.30)
                           </p>
                         </div>

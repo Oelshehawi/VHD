@@ -72,49 +72,14 @@ const Schedule = async ({
   );
   const targetDate = parseDateOnlyToUTC(date || undefined) || fallbackDate;
 
-  // "month" view: Fetch from start to end of current month
-  // We add a buffer of some days before/after to handle edge cases or adjacent weeks in some calendar views if needed
-  if (view === "month") {
-    // Start of month
-    rangeStart = new Date(
-      Date.UTC(targetDate.getUTCFullYear(), targetDate.getUTCMonth(), 1),
-    );
-    // End of month
-    rangeEnd = new Date(
-      Date.UTC(
-        targetDate.getUTCFullYear(),
-        targetDate.getUTCMonth() + 1,
-        0,
-        23,
-        59,
-        59,
-        999,
-      ),
-    );
+  // Fetch a wider range for smoother navigation: 2 weeks back, 2 months forward.
+  rangeStart = new Date(targetDate);
+  rangeStart.setUTCDate(targetDate.getUTCDate() - 14);
+  rangeStart.setUTCHours(0, 0, 0, 0);
 
-    // Add 1 week buffer before/after for partial weeks in calendar grid
-    rangeStart.setUTCDate(rangeStart.getUTCDate() - 7);
-    rangeEnd.setUTCDate(rangeEnd.getUTCDate() + 7);
-  } else if (view === "week") {
-    // For week view, we can just grab the surrounding weeks
-    // Simple heuristic: +/- 2 weeks from target date
-    rangeStart = new Date(targetDate);
-    rangeStart.setUTCDate(targetDate.getUTCDate() - 14);
-    rangeStart.setUTCHours(0, 0, 0, 0);
-
-    rangeEnd = new Date(targetDate);
-    rangeEnd.setUTCDate(targetDate.getUTCDate() + 14);
-    rangeEnd.setUTCHours(23, 59, 59, 999);
-  } else if (view === "day") {
-    // Day view (or "agenda"?). Just grab the day +/- 1 day buffer
-    rangeStart = new Date(targetDate);
-    rangeStart.setUTCDate(targetDate.getUTCDate() - 2);
-    rangeStart.setUTCHours(0, 0, 0, 0);
-
-    rangeEnd = new Date(targetDate);
-    rangeEnd.setUTCDate(targetDate.getUTCDate() + 2);
-    rangeEnd.setUTCHours(23, 59, 59, 999);
-  }
+  rangeEnd = new Date(targetDate);
+  rangeEnd.setUTCMonth(targetDate.getUTCMonth() + 2);
+  rangeEnd.setUTCHours(23, 59, 59, 999);
 
   // Fetch all data in parallel for better performance
   // Invoices are now lazy-loaded in AddJob modal via TanStack Query

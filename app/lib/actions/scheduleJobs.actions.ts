@@ -17,6 +17,7 @@ import {
 import { clerkClient, auth } from "@clerk/nextjs/server";
 import { calculateJobDurationFromPrice, minutesToPayrollHours } from "../utils";
 import { v2 as cloudinary } from "cloudinary";
+import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -462,12 +463,9 @@ export const updateJob = async ({
       });
 
       if (schedulesForInvoice === 1) {
-        // Extract date only (without time) from startDateTime for invoice dateIssued
-        const dateOnlyStr = updatedStartDate.toISOString().split("T")[0];
-        const dateIssuedValue = new Date(dateOnlyStr + "T00:00:00.000Z");
-
-        await Invoice.findByIdAndUpdate(schedule.invoiceRef, {
-          dateIssued: dateIssuedValue,
+        await syncInvoiceDateIssuedAndJobsDueSoon({
+          invoiceId: schedule.invoiceRef.toString(),
+          dateIssued: updatedStartDate,
         });
       }
     }

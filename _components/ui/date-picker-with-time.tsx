@@ -22,6 +22,7 @@ interface DatePickerWithTimeProps {
   dateId?: string;
   timeId?: string;
   showSeconds?: boolean;
+  defaultMonth?: Date;
 }
 
 export function DatePickerWithTime({
@@ -36,6 +37,7 @@ export function DatePickerWithTime({
   dateId,
   timeId,
   showSeconds = false,
+  defaultMonth,
 }: DatePickerWithTimeProps) {
   const [open, setOpen] = React.useState(false);
 
@@ -129,6 +131,7 @@ export function DatePickerWithTime({
               mode="single"
               selected={localDate}
               onSelect={handleDateSelect}
+              defaultMonth={defaultMonth || localDate}
               disabled={(date) => {
                 if (minDate && date < minDate) return true;
                 if (maxDate && date > maxDate) return true;

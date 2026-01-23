@@ -549,6 +549,7 @@ const InvoiceDetailsContainer = ({
             <PaymentRemindersCard
               invoiceId={invoice._id as string}
               client={client}
+              initialSettings={invoice.paymentReminders}
             />
           )}
         </div>

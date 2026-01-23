@@ -6,7 +6,6 @@
  */
 
 import connectMongo from "./connect";
-import { getEmailForPurpose } from "./utils";
 import {
   Client,
   Invoice,

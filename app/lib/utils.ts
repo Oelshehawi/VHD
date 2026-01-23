@@ -99,7 +99,15 @@ const UTC_WEEKDAY_NAMES = [
   "Saturday",
 ];
 
-const UTC_WEEKDAY_SHORT_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const UTC_WEEKDAY_SHORT_NAMES = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+];
 
 const UTC_MONTH_SHORT_NAMES = [
   "Jan",
@@ -425,6 +433,18 @@ export const formatPhoneNumber = (phoneNumber: any) => {
   return phoneNumber;
 };
 
+/**
+ * @deprecated Use calculateDateDueFromParts from utils/datePartsUtils instead.
+ * This function uses 'any' types and returns a string. The replacement
+ * returns a Date object and has proper TypeScript types.
+ *
+ * Migration:
+ * ```typescript
+ * import { parseDateParts, calculateDateDueFromParts } from "./utils/datePartsUtils";
+ * const parts = parseDateParts(issuedDate);
+ * const dueDate = parts ? calculateDateDueFromParts(parts, frequency) : undefined;
+ * ```
+ */
 export const calculateDueDate = (issuedDate: any, freq: any) => {
   if (issuedDate && freq) {
     const dueDate = new Date(issuedDate);

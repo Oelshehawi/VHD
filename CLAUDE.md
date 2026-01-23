@@ -10,6 +10,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Package Manager:** This project uses **pnpm** (not npm). Always use pnpm for installing dependencies and running scripts.
 
+## Business Context
+
+**Service:** Kitchen hood exhaust cleaning for commercial kitchens
+**Location:** British Columbia, Canada
+**Timezone:** Pacific Time (UTC-7 / UTC-8 during DST)
+
+### Regulatory Notes
+- **Credit card surcharge cap:** 2.4% maximum (Canadian federal regulation)
+- **GST:** 5% (BC has no PST on services)
+
 ## Development Commands
 
 ```bash
@@ -254,11 +264,41 @@ Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, Ope
 
 ```
 
+### Utility File Organization
+
+Utilities are organized by domain in `app/lib/`:
+
+- **`utils.ts`** - General utilities (formatting, pagination, calculations)
+- **`utils/datePartsUtils.ts`** - Timezone-safe date parsing and calculations
+- **`utils/timeFormatUtils.ts`** - 24hr ↔ 12hr time conversion
+- **`utils/availabilityUtils.ts`** - Technician availability helpers
+- **`imageUtils.ts`** - Cloudinary image handling
+- **`clerkUtils.ts`** - User name caching
+
+### Date Handling
+
+**Important:** Use `parseDateParts()` + `toUtcDateFromParts()` from `utils/datePartsUtils` for persistence-sensitive date operations. Avoid `new Date(string)` which can cause timezone drift.
+
+```typescript
+// WRONG - can cause timezone drift in BC evenings
+const date = new Date(); // 11 PM Jan 21 PST = Jan 22 in UTC
+
+// CORRECT - use local date parts for "today"
+const today = new Date();
+const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+const parts = parseDateParts(todayStr);
+const utcDate = parts ? toUtcDateFromParts(parts) : undefined;
+```
+
 ### Available Utility Functions
 
 - `formatDateStringUTC(dateInput)` - Formats date as "January 10, 2026" without timezone conversion
 - `formatDateTimeStringUTC(dateInput)` - Formats date with time as "January 10, 2026 at 3:45 PM"
 - `calculatePaymentDueDate(dateIssued)` - Returns a Date object 14 days after the issued date
+- `parseDateParts(dateInput)` - Extracts year/month/day from Date or string (timezone-safe)
+- `toUtcDateFromParts(parts)` - Creates UTC Date from parts
+- `calculateDateDueFromParts(parts, frequency)` - Calculates invoice due date based on billing frequency
+- `calculateNextReminderDateFromParts(parts, frequency)` - Calculates next payment reminder date
 
 **ESLint Rule:** The codebase has an ESLint rule that warns against using `toLocaleDateString()`. Use the UTC-safe utilities above instead.
 

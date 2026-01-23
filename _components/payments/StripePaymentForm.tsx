@@ -120,7 +120,7 @@ export default function StripePaymentForm({
           <span className="text-muted-foreground">
             Processing Fee (
             {paymentMethod === "card"
-              ? "2.9% + $0.30"
+              ? "2.4% + $0.30"
               : "1.0% + $0.40 (max $5)"}
             )
           </span>

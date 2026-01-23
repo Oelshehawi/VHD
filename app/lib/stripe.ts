@@ -6,7 +6,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 // Fee calculation utilities
-const STRIPE_CARD_PERCENTAGE = 0.029; // 2.9%
+const STRIPE_CARD_PERCENTAGE = 0.024; // 2.4% (surcharge cap)
 const STRIPE_CARD_FIXED = 30; // $0.30 in cents
 const STRIPE_PAD_PERCENTAGE = 0.01; // 1.0%
 const STRIPE_PAD_FIXED = 40; // $0.40 in cents

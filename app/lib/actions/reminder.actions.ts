@@ -722,3 +722,70 @@ function getSequenceText(sequence: number): string {
       return `${sequence}th`;
   }
 }
+
+// Get only audit logs for an invoice (lazy-loaded when history tab is viewed)
+export async function getReminderAuditLogs(invoiceId: string) {
+  await connectMongo();
+
+  try {
+    // Get the invoice to find its invoiceId string
+    const invoiceDoc = (await Invoice.findById(invoiceId)
+      .select("invoiceId")
+      .lean()) as { invoiceId?: string } | null;
+
+    if (!invoiceDoc) {
+      return { success: false, error: "Invoice not found" };
+    }
+
+    // Get audit logs from separate collection
+    const rawAuditLogsDoc = await AuditLog.find({
+      $or: [
+        { invoiceId },
+        { invoiceId: invoiceDoc.invoiceId },
+        { "details.newValue.invoiceMongoId": invoiceId },
+      ],
+      action: {
+        $in: [
+          "reminder_configured",
+          "reminder_sent_auto",
+          "reminder_sent_manual",
+          "reminder_failed",
+        ],
+      },
+    })
+      .sort({ timestamp: -1 })
+      .limit(50)
+      .lean();
+
+    // Use JSON.parse(JSON.stringify()) to completely strip MongoDB types
+    const rawAuditLogs = JSON.parse(JSON.stringify(rawAuditLogsDoc));
+
+    // Convert MongoDB objects to plain objects for client components
+    const auditLogs = rawAuditLogs.map((log: any) => ({
+      _id: log._id?.toString() || "",
+      invoiceId: log.invoiceId || "",
+      action: log.action || "",
+      timestamp:
+        log.timestamp instanceof Date
+          ? log.timestamp.toISOString()
+          : String(log.timestamp || ""),
+      performedBy: log.performedBy || "",
+      details: log.details || {},
+      ipAddress: log.ipAddress || "",
+      userAgent: log.userAgent || "",
+      success: log.success ?? false,
+      errorMessage: log.errorMessage || "",
+    }));
+
+    return {
+      success: true,
+      data: auditLogs,
+    };
+  } catch (error) {
+    console.error("Error getting reminder audit logs:", error);
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown error",
+    };
+  }
+}

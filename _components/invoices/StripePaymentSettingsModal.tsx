@@ -303,7 +303,7 @@ export default function StripePaymentSettingsModal({
                       <div>
                         <p className="text-sm font-medium">Credit/Debit Card</p>
                         <p className="text-muted-foreground text-xs">
-                          Fee: 2.9% + $0.30 (passed to client)
+                          Fee: 2.4% + $0.30 (passed to client)
                         </p>
                       </div>
                     </div>

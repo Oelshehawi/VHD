@@ -10,6 +10,7 @@ import {
 } from "../../../models/reactDataSchema";
 import { ClientType, InvoiceType } from "../typeDefinitions";
 import { calculateDueDate } from "../utils";
+import { calculateNextReminderDateFromParts } from "../utils/datePartsUtils";
 import { CallLogEntry } from "../typeDefinitions";
 
 export async function updateInvoiceScheduleStatus(invoiceId: string) {
@@ -345,6 +346,30 @@ export async function updateInvoice(
         const newDateDue = calculateDueDate(nextDateIssued, frequency);
         if (newDateDue) {
           jobsDueSoonUpdate.dateDue = newDateDue;
+        }
+
+        // Recalculate nextReminderDate if reminders are enabled and none have been sent
+        const reminderSettings = currentInvoice?.paymentReminders;
+        const shouldRecalcReminders =
+          reminderSettings?.enabled &&
+          reminderSettings.frequency &&
+          reminderSettings.frequency !== "none" &&
+          (!reminderSettings.reminderHistory ||
+            reminderSettings.reminderHistory.length === 0);
+
+        if (shouldRecalcReminders) {
+          // nextParts.month is 0-indexed from getDateParts, but calculateNextReminderDateFromParts expects 1-indexed
+          const nextReminderDate = calculateNextReminderDateFromParts(
+            {
+              year: nextParts.year,
+              month: nextParts.month + 1,
+              day: nextParts.day,
+            },
+            reminderSettings.frequency,
+          );
+          await Invoice.findByIdAndUpdate(invoiceId, {
+            "paymentReminders.nextReminderDate": nextReminderDate,
+          });
         }
       }
     }

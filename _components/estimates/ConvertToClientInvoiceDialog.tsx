@@ -90,6 +90,10 @@ export default function ConvertToClientInvoiceDialog({
 }: ConvertToClientInvoiceDialogProps) {
   const [isConverting, setIsConverting] = useState(false);
   const [step, setStep] = useState<Step>("client");
+  const [reminderEnabled, setReminderEnabled] = useState(false);
+  const [reminderFrequency, setReminderFrequency] = useState<
+    "none" | "3days" | "5days" | "7days" | "14days"
+  >("5days");
 
   // Calculate totals from items
   const { subtotal, gst, total } = calculateTotalFromItems(estimate.items);
@@ -220,6 +224,9 @@ export default function ConvertToClientInvoiceDialog({
           dateIssued: dateIssuedStr,
           notes: invoiceData.notes,
           items: estimate.items,
+          paymentReminders: reminderEnabled
+            ? { enabled: true, frequency: reminderFrequency }
+            : { enabled: false, frequency: "none" },
         },
         scheduleData.createSchedule
           ? {
@@ -485,6 +492,54 @@ export default function ConvertToClientInvoiceDialog({
                         placeholder="Invoice notes"
                       />
                     </div>
+
+                    <div className="space-y-2 md:col-span-2">
+                      <div className="flex items-center justify-between rounded-lg border p-3">
+                        <div>
+                          <Label htmlFor="reminder-toggle">
+                            Enable automatic reminders
+                          </Label>
+                          <p className="text-muted-foreground text-xs">
+                            Send payment reminders based on the issued date.
+                          </p>
+                        </div>
+                        <Checkbox
+                          id="reminder-toggle"
+                          checked={reminderEnabled}
+                          onCheckedChange={(checked) =>
+                            setReminderEnabled(Boolean(checked))
+                          }
+                        />
+                      </div>
+                    </div>
+
+                    {reminderEnabled && (
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="reminder-frequency">
+                          Reminder frequency
+                        </Label>
+                        <Select
+                          value={reminderFrequency}
+                          onValueChange={(value) =>
+                            setReminderFrequency(
+                              value as "3days" | "5days" | "7days" | "14days",
+                            )
+                          }
+                        >
+                          <SelectTrigger id="reminder-frequency">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="3days">Every 3 days</SelectItem>
+                            <SelectItem value="5days">Every 5 days</SelectItem>
+                            <SelectItem value="7days">Every 7 days</SelectItem>
+                            <SelectItem value="14days">
+                              Every 14 days
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
                   </div>
                 </div>
 

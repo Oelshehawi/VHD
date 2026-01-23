@@ -211,6 +211,7 @@ const EditJobModal = ({ job, onClose, technicians }: EditJobModalProps) => {
             timePlaceholder="Select time"
             dateId="editStartDate"
             timeId="editStartTime"
+            defaultMonth={getInitialDate()}
           />
           {errors.startDateTime && (
             <p className="text-destructive text-sm">
