@@ -15,11 +15,17 @@ import {
 interface ClientPortalAccessProps {
   clientId: string;
   clientName: string;
+  clientEmail?: string | null;
+  portalAccessToken?: string | null;
+  portalAccessTokenExpiry?: Date | string | null;
 }
 
 export default function ClientPortalAccess({
   clientId,
   clientName,
+  clientEmail,
+  portalAccessToken,
+  portalAccessTokenExpiry,
 }: ClientPortalAccessProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
@@ -63,7 +69,13 @@ export default function ClientPortalAccess({
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4">
-            <PortalAccessManager clientId={clientId} clientName={clientName} />
+            <PortalAccessManager
+              clientId={clientId}
+              clientName={clientName}
+              clientEmail={clientEmail}
+              portalAccessToken={portalAccessToken}
+              portalAccessTokenExpiry={portalAccessTokenExpiry}
+            />
           </div>
         </DialogContent>
       </Dialog>

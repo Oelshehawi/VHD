@@ -8,6 +8,7 @@ import { ClientType } from "../../app/lib/typeDefinitions";
 import ClientPortalAccess from "../client-portal/ClientPortalAccess";
 import { Card, CardContent } from "../ui/card";
 import { User } from "lucide-react";
+import { getEmailForPurpose } from "@/lib/utils";
 
 const ClientDetailedContainer = ({
   client,
@@ -31,7 +32,7 @@ const ClientDetailedContainer = ({
           archivedAt={client.archivedAt}
         />
       )}
-      
+
       {/* Action Bar */}
       <Card className="">
         <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
@@ -53,6 +54,9 @@ const ClientDetailedContainer = ({
             <ClientPortalAccess
               clientId={client._id as string}
               clientName={client.clientName}
+              clientEmail={getEmailForPurpose(client, "primary")}
+              portalAccessToken={client.portalAccessToken}
+              portalAccessTokenExpiry={client.portalAccessTokenExpiry}
             />
           </div>
         </CardContent>
