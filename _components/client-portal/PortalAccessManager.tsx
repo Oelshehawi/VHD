@@ -21,7 +21,7 @@ export default function PortalAccessManager({
   return (
     <Card className="">
       <CardHeader>
-        <CardTitle>Client Portal Access</CardTitle>
+        <CardTitle>Access Link</CardTitle>
       </CardHeader>
       <CardContent>
         <AccessLinkGenerator

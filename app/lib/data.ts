@@ -56,6 +56,8 @@ export const fetchClientById = async (
       isArchived: client.isArchived,
       archiveReason: client.archiveReason,
       archivedAt: client.archivedAt,
+      portalAccessToken: client.portalAccessToken,
+      portalAccessTokenExpiry: client.portalAccessTokenExpiry,
     };
     return clientData;
   } catch (error) {
