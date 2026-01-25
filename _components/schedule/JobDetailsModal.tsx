@@ -258,6 +258,10 @@ export default function JobDetailsModal({
     if (!job) return undefined;
 
     try {
+      const effectiveJobTitle =
+        report.jobTitle?.trim() || job.jobTitle || "Service Report";
+      const effectiveLocation = report.location?.trim() || job.location || "";
+
       const reportData = {
         _id:
           typeof report._id === "string"
@@ -267,8 +271,8 @@ export default function JobDetailsModal({
           typeof report.scheduleId === "string"
             ? report.scheduleId
             : report.scheduleId.toString(),
-        jobTitle: job.jobTitle,
-        location: job.location,
+        jobTitle: effectiveJobTitle,
+        location: effectiveLocation,
         dateCompleted: report.dateCompleted,
         technicianId: report.technicianId,
         lastServiceDate: report.lastServiceDate,
@@ -636,7 +640,7 @@ export default function JobDetailsModal({
                     <div className="flex items-center justify-between gap-2">
                       <LazyPDFButton
                         pdfData={createReportPDFData(existingReportData)}
-                        fileName={`Report - ${job.jobTitle}.pdf`}
+                        fileName={`Report - ${existingReportData.jobTitle?.trim() || job.jobTitle || "Service Report"}.pdf`}
                         buttonText="Download Report PDF"
                         className="flex-1"
                         showScaleSelector

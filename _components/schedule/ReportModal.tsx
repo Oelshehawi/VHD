@@ -288,8 +288,8 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
           typeof schedule.invoiceRef === "string"
             ? schedule.invoiceRef
             : schedule.invoiceRef.toString(),
-        jobTitle: schedule.jobTitle || "",
-        location: schedule.location || "",
+        jobTitle: report.jobTitle ?? schedule.jobTitle ?? "",
+        location: report.location ?? schedule.location ?? "",
         dateCompleted: report.dateCompleted
           ? String(report.dateCompleted).split("T")[0]
           : (() => {

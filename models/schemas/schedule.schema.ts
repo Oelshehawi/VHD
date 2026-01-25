@@ -83,6 +83,8 @@ export const ReportSchema = new Schema<ReportType>({
     ref: "Invoice",
     required: true,
   },
+  jobTitle: { type: String },
+  location: { type: String },
   dateCompleted: { type: Date, required: true },
   technicianId: { type: String, required: true },
   lastServiceDate: { type: Date },
