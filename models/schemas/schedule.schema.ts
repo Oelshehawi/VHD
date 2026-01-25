@@ -88,7 +88,7 @@ export const ReportSchema = new Schema<ReportType>({
   lastServiceDate: { type: Date },
   fuelType: {
     type: String,
-    enum: ["Natural Gas", "Electric", "Solid Fuel", "Other"],
+    enum: ["Natural Gas", "Propane", "Electric", "Solid Fuel", "Other"],
   },
   cookingVolume: { type: String, enum: ["High", "Medium", "Low"] },
   cookingEquipment: {

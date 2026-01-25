@@ -272,7 +272,7 @@ export interface ReportType {
   dateCompleted: Date | string;
   technicianId: string;
   lastServiceDate?: Date | string;
-  fuelType?: "Natural Gas" | "Electric" | "Solid Fuel" | "Other";
+  fuelType?: "Natural Gas" | "Propane" | "Electric" | "Solid Fuel" | "Other";
   cookingVolume?: "High" | "Medium" | "Low";
   cookingEquipment?: {
     griddles?: boolean;

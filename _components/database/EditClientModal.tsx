@@ -204,10 +204,12 @@ const InlineEditClient = ({
       ) : (
         <div className="ml-6">
           <div className="flex items-center gap-2">
-            <div className={cn(
-              "bg-muted text-foreground flex-1 rounded-lg px-3 py-2 text-sm",
-              field.name === "notes" && "whitespace-pre-wrap"
-            )}>
+            <div
+              className={cn(
+                "bg-muted text-foreground min-w-0 flex-1 rounded-lg px-3 py-2 text-sm break-words",
+                field.name === "notes" && "whitespace-pre-wrap",
+              )}
+            >
               {field.value || (
                 <span className="text-muted-foreground italic">
                   Not provided
@@ -247,14 +249,16 @@ const InlineEditClient = ({
               </CardDescription>
             </div>
           </div>
-          <Button onClick={toggleEdit} variant={isEditing ? "outline" : "default"} size="sm">
+          <Button
+            onClick={toggleEdit}
+            variant={isEditing ? "outline" : "default"}
+            size="sm"
+          >
             <FaPenSquare className="h-3 w-3 sm:mr-2 sm:h-4 sm:w-4" />
             <span className="hidden sm:inline">
               {isEditing ? "Cancel Edit" : "Edit Client"}
             </span>
-            <span className="sm:hidden">
-              {isEditing ? "Cancel" : "Edit"}
-            </span>
+            <span className="sm:hidden">{isEditing ? "Cancel" : "Edit"}</span>
           </Button>
         </div>
       </CardHeader>

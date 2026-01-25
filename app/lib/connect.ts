@@ -1,16 +1,30 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
-let isConnected = false;
+declare global {
+  var mongooseConnectPromise: Promise<typeof mongoose> | null;
+}
 
 const connectMongo = async () => {
-  if (isConnected) {
+  if (mongoose.connection.readyState === 1) {
     return;
   }
+
+  if (!global.mongooseConnectPromise) {
+    mongoose.set("bufferCommands", false);
+    mongoose.set("bufferTimeoutMS", 0);
+    global.mongooseConnectPromise = mongoose
+      .connect(process.env.MONGODB_URI as string)
+      .catch((error) => {
+        global.mongooseConnectPromise = null;
+        throw error;
+      });
+  }
+
   try {
-    await mongoose.connect(process.env.MONGODB_URI as string);
-    isConnected = true;
+    await global.mongooseConnectPromise;
   } catch (error) {
-    console.error('Failed to connect to MongoDB:', error);
+    console.error("Failed to connect to MongoDB:", error);
+    throw error;
   }
 };
 

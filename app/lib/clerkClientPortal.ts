@@ -4,6 +4,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import * as crypto from "crypto";
 import { getBaseUrl } from "./utils";
 import { Client } from "@/models";
+import connectMongo from "./connect";
 
 /**
  * Generate a cryptographically secure access token
@@ -25,6 +26,7 @@ export async function generateClientAccessLink(
   clientEmail: string,
 ) {
   try {
+    await connectMongo();
     const clerk = await clerkClient();
 
     // Check if user exists with this email
@@ -61,16 +63,14 @@ export async function generateClientAccessLink(
       userId = newUser.id;
     }
 
-    // Generate a secure access token with 30-day expiry
+    // Generate a secure access token with no expiry (reusable forever)
     const accessToken = generateSecureToken();
-    const expiryDate = new Date();
-    expiryDate.setDate(expiryDate.getDate() + 30);
 
     // Store the token and Clerk userId in the Client document
     await Client.findByIdAndUpdate(clientId, {
       portalAccessToken: accessToken,
-      portalAccessTokenExpiry: expiryDate,
       clerkUserId: userId,
+      $unset: { portalAccessTokenExpiry: "" },
     });
 
     // Create the reusable access URL with secure token
@@ -100,6 +100,7 @@ export async function generateFreshClientToken(
   accessToken: string,
 ) {
   try {
+    await connectMongo();
     if (!clientId) {
       throw new Error("Client ID is required");
     }
@@ -150,10 +151,7 @@ export async function generateFreshClientToken(
           isClientPortalUser?: boolean;
           clientId?: string;
         };
-        if (
-          !metadata?.isClientPortalUser ||
-          metadata?.clientId !== clientId
-        ) {
+        if (!metadata?.isClientPortalUser || metadata?.clientId !== clientId) {
           clerkUserId = undefined; // Force email lookup
         }
       } catch {
@@ -183,9 +181,7 @@ export async function generateFreshClientToken(
       );
 
       if (!clientUser) {
-        throw new Error(
-          "Client not found or not authorized for portal access",
-        );
+        throw new Error("Client not found or not authorized for portal access");
       }
 
       clerkUserId = clientUser.id;

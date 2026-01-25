@@ -138,7 +138,13 @@ const FAN_TYPE_OPTIONS = [
   "Other",
 ];
 
-const FUEL_TYPES = ["Natural Gas", "Electric", "Solid Fuel", "Other"];
+const FUEL_TYPES = [
+  "Natural Gas",
+  "Propane",
+  "Electric",
+  "Solid Fuel",
+  "Other",
+];
 const COOKING_VOLUMES = ["High", "Medium", "Low"];
 
 // Key mappings for API - updated for consolidated inspection items
@@ -532,15 +538,15 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
   return (
     <>
       <Dialog open={true} onOpenChange={() => onClose()}>
-        <DialogContent className="flex max-h-[90vh] min-h-[90vh] w-full max-w-5xl min-w-[800px] flex-col gap-0 p-0">
-          <DialogHeader className="shrink-0 border-b p-6">
-            <DialogTitle className="text-xl">
+        <DialogContent className="flex h-[100dvh] w-[96vw] max-w-5xl flex-col gap-0 p-0 sm:h-[90vh] sm:w-full sm:min-w-[800px]">
+          <DialogHeader className="shrink-0 border-b p-4 sm:p-6">
+            <DialogTitle className="text-lg sm:text-xl">
               Kitchen Exhaust System Cleaning Report
             </DialogTitle>
           </DialogHeader>
 
           {/* Progress Bar and Step Navigation */}
-          <div className="bg-muted/30 shrink-0 border-b px-6 py-4">
+          <div className="bg-muted/30 shrink-0 border-b px-4 py-3 sm:px-6 sm:py-4">
             <div className="bg-muted mb-4 h-2 w-full overflow-hidden rounded-full">
               <div
                 className="bg-primary h-full transition-all duration-300"
@@ -548,7 +554,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
               />
             </div>
 
-            <div className="flex gap-2">
+            <div className="flex gap-2 overflow-x-auto pb-1">
               {steps.map((s) => (
                 <Button
                   key={s}
@@ -556,7 +562,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                   variant={step === s ? "default" : "outline"}
                   size="sm"
                   onClick={() => setStep(s)}
-                  className="capitalize"
+                  className="min-w-max capitalize"
                 >
                   {s === "basic"
                     ? "Basic Info"
@@ -571,7 +577,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
           {/* Form Content - simple overflow instead of ScrollArea */}
           <div className="min-h-0 flex-1 overflow-y-auto">
             <form id="report-form" onSubmit={handleSubmit(onSubmit)}>
-              <div className="space-y-6 p-6">
+              <div className="space-y-6 p-4 sm:p-6">
                 {/* Basic Info Step */}
                 {step === "basic" && (
                   <div className="space-y-6">
