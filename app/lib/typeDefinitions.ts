@@ -263,6 +263,16 @@ export interface PhotoType {
   type: "before" | "after" | "estimate";
 }
 
+export interface PhotoRecordType {
+  _id: ObjectId | string;
+  scheduleId: ObjectId | string;
+  cloudinaryUrl: string;
+  type: "before" | "after" | "estimate" | "signature";
+  technicianId: string;
+  timestamp: Date | string;
+  signerName?: string | null;
+}
+
 export interface ReportType {
   _id?: ObjectId | string;
   scheduleId: ObjectId | string;

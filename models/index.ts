@@ -13,6 +13,7 @@ export {
   PayrollPeriod,
   JobsDueSoon,
 } from "./schemas/schedule.schema";
+export { Photo } from "./schemas/photo.schema";
 export {
   LocationGeocode,
   DistanceMatrixCache,
