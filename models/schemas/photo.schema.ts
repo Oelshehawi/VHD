@@ -21,7 +21,7 @@ const PhotoSchema = new Schema<PhotoRecordType>(
     timestamp: { type: Date, required: true },
     signerName: { type: String, default: null },
   },
-  { timestamps: false },
+  { timestamps: true },
 );
 
 PhotoSchema.index({ scheduleId: 1 });
