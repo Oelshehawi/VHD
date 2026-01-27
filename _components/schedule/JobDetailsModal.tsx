@@ -343,7 +343,6 @@ export default function JobDetailsModal({
         recommendedCleaningFrequency: report.recommendedCleaningFrequency,
         inspectionItems: report.inspectionItems,
         ecologyUnit: report.ecologyUnit,
-        accessPanels: report.accessPanels,
       };
 
       const assignedTech = technicians.find(
@@ -625,13 +624,22 @@ export default function JobDetailsModal({
                 // Show existing report details
                 <div className="space-y-4">
                   <div className="text-center">
-                    <FileText className="text-job-confirmed mx-auto mb-4 h-12 w-12" />
+                    <FileText
+                      className={`mx-auto mb-4 h-12 w-12 ${
+                        existingReportData.reportStatus === "in_progress" ||
+                        existingReportData.reportStatus === "draft"
+                          ? "text-amber-500"
+                          : "text-job-confirmed"
+                      }`}
+                    />
                     <h3 className="text-foreground mb-2 text-lg font-medium">
                       Kitchen Exhaust Cleaning Report
                     </h3>
                     <p className="text-muted-foreground text-sm">
-                      Report completed on{" "}
-                      {formatDateStringUTC(existingReportData.dateCompleted)}
+                      {existingReportData.reportStatus === "in_progress" ||
+                      existingReportData.reportStatus === "draft"
+                        ? "Report in progress - complete it to enable PDF download"
+                        : `Report completed on ${formatDateStringUTC(existingReportData.dateCompleted)}`}
                     </p>
                   </div>
 
@@ -697,59 +705,71 @@ export default function JobDetailsModal({
                   <div className="flex flex-col gap-3">
                     <Button
                       onClick={() => setShowReportModal(true)}
-                      variant="outline"
+                      variant={
+                        existingReportData.reportStatus === "in_progress" ||
+                        existingReportData.reportStatus === "draft"
+                          ? "default"
+                          : "outline"
+                      }
                     >
-                      Edit Report
+                      {existingReportData.reportStatus === "in_progress" ||
+                      existingReportData.reportStatus === "draft"
+                        ? "Finish Report"
+                        : "Edit Report"}
                     </Button>
 
-                    <div className="flex items-center justify-between gap-2">
-                      <LazyPDFButton
-                        pdfData={createReportPDFData(existingReportData)}
-                        fileName={`Report - ${existingReportData.jobTitle?.trim() || job.jobTitle || "Service Report"}.pdf`}
-                        buttonText="Download Report PDF"
-                        className="flex-1"
-                        showScaleSelector
-                        iconType="download"
-                      />
+                    {/* Only show PDF download for completed reports */}
+                    {(existingReportData.reportStatus === "completed" ||
+                      !existingReportData.reportStatus) && (
+                      <div className="flex items-center justify-between gap-2">
+                        <LazyPDFButton
+                          pdfData={createReportPDFData(existingReportData)}
+                          fileName={`Report - ${existingReportData.jobTitle?.trim() || job.jobTitle || "Service Report"}.pdf`}
+                          buttonText="Download Report PDF"
+                          className="flex-1"
+                          showScaleSelector
+                          iconType="download"
+                        />
 
-                      {canManage && (
-                        <AlertDialog
-                          open={showDeleteReportConfirm}
-                          onOpenChange={setShowDeleteReportConfirm}
-                        >
-                          <AlertDialogTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:bg-destructive/10 hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </AlertDialogTrigger>
-                          <AlertDialogContent>
-                            <AlertDialogHeader>
-                              <AlertDialogTitle>Delete Report</AlertDialogTitle>
-                              <AlertDialogDescription>
-                                Are you sure you want to delete this report?
-                                This action cannot be undone.
-                              </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                              <AlertDialogCancel disabled={isDeletingReport}>
-                                Cancel
-                              </AlertDialogCancel>
-                              <AlertDialogAction
-                                onClick={handleDeleteReport}
-                                disabled={isDeletingReport}
-                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                        {canManage && (
+                          <AlertDialog
+                            open={showDeleteReportConfirm}
+                            onOpenChange={setShowDeleteReportConfirm}
+                          >
+                            <AlertDialogTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                               >
-                                {isDeletingReport ? "Deleting..." : "Delete"}
-                              </AlertDialogAction>
-                            </AlertDialogFooter>
-                          </AlertDialogContent>
-                        </AlertDialog>
-                      )}
-                    </div>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                              <AlertDialogHeader>
+                                <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                  Are you sure you want to delete this report?
+                                  This action cannot be undone.
+                                </AlertDialogDescription>
+                              </AlertDialogHeader>
+                              <AlertDialogFooter>
+                                <AlertDialogCancel disabled={isDeletingReport}>
+                                  Cancel
+                                </AlertDialogCancel>
+                                <AlertDialogAction
+                                  onClick={handleDeleteReport}
+                                  disabled={isDeletingReport}
+                                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                >
+                                  {isDeletingReport ? "Deleting..." : "Delete"}
+                                </AlertDialogAction>
+                              </AlertDialogFooter>
+                            </AlertDialogContent>
+                          </AlertDialog>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (

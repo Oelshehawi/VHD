@@ -292,8 +292,15 @@ export async function fetchClientReports(
     // Get invoice IDs
     const invoiceIds = clientInvoices.map((invoice) => invoice._id);
 
-    // Find reports that reference these invoices
-    const reports = await Report.find({ invoiceId: { $in: invoiceIds } })
+    // Find completed reports that reference these invoices
+    // Include reports with reportStatus "completed" or without reportStatus (backward compatibility)
+    const reports = await Report.find({
+      invoiceId: { $in: invoiceIds },
+      $or: [
+        { reportStatus: "completed" },
+        { reportStatus: { $exists: false } },
+      ],
+    })
       .sort({ dateCompleted: -1 })
       .limit(limit)
       .lean();

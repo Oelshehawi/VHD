@@ -602,16 +602,6 @@ export const createOrUpdateReport = async (reportData: ReportType) => {
     if (existingReport) {
       // DEBUG: Log what we're about to update
       console.log("=== SERVER: createOrUpdateReport UPDATE ===");
-      console.log("Existing report ID:", existingReport._id);
-      console.log(
-        "reportData.ecologyUnit:",
-        JSON.stringify(reportData.ecologyUnit, null, 2),
-      );
-      console.log(
-        "reportData.accessPanels:",
-        JSON.stringify(reportData.accessPanels, null, 2),
-      );
-
       // Update existing report - use $set to completely replace fields (prevents old data from persisting)
       existingReport = await Report.findByIdAndUpdate(
         existingReport._id,
@@ -749,8 +739,9 @@ export const getReportsByJobNameAndLocation = async (
 };
 
 /**
- * Check if a schedule and report exist for an invoice
+ * Check if a schedule and completed report exist for an invoice
  * Returns object with hasSchedule and hasReport flags
+ * hasReport is true only if the report is completed (or has no reportStatus for backward compatibility)
  */
 export async function getReportStatusByInvoiceId(
   invoiceId: string,
@@ -764,10 +755,15 @@ export async function getReportStatusByInvoiceId(
       return { hasSchedule: false, hasReport: false };
     }
 
-    // Check if any schedule has a report
+    // Check if any schedule has a completed report
+    // Include reports with reportStatus "completed" or without reportStatus (backward compatibility)
     const scheduleIds = schedules.map((s: any) => s._id.toString());
     const reportCount = await Report.countDocuments({
       scheduleId: { $in: scheduleIds },
+      $or: [
+        { reportStatus: "completed" },
+        { reportStatus: { $exists: false } },
+      ],
     });
 
     return { hasSchedule: true, hasReport: reportCount > 0 };

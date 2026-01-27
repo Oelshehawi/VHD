@@ -2,7 +2,7 @@
 
 import connectMongo from "../connect";
 import { SchedulingRequest } from "../../../models";
-import { SchedulingRequestType } from "../typeDefinitions";
+import { SchedulingRequestType, TimeSelection } from "../typeDefinitions";
 
 const normalizeDate = (value?: Date | string | null) => {
   if (!value) return null;
@@ -55,10 +55,12 @@ export async function getSchedulingRequestsForJobsDueSoon(
       confirmedScheduleId: request.confirmedScheduleId?.toString(),
       confirmedDate: normalizeDate(request.confirmedDate),
       confirmedTime: request.confirmedTime,
-      alternativesOffered: request.alternativesOffered?.map((selection) => ({
-        date: normalizeDate(selection?.date) || "",
-        requestedTime: selection?.requestedTime,
-      })),
+      alternativesOffered: request.alternativesOffered?.map(
+        (selection: TimeSelection | null | undefined) => ({
+          date: normalizeDate(selection?.date) || "",
+          requestedTime: selection?.requestedTime,
+        }),
+      ),
       confirmationEmailSent: request.confirmationEmailSent,
       confirmationEmailSentAt: normalizeDate(request.confirmationEmailSentAt),
       createdAt: normalizeDate(request.createdAt),

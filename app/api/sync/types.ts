@@ -4,7 +4,8 @@ export type SyncTable =
   | "photos"
   | "availabilities"
   | "timeoffrequests"
-  | "payrollperiods";
+  | "payrollperiods"
+  | "reports";
 
 export interface SyncRequest {
   table: SyncTable;
@@ -91,4 +92,28 @@ export interface PayrollPeriodData {
   endDate: string;
   cutoffDate: string;
   payDay: string;
+}
+
+// Report sync data from mobile app
+export interface ReportSyncData {
+  id: string;
+  scheduleId: string;
+  invoiceId: string;
+  technicianId: string;
+  dateCompleted: string;
+  reportStatus: "draft" | "in_progress" | "completed";
+  jobTitle?: string | null;
+  location?: string | null;
+  cookingVolume?: "High" | "Medium" | "Low" | null;
+  recommendedCleaningFrequency?: number | null;
+  comments?: string | null;
+  cleaningDetails?: {
+    hoodCleaned?: boolean;
+    filtersCleaned?: boolean;
+    ductworkCleaned?: boolean;
+    fanCleaned?: boolean;
+  };
+  inspectionItems?: {
+    adequateAccessPanels?: "Yes" | "No" | "N/A";
+  };
 }

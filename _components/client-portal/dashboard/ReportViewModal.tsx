@@ -456,42 +456,6 @@ const ReportModal = ({ report, isOpen, onClose }: ReportModalProps) => {
                   </Card>
                 )}
 
-                {/* Access Panels (new schema) */}
-                {report.accessPanels && (
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-sm font-semibold">
-                        Access Panels
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <span className="text-muted-foreground text-sm">
-                          Adequate Access Panels
-                        </span>
-                        <Badge
-                          variant={
-                            report.accessPanels.adequate
-                              ? "default"
-                              : "destructive"
-                          }
-                        >
-                          {formatBooleanValue(report.accessPanels.adequate)}
-                        </Badge>
-                      </div>
-                      {report.accessPanels.notes && (
-                        <div>
-                          <span className="text-muted-foreground text-xs">
-                            Notes
-                          </span>
-                          <p className="text-foreground text-sm">
-                            {report.accessPanels.notes}
-                          </p>
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
-                )}
               </TabsContent>
 
               {/* Cleaning Tab */}

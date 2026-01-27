@@ -65,6 +65,11 @@ export const ReportSchema = new Schema<ReportType>({
     ref: "Invoice",
     required: true,
   },
+  reportStatus: {
+    type: String,
+    enum: ["draft", "in_progress", "completed"],
+    default: "draft",
+  },
   jobTitle: { type: String },
   location: { type: String },
   dateCompleted: { type: Date, required: true },
@@ -157,10 +162,6 @@ export const ReportSchema = new Schema<ReportType>({
     exists: { type: Boolean, default: false },
     operational: { type: Boolean },
     filterReplacementNeeded: { type: Boolean, default: false },
-    notes: { type: String },
-  },
-  accessPanels: {
-    adequate: { type: Boolean, default: true },
     notes: { type: String },
   },
   recommendations: String,

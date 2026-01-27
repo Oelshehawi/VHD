@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { toast } from "sonner";
 import { format, parseISO, subMonths } from "date-fns";
 import { Check, X, Minus, RotateCcw, Loader2 } from "lucide-react";
@@ -84,10 +84,6 @@ interface ReportFormData {
     exists: boolean;
     operational?: boolean;
     filterReplacementNeeded: boolean;
-    notes: string;
-  };
-  accessPanels: {
-    adequate: boolean;
     notes: string;
   };
 }
@@ -233,12 +229,13 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
           filterReplacementNeeded: false,
           notes: "",
         },
-        accessPanels: {
-          adequate: true,
-          notes: "",
-        },
       },
     });
+
+  const technicianId = useWatch({ control, name: "technicianId" });
+  const isTechnicianValid = useMemo(() => {
+    return technicians.some((t) => t.id === technicianId);
+  }, [technicians, technicianId]);
 
   const watchedInspectionItems = watch("inspectionItems");
   const watchedCleaningDetails = watch("cleaningDetails");
@@ -322,10 +319,6 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
           filterReplacementNeeded:
             report.ecologyUnit?.filterReplacementNeeded || false,
           notes: report.ecologyUnit?.notes || "",
-        },
-        accessPanels: {
-          adequate: report.accessPanels?.adequate ?? true,
-          notes: report.accessPanels?.notes || "",
         },
         recommendedCleaningFrequency: report.recommendedCleaningFrequency || "",
         comments: report.comments || "",
@@ -438,6 +431,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         _id: existingReportId,
         scheduleId: data.scheduleId,
         invoiceId: data.invoiceId,
+        reportStatus: "completed" as const,
         jobTitle: data.jobTitle,
         location: data.location,
         dateCompleted: parseAsUTC(data.dateCompleted),
@@ -452,7 +446,6 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         equipmentDetails: data.equipmentDetails,
         cleaningDetails: data.cleaningDetails,
         ecologyUnit: data.ecologyUnit,
-        accessPanels: data.accessPanels,
         recommendedCleaningFrequency:
           typeof data.recommendedCleaningFrequency === "number"
             ? data.recommendedCleaningFrequency
@@ -460,26 +453,6 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
         comments: data.comments || undefined,
         recommendations: data.recommendations || undefined,
       };
-
-      // DEBUG: Log ecologyUnit and related fields
-      console.log("=== REPORT SAVE DEBUG ===");
-      console.log(
-        "data.ecologyUnit:",
-        JSON.stringify(data.ecologyUnit, null, 2),
-      );
-      console.log(
-        "data.accessPanels:",
-        JSON.stringify(data.accessPanels, null, 2),
-      );
-      console.log(
-        "data.cleaningDetails:",
-        JSON.stringify(data.cleaningDetails, null, 2),
-      );
-      console.log(
-        "apiData.ecologyUnit:",
-        JSON.stringify(apiData.ecologyUnit, null, 2),
-      );
-      console.log("Full apiData:", JSON.stringify(apiData, null, 2));
 
       await createOrUpdateReport(apiData as unknown as ReportType);
       toast.success("Report saved successfully");
@@ -508,6 +481,13 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
       e.preventDefault();
       e.stopPropagation();
     }
+
+    // Validation for Basic Info step
+    if (step === "basic" && !isTechnicianValid) {
+      toast.error("Please select a technician before proceeding");
+      return;
+    }
+
     const next = steps[currentStepIndex + 1];
     if (next) setStep(next);
   };
@@ -1190,6 +1170,7 @@ const ReportModal = ({ schedule, onClose, technicians }: ReportModalProps) => {
                   e.stopPropagation();
                   nextStep(e);
                 }}
+                disabled={step === "basic" && !isTechnicianValid}
               >
                 Next
               </Button>

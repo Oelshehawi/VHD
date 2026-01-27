@@ -5,6 +5,7 @@ import { photosHandler } from "./photos.handler";
 import { availabilitiesHandler } from "./availabilities.handler";
 import { timeOffRequestsHandler } from "./timeoffrequests.handler";
 import { payrollPeriodsHandler } from "./payrollperiods.handler";
+import { reportsHandler } from "./reports.handler";
 
 const handlers: Record<SyncTable, TableHandler> = {
   schedules: schedulesHandler,
@@ -13,6 +14,7 @@ const handlers: Record<SyncTable, TableHandler> = {
   availabilities: availabilitiesHandler,
   timeoffrequests: timeOffRequestsHandler,
   payrollperiods: payrollPeriodsHandler,
+  reports: reportsHandler,
 };
 
 export function getHandler(table: string): TableHandler | null {

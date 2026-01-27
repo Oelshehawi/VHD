@@ -277,6 +277,7 @@ export interface ReportType {
   _id?: ObjectId | string;
   scheduleId: ObjectId | string;
   invoiceId: ObjectId | string;
+  reportStatus?: "draft" | "in_progress" | "completed";
   jobTitle?: string;
   location?: string;
   dateCompleted: Date | string;
@@ -331,10 +332,6 @@ export interface ReportType {
     exists: boolean;
     operational?: boolean;
     filterReplacementNeeded: boolean;
-    notes?: string;
-  };
-  accessPanels?: {
-    adequate: boolean;
     notes?: string;
   };
   recommendations?: string;
