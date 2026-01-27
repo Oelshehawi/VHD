@@ -136,6 +136,10 @@ export default function SchedulingWizard({
     pattern?.usualTime?.minute ?? 0,
   );
   const [useCustomTime, setUseCustomTime] = useState(false);
+  const [timePickerStep, setTimePickerStep] = useState<"hour" | "minute">(
+    "hour",
+  );
+  const [pendingHour, setPendingHour] = useState<number | null>(null);
   const latestRefreshRequestId = useRef(0);
 
   // Get estimated hours from invoice (default to 4)
@@ -410,6 +414,59 @@ export default function SchedulingWizard({
     }
   };
 
+  const handleTimeChange = useCallback(
+    async (value: string) => {
+      const [h, m] = value.split(":").map(Number);
+      const newHour = h ?? 9;
+      const newMinute = m ?? 0;
+      setCustomHour(newHour);
+      setCustomMinute(newMinute);
+      setUseCustomTime(true);
+
+      // Reset selections and refetch availability
+      setPrimarySelection(null);
+      setBackupSelection(null);
+      setIsSelectingBackup(false);
+      setIsLoadingAvailability(true);
+      const requestId = ++latestRefreshRequestId.current;
+      try {
+        const newAvailability = await refreshAvailabilityAction(
+          token,
+          { hour: newHour, minute: newMinute },
+          estimatedHours,
+        );
+        if (latestRefreshRequestId.current === requestId) {
+          setAvailableDays(newAvailability);
+        }
+      } catch (error) {
+        console.error("Error refreshing availability:", error);
+      } finally {
+        if (latestRefreshRequestId.current === requestId) {
+          setIsLoadingAvailability(false);
+        }
+      }
+    },
+    [estimatedHours, token],
+  );
+
+  const handleOpenTimePicker = () => {
+    setPendingHour(currentSchedulingTime.hour);
+    setTimePickerStep("hour");
+    setCustomTimeDialogOpen(true);
+  };
+
+  const handleSelectHour = (hour: number) => {
+    setPendingHour(hour);
+    setTimePickerStep("minute");
+  };
+
+  const handleSelectMinute = async (minute: number) => {
+    const hour = pendingHour ?? currentSchedulingTime.hour;
+    const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    await handleTimeChange(value);
+    setCustomTimeDialogOpen(false);
+  };
+
   return (
     <Card className="mx-auto min-h-[500px] w-full max-w-5xl gap-0 overflow-hidden rounded-xl py-0 lg:min-h-[600px]">
       {/* Header with Job Info */}
@@ -490,46 +547,17 @@ export default function SchedulingWizard({
 
                   {/* Time Picker Row */}
                   <div className="flex flex-wrap items-center gap-2">
-                    <input
-                      type="time"
-                      value={`${String(currentSchedulingTime.hour).padStart(2, "0")}:${String(currentSchedulingTime.minute).padStart(2, "0")}`}
-                      onChange={async (e) => {
-                        const [h, m] = e.target.value.split(":").map(Number);
-                        const newHour = h ?? 9;
-                        const newMinute = m ?? 0;
-                        setCustomHour(newHour);
-                        setCustomMinute(newMinute);
-                        setUseCustomTime(true);
-
-                        // Reset selections and refetch availability
-                        setPrimarySelection(null);
-                        setBackupSelection(null);
-                        setIsSelectingBackup(false);
-                        setIsLoadingAvailability(true);
-                        const requestId = ++latestRefreshRequestId.current;
-                        try {
-                          const newAvailability =
-                            await refreshAvailabilityAction(
-                              token,
-                              { hour: newHour, minute: newMinute },
-                              estimatedHours,
-                            );
-                          if (latestRefreshRequestId.current === requestId) {
-                            setAvailableDays(newAvailability);
-                          }
-                        } catch (error) {
-                          console.error(
-                            "Error refreshing availability:",
-                            error,
-                          );
-                        } finally {
-                          if (latestRefreshRequestId.current === requestId) {
-                            setIsLoadingAvailability(false);
-                          }
-                        }
-                      }}
-                      className="bg-background text-primary focus:ring-primary cursor-pointer rounded-md border px-3 py-1.5 text-base font-semibold focus:ring-2 focus:outline-none"
-                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleOpenTimePicker}
+                      className="bg-background text-primary hover:text-primary focus:ring-primary h-9 px-3 text-base font-semibold"
+                    >
+                      {formatExactTime(
+                        currentSchedulingTime.hour,
+                        currentSchedulingTime.minute,
+                      )}
+                    </Button>
                     <span className="text-muted-foreground text-sm">
                       (±15 min)
                     </span>
@@ -546,6 +574,74 @@ export default function SchedulingWizard({
                   </div>
                 </div>
               </motion.div>
+
+              <Dialog
+                open={customTimeDialogOpen}
+                onOpenChange={setCustomTimeDialogOpen}
+              >
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Select a time</DialogTitle>
+                    <DialogDescription>
+                      Choose an hour, then select a 30-minute interval.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    {timePickerStep === "hour" ? (
+                      <div className="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                        {Array.from({ length: 24 }, (_, hour) => (
+                          <Button
+                            key={hour}
+                            type="button"
+                            variant={
+                              pendingHour === hour ? "default" : "outline"
+                            }
+                            onClick={() => handleSelectHour(hour)}
+                            className="h-10"
+                          >
+                            {formatExactTime(hour, 0).replace(":00 ", " ")}
+                          </Button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-2 gap-2">
+                        {[0, 30].map((minute) => (
+                          <Button
+                            key={minute}
+                            type="button"
+                            variant="outline"
+                            onClick={() => handleSelectMinute(minute)}
+                            className="h-12 text-base font-semibold"
+                          >
+                            {formatExactTime(
+                              pendingHour ?? currentSchedulingTime.hour,
+                              minute,
+                            )}
+                          </Button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <DialogFooter className="gap-2 sm:gap-3">
+                    {timePickerStep === "minute" && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        onClick={() => setTimePickerStep("hour")}
+                      >
+                        Back to hours
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setCustomTimeDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
 
               <div className="flex flex-col lg:min-h-[450px] lg:flex-row">
                 {/* Calendar Section */}

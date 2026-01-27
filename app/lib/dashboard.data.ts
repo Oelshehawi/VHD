@@ -128,6 +128,15 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
         as: "invoice",
       },
     },
+    // Lookup scheduling requests for count
+    {
+      $lookup: {
+        from: "schedulingrequests",
+        localField: "_id",
+        foreignField: "jobsDueSoonId",
+        as: "schedulingRequests",
+      },
+    },
     // Add computed fields for email/notes existence
     {
       $addFields: {
@@ -155,10 +164,11 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
             else: false,
           },
         },
+        schedulingRequestsCount: { $size: "$schedulingRequests" },
       },
     },
     // Remove lookup arrays from final output
-    { $project: { client: 0, invoice: 0 } },
+    { $project: { client: 0, invoice: 0, schedulingRequests: 0 } },
     { $sort: { dateDue: 1 } },
   ]);
 
@@ -179,6 +189,7 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
     emailSent: job.emailSent || false,
     emailExists: job.emailExists || false,
     notesExists: job.notesExists || false,
+    schedulingRequestsCount: Number(job.schedulingRequestsCount || 0),
     // Properly serialize callHistory to avoid MongoDB ObjectId issues
     callHistory: job.callHistory
       ? job.callHistory.map((call: any) => ({

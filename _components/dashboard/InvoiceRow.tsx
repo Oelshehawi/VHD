@@ -13,12 +13,13 @@ import {
   FaEnvelope,
   FaHistory,
 } from "react-icons/fa";
-import { Loader2, Link2 } from "lucide-react";
+import { ClipboardList, Loader2, Link2 } from "lucide-react";
 import { CALL_OUTCOME_LABELS } from "../../app/lib/callLogConstants";
 import CallLogModal from "../database/CallLogModal";
 import CallHistoryModal from "../database/CallHistoryModal";
 import SchedulingLinkDialog from "./SchedulingLinkDialog";
 import SendCleaningReminderDialog from "./SendCleaningReminderDialog";
+import SchedulingRequestsDialog from "./SchedulingRequestsDialog";
 
 import { TableRow, TableCell } from "../ui/table";
 import { Button } from "../ui/button";
@@ -36,6 +37,7 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
   const [callLogOpen, setCallLogOpen] = useState(false);
   const [callHistoryOpen, setCallHistoryOpen] = useState(false);
   const [schedulingLinkOpen, setSchedulingLinkOpen] = useState(false);
+  const [schedulingRequestsOpen, setSchedulingRequestsOpen] = useState(false);
   const [sendEmailOpen, setSendEmailOpen] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isMarkingScheduled, setIsMarkingScheduled] = useState(false);
@@ -186,6 +188,21 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
               <span>Get Scheduling Link</span>
             </DropdownMenuItem>
 
+            {Number(invoiceData.schedulingRequestsCount || 0) > 0 && (
+              <DropdownMenuItem
+                onClick={() => setSchedulingRequestsOpen(true)}
+                disabled={!invoiceData._id}
+              >
+                <ClipboardList className="mr-2 h-4 w-4 text-emerald-500" />
+                <span className="flex items-center gap-2">
+                  Scheduling Requests
+                  <Badge variant="secondary" className="px-2 text-[10px]">
+                    {invoiceData.schedulingRequestsCount}
+                  </Badge>
+                </span>
+              </DropdownMenuItem>
+            )}
+
             <DropdownMenuItem
               disabled={isSendingEmail || !invoiceData.emailExists}
               onClick={() => {
@@ -252,6 +269,15 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
           jobTitle={invoiceData.jobTitle}
           isOpen={schedulingLinkOpen}
           onClose={() => setSchedulingLinkOpen(false)}
+        />
+      )}
+      {invoiceData._id && (
+        <SchedulingRequestsDialog
+          jobsDueSoonId={invoiceData._id.toString()}
+          jobTitle={invoiceData.jobTitle}
+          count={Number(invoiceData.schedulingRequestsCount || 0)}
+          isOpen={schedulingRequestsOpen}
+          onClose={() => setSchedulingRequestsOpen(false)}
         />
       )}
       <SendCleaningReminderDialog

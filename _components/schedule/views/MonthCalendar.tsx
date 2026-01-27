@@ -31,11 +31,13 @@ import { getTechnicianUnavailabilityInfo } from "../../../app/lib/utils/availabi
 import { formatTimeRange12hr } from "../../../app/lib/utils/timeFormatUtils";
 import { cn, formatDateStringUTC } from "../../../app/lib/utils";
 import { CalendarDays } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../../ui/tooltip";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../ui/dialog";
 
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -86,6 +88,8 @@ export default function MonthCalendar({
   // Modal state
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [dayJobsModalOpen, setDayJobsModalOpen] = useState(false);
+  const [dayJobsModalDate, setDayJobsModalDate] = useState<Date | null>(null);
 
   // Get all days to display (including days from prev/next month to fill the grid)
   const calendarDays = useMemo(() => {
@@ -126,18 +130,30 @@ export default function MonthCalendar({
     const map: Record<string, TimeOffRequestType[]> = {};
     timeOffRequests.forEach((request) => {
       // Parse dates as UTC to avoid timezone shifts
-      const startDateStr = typeof request.startDate === 'string'
-        ? (request.startDate.split('T')[0] || request.startDate)
-        : format(request.startDate, "yyyy-MM-dd");
-      const endDateStr = typeof request.endDate === 'string'
-        ? (request.endDate.split('T')[0] || request.endDate)
-        : format(request.endDate, "yyyy-MM-dd");
+      const startDateStr =
+        typeof request.startDate === "string"
+          ? request.startDate.split("T")[0] || request.startDate
+          : format(request.startDate, "yyyy-MM-dd");
+      const endDateStr =
+        typeof request.endDate === "string"
+          ? request.endDate.split("T")[0] || request.endDate
+          : format(request.endDate, "yyyy-MM-dd");
 
       // Parse as UTC dates (YYYY-MM-DD format)
-      const [startYear, startMonth, startDay] = startDateStr.split("-").map(Number);
+      const [startYear, startMonth, startDay] = startDateStr
+        .split("-")
+        .map(Number);
       const [endYear, endMonth, endDay] = endDateStr.split("-").map(Number);
-      const startDate = new Date(startYear as number, (startMonth as number) - 1, startDay as number);
-      const endDate = new Date(endYear as number, (endMonth as number) - 1, endDay as number);
+      const startDate = new Date(
+        startYear as number,
+        (startMonth as number) - 1,
+        startDay as number,
+      );
+      const endDate = new Date(
+        endYear as number,
+        (endMonth as number) - 1,
+        endDay as number,
+      );
 
       // Add request to all days in the range (inclusive of both start and end)
       let currentDate = new Date(startDate);
@@ -185,6 +201,11 @@ export default function MonthCalendar({
   const handleJobClick = (job: ScheduleType) => {
     setSelectedJob(job);
     setIsModalOpen(true);
+  };
+
+  const openDayJobsModal = (day: Date) => {
+    setDayJobsModalDate(day);
+    setDayJobsModalOpen(true);
   };
 
   const handleModalOpenChange = (open: boolean) => {
@@ -307,7 +328,7 @@ export default function MonthCalendar({
 
                   {/* Job count badge */}
                   {dayJobs.length > 0 && (
-                    <div className="absolute bottom-1 right-1">
+                    <div className="absolute right-1 bottom-1">
                       <Badge
                         variant="secondary"
                         className="h-4 min-w-[16px] px-1 text-[9px] font-medium"
@@ -324,7 +345,7 @@ export default function MonthCalendar({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="relative">
-                            <div className="bg-destructive h-2.5 w-2.5 rounded-full shadow-sm animate-pulse" />
+                            <div className="bg-destructive h-2.5 w-2.5 animate-pulse rounded-full shadow-sm" />
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
@@ -336,10 +357,15 @@ export default function MonthCalendar({
                                 <div className="text-muted-foreground">
                                   {info.type === "full-day"
                                     ? "All day"
-                                    : formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
+                                    : formatTimeRange12hr(
+                                        info.startTime || "00:00",
+                                        info.endTime || "23:59",
+                                      )}
                                 </div>
                                 {info.reason && (
-                                  <div className="text-muted-foreground">{info.reason}</div>
+                                  <div className="text-muted-foreground">
+                                    {info.reason}
+                                  </div>
                                 )}
                               </div>
                             ))}
@@ -353,29 +379,42 @@ export default function MonthCalendar({
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <div className="relative">
-                            <div className="bg-blue-500 h-2.5 w-2.5 rounded-full shadow-sm animate-pulse" />
+                            <div className="h-2.5 w-2.5 animate-pulse rounded-full bg-blue-500 shadow-sm" />
                           </div>
                         </TooltipTrigger>
                         <TooltipContent side="top" className="max-w-xs">
                           <div className="space-y-2 text-xs">
                             <div className="font-semibold">Time Off</div>
                             {dayTimeOff.map((request) => {
-                              const technician = technicians.find(t => t.id === request.technicianId);
-                              const startDateStr = typeof request.startDate === 'string'
-                                ? (request.startDate.split('T')[0] || request.startDate)
-                                : format(request.startDate, "yyyy-MM-dd");
-                              const endDateStr = typeof request.endDate === 'string'
-                                ? (request.endDate.split('T')[0] || request.endDate)
-                                : format(request.endDate, "yyyy-MM-dd");
-                              const startDate = formatDateStringUTC(startDateStr);
+                              const technician = technicians.find(
+                                (t) => t.id === request.technicianId,
+                              );
+                              const startDateStr =
+                                typeof request.startDate === "string"
+                                  ? request.startDate.split("T")[0] ||
+                                    request.startDate
+                                  : format(request.startDate, "yyyy-MM-dd");
+                              const endDateStr =
+                                typeof request.endDate === "string"
+                                  ? request.endDate.split("T")[0] ||
+                                    request.endDate
+                                  : format(request.endDate, "yyyy-MM-dd");
+                              const startDate =
+                                formatDateStringUTC(startDateStr);
                               const endDate = formatDateStringUTC(endDateStr);
                               return (
                                 <div key={request._id as string}>
-                                  <div className="font-medium">{technician?.name || "Unknown"}</div>
-                                  <div className="text-muted-foreground">
-                                    {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
+                                  <div className="font-medium">
+                                    {technician?.name || "Unknown"}
                                   </div>
-                                  <div className="text-muted-foreground">{request.reason}</div>
+                                  <div className="text-muted-foreground">
+                                    {startDate === endDate
+                                      ? startDate
+                                      : `${startDate} - ${endDate}`}
+                                  </div>
+                                  <div className="text-muted-foreground">
+                                    {request.reason}
+                                  </div>
                                 </div>
                               );
                             })}
@@ -428,7 +467,11 @@ export default function MonthCalendar({
                     })}
                     {dayJobs.length > 3 && (
                       <button
-                        onClick={() => handleDaySelect(day)}
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          openDayJobsModal(day);
+                        }}
                         className="text-muted-foreground hover:text-foreground w-full px-1.5 py-0.5 text-left text-[10px]"
                       >
                         +{dayJobs.length - 3} more
@@ -577,25 +620,36 @@ export default function MonthCalendar({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="relative">
-                                  <div className="bg-destructive h-2 w-2 rounded-full shadow-sm animate-pulse sm:h-2.5 sm:w-2.5" />
+                                  <div className="bg-destructive h-2 w-2 animate-pulse rounded-full shadow-sm sm:h-2.5 sm:w-2.5" />
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-xs">
                                 <div className="space-y-2 text-xs">
-                                  <div className="font-semibold">Unavailability</div>
-                                  {unavailabilityInfoList.map(({ tech, info }) => (
-                                    <div key={tech.id}>
-                                      <div className="font-medium">{tech.name}</div>
-                                      <div className="text-muted-foreground">
-                                        {info.type === "full-day"
-                                          ? "All day"
-                                          : formatTimeRange12hr(info.startTime || "00:00", info.endTime || "23:59")}
+                                  <div className="font-semibold">
+                                    Unavailability
+                                  </div>
+                                  {unavailabilityInfoList.map(
+                                    ({ tech, info }) => (
+                                      <div key={tech.id}>
+                                        <div className="font-medium">
+                                          {tech.name}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                          {info.type === "full-day"
+                                            ? "All day"
+                                            : formatTimeRange12hr(
+                                                info.startTime || "00:00",
+                                                info.endTime || "23:59",
+                                              )}
+                                        </div>
+                                        {info.reason && (
+                                          <div className="text-muted-foreground">
+                                            {info.reason}
+                                          </div>
+                                        )}
                                       </div>
-                                      {info.reason && (
-                                        <div className="text-muted-foreground">{info.reason}</div>
-                                      )}
-                                    </div>
-                                  ))}
+                                    ),
+                                  )}
                                 </div>
                               </TooltipContent>
                             </Tooltip>
@@ -606,29 +660,46 @@ export default function MonthCalendar({
                             <Tooltip>
                               <TooltipTrigger asChild>
                                 <div className="relative">
-                                  <div className="bg-blue-500 h-2 w-2 rounded-full shadow-sm animate-pulse sm:h-2.5 sm:w-2.5" />
+                                  <div className="h-2 w-2 animate-pulse rounded-full bg-blue-500 shadow-sm sm:h-2.5 sm:w-2.5" />
                                 </div>
                               </TooltipTrigger>
                               <TooltipContent side="top" className="max-w-xs">
                                 <div className="space-y-2 text-xs">
                                   <div className="font-semibold">Time Off</div>
                                   {dayTimeOff.map((request) => {
-                                    const technician = technicians.find(t => t.id === request.technicianId);
-                                    const startDateStr = typeof request.startDate === 'string'
-                                      ? (request.startDate.split('T')[0] || request.startDate)
-                                      : format(request.startDate, "yyyy-MM-dd");
-                                    const endDateStr = typeof request.endDate === 'string'
-                                      ? (request.endDate.split('T')[0] || request.endDate)
-                                      : format(request.endDate, "yyyy-MM-dd");
-                                    const startDate = formatDateStringUTC(startDateStr);
-                                    const endDate = formatDateStringUTC(endDateStr);
+                                    const technician = technicians.find(
+                                      (t) => t.id === request.technicianId,
+                                    );
+                                    const startDateStr =
+                                      typeof request.startDate === "string"
+                                        ? request.startDate.split("T")[0] ||
+                                          request.startDate
+                                        : format(
+                                            request.startDate,
+                                            "yyyy-MM-dd",
+                                          );
+                                    const endDateStr =
+                                      typeof request.endDate === "string"
+                                        ? request.endDate.split("T")[0] ||
+                                          request.endDate
+                                        : format(request.endDate, "yyyy-MM-dd");
+                                    const startDate =
+                                      formatDateStringUTC(startDateStr);
+                                    const endDate =
+                                      formatDateStringUTC(endDateStr);
                                     return (
                                       <div key={request._id as string}>
-                                        <div className="font-medium">{technician?.name || "Unknown"}</div>
-                                        <div className="text-muted-foreground">
-                                          {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
+                                        <div className="font-medium">
+                                          {technician?.name || "Unknown"}
                                         </div>
-                                        <div className="text-muted-foreground">{request.reason}</div>
+                                        <div className="text-muted-foreground">
+                                          {startDate === endDate
+                                            ? startDate
+                                            : `${startDate} - ${endDate}`}
+                                        </div>
+                                        <div className="text-muted-foreground">
+                                          {request.reason}
+                                        </div>
                                       </div>
                                     );
                                   })}
@@ -718,12 +789,12 @@ export default function MonthCalendar({
                   </h2>
                 </div>
               </div>
-              
+
               {/* Time-off requests for selected day */}
               {selectedDayTimeOff.length > 0 && (
-                <Card className="border-l-blue-500 bg-blue-500/10 mb-3 border-l-4">
+                <Card className="mb-3 border-l-4 border-l-blue-500 bg-blue-500/10">
                   <CardContent className="p-3">
-                    <h3 className="text-blue-600 dark:text-blue-400 mb-2 text-xs font-semibold flex items-center gap-1">
+                    <h3 className="mb-2 flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400">
                       <CalendarDays className="h-4 w-4" />
                       Time Off
                     </h3>
@@ -733,24 +804,31 @@ export default function MonthCalendar({
                           (tech) => tech.id === request.technicianId,
                         );
                         // Format dates using UTC to avoid timezone issues
-                        const startDateStr = typeof request.startDate === 'string'
-                          ? (request.startDate.split('T')[0] || request.startDate)
-                          : format(request.startDate, "yyyy-MM-dd");
-                        const endDateStr = typeof request.endDate === 'string'
-                          ? (request.endDate.split('T')[0] || request.endDate)
-                          : format(request.endDate, "yyyy-MM-dd");
+                        const startDateStr =
+                          typeof request.startDate === "string"
+                            ? request.startDate.split("T")[0] ||
+                              request.startDate
+                            : format(request.startDate, "yyyy-MM-dd");
+                        const endDateStr =
+                          typeof request.endDate === "string"
+                            ? request.endDate.split("T")[0] || request.endDate
+                            : format(request.endDate, "yyyy-MM-dd");
                         const startDate = formatDateStringUTC(startDateStr);
                         const endDate = formatDateStringUTC(endDateStr);
                         return (
                           <div
                             key={request._id as string}
-                            className="text-blue-600 dark:text-blue-400 text-xs"
+                            className="text-xs text-blue-600 dark:text-blue-400"
                           >
-                            <span className="font-medium">{technician?.name || "Unknown"}</span>
-                            <span className="text-blue-500/80 ml-2">
-                              {startDate === endDate ? startDate : `${startDate} - ${endDate}`}
+                            <span className="font-medium">
+                              {technician?.name || "Unknown"}
                             </span>
-                            <div className="text-blue-500/80 ml-0 mt-0.5">
+                            <span className="ml-2 text-blue-500/80">
+                              {startDate === endDate
+                                ? startDate
+                                : `${startDate} - ${endDate}`}
+                            </span>
+                            <div className="mt-0.5 ml-0 text-blue-500/80">
                               - {request.reason}
                             </div>
                           </div>
@@ -806,6 +884,49 @@ export default function MonthCalendar({
         canManage={canManage}
         technicians={technicians}
       />
+
+      {/* Day Jobs Modal (desktop "more" list) */}
+      <Dialog open={dayJobsModalOpen} onOpenChange={setDayJobsModalOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>
+                {dayJobsModalDate
+                  ? `Schedule for ${format(dayJobsModalDate, "MMM dd, yyyy")}`
+                  : "Schedule"}
+              </span>
+              {dayJobsModalDate && (
+                <Badge variant="secondary">
+                  {
+                    (jobsByDate[format(dayJobsModalDate, "yyyy-MM-dd")] || [])
+                      .length
+                  }{" "}
+                  jobs
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto">
+            <ul className="flex flex-col gap-2">
+              {(dayJobsModalDate
+                ? jobsByDate[format(dayJobsModalDate, "yyyy-MM-dd")] || []
+                : []
+              ).map((job) => (
+                <Job
+                  key={job._id as string}
+                  job={job}
+                  canManage={canManage}
+                  technicians={technicians}
+                  onJobClick={(selected) => {
+                    setDayJobsModalOpen(false);
+                    handleJobClick(selected);
+                  }}
+                />
+              ))}
+            </ul>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

@@ -19,6 +19,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Loader2 } from "lucide-react";
+import SchedulingRequestsDialog from "./SchedulingRequestsDialog";
 
 interface ScheduledJobsBoxProps {
   scheduledCount: number;
@@ -33,6 +34,9 @@ const ScheduledJobsBox = ({
 }: ScheduledJobsBoxProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [processingId, setProcessingId] = useState<string | null>(null);
+  const [requestsOpen, setRequestsOpen] = useState(false);
+  const [selectedJobForRequests, setSelectedJobForRequests] =
+    useState<DueInvoiceType | null>(null);
   const router = useRouter();
 
   const handleResetScheduleStatus = async (invoiceId: string) => {
@@ -57,7 +61,7 @@ const ScheduledJobsBox = ({
     <>
       <div className="flex gap-2">
         <Card
-          className="hover:bg-muted/50 py-0 flex-1 cursor-pointer transition-colors"
+          className="hover:bg-muted/50 flex-1 cursor-pointer py-0 transition-colors"
           onClick={() => setIsModalOpen(true)}
         >
           <CardContent className="flex items-center justify-between gap-2 p-3">
@@ -70,7 +74,7 @@ const ScheduledJobsBox = ({
             </Badge>
           </CardContent>
         </Card>
-        <Card className="py-0 flex-1 cursor-pointer transition-colors">
+        <Card className="flex-1 cursor-pointer py-0 transition-colors">
           <CardContent className="flex items-center justify-between gap-2 p-3">
             <p className="text-muted-foreground text-xs">Unscheduled</p>
             <Badge variant="destructive">{unscheduledCount}</Badge>
@@ -107,21 +111,41 @@ const ScheduledJobsBox = ({
                         Due: {formatDate(job.dateDue.toString().split("T")[0])}
                       </span>
                     </div>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleResetScheduleStatus(job.invoiceId)}
-                      disabled={processingId === job.invoiceId}
-                    >
-                      {processingId === job.invoiceId ? (
-                        <>
-                          <Loader2 className="mr-2 h-3 w-3 animate-spin" />
-                          Resetting...
-                        </>
-                      ) : (
-                        "Reset"
+                    <div className="flex items-center gap-2">
+                      {Number(job.schedulingRequestsCount || 0) > 0 && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedJobForRequests(job);
+                            setRequestsOpen(true);
+                          }}
+                        >
+                          Requests
+                          <Badge
+                            variant="secondary"
+                            className="ml-2 px-2 text-[10px]"
+                          >
+                            {job.schedulingRequestsCount}
+                          </Badge>
+                        </Button>
                       )}
-                    </Button>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        onClick={() => handleResetScheduleStatus(job.invoiceId)}
+                        disabled={processingId === job.invoiceId}
+                      >
+                        {processingId === job.invoiceId ? (
+                          <>
+                            <Loader2 className="mr-2 h-3 w-3 animate-spin" />
+                            Resetting...
+                          </>
+                        ) : (
+                          "Reset"
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -135,6 +159,16 @@ const ScheduledJobsBox = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {selectedJobForRequests?._id && (
+        <SchedulingRequestsDialog
+          jobsDueSoonId={selectedJobForRequests._id.toString()}
+          jobTitle={selectedJobForRequests.jobTitle}
+          count={Number(selectedJobForRequests.schedulingRequestsCount || 0)}
+          isOpen={requestsOpen}
+          onClose={() => setRequestsOpen(false)}
+        />
+      )}
     </>
   );
 };

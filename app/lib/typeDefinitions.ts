@@ -377,6 +377,7 @@ export interface DueInvoiceType {
   emailExists?: boolean;
   notesExists?: boolean;
   callHistory?: CallLogEntry[];
+  schedulingRequestsCount?: number;
   // Client self-scheduling fields
   schedulingToken?: string;
   schedulingTokenExpiry?: Date | string;

@@ -24,24 +24,20 @@ const InvoiceSelectionModal = ({
   onClose,
   onSelect,
 }: InvoiceSelectionModalProps) => {
-  // Group invoices by location and keep only the most recent one for each location
   const uniqueInvoices = useMemo(() => {
-    const locationMap = new Map();
+    const jobTitleMap = new Map<string, any>();
 
-    // Since invoices are already sorted by date (newest first),
-    // the first one we encounter for each location will be the most recent
     invoices.forEach((invoice) => {
-      const rawLocation =
-        typeof invoice?.location === "string" ? invoice.location : "";
-      const key = rawLocation.trim() || String(invoice?._id ?? "");
+      const rawJobTitle =
+        typeof invoice?.jobTitle === "string" ? invoice.jobTitle : "";
+      const key = rawJobTitle.trim() || String(invoice?._id ?? "");
 
-      if (!locationMap.has(key)) {
-        locationMap.set(key, invoice);
+      if (!jobTitleMap.has(key)) {
+        jobTitleMap.set(key, invoice);
       }
     });
 
-    // Convert map values back to array
-    return Array.from(locationMap.values());
+    return Array.from(jobTitleMap.values());
   }, [invoices]);
 
   return (

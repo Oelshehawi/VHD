@@ -156,7 +156,7 @@ export default function SchedulingConfirmDialog({
 
         <div className="flex min-h-0 flex-1 gap-6">
           {/* Left side: Invoice Selection */}
-          <div className="flex w-1/2 flex-col">
+          <div className="flex min-h-0 w-1/2 flex-col">
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
                 Select Invoice to Copy
@@ -164,7 +164,7 @@ export default function SchedulingConfirmDialog({
               <Badge variant="secondary">{invoices.length} invoices</Badge>
             </div>
 
-            <ScrollArea className="bg-muted/30 flex-1 rounded-lg border p-2">
+            <ScrollArea className="bg-muted/30 max-h-[60vh] min-h-0 flex-1 rounded-lg border p-2">
               {isLoading ? (
                 <div className="space-y-3 p-2">
                   {[1, 2, 3].map((i) => (
@@ -261,7 +261,7 @@ export default function SchedulingConfirmDialog({
           </div>
 
           {/* Right side: Preview */}
-          <div className="flex w-1/2 flex-col">
+          <div className="flex min-h-0 w-1/2 flex-col">
             {/* Schedule summary card */}
             <Card className="border-primary/30 from-primary/5 to-primary/10 mb-4 shrink-0 bg-gradient-to-br">
               <CardContent className="p-4">
