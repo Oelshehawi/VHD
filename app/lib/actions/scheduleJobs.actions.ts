@@ -7,6 +7,7 @@ import {
   Report,
   AuditLog,
   Invoice,
+  Photo,
 } from "../../../models/reactDataSchema";
 import {
   PayrollPeriodType,
@@ -259,37 +260,35 @@ export async function createSchedule(
 export const deleteJob = async (jobId: string) => {
   await connectMongo();
   try {
-    // First, fetch the schedule to get photos before deleting
-    const schedule = await Schedule.findById(jobId);
+    // Delete estimate photos from Cloudinary and photos collection
+    const estimatePhotos = await Photo.find({
+      scheduleId: jobId,
+      type: "estimate",
+    }).lean();
 
-    if (!schedule) {
-      throw new Error("Schedule not found");
+    for (const photo of estimatePhotos) {
+      try {
+        const matches = photo.cloudinaryUrl.match(
+          /\/upload\/(?:v\d+\/)?(.+?)\./,
+        );
+        if (matches && matches[1]) {
+          const publicId = matches[1];
+          await cloudinary.uploader.destroy(publicId);
+          console.log(`Deleted estimate photo from Cloudinary: ${publicId}`);
+        }
+      } catch (cloudinaryError) {
+        console.error(
+          "Failed to delete estimate photo from Cloudinary:",
+          cloudinaryError,
+        );
+      }
     }
 
-    // Delete estimate photos from Cloudinary
-    if (schedule.photos && schedule.photos.length > 0) {
-      const estimatePhotos = schedule.photos.filter(
-        (photo: any) => photo.type === "estimate",
-      );
-
-      // Delete each estimate photo from Cloudinary
-      for (const photo of estimatePhotos) {
-        try {
-          // Extract public_id from Cloudinary URL
-          const matches = photo.url.match(/\/upload\/(?:v\d+\/)?(.+?)\./);
-          if (matches && matches[1]) {
-            const publicId = matches[1];
-            await cloudinary.uploader.destroy(publicId);
-            console.log(`Deleted estimate photo from Cloudinary: ${publicId}`);
-          }
-        } catch (cloudinaryError) {
-          console.error(
-            "Failed to delete estimate photo from Cloudinary:",
-            cloudinaryError,
-          );
-          // Continue with job deletion even if Cloudinary delete fails
-        }
-      }
+    if (estimatePhotos.length > 0) {
+      await Photo.deleteMany({
+        scheduleId: jobId,
+        type: "estimate",
+      });
     }
 
     // Now delete the schedule from MongoDB

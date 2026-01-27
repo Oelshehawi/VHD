@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ScheduleType } from "../../../app/lib/typeDefinitions";
+import { savePhotos } from "../../../app/lib/actions/photos.actions";
 import { toast } from "sonner";
 
 export interface UploadProgress {
@@ -13,6 +14,14 @@ interface UploadResult {
   successful: number;
   failed: number;
   errors: string[];
+}
+
+interface UploadedPhotoPayload {
+  scheduleId: string;
+  cloudinaryUrl: string;
+  type: "estimate";
+  technicianId: string;
+  timestamp: string;
 }
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -38,7 +47,7 @@ export const useEstimatePhotoUpload = () => {
     file: File,
     job: ScheduleType,
     userId: string,
-  ): Promise<boolean> => {
+  ): Promise<UploadedPhotoPayload | null> => {
     // Update progress to uploading
     setUploadProgress((prev) => ({
       ...prev,
@@ -90,9 +99,7 @@ export const useEstimatePhotoUpload = () => {
 
       if (!uploadResponse.ok) {
         const errorData = await uploadResponse.json();
-        throw new Error(
-          errorData.error?.message || "Cloudinary upload failed",
-        );
+        throw new Error(errorData.error?.message || "Cloudinary upload failed");
       }
 
       const cloudinaryResult = await uploadResponse.json();
@@ -104,23 +111,6 @@ export const useEstimatePhotoUpload = () => {
         [file.name]: { fileName: file.name, status: "uploading", progress: 66 },
       }));
 
-      // Step 3: Save photo metadata to MongoDB
-      const saveResponse = await fetch("/api/update-photos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          cloudinaryUrl,
-          type: "estimate",
-          technicianId: userId,
-          scheduleId: job._id,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-
-      if (!saveResponse.ok) {
-        throw new Error("Failed to save photo metadata");
-      }
-
       // Success
       setUploadProgress((prev) => ({
         ...prev,
@@ -131,7 +121,13 @@ export const useEstimatePhotoUpload = () => {
         },
       }));
 
-      return true;
+      return {
+        scheduleId: job._id.toString(),
+        cloudinaryUrl,
+        type: "estimate",
+        technicianId: userId,
+        timestamp: new Date().toISOString(),
+      };
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -146,7 +142,7 @@ export const useEstimatePhotoUpload = () => {
         },
       }));
 
-      return false;
+      return null;
     }
   };
 
@@ -188,17 +184,29 @@ export const useEstimatePhotoUpload = () => {
     let successful = 0;
     let failed = 0;
     const uploadErrors: string[] = [];
+    const uploadedPayloads: UploadedPhotoPayload[] = [];
 
     for (const file of validFiles) {
-      const success = await uploadSingleFile(file, job, userId);
-      if (success) {
+      const payload = await uploadSingleFile(file, job, userId);
+      if (payload) {
         successful++;
+        uploadedPayloads.push(payload);
       } else {
         failed++;
         const progress = uploadProgress[file.name];
         if (progress?.error) {
           uploadErrors.push(`${file.name}: ${progress.error}`);
         }
+      }
+    }
+
+    if (uploadedPayloads.length > 0) {
+      try {
+        await savePhotos(uploadedPayloads);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to save photos";
+        uploadErrors.push(message);
       }
     }
 

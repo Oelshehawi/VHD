@@ -56,8 +56,6 @@ export interface ScheduleType {
   payrollPeriod: ObjectId | string;
   deadRun: boolean;
   technicianNotes?: string;
-  signature?: SignatureType;
-  photos?: PhotoType[];
   onSiteContact?: OnSiteContactType;
   accessInstructions?: string;
 }
@@ -271,6 +269,8 @@ export interface PhotoRecordType {
   technicianId: string;
   timestamp: Date | string;
   signerName?: string | null;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
 }
 
 export interface ReportType {

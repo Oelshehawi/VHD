@@ -2,7 +2,12 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { ScheduleType, ReportType } from "../../app/lib/typeDefinitions";
+import {
+  ScheduleType,
+  ReportType,
+  PhotoType,
+  SignatureType,
+} from "../../app/lib/typeDefinitions";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -10,6 +15,7 @@ import {
   getReportByScheduleId,
   deleteReport,
 } from "../../app/lib/actions/scheduleJobs.actions";
+import { getSchedulePhotos } from "../../app/lib/actions/photos.actions";
 import DeleteModal from "../DeleteModal";
 import EditJobModal from "./EditJobModal";
 import ReportModal from "./ReportModal";
@@ -78,6 +84,11 @@ export default function JobDetailsModal({
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [isDeletingReport, setIsDeletingReport] = useState(false);
   const [showDeleteReportConfirm, setShowDeleteReportConfirm] = useState(false);
+  const [mediaPhotos, setMediaPhotos] = useState<PhotoType[]>([]);
+  const [mediaSignature, setMediaSignature] = useState<SignatureType | null>(
+    null,
+  );
+  const [isLoadingMedia, setIsLoadingMedia] = useState(false);
   // Local state mirrors for optimistic UI updates
   const [localOnSiteContact, setLocalOnSiteContact] = useState(
     job?.onSiteContact,
@@ -100,6 +111,52 @@ export default function JobDetailsModal({
       setShowReportModal(false); // Reset report modal state
     }
   }, [job]);
+
+  useEffect(() => {
+    const loadMedia = async () => {
+      if (!job || !isOpen) return;
+      setIsLoadingMedia(true);
+      try {
+        const data = await getSchedulePhotos(job._id.toString());
+        const photos = data
+          .filter((photo) => photo.type === "before" || photo.type === "after")
+          .map((photo) => ({
+            _id: photo.id,
+            url: photo.cloudinaryUrl,
+            timestamp: new Date(photo.timestamp),
+            technicianId: photo.technicianId,
+            type: photo.type as "before" | "after",
+          }));
+        const signature = data.find((photo) => photo.type === "signature");
+
+        setMediaPhotos(photos);
+        setMediaSignature(
+          signature
+            ? {
+                _id: signature.id,
+                url: signature.cloudinaryUrl,
+                timestamp: new Date(signature.timestamp),
+                signerName: signature.signerName || "Customer",
+                technicianId: signature.technicianId,
+              }
+            : null,
+        );
+      } catch (error) {
+        console.error("Failed to load media:", error);
+        setMediaPhotos([]);
+        setMediaSignature(null);
+      } finally {
+        setIsLoadingMedia(false);
+      }
+    };
+
+    if (isOpen && job) {
+      void loadMedia();
+    } else {
+      setMediaPhotos([]);
+      setMediaSignature(null);
+    }
+  }, [isOpen, job]);
 
   // Check for existing report when switching to report view
   useEffect(() => {
@@ -249,9 +306,9 @@ export default function JobDetailsModal({
     }
   };
 
-  const hasBeforePhotos = job?.photos?.some((photo) => photo.type === "before");
-  const hasAfterPhotos = job?.photos?.some((photo) => photo.type === "after");
-  const hasSignature = !!job?.signature;
+  const hasBeforePhotos = mediaPhotos.some((photo) => photo.type === "before");
+  const hasAfterPhotos = mediaPhotos.some((photo) => photo.type === "after");
+  const hasSignature = !!mediaSignature;
   const hasMedia = hasBeforePhotos || hasAfterPhotos || hasSignature;
 
   const createReportPDFData = (report: ReportType): PDFData | undefined => {
@@ -351,7 +408,7 @@ export default function JobDetailsModal({
         >
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
-            {hasMedia && (
+            {(isLoadingMedia || hasMedia) && (
               <TabsTrigger value="media">
                 <Camera className="mr-1 h-4 w-4" />
                 Media
@@ -540,11 +597,19 @@ export default function JobDetailsModal({
             </TabsContent>
 
             <TabsContent value="media" className="p-6">
-              {hasMedia && (
-                <MediaDisplay
-                  photos={job.photos || []}
-                  signature={job.signature || null}
-                />
+              {isLoadingMedia ? (
+                <div className="py-8 text-center">
+                  <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2"></div>
+                  <p className="text-muted-foreground text-sm">
+                    Loading media...
+                  </p>
+                </div>
+              ) : hasMedia ? (
+                <MediaDisplay photos={mediaPhotos} signature={mediaSignature} />
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  No media available for this job yet.
+                </p>
               )}
             </TabsContent>
 

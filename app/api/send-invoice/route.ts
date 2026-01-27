@@ -1,15 +1,11 @@
-import { NextApiRequest, NextApiResponse } from "next";
-import connectMongo from "../../../app/lib/connect";
-import {
-  Invoice,
-  Client,
-  AuditLog,
-} from "../../../models/reactDataSchema";
+import { NextResponse } from "next/server";
+import connectMongo from "../../lib/connect";
+import { Invoice, Client, AuditLog } from "../../../models/reactDataSchema";
 import {
   getEmailForPurpose,
   getBaseUrl,
   formatDateStringUTC,
-} from "../../../app/lib/utils";
+} from "../../lib/utils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -22,63 +18,53 @@ const postmarkClient = new postmark.ServerClient(
   process.env.POSTMARK_CLIENT || "",
 );
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
-  // Only allow POST requests
-  if (req.method !== "POST") {
-    return res.status(405).json({ message: "Method not allowed" });
-  }
-
+export async function POST(request: Request) {
   try {
-    // Extract data from request body
     const { scheduleId, invoiceRef, invoiceData, technicianId, isComplete } =
-      req.body;
+      await request.json();
 
-    // Validate inputs
     if (!scheduleId || !invoiceRef) {
-      return res.status(400).json({
-        message: "Schedule ID and invoice reference are required",
-      });
+      return NextResponse.json(
+        { message: "Schedule ID and invoice reference are required" },
+        { status: 400 },
+      );
     }
 
     if (!isComplete) {
-      return res.status(400).json({
-        message: "Work documentation must be complete before sending invoice",
-      });
+      return NextResponse.json(
+        { message: "Work documentation must be complete before sending invoice" },
+        { status: 400 },
+      );
     }
 
-    // Connect to the database
     await connectMongo();
 
-    // Find the invoice and client details
     const invoice = await Invoice.findById(invoiceRef);
     if (!invoice) {
-      return res.status(404).json({ message: "Invoice not found" });
+      return NextResponse.json({ message: "Invoice not found" }, { status: 404 });
     }
 
     const clientDetails = await Client.findById(invoice.clientId);
     if (!clientDetails) {
-      return res.status(404).json({ message: "Client not found" });
+      return NextResponse.json({ message: "Client not found" }, { status: 404 });
     }
 
-    // Get appropriate email for accounting purposes
     const clientEmail = getEmailForPurpose(clientDetails, "accounting");
     if (!clientEmail) {
-      return res.status(400).json({ message: "Client email not found" });
+      return NextResponse.json(
+        { message: "Client email not found" },
+        { status: 400 },
+      );
     }
 
-    // Calculate total with tax
     const items = invoiceData.items || [];
     const subtotal = items.reduce(
       (sum: number, item: { price: number }) => sum + (item?.price || 0),
       0,
     );
-    const gst = subtotal * 0.05; // 5% GST
+    const gst = subtotal * 0.05;
     const totalWithTax = subtotal + gst;
 
-    // Calculate due date (14 days from issue date) - using timezone-safe approach
     const dateStr =
       invoiceData.dateIssued instanceof Date
         ? invoiceData.dateIssued.toISOString()
@@ -86,12 +72,13 @@ export default async function handler(
     const datePart = dateStr.split("T")[0] || dateStr;
     const parts = datePart.split("-");
     if (parts.length < 3) {
-      return res.status(400).json({
-        message: "Invalid dateIssued format (expected YYYY-MM-DD)",
-      });
+      return NextResponse.json(
+        { message: "Invalid dateIssued format (expected YYYY-MM-DD)" },
+        { status: 400 },
+      );
     }
     const baseYear = parseInt(parts[0] || "", 10);
-    const baseMonth = parseInt(parts[1] || "", 10) - 1; // JS months are 0-indexed
+    const baseMonth = parseInt(parts[1] || "", 10) - 1;
     const baseDay = parseInt(parts[2] || "", 10);
 
     const hasValidParts =
@@ -104,12 +91,12 @@ export default async function handler(
       baseDay <= 31;
 
     if (!hasValidParts) {
-      return res.status(400).json({
-        message: "Invalid dateIssued value",
-      });
+      return NextResponse.json(
+        { message: "Invalid dateIssued value" },
+        { status: 400 },
+      );
     }
 
-    // Create date in local timezone
     const issueDate = new Date(baseYear, baseMonth, baseDay);
     if (
       Number.isNaN(issueDate.getTime()) ||
@@ -117,19 +104,19 @@ export default async function handler(
       issueDate.getMonth() !== baseMonth ||
       issueDate.getDate() !== baseDay
     ) {
-      return res.status(400).json({
-        message: "Invalid dateIssued value",
-      });
+      return NextResponse.json(
+        { message: "Invalid dateIssued value" },
+        { status: 400 },
+      );
     }
     const dueDate = new Date(issueDate);
     dueDate.setDate(dueDate.getDate() + 14);
 
     const formattedDueDate = formatDateStringUTC(dueDate);
 
-    // Prepare invoice data for PDF generation
     const pdfInvoiceData: InvoiceData = {
       invoiceId: invoiceData.invoiceId,
-      dateIssued: invoiceData.dateIssued, // Keep original format for PDF
+      dateIssued: invoiceData.dateIssued,
       dateDue: formattedDueDate,
       jobTitle: invoiceData.jobTitle,
       location: invoiceData.location,
@@ -153,13 +140,11 @@ export default async function handler(
         "Please report any and all cleaning inquiries within 5 business days.",
     };
 
-    // Generate PDF using the PDF document component
     const MyDocument = () =>
       createElement(InvoicePdfDocument, { invoiceData: pdfInvoiceData });
     const pdfBuffer = await renderToBuffer(createElement(MyDocument));
     const pdfBase64 = pdfBuffer.toString("base64");
 
-    // Check for Stripe payment link
     let hasOnlinePaymentBlock: any = false;
 
     if (
@@ -178,7 +163,6 @@ export default async function handler(
       }
     }
 
-    // Prepare email template model
     const templateModel = {
       client_name: clientDetails.clientName,
       invoice_number: invoiceData.invoiceId,
@@ -192,11 +176,10 @@ export default async function handler(
       has_online_payment: hasOnlinePaymentBlock,
     };
 
-    // Send email using Postmark with invoice delivery template
     const emailResult = await postmarkClient.sendEmailWithTemplate({
       From: "adam@vancouverventcleaning.ca",
       To: clientEmail,
-      TemplateAlias: "invoice-delivery-1", // New template to be created in Postmark
+      TemplateAlias: "invoice-delivery-1",
       TemplateModel: templateModel,
       Attachments: [
         {
@@ -230,17 +213,19 @@ export default async function handler(
       success: true,
     });
 
-    // Return success response
-    return res.status(200).json({
+    return NextResponse.json({
       message: "Invoice sent successfully",
       emailMessageId: emailResult.MessageID,
       sentTo: clientEmail,
     });
   } catch (error) {
     console.error("Error sending invoice:", error);
-    return res.status(500).json({
-      message: "Failed to send invoice",
-      error: error instanceof Error ? error.message : "Unknown error",
-    });
+    return NextResponse.json(
+      {
+        message: "Failed to send invoice",
+        error: error instanceof Error ? error.message : "Unknown error",
+      },
+      { status: 500 },
+    );
   }
 }

@@ -3,8 +3,6 @@ import mongoose from "mongoose";
 import {
   ScheduleType,
   ShiftType,
-  SignatureType,
-  PhotoType,
   ReportType,
   PayrollPeriodType,
   DueInvoiceType,
@@ -13,20 +11,6 @@ import { CallLogEntrySchema } from "./invoice.schema";
 
 const { Schema, model, models, Model } = mongoose;
 const { ObjectId } = mongoose.Schema.Types;
-
-const PhotoSchema = new Schema<PhotoType>({
-  url: { type: String, required: true },
-  timestamp: { type: Date, required: true },
-  technicianId: { type: String, required: true },
-  type: { type: String, enum: ["before", "after", "estimate"], required: true },
-});
-
-const SignatureSchema = new Schema<SignatureType>({
-  url: { type: String, required: true },
-  timestamp: { type: Date, required: true },
-  signerName: { type: String, required: true, default: "Customer" },
-  technicianId: { type: String, required: true },
-});
 
 const ShiftSchema = new Schema<ShiftType>({
   technicianId: { type: String, required: true },
@@ -51,8 +35,6 @@ export const scheduleSchema = new Schema<ScheduleType>({
   shifts: { type: [ShiftSchema], default: [] },
   payrollPeriod: { type: mongoose.Schema.Types.ObjectId, ref: "PayrollPeriod" },
   deadRun: { type: Boolean, default: false },
-  signature: { type: SignatureSchema, required: false },
-  photos: { type: [PhotoSchema], default: undefined },
   technicianNotes: { type: String, default: "" },
   onSiteContact: {
     name: { type: String },

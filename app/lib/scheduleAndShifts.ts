@@ -53,24 +53,6 @@ export const fetchAllScheduledJobsWithShifts = async (
       technicianNotes: job.technicianNotes,
       onSiteContact: job.onSiteContact || undefined,
       accessInstructions: job.accessInstructions || undefined,
-      photos: job.photos
-        ? job.photos.map((photo: any) => ({
-            _id: photo._id.toString(),
-            url: photo.url,
-            timestamp: photo.timestamp,
-            technicianId: photo.technicianId,
-            type: photo.type,
-          }))
-        : undefined,
-      signature: job.signature
-        ? {
-            _id: job.signature._id.toString(),
-            url: job.signature.url,
-            timestamp: job.signature.timestamp,
-            signerName: job.signature.signerName,
-            technicianId: job.signature.technicianId,
-          }
-        : undefined,
     }));
   } catch (error) {
     console.error("Database Error:", error);
@@ -228,24 +210,6 @@ export const fetchSchedulesForTechnician = async (
     technicianNotes: schedule.technicianNotes,
     onSiteContact: schedule.onSiteContact || undefined,
     accessInstructions: schedule.accessInstructions || undefined,
-    photos: schedule.photos
-      ? schedule.photos.map((photo: any) => ({
-          _id: photo._id.toString(),
-          url: photo.url,
-          timestamp: photo.timestamp,
-          technicianId: photo.technicianId,
-          type: photo.type,
-        }))
-      : undefined,
-    signature: schedule.signature
-      ? {
-          _id: schedule.signature._id.toString(),
-          url: schedule.signature.url,
-          timestamp: schedule.signature.timestamp,
-          signerName: schedule.signature.signerName,
-          technicianId: schedule.signature.technicianId,
-        }
-      : undefined,
   }));
 };
 

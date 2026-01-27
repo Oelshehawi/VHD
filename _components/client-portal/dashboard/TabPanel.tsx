@@ -40,6 +40,8 @@ import {
   ReportType,
 } from "../../../app/lib/typeDefinitions";
 import PhotoGalleryModal from "./PhotoGalleryModal";
+import { toast } from "sonner";
+import { getSchedulePhotos } from "../../../app/lib/actions/photos.actions";
 
 interface Invoice {
   _id: string;
@@ -74,13 +76,13 @@ const ServiceGridCard = ({
   service,
   upcoming,
   onViewPhotos,
+  isLoadingPhotos,
 }: {
   service: any;
   upcoming: boolean;
-  onViewPhotos: (photos: PhotoType[]) => void;
+  onViewPhotos: (scheduleId: string) => void;
+  isLoadingPhotos: boolean;
 }) => {
-  const hasPhotos = service.photos && service.photos.length > 0;
-
   const formatDateTime = (dateInput: string | Date) => {
     return formatDateTimeStringUTC(dateInput);
   };
@@ -146,16 +148,16 @@ const ServiceGridCard = ({
           )}
         </div>
 
-        {hasPhotos && !upcoming && (
+        {!upcoming && (
           <Button
             variant="outline"
             size="sm"
             className="mt-3 h-8 w-full text-xs"
-            onClick={() => onViewPhotos(service.photos)}
+            onClick={() => onViewPhotos(service._id)}
+            disabled={isLoadingPhotos}
           >
             <PhotoIcon className="mr-1.5 h-3.5 w-3.5" />
-            View {service.photos.length} Photo
-            {service.photos.length !== 1 ? "s" : ""}
+            {isLoadingPhotos ? "Loading photos..." : "View Photos"}
           </Button>
         )}
       </CardContent>
@@ -179,6 +181,9 @@ const TabPanel = ({
   const [selectedPhotos, setSelectedPhotos] = useState<PhotoType[] | null>(
     null,
   );
+  const [loadingScheduleId, setLoadingScheduleId] = useState<string | null>(
+    null,
+  );
 
   // Create a map of invoice IDs to job titles for easy lookup
   const invoiceJobTitleMap = useMemo(() => {
@@ -198,24 +203,21 @@ const TabPanel = ({
     });
   }, [allInvoices]);
 
-  // Convert service to consistent format
-  const convertService = useCallback((service: any) => {
-    return {
-      _id:
-        typeof service._id === "string" ? service._id : service._id.toString(),
-      jobTitle: service.jobTitle,
-      startDateTime: service.startDateTime,
-      dateDue: service.dateDue,
-      location: service.location,
-      confirmed: service.confirmed,
-      photos: service.photos?.map((photo: any) => ({
-        _id: typeof photo._id === "string" ? photo._id : photo._id.toString(),
-        url: photo.url,
-        timestamp: photo.timestamp,
+  const normalizeServiceId = useCallback((serviceId: string | object) => {
+    return typeof serviceId === "string" ? serviceId : serviceId.toString();
+  }, []);
+
+  const fetchSchedulePhotos = useCallback(async (scheduleId: string) => {
+    const data = await getSchedulePhotos(scheduleId);
+    return data
+      .filter((photo) => photo.type === "before" || photo.type === "after")
+      .map((photo) => ({
+        _id: photo.id,
+        url: photo.cloudinaryUrl,
+        timestamp: new Date(photo.timestamp),
         technicianId: photo.technicianId,
-        type: photo.type,
-      })),
-    };
+        type: photo.type as "before" | "after",
+      }));
   }, []);
 
   // Memoized PDF data creators
@@ -321,8 +323,21 @@ const TabPanel = ({
     setIsReportModalOpen(false);
   };
 
-  const handleViewPhotos = (photos: PhotoType[]) => {
-    setSelectedPhotos(photos);
+  const handleViewPhotos = async (scheduleId: string) => {
+    setLoadingScheduleId(scheduleId);
+    try {
+      const photos = await fetchSchedulePhotos(scheduleId);
+      if (photos.length === 0) {
+        toast.info("No service photos available yet.");
+        return;
+      }
+      setSelectedPhotos(photos);
+    } catch (error) {
+      console.error("Failed to load photos:", error);
+      toast.error("Failed to load photos.");
+    } finally {
+      setLoadingScheduleId(null);
+    }
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -392,9 +407,16 @@ const TabPanel = ({
                       {upcomingServices.map((service) => (
                         <ServiceGridCard
                           key={`upcoming-${typeof service._id === "string" ? service._id : service._id.toString()}`}
-                          service={convertService(service)}
+                          service={{
+                            ...service,
+                            _id: normalizeServiceId(service._id),
+                          }}
                           upcoming={true}
                           onViewPhotos={handleViewPhotos}
+                          isLoadingPhotos={
+                            loadingScheduleId ===
+                            normalizeServiceId(service._id)
+                          }
                         />
                       ))}
                     </div>
@@ -418,9 +440,16 @@ const TabPanel = ({
                         {recentServices.map((service) => (
                           <ServiceGridCard
                             key={`recent-${typeof service._id === "string" ? service._id : service._id.toString()}`}
-                            service={convertService(service)}
+                            service={{
+                              ...service,
+                              _id: normalizeServiceId(service._id),
+                            }}
                             upcoming={false}
                             onViewPhotos={handleViewPhotos}
+                            isLoadingPhotos={
+                              loadingScheduleId ===
+                              normalizeServiceId(service._id)
+                            }
                           />
                         ))}
                       </div>

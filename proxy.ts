@@ -16,22 +16,15 @@ const isPublicRoute = createRouteMatcher([
   "/api/cron/process-reminders(.*)",
   "/api/cron/update-overdue-invoices",
   "/api/send-invoice(.*)",
-  "/api/availability",
-  "/api/timeoff",
-  "/api/markChequeAsPaid",
   "/api/cloudinaryUpload",
-  "/api/deletePhoto",
-  "/api/downloadPhoto",
-  "/api/update-photos",
-  "/api/updateTechnicianNotes",
   "/api/stripe/(.*)",
+  "/api/sync",
 ]);
 
 // Define client portal routes
 const isClientPortalRoute = createRouteMatcher([
   "/client-portal/((?!auth-error).*)",
 ]);
-
 
 export default clerkMiddleware(async (auth, req) => {
   const { userId, sessionClaims } = await auth();

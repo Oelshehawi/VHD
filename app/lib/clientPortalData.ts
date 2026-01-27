@@ -129,24 +129,6 @@ export async function fetchClientUpcomingSchedules(
             hoursWorked: shift.hoursWorked || 0,
           }))
         : [],
-      photos: Array.isArray(schedule.photos)
-        ? schedule.photos.map((photo: any) => ({
-            _id: photo._id.toString(),
-            url: photo.url || "",
-            timestamp: photo.timestamp || new Date(),
-            technicianId: photo.technicianId || "",
-            type: photo.type || "before",
-          }))
-        : undefined,
-      signature: schedule.signature
-        ? {
-            _id: schedule.signature._id.toString(),
-            url: schedule.signature.url || "",
-            timestamp: schedule.signature.timestamp || new Date(),
-            signerName: schedule.signature.signerName || "",
-            technicianId: schedule.signature.technicianId || "",
-          }
-        : undefined,
     }));
   } catch (error) {
     console.error("Error fetching upcoming schedules:", error);
@@ -221,24 +203,6 @@ export async function fetchClientPastSchedules(
               hoursWorked: shift.hoursWorked || 0,
             }))
           : [],
-        photos: Array.isArray(schedule.photos)
-          ? schedule.photos.map((photo: any) => ({
-              _id: photo._id.toString(),
-              url: photo.url || "",
-              timestamp: photo.timestamp || new Date(),
-              technicianId: photo.technicianId || "",
-              type: photo.type || "before",
-            }))
-          : undefined,
-        signature: schedule.signature
-          ? {
-              _id: schedule.signature._id.toString(),
-              url: schedule.signature.url || "",
-              timestamp: schedule.signature.timestamp || new Date(),
-              signerName: schedule.signature.signerName || "",
-              technicianId: schedule.signature.technicianId || "",
-            }
-          : undefined,
       };
     });
   } catch (error) {

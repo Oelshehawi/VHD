@@ -3,7 +3,6 @@
 import { PhotoType, SignatureType } from "../../app/lib/typeDefinitions";
 import { CldImage } from "next-cloudinary";
 import { useState, useCallback, useMemo } from "react";
-import { formatDateFns } from "../../app/lib/utils";
 import { toPublicId } from "../../app/lib/imageUtils";
 import Lightbox from "yet-another-react-lightbox";
 import "yet-another-react-lightbox/styles.css";
@@ -52,6 +51,13 @@ export default function MediaDisplay({
 }: MediaDisplayProps) {
   const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
+  const formatLocalDateTime = useCallback((date: string | Date): string => {
+    const parsedDate = typeof date === "string" ? new Date(date) : date;
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "long",
+      timeStyle: "short",
+    }).format(parsedDate);
+  }, []);
 
   // Filter photos by type
   const beforePhotos = useMemo(
@@ -104,7 +110,7 @@ export default function MediaDisplay({
         createSlide(
           photo.url,
           "Before Photo",
-          `Uploaded on: ${formatDateFns(photo.timestamp)}`,
+          `Uploaded on: ${formatLocalDateTime(photo.timestamp)}`,
           `before-photo-${idx + 1}.jpg`,
         ),
       );
@@ -116,7 +122,7 @@ export default function MediaDisplay({
         createSlide(
           photo.url,
           "After Photo",
-          `Uploaded on: ${formatDateFns(photo.timestamp)}`,
+          `Uploaded on: ${formatLocalDateTime(photo.timestamp)}`,
           `after-photo-${idx + 1}.jpg`,
         ),
       );
@@ -128,14 +134,16 @@ export default function MediaDisplay({
         createSlide(
           signature.url,
           "Signature",
-          `Signed by: ${signature.signerName} on ${formatDateFns(signature.timestamp)}`,
+          `Signed by: ${signature.signerName} on ${formatLocalDateTime(
+            signature.timestamp,
+          )}`,
           `signature-${signature.signerName.replace(/\s+/g, "-").toLowerCase()}.jpg`,
         ),
       );
     }
 
     return newSlides;
-  }, [beforePhotos, afterPhotos, signature, createSlide]);
+  }, [beforePhotos, afterPhotos, signature, createSlide, formatLocalDateTime]);
 
   // Function to open lightbox at specific index
   const openLightbox = useCallback((photoIndex: number) => {
@@ -159,25 +167,25 @@ export default function MediaDisplay({
             </div>
             <div className="p-4">
               <div
-                className="relative h-32 w-full cursor-pointer"
+                className="relative h-40 w-full cursor-pointer rounded-md bg-white p-2 shadow-inner"
                 onClick={() => openLightbox(signatureIndex)}
               >
                 <CldImage
                   src={toPublicId(signature.url)!}
                   alt="Signature"
-                  width={200}
-                  height={200}
+                  width={600}
+                  height={240}
                   crop="fit"
                   format="auto"
                   quality="auto"
                   dpr="auto"
                   sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 800px"
-                  className="object-contain"
+                  className="h-full w-full object-contain"
                 />
               </div>
-              <div className="mt-2 space-y-1 text-sm text-gray-600">
+              <div className="text-muted-foreground mt-2 space-y-1 text-sm">
                 <p>Signed by: {signature.signerName}</p>
-                <p>Date: {formatDateFns(signature.timestamp)}</p>
+                <p>Date: {formatLocalDateTime(signature.timestamp)}</p>
               </div>
             </div>
           </div>

@@ -17,6 +17,8 @@ import { createPortal } from "react-dom";
 import { Badge } from "../../ui/badge";
 import { Button } from "../../ui/button";
 import { Card, CardHeader, CardTitle } from "../../ui/card";
+import { toast } from "sonner";
+import { getSchedulePhotos } from "../../../app/lib/actions/photos.actions";
 
 interface PhotoType {
   _id: string;
@@ -44,6 +46,8 @@ export interface ServiceCardProps {
 
 const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
   const [showPhotoGallery, setShowPhotoGallery] = useState(false);
+  const [photos, setPhotos] = useState<PhotoType[]>([]);
+  const [isLoadingPhotos, setIsLoadingPhotos] = useState(false);
 
   // Format date and time for display
   const formatDateTime = (dateInput: string | Date) => {
@@ -60,12 +64,22 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
     });
   };
 
-  const hasPhotos = service.photos && service.photos.length > 0;
-  const photos = service.photos || [];
+  const hasPhotos = photos.length > 0;
 
-  // Count before and after photos
-  const beforePhotos = photos.filter((photo) => photo.type === "before").length;
-  const afterPhotos = photos.filter((photo) => photo.type === "after").length;
+  const fetchSchedulePhotos = async () => {
+    const scheduleId =
+      typeof service._id === "string" ? service._id : service._id.toString();
+    const data = await getSchedulePhotos(scheduleId);
+    return data
+      .filter((photo) => photo.type === "before" || photo.type === "after")
+      .map((photo) => ({
+        _id: photo.id,
+        url: photo.cloudinaryUrl,
+        timestamp: new Date(photo.timestamp),
+        technicianId: photo.technicianId,
+        type: photo.type as "before" | "after",
+      }));
+  };
 
   // Get badge variant based on status
   const getBadgeVariant = () => {
@@ -134,17 +148,31 @@ const ServiceCard = ({ service, upcoming }: ServiceCardProps) => {
             </div>
           )}
 
-          {hasPhotos && !upcoming && (
+          {!upcoming && (
             <div className="mt-3 flex items-center">
               <PhotoIcon className="text-primary mr-2 h-4 w-4 shrink-0" />
               <button
-                onClick={() => setShowPhotoGallery(true)}
+                onClick={async () => {
+                  setIsLoadingPhotos(true);
+                  try {
+                    const loaded = await fetchSchedulePhotos();
+                    if (loaded.length === 0) {
+                      toast.info("No service photos available yet.");
+                      return;
+                    }
+                    setPhotos(loaded);
+                    setShowPhotoGallery(true);
+                  } catch (error) {
+                    console.error("Failed to load photos:", error);
+                    toast.error("Failed to load photos.");
+                  } finally {
+                    setIsLoadingPhotos(false);
+                  }
+                }}
                 className="text-primary hover:text-primary/80 text-sm hover:underline"
+                disabled={isLoadingPhotos}
               >
-                View {photos.length} photo{photos.length !== 1 ? "s" : ""}
-                {beforePhotos > 0 &&
-                  afterPhotos > 0 &&
-                  ` (${beforePhotos} before, ${afterPhotos} after)`}
+                {isLoadingPhotos ? "Loading photos..." : "View photos"}
               </button>
             </div>
           )}

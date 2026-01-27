@@ -17,58 +17,126 @@ interface CloudinaryUploadRequest {
 }
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+    const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  let payload: CloudinaryUploadRequest;
+  let payload: unknown;
   try {
-    payload = (await request.json()) as CloudinaryUploadRequest;
+    payload = await request.json();
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
 
-  const { fileName, jobTitle, type, startDate } = payload;
+  const buildFolderPath = (
+    jobTitle: string,
+    type: string,
+    startDate: string,
+  ) => {
+    const parsedDate = new Date(startDate);
+    if (Number.isNaN(parsedDate.getTime())) {
+      return { error: "Invalid startDate" } as const;
+    }
 
-  if (!fileName) {
-    return NextResponse.json(
+    const dateStr = parsedDate.toISOString().split("T")[0];
+
+    const sanitizedJobTitle = `${jobTitle} - ${dateStr}`
+      .replace(/[^a-zA-Z0-9-_]/g, "-")
+      .toLowerCase();
+
+    return {
+      folderPath: `vhd-app/${sanitizedJobTitle}/${type}`,
+    } as const;
+  };
+
+  const toSignedResponse = (file: CloudinaryUploadRequest) => {
+    const { fileName, jobTitle, type, startDate } = file;
+    if (!fileName) {
+      return { error: "Missing fileName" } as const;
+    }
+    if (!jobTitle) {
+      return { error: "Missing jobTitle" } as const;
+    }
+    if (!type) {
+      return { error: "Missing type" } as const;
+    }
+    if (!startDate) {
+      return { error: "Missing startDate" } as const;
+    }
+
+    const folderResult = buildFolderPath(jobTitle, type, startDate);
+    if ("error" in folderResult) {
+      return folderResult;
+    }
+
+    const timestamp = Math.round(Date.now() / 1000);
+    const signature = cloudinary.utils.api_sign_request(
       {
-        error: "Missing fileName",
-        message: "A fileName is required",
+        timestamp,
+        folder: folderResult.folderPath,
       },
+      process.env.CLOUDINARY_API_SECRET || "",
+    );
+
+    const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+    const apiKey = process.env.CLOUDINARY_API_KEY;
+
+    return {
+      filename: fileName,
+      apiKey,
+      timestamp,
+      signature,
+      cloudName,
+      folderPath: folderResult.folderPath,
+    } as const;
+  };
+
+  if (
+    payload &&
+    typeof payload === "object" &&
+    Array.isArray((payload as { files?: CloudinaryUploadRequest[] }).files)
+  ) {
+    const files = (payload as { files: CloudinaryUploadRequest[] }).files;
+    if (files.length === 0) {
+      return NextResponse.json(
+        { error: "Missing files", message: "A files array is required" },
+        { status: 400 },
+      );
+    }
+
+    const signedUrls = [];
+    for (const file of files) {
+      const result = toSignedResponse(file);
+      if ("error" in result) {
+        return NextResponse.json(
+          { error: result.error, message: result.error },
+          { status: 400 },
+        );
+      }
+      signedUrls.push(result);
+    }
+
+    return NextResponse.json({ signedUrls });
+  }
+
+  if (!payload || typeof payload !== "object") {
+    return NextResponse.json(
+      { error: "Missing fileName", message: "A fileName is required" },
       { status: 400 },
     );
   }
 
-  const dateStr = startDate
-    ? new Date(startDate).toISOString().split("T")[0]
-    : "no-date";
-
-  const sanitizedJobTitle = `${jobTitle} - ${dateStr}`
-    .replace(/[^a-zA-Z0-9-_]/g, "-")
-    .toLowerCase();
-
-  const folderPath = `vhd-app/${sanitizedJobTitle}/${type}`;
-
-  const timestamp = Math.round(new Date().getTime() / 1000);
-  const signature = cloudinary.utils.api_sign_request(
-    {
-      timestamp,
-      folder: folderPath,
-    },
-    process.env.CLOUDINARY_API_SECRET || "",
-  );
-
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const result = toSignedResponse(payload as CloudinaryUploadRequest);
+  if ("error" in result) {
+    return NextResponse.json(
+      { error: result.error, message: result.error },
+      { status: 400 },
+    );
+  }
 
   return NextResponse.json({
     message: "Upload parameters generated successfully",
-    apiKey,
-    timestamp,
-    signature,
-    cloudName,
-    folderPath,
+    ...result,
   });
 }

@@ -7,7 +7,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Copy } from "lucide-react";
-import { getBaseUrl } from "@/lib/utils";
+import { formatDateStringUTC, getBaseUrl } from "@/lib/utils";
 
 interface AccessLinkGeneratorProps {
   clientId: string;
@@ -53,11 +53,7 @@ export default function AccessLinkGenerator({
     if (!existingAccessTokenExpiry) return "No expiry (reusable)";
     const parsed = new Date(existingAccessTokenExpiry);
     if (Number.isNaN(parsed.getTime())) return "Unknown expiry";
-    return parsed.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
+    return formatDateStringUTC(parsed);
   }, [existingAccessTokenExpiry]);
 
   async function handleGenerateAccess() {
