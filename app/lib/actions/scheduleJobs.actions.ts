@@ -14,11 +14,13 @@ import {
   ScheduleType,
   ReportType,
   InvoiceType,
+  NOTIFICATION_TYPES,
 } from "../typeDefinitions";
 import { clerkClient, auth } from "@clerk/nextjs/server";
-import { calculateJobDurationFromPrice, minutesToPayrollHours } from "../utils";
+import { calculateJobDurationFromPrice, minutesToPayrollHours, formatDateTimeStringUTC } from "../utils";
 import { v2 as cloudinary } from "cloudinary";
 import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
+import { createNotification } from "./notifications.actions";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -249,6 +251,27 @@ export async function createSchedule(
         success: true,
       });
     }
+
+    // Notify assigned technicians
+    if (scheduleData.assignedTechnicians && scheduleData.assignedTechnicians.length > 0) {
+      for (const technicianId of scheduleData.assignedTechnicians) {
+        try {
+          await createNotification({
+            userId: technicianId,
+            title: "New Job Assigned",
+            body: `You've been assigned to: ${scheduleData.jobTitle} at ${scheduleData.location} on ${formatDateTimeStringUTC(scheduleData.startDateTime)}`,
+            type: NOTIFICATION_TYPES.JOB_ASSIGNED,
+            metadata: {
+              scheduleId: newSchedule._id.toString(),
+              link: `/schedule?date=${new Date(scheduleData.startDateTime).toISOString().split("T")[0]}`,
+            },
+          });
+        } catch (notifError) {
+          console.error("Failed to send notification to technician:", notifError);
+          // Don't fail the entire operation if notification fails
+        }
+      }
+    }
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to create schedule");
@@ -454,6 +477,34 @@ export const updateJob = async ({
 
     // Update the schedule with the new details and payroll period
     await Schedule.findByIdAndUpdate(scheduleId, updateFields, { new: true });
+
+    // Detect technician changes and send notifications
+    const previousTechnicians = schedule.assignedTechnicians || [];
+    const newTechnicians = assignedTechnicians || [];
+
+    // Find newly assigned technicians
+    const addedTechnicians = newTechnicians.filter(
+      (techId) => !previousTechnicians.includes(techId)
+    );
+
+    // Notify newly assigned technicians
+    for (const technicianId of addedTechnicians) {
+      try {
+        await createNotification({
+          userId: technicianId,
+          title: "New Job Assigned",
+          body: `You've been assigned to: ${trimmedJobTitle} at ${location} on ${formatDateTimeStringUTC(updatedStartDate)}`,
+          type: NOTIFICATION_TYPES.JOB_ASSIGNED,
+          metadata: {
+            scheduleId: scheduleId,
+            link: `/schedule?date=${updatedStartDate.toISOString().split("T")[0]}`,
+          },
+        });
+      } catch (notifError) {
+        console.error("Failed to send notification to technician:", notifError);
+        // Don't fail the entire operation if notification fails
+      }
+    }
 
     // Sync invoice dateIssued if this is the only schedule linked to the invoice
     if (schedule.invoiceRef) {

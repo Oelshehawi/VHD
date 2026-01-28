@@ -10,6 +10,7 @@ import {
 } from "../../../models/notificationSchema";
 import { NotificationTypeEnum, NOTIFICATION_TYPES } from "../typeDefinitions";
 import { requireAdmin } from "../auth/utils";
+import { sendExpoPushToUser } from "../services/expoPush.service";
 
 webpush.setVapidDetails(
   "mailto:oelshehawi@gmail.com",
@@ -217,6 +218,35 @@ export async function createNotification({
         }
         console.error("Push notification failed:", pushError);
       }
+    }
+
+    // Send Expo push notification to mobile devices
+    // Determine notification type for preference filtering
+    let expoNotificationType: "newJob" | "scheduleChange" | "general" = "general";
+    if (type === NOTIFICATION_TYPES.JOB_ASSIGNED) {
+      expoNotificationType = "newJob";
+    } else if (type === NOTIFICATION_TYPES.SCHEDULE_UPDATE) {
+      expoNotificationType = "scheduleChange";
+    }
+
+    // Try to send Expo push notification
+    try {
+      await sendExpoPushToUser(
+        userId,
+        {
+          title,
+          body,
+          data: {
+            type,
+            notificationId: notification._id.toString(),
+            ...metadata,
+          },
+        },
+        expoNotificationType
+      );
+    } catch (expoError) {
+      console.error("Expo push notification failed:", expoError);
+      // Don't fail the entire operation if Expo push fails
     }
 
     return {

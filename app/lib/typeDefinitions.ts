@@ -632,6 +632,7 @@ export const NOTIFICATION_TYPES = {
   ESTIMATE_STATUS: "estimate_status",
   SCHEDULING_REQUEST: "scheduling_request",
   SYSTEM: "system",
+  JOB_ASSIGNED: "job_assigned",
 } as const;
 
 export type NotificationTypeEnum =
@@ -646,6 +647,20 @@ export interface PushSubscriptionType {
     p256dh: string;
     auth: string;
   };
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+// Expo Push Token Type - for storing mobile app push tokens
+export interface ExpoPushTokenType {
+  _id?: string;
+  userId: string; // Clerk user ID
+  token: string; // ExponentPushToken[xxx]
+  platform: "ios" | "android";
+  deviceName: string;
+  notifyNewJobs: boolean; // Preference: new job assignments
+  notifyScheduleChanges: boolean; // Preference: schedule updates
+  lastUsedAt: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }

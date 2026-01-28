@@ -6,6 +6,7 @@ import { availabilitiesHandler } from "./availabilities.handler";
 import { timeOffRequestsHandler } from "./timeoffrequests.handler";
 import { payrollPeriodsHandler } from "./payrollperiods.handler";
 import { reportsHandler } from "./reports.handler";
+import { expoPushTokensHandler } from "./expopushtokens.handler";
 
 const handlers: Record<SyncTable, TableHandler> = {
   schedules: schedulesHandler,
@@ -15,6 +16,7 @@ const handlers: Record<SyncTable, TableHandler> = {
   timeoffrequests: timeOffRequestsHandler,
   payrollperiods: payrollPeriodsHandler,
   reports: reportsHandler,
+  expopushtokens: expoPushTokensHandler,
 };
 
 export function getHandler(table: string): TableHandler | null {

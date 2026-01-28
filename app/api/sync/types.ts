@@ -5,7 +5,8 @@ export type SyncTable =
   | "availabilities"
   | "timeoffrequests"
   | "payrollperiods"
-  | "reports";
+  | "reports"
+  | "expopushtokens";
 
 export interface SyncRequest {
   table: SyncTable;
@@ -116,4 +117,16 @@ export interface ReportSyncData {
   inspectionItems?: {
     adequateAccessPanels?: "Yes" | "No" | "N/A";
   };
+}
+
+// Expo Push Token data
+export interface ExpoPushTokenData {
+  id: string;
+  userId: string;
+  token: string;
+  platform: "ios" | "android";
+  deviceName: string;
+  notifyNewJobs: 0 | 1;
+  notifyScheduleChanges: 0 | 1;
+  lastUsedAt: string;
 }
