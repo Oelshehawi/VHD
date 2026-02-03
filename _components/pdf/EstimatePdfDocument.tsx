@@ -356,16 +356,16 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
     col20: { width: "20%" },
     servicesSection: {
       backgroundColor: "#f9f9f9",
-      padding: s(6),
-      borderRadius: s(4),
+      padding: 6,
+      borderRadius: 4,
       marginTop: s(6),
       marginBottom: s(6),
     },
     servicesTitle: {
-      fontSize: s(9),
+      fontSize: 10,
       fontWeight: "bold",
       color: "#003e29",
-      marginBottom: s(6),
+      marginBottom: 6,
     },
     servicesGrid: {
       flexDirection: "row",
@@ -373,9 +373,9 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
     },
     serviceItem: {
       width: "50%",
-      fontSize: s(9),
-      marginBottom: s(3),
-      paddingLeft: s(11),
+      fontSize: 9,
+      marginBottom: 3,
+      paddingLeft: 11,
     },
     totalsSection: {
       marginTop: s(8),
@@ -443,37 +443,37 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
     clientPortalSection: {
       backgroundColor: "#e8f5e8",
       border: "1px solid #003e29",
-      padding: s(6),
-      borderRadius: s(4),
+      padding: 6,
+      borderRadius: 4,
       marginTop: s(6),
       marginBottom: s(6),
     },
     clientPortalTitle: {
-      fontSize: s(10),
+      fontSize: 11,
       fontWeight: "bold",
       color: "#003e29",
       textAlign: "center",
-      marginBottom: s(4),
+      marginBottom: 4,
     },
     clientPortalText: {
-      fontSize: s(9),
+      fontSize: 10,
       textAlign: "center",
-      marginBottom: s(4),
+      marginBottom: 4,
       fontWeight: "bold",
     },
     clientPortalGrid: {
       flexDirection: "row",
       flexWrap: "wrap",
-      marginBottom: s(4),
+      marginBottom: 4,
     },
     clientPortalItem: {
       width: "50%",
-      fontSize: s(9),
-      marginBottom: s(3),
-      paddingLeft: s(11),
+      fontSize: 9,
+      marginBottom: 3,
+      paddingLeft: 11,
     },
     clientPortalFooter: {
-      fontSize: s(9),
+      fontSize: 9,
       textAlign: "center",
       fontStyle: "italic",
       color: "#003e29",
@@ -665,8 +665,8 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
             CLIENT PORTAL ACCESS
           </Text>
           <Text style={scaledStyles.clientPortalText}>
-            Once you approve this estimate, you&apos;ll receive access to our client
-            portal where you can:
+            Once you approve this estimate, you&apos;ll receive access to our
+            client portal where you can:
           </Text>
           <View style={scaledStyles.clientPortalGrid}>
             <Text style={scaledStyles.clientPortalItem}>

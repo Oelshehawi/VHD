@@ -71,7 +71,7 @@ const LazyPDFButton: React.FC<LazyPDFButtonProps> = ({
   showScaleSelector = false,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [scale, setScale] = useState(100);
+  const [scale, setScale] = useState(80);
 
   // Generate the appropriate document based on data type
   const generateDocument = useCallback(

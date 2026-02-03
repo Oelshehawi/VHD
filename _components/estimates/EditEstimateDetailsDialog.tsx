@@ -44,6 +44,8 @@ const DEFAULT_SERVICES = [
   "ASTTBC Sticker",
   "Fire Dept Report",
   "Before/After pictures",
+  "Eco unit maintenance",
+  "Filter replacement",
 ];
 
 interface FormData {

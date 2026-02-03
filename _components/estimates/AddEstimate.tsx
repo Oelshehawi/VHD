@@ -61,6 +61,8 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
     "ASTTBC Sticker",
     "Fire Dept Report",
     "Before/After pictures",
+    "Eco unit maintenance",
+    "Filter replacement",
   ];
 
   const [selectedServices, setSelectedServices] =

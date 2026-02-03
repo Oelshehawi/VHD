@@ -21,7 +21,6 @@ import {
 import { Label } from "../ui/label";
 import { Button } from "../ui/button";
 
-
 // Union type for all possible PDF data types
 type PDFData =
   | { type: "invoice"; data: InvoiceData }
@@ -48,7 +47,7 @@ const GeneratePDF: React.FC<GeneratePDFProps> = ({
   className,
   showScaleSelector = false,
 }) => {
-  const [scale, setScale] = useState(100); // Default 100%
+  const [scale, setScale] = useState(80); // Default 90%
 
   // Handle undefined pdfData
   if (!pdfData) {

@@ -1,6 +1,5 @@
 "use client";
 import { useState } from "react";
-import dynamic from "next/dynamic";
 import {
   FaFileInvoice,
   FaPenSquare,
@@ -37,10 +36,7 @@ import EditEstimateDetailsDialog from "./EditEstimateDetailsDialog";
 import EditItemsTotalsDialog from "./EditItemsTotalsDialog";
 import ConvertToClientInvoiceDialog from "./ConvertToClientInvoiceDialog";
 
-// Dynamically import GeneratePDF with SSR disabled to avoid PDF rendering issues
-const GeneratePDF = dynamic(() => import("../pdf/GeneratePDF"), {
-  ssr: false,
-});
+import LazyPDFButton from "../pdf/LazyPDFButton";
 
 interface EstimateDetailsContainerProps {
   estimate: EstimateType;
@@ -71,8 +67,6 @@ const EstimateDetailsContainer = ({
   const clientName = estimate.prospectInfo?.businessName || "Unknown Client";
 
   // Prepare estimate data for PDF generation
-  // Use a unique key to force PDF regeneration when estimate changes
-  const pdfKey = `${estimate._id}-${estimate.prospectInfo?.businessName}-${estimate.items.length}-${total}`;
   const estimateData: EstimateData = {
     estimateNumber: estimate.estimateNumber,
     createdDate: formatDateStringUTC(estimate.createdDate),
@@ -221,16 +215,13 @@ const EstimateDetailsContainer = ({
                         Create Client & Invoice
                       </Button>
                     )}
-                    {/* Use key to force remount when data changes */}
-                    <div key={pdfKey}>
-                      <GeneratePDF
-                        pdfData={{ type: "estimate", data: estimateData }}
-                        fileName={`${estimateData.clientName} - Estimate.pdf`}
-                        buttonText="Download PDF"
-                        className="inline-flex items-center px-4 py-2"
-                        showScaleSelector={true}
-                      />
-                    </div>
+                    <LazyPDFButton
+                      pdfData={{ type: "estimate", data: estimateData }}
+                      fileName={`${estimateData.clientName} - Estimate.pdf`}
+                      buttonText="Download PDF"
+                      className="inline-flex items-center"
+                      showScaleSelector={true}
+                    />
                   </div>
                 )}
               </div>
