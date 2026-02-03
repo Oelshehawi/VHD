@@ -244,7 +244,7 @@ const TabPanel = ({
             calculateSubtotal(invoice.items) +
             calculateGST(calculateSubtotal(invoice.items)),
           cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
-          eTransfer: "adam@vancouverventcleaning.ca",
+          eTransfer: "payables@vancouverventcleaning.ca",
           terms:
             "Please report any and all cleaning inquiries within 5 business days.",
         };

@@ -154,10 +154,10 @@ export default async function SchedulePage({
               </a>
               {" or "}
               <a
-                href="mailto:adam@vancouverventcleaning.ca"
+                href="mailto:scheduling@vancouverventcleaning.ca"
                 className="text-primary hover:underline"
               >
-                adam@vancouverventcleaning.ca
+                scheduling@vancouverventcleaning.ca
               </a>
             </p>
           </CardContent>

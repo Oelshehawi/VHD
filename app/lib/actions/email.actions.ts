@@ -79,14 +79,14 @@ export async function sendCleaningReminderEmail(
     // Send email using Postmark
     const client = new postmark.ServerClient(process.env.POSTMARK_CLIENT);
     await client.sendEmailWithTemplate({
-      From: "adam@vancouverventcleaning.ca",
+      From: "scheduling@vancouverventcleaning.ca",
       To: clientEmail,
       TemplateAlias: "cleaning-due-reminder-1",
       TemplateModel: {
         due_date: formattedDate,
         jobTitle: invoice.jobTitle,
         phone_number: "604-273-8717",
-        contact_email: "adam@vancouverventcleaning.ca",
+        contact_email: "scheduling@vancouverventcleaning.ca",
         header_title: "Hood & Vent Cleaning Reminder",
         email_title: "Hood & Vent Cleaning Reminder",
         // Client self-scheduling link
@@ -220,7 +220,7 @@ export async function sendInvoiceDeliveryEmail(
       gst: gst,
       totalAmount: totalWithTax,
       cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
-      eTransfer: "adam@vancouverventcleaning.ca",
+      eTransfer: "payables@vancouverventcleaning.ca",
       terms:
         "Please report any and all cleaning inquiries within 5 business days.",
     };
@@ -274,7 +274,7 @@ export async function sendInvoiceDeliveryEmail(
       due_date: formattedDueDate,
       issue_date: formattedIssueDate,
       phone_number: "604-273-8717",
-      contact_email: "adam@vancouverventcleaning.ca",
+      contact_email: "payables@vancouverventcleaning.ca",
       header_title: "Invoice - Vent Cleaning & Certification",
       email_title: "Invoice - Vent Cleaning & Certification",
       has_online_payment: hasOnlinePaymentBlock,
@@ -299,11 +299,14 @@ export async function sendInvoiceDeliveryEmail(
           const scheduleIds = schedules.map((s: any) => s._id.toString());
           const report = (await Report.findOne({
             scheduleId: { $in: scheduleIds },
-          }).lean()) as { scheduleId?: { toString?: () => string } | string } | null;
+          }).lean()) as {
+            scheduleId?: { toString?: () => string } | string;
+          } | null;
 
           if (report) {
             // Include job title and location from the matching schedule, if available
-            const reportScheduleId = report.scheduleId?.toString?.() || report.scheduleId;
+            const reportScheduleId =
+              report.scheduleId?.toString?.() || report.scheduleId;
             const scheduleData =
               (reportScheduleId
                 ? schedules.find(
@@ -379,7 +382,7 @@ export async function sendInvoiceDeliveryEmail(
     // Send to all recipients
     for (const recipient of emailRecipients) {
       await postmarkClient.sendEmailWithTemplate({
-        From: "adam@vancouverventcleaning.ca",
+        From: "payables@vancouverventcleaning.ca",
         To: recipient,
         TemplateAlias: "invoice-delivery-1",
         TemplateModel: templateModel,

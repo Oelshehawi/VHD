@@ -426,7 +426,7 @@ export async function sendPaymentReminderEmail(
       gst: total * 0.05, // 5% GST
       totalAmount: totalWithTax,
       cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
-      eTransfer: "adam@vancouverventcleaning.ca",
+      eTransfer: "payables@vancouverventcleaning.ca",
       terms:
         "Please report any and all cleaning inquiries within 5 business days.",
     };
@@ -463,7 +463,7 @@ export async function sendPaymentReminderEmail(
       due_date: formattedDueDate,
       amount_due: formattedAmount,
       phone_number: "604-273-8717",
-      contact_email: "adam@vancouverventcleaning.ca",
+      contact_email: "payables@vancouverventcleaning.ca",
       header_title: `${sequenceText} Payment Reminder - Vent Cleaning & Certification`,
       email_title: `${sequenceText} Payment Reminder - Vent Cleaning & Certification`,
       reminder_sequence: sequenceText,
@@ -500,7 +500,7 @@ export async function sendPaymentReminderEmail(
     };
 
     const emailResult = await postmarkClient.sendEmailWithTemplate({
-      From: "adam@vancouverventcleaning.ca",
+      From: "payables@vancouverventcleaning.ca",
       To: clientEmail,
       TemplateAlias: "payment-reminder-1",
       TemplateModel: templateModel,

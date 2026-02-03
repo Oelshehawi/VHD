@@ -38,7 +38,7 @@ import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
 const postmark = require("postmark");
 
 const CONTACT_PHONE = "604-273-8717";
-const CONTACT_EMAIL = "adam@vancouverventcleaning.ca";
+const CONTACT_EMAIL = "scheduling@vancouverventcleaning.ca";
 
 const DEFAULT_CONTACT_MODEL = {
   phone_number: CONTACT_PHONE,

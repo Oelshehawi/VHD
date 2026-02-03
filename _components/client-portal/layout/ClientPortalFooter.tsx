@@ -35,12 +35,12 @@ const ClientPortalFooter = () => {
               vancouverventcleaning.ca
             </a>
             <a
-              href="mailto:support@vancouverventcleaning.ca"
+              href="mailto:scheduling@vancouverventcleaning.ca"
               className="text-muted-foreground hover:text-foreground flex items-center text-sm transition-colors sm:text-base"
             >
               <EnvelopeIcon className="mr-2 h-4 w-4 sm:h-5 sm:w-5" />
-              <span className="sm:inline hidden">
-                support@vancouverventcleaning.ca
+              <span className="hidden sm:inline">
+                scheduling@vancouverventcleaning.ca
               </span>
               <span className="sm:hidden">Email Us</span>
             </a>

@@ -32,7 +32,9 @@ export async function POST(request: Request) {
 
     if (!isComplete) {
       return NextResponse.json(
-        { message: "Work documentation must be complete before sending invoice" },
+        {
+          message: "Work documentation must be complete before sending invoice",
+        },
         { status: 400 },
       );
     }
@@ -41,12 +43,18 @@ export async function POST(request: Request) {
 
     const invoice = await Invoice.findById(invoiceRef);
     if (!invoice) {
-      return NextResponse.json({ message: "Invoice not found" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Invoice not found" },
+        { status: 404 },
+      );
     }
 
     const clientDetails = await Client.findById(invoice.clientId);
     if (!clientDetails) {
-      return NextResponse.json({ message: "Client not found" }, { status: 404 });
+      return NextResponse.json(
+        { message: "Client not found" },
+        { status: 404 },
+      );
     }
 
     const clientEmail = getEmailForPurpose(clientDetails, "accounting");
@@ -135,7 +143,7 @@ export async function POST(request: Request) {
       gst: gst,
       totalAmount: totalWithTax,
       cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
-      eTransfer: "adam@vancouverventcleaning.ca",
+      eTransfer: "payables@vancouverventcleaning.ca",
       terms:
         "Please report any and all cleaning inquiries within 5 business days.",
     };
@@ -170,14 +178,14 @@ export async function POST(request: Request) {
       amount_due: totalWithTax.toFixed(2),
       due_date: formattedDueDate,
       phone_number: "604-273-8717",
-      contact_email: "adam@vancouverventcleaning.ca",
+      contact_email: "payables@vancouverventcleaning.ca",
       header_title: "Invoice - Vent Cleaning & Certification",
       email_title: "Invoice - Vent Cleaning & Certification",
       has_online_payment: hasOnlinePaymentBlock,
     };
 
     const emailResult = await postmarkClient.sendEmailWithTemplate({
-      From: "adam@vancouverventcleaning.ca",
+      From: "payables@vancouverventcleaning.ca",
       To: clientEmail,
       TemplateAlias: "invoice-delivery-1",
       TemplateModel: templateModel,

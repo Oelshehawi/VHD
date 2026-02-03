@@ -399,7 +399,7 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
             <View style={scaledStyles.paymentInfoBoxLast}>
               <Text style={scaledStyles.paymentLabel}>E-TRANSFER TO:</Text>
               <Text style={scaledStyles.paymentValue}>
-                adam@vancouverventcleaning.ca
+                payables@vancouverventcleaning.ca
               </Text>
             </View>
           </View>
@@ -473,7 +473,9 @@ const InvoicePdfDocument: React.FC<InvoicePdfDocumentProps> = ({
               </View>
             </View>
             <View style={scaledStyles.totalRow}>
-              <Text style={scaledStyles.totalLabel}>GST# 71219 0768 RT0001 (5%):</Text>
+              <Text style={scaledStyles.totalLabel}>
+                GST# 71219 0768 RT0001 (5%):
+              </Text>
               <View style={{ flexDirection: "row", alignItems: "baseline" }}>
                 <Text style={scaledStyles.totalValue}>
                   ${invoiceData.gst.toFixed(2)} {invoiceData.currency || "CAD"}

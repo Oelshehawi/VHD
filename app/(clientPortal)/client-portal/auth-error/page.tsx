@@ -24,9 +24,9 @@ export default function AuthErrorPage() {
           Authentication Error
         </h1>
         <p className="mb-6 max-w-md text-gray-600">
-          We couldn&apos;t authenticate your access to this portal. This could be
-          because you&apos;re not authorized to access this area or your session has
-          expired.
+          We couldn&apos;t authenticate your access to this portal. This could
+          be because you&apos;re not authorized to access this area or your
+          session has expired.
         </p>
       </motion.div>
 
@@ -42,10 +42,10 @@ export default function AuthErrorPage() {
           assistance.
         </p>
         <a
-          href="mailto:support@vancouverventcleaning.ca"
+          href="mailto:scheduling@vancouverventcleaning.ca"
           className="text-sm font-medium text-blue-600 hover:text-blue-800"
         >
-          support@vancouverventcleaning.ca
+          scheduling@vancouverventcleaning.ca
         </a>
       </motion.div>
     </div>

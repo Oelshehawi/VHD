@@ -1123,7 +1123,7 @@ export default function PaymentPageClient({ token }: PaymentPageClientProps) {
                   Questions about this invoice?
                 </p>
                 <p className="text-center text-sm font-medium">
-                  support@vancouverventcleaning.ca
+                  payables@vancouverventcleaning.ca
                 </p>
                 <p className="text-muted-foreground text-center text-sm">
                   604-273-8717

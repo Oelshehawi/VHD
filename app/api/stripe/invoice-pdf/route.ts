@@ -111,7 +111,7 @@ export async function GET(request: NextRequest) {
       gst,
       totalAmount,
       cheque: "51-11020 Williams Rd Richmond, BC V7A 1X8",
-      eTransfer: "adam@vancouverventcleaning.ca",
+      eTransfer: "payables@vancouverventcleaning.ca",
       terms: "Must be raised in writing within 7 days.",
     };
 
