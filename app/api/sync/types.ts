@@ -10,7 +10,7 @@ export type SyncTable =
 
 export interface SyncRequest {
   table: SyncTable;
-  data: Record<string, unknown>;
+  data: Record<string, unknown> | Record<string, unknown>[];
 }
 
 export interface HandlerResult {
