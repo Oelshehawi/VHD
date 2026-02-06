@@ -4,6 +4,26 @@ import connectMongo from "../../lib/connect";
 import { SyncRequest } from "./types";
 import { getHandler, supportedTables } from "./handlers";
 
+// TEMP DEBUG: Remove after mobile sync queues are healthy in production.
+function logSyncValidationFailure(
+  method: string,
+  reason: string,
+  body?: SyncRequest | null,
+) {
+  console.warn("[sync] validation failure", {
+    method,
+    reason,
+    table: body?.table ?? null,
+    id:
+      body?.data &&
+      typeof body.data === "object" &&
+      "id" in body.data &&
+      typeof body.data.id === "string"
+        ? body.data.id
+        : null,
+  });
+}
+
 async function parseRequest(
   request: NextRequest,
 ): Promise<{ data: SyncRequest | null; error: string | null }> {
@@ -39,6 +59,7 @@ export async function PUT(request: NextRequest) {
 
   const { data: body, error: parseError } = await parseRequest(request);
   if (parseError || !body) {
+    logSyncValidationFailure("PUT", parseError ?? "Invalid request body", body);
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: parseError },
       { status: 400 },
@@ -49,6 +70,7 @@ export async function PUT(request: NextRequest) {
 
   const handler = getHandler(body.table);
   if (!handler) {
+    logSyncValidationFailure("PUT", "Unknown table", body);
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: "Unknown table" },
       { status: 400 },
@@ -76,6 +98,11 @@ export async function POST(request: NextRequest) {
 
   const { data: body, error: parseError } = await parseRequest(request);
   if (parseError || !body) {
+    logSyncValidationFailure(
+      "POST",
+      parseError ?? "Invalid request body",
+      body,
+    );
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: parseError },
       { status: 400 },
@@ -86,6 +113,7 @@ export async function POST(request: NextRequest) {
 
   const handler = getHandler(body.table);
   if (!handler) {
+    logSyncValidationFailure("POST", "Unknown table", body);
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: "Unknown table" },
       { status: 400 },
@@ -113,6 +141,11 @@ export async function PATCH(request: NextRequest) {
 
   const { data: body, error: parseError } = await parseRequest(request);
   if (parseError || !body) {
+    logSyncValidationFailure(
+      "PATCH",
+      parseError ?? "Invalid request body",
+      body,
+    );
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: parseError },
       { status: 400 },
@@ -123,6 +156,7 @@ export async function PATCH(request: NextRequest) {
 
   const handler = getHandler(body.table);
   if (!handler) {
+    logSyncValidationFailure("PATCH", "Unknown table", body);
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: "Unknown table" },
       { status: 400 },
@@ -136,6 +170,7 @@ export async function PATCH(request: NextRequest) {
 
   if (isPhotoBatchPayload) {
     if (!handler.batchPatch) {
+      logSyncValidationFailure("PATCH", "batchPatch is not supported", body);
       return NextResponse.json(
         {
           success: false,
@@ -184,6 +219,11 @@ export async function DELETE(request: NextRequest) {
 
   const { data: body, error: parseError } = await parseRequest(request);
   if (parseError || !body) {
+    logSyncValidationFailure(
+      "DELETE",
+      parseError ?? "Invalid request body",
+      body,
+    );
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: parseError },
       { status: 400 },
@@ -192,6 +232,7 @@ export async function DELETE(request: NextRequest) {
 
   const id = body.data.id;
   if (!id || typeof id !== "string") {
+    logSyncValidationFailure("DELETE", "id is required", body);
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: "id is required" },
       { status: 400 },
@@ -202,6 +243,7 @@ export async function DELETE(request: NextRequest) {
 
   const handler = getHandler(body.table);
   if (!handler) {
+    logSyncValidationFailure("DELETE", "Unknown table", body);
     return NextResponse.json(
       { success: false, error: "VALIDATION_ERROR", message: "Unknown table" },
       { status: 400 },
