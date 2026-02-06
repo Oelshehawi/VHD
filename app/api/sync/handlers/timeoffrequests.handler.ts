@@ -1,8 +1,7 @@
 import { TimeOffRequest } from "../../../../models/reactDataSchema";
 import { HandlerResult, TableHandler } from "../types";
 import {
-  isValidObjectId,
-  toObjectId,
+  toSyncObjectId,
   validationError,
   notFoundError,
   serverError,
@@ -28,9 +27,8 @@ export const timeOffRequestsHandler: TableHandler = {
         return validationError("id is required");
       }
 
-      if (!isValidObjectId(id)) {
-        return validationError("Invalid id format");
-      }
+      // TEMP: legacy PowerSync payload compatibility. Remove after old mobile queues are drained.
+      const timeOffRequestId = toSyncObjectId(id);
 
       if (!technicianId || typeof technicianId !== "string") {
         return validationError("technicianId is required");
@@ -70,7 +68,7 @@ export const timeOffRequestsHandler: TableHandler = {
           : "pending";
 
       const result = await TimeOffRequest.findByIdAndUpdate(
-        toObjectId(id),
+        timeOffRequestId,
         {
           $set: {
             technicianId,
@@ -105,11 +103,10 @@ export const timeOffRequestsHandler: TableHandler = {
         return validationError("id is required");
       }
 
-      if (!isValidObjectId(id)) {
-        return validationError("Invalid id format");
-      }
+      // TEMP: legacy PowerSync payload compatibility. Remove after old mobile queues are drained.
+      const timeOffRequestId = toSyncObjectId(id);
 
-      const existing = await TimeOffRequest.findById(toObjectId(id));
+      const existing = await TimeOffRequest.findById(timeOffRequestId);
       if (!existing) {
         return notFoundError("Time-off request not found");
       }
@@ -156,7 +153,7 @@ export const timeOffRequestsHandler: TableHandler = {
       }
 
       const result = await TimeOffRequest.findByIdAndUpdate(
-        toObjectId(id),
+        timeOffRequestId,
         { $set: updateData },
         { new: true, runValidators: true },
       );
@@ -172,11 +169,10 @@ export const timeOffRequestsHandler: TableHandler = {
 
   async delete(id: string): Promise<HandlerResult> {
     try {
-      if (!isValidObjectId(id)) {
-        return validationError("Invalid id format");
-      }
+      // TEMP: legacy PowerSync payload compatibility. Remove after old mobile queues are drained.
+      const timeOffRequestId = toSyncObjectId(id);
 
-      const result = await TimeOffRequest.findByIdAndDelete(toObjectId(id));
+      const result = await TimeOffRequest.findByIdAndDelete(timeOffRequestId);
 
       if (!result) {
         return notFoundError("Time-off request not found");

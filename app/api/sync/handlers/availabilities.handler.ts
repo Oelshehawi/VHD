@@ -1,8 +1,7 @@
 import { Availability } from "../../../../models/reactDataSchema";
 import { HandlerResult, TableHandler } from "../types";
 import {
-  isValidObjectId,
-  toObjectId,
+  toSyncObjectId,
   validateTimeFormat,
   validateTimeLogic,
   validationError,
@@ -30,9 +29,8 @@ export const availabilitiesHandler: TableHandler = {
         return validationError("id is required");
       }
 
-      if (!isValidObjectId(id)) {
-        return validationError("Invalid id format");
-      }
+      // TEMP: legacy PowerSync payload compatibility. Remove after old mobile queues are drained.
+      const availabilityId = toSyncObjectId(id);
 
       if (!technicianId || typeof technicianId !== "string") {
         return validationError("technicianId is required");
@@ -78,7 +76,7 @@ export const availabilitiesHandler: TableHandler = {
       }
 
       const result = await Availability.findByIdAndUpdate(
-        toObjectId(id),
+        availabilityId,
         {
           $set: {
             technicianId,
@@ -126,11 +124,10 @@ export const availabilitiesHandler: TableHandler = {
         return validationError("id is required");
       }
 
-      if (!isValidObjectId(id)) {
-        return validationError("Invalid id format");
-      }
+      // TEMP: legacy PowerSync payload compatibility. Remove after old mobile queues are drained.
+      const availabilityId = toSyncObjectId(id);
 
-      const existing = await Availability.findById(toObjectId(id));
+      const existing = await Availability.findById(availabilityId);
       if (!existing) {
         return notFoundError("Availability not found");
       }
@@ -208,7 +205,7 @@ export const availabilitiesHandler: TableHandler = {
       updateData.updatedAt = new Date();
 
       const result = await Availability.findByIdAndUpdate(
-        toObjectId(id),
+        availabilityId,
         { $set: updateData },
         { new: true, runValidators: true },
       );
@@ -224,11 +221,10 @@ export const availabilitiesHandler: TableHandler = {
 
   async delete(id: string): Promise<HandlerResult> {
     try {
-      if (!isValidObjectId(id)) {
-        return validationError("Invalid id format");
-      }
+      // TEMP: legacy PowerSync payload compatibility. Remove after old mobile queues are drained.
+      const availabilityId = toSyncObjectId(id);
 
-      const result = await Availability.findByIdAndDelete(toObjectId(id));
+      const result = await Availability.findByIdAndDelete(availabilityId);
 
       if (!result) {
         return notFoundError("Availability not found");

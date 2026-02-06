@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import crypto from "crypto";
 import { HandlerResult } from "../types";
 
 const TIME_REGEX = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
@@ -9,6 +10,19 @@ export function isValidObjectId(id: string): boolean {
 
 export function toObjectId(id: string): mongoose.Types.ObjectId {
   return new mongoose.Types.ObjectId(id);
+}
+
+export function toSyncObjectId(id: string): mongoose.Types.ObjectId {
+  if (isValidObjectId(id)) {
+    return toObjectId(id);
+  }
+
+  const deterministicHex = crypto
+    .createHash("sha1")
+    .update(`legacy-sync-id:${id}`)
+    .digest("hex")
+    .slice(0, 24);
+  return toObjectId(deterministicHex);
 }
 
 export function validateTimeFormat(time: string): boolean {
