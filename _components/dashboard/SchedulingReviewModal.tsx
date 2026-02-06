@@ -107,7 +107,10 @@ export default function SchedulingReviewModal({
   };
 
   // Handle the actual confirmation with invoice creation
-  const handleConfirmWithInvoice = async (sourceInvoiceId: string) => {
+  const handleConfirmWithInvoice = async (
+    sourceInvoiceId: string,
+    assignedTechnicians: string[],
+  ) => {
     if (!pendingSelection || !requestId) {
       const message = "Missing scheduling request details.";
       setError(message);
@@ -124,6 +127,7 @@ export default function SchedulingReviewModal({
         confirmedDate: pendingSelection.date,
         confirmedTime: pendingSelection.time,
         sourceInvoiceId,
+        assignedTechnicians,
         internalNotes: notes || undefined,
       });
 
@@ -214,8 +218,8 @@ export default function SchedulingReviewModal({
             {/* Client & Job Info Grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {/* Client Card */}
-              <Card>
-                <CardHeader className="pb-2">
+              <Card className="gap-0">
+                <CardHeader className="pb-2 ">
                   <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
                     <UserIcon className="h-4 w-4" />
                     Client
@@ -237,7 +241,7 @@ export default function SchedulingReviewModal({
               </Card>
 
               {/* Job Card */}
-              <Card>
+              <Card className="gap-0">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
                     <MapPinIcon className="h-4 w-4" />
@@ -255,7 +259,7 @@ export default function SchedulingReviewModal({
 
             {/* On-Site Contact Card - Dedicated Section */}
             {(request.onSiteContactName || request.onSiteContactPhone) && (
-              <Card className="border-primary/20 bg-primary/5">
+              <Card className="border-primary/20 bg-primary/5 gap-0">
                 <CardHeader className="pb-2">
                   <CardTitle className="flex items-center gap-2 text-sm font-medium">
                     <PhoneIcon className="h-4 w-4" />
@@ -357,7 +361,7 @@ export default function SchedulingReviewModal({
             {(request.parkingNotes ||
               request.accessNotes ||
               request.specialInstructions) && (
-              <Card className="border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
+              <Card className="border-blue-200 gap-0 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
                     Client Notes

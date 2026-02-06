@@ -17,7 +17,11 @@ import {
   NOTIFICATION_TYPES,
 } from "../typeDefinitions";
 import { clerkClient, auth } from "@clerk/nextjs/server";
-import { calculateJobDurationFromPrice, minutesToPayrollHours, formatDateTimeStringUTC } from "../utils";
+import {
+  calculateJobDurationFromPrice,
+  minutesToPayrollHours,
+  formatDateTimeStringUTC,
+} from "../utils";
 import { v2 as cloudinary } from "cloudinary";
 import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
 import { createNotification } from "./notifications.actions";
@@ -253,7 +257,10 @@ export async function createSchedule(
     }
 
     // Notify assigned technicians
-    if (scheduleData.assignedTechnicians && scheduleData.assignedTechnicians.length > 0) {
+    if (
+      scheduleData.assignedTechnicians &&
+      scheduleData.assignedTechnicians.length > 0
+    ) {
       for (const technicianId of scheduleData.assignedTechnicians) {
         try {
           await createNotification({
@@ -267,7 +274,10 @@ export async function createSchedule(
             },
           });
         } catch (notifError) {
-          console.error("Failed to send notification to technician:", notifError);
+          console.error(
+            "Failed to send notification to technician:",
+            notifError,
+          );
           // Don't fail the entire operation if notification fails
         }
       }
@@ -458,6 +468,11 @@ export const updateJob = async ({
       throw new Error("Schedule not found");
     }
 
+    const previousStartDate =
+      schedule.startDateTime instanceof Date
+        ? schedule.startDateTime
+        : new Date(schedule.startDateTime);
+
     // Build update object
     const updateFields: any = {
       jobTitle: trimmedJobTitle,
@@ -484,7 +499,7 @@ export const updateJob = async ({
 
     // Find newly assigned technicians
     const addedTechnicians = newTechnicians.filter(
-      (techId) => !previousTechnicians.includes(techId)
+      (techId) => !previousTechnicians.includes(techId),
     );
 
     // Notify newly assigned technicians
@@ -503,6 +518,39 @@ export const updateJob = async ({
       } catch (notifError) {
         console.error("Failed to send notification to technician:", notifError);
         // Don't fail the entire operation if notification fails
+      }
+    }
+
+    const isRescheduled =
+      !Number.isNaN(previousStartDate.getTime()) &&
+      previousStartDate.getTime() !== updatedStartDate.getTime();
+
+    if (isRescheduled) {
+      const scheduleUpdateRecipients = newTechnicians.filter((techId) =>
+        previousTechnicians.includes(techId),
+      );
+
+      const oldDateLabel = formatDateTimeStringUTC(previousStartDate);
+      const newDateLabel = formatDateTimeStringUTC(updatedStartDate);
+
+      for (const technicianId of scheduleUpdateRecipients) {
+        try {
+          await createNotification({
+            userId: technicianId,
+            title: "Job Rescheduled",
+            body: `${trimmedJobTitle} moved from ${oldDateLabel} to ${newDateLabel}`,
+            type: NOTIFICATION_TYPES.SCHEDULE_UPDATE,
+            metadata: {
+              scheduleId: scheduleId,
+              link: `/schedule?date=${updatedStartDate.toISOString().split("T")[0]}`,
+            },
+          });
+        } catch (notifError) {
+          console.error(
+            "Failed to send reschedule notification to technician:",
+            notifError,
+          );
+        }
       }
     }
 

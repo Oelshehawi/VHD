@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
+import { useForm } from "react-hook-form";
 import {
   Dialog,
   DialogContent,
@@ -28,6 +29,7 @@ import {
   formatAmount,
 } from "../../app/lib/utils";
 import { getClientInvoicesForScheduling } from "../../app/lib/actions/autoScheduling.actions";
+import { getTechnicians } from "../../app/lib/actions/scheduleJobs.actions";
 import {
   CalendarIcon,
   DocumentTextIcon,
@@ -36,11 +38,15 @@ import {
   MapPinIcon,
   CurrencyDollarIcon,
 } from "@heroicons/react/24/outline";
+import TechnicianSelect from "../schedule/TechnicianSelect";
 
 interface SchedulingConfirmDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  onConfirm: (sourceInvoiceId: string) => Promise<void>;
+  onConfirm: (
+    sourceInvoiceId: string,
+    assignedTechnicians: string[],
+  ) => Promise<void>;
   clientId: string;
   client: ClientType;
   confirmedDate: string | Date;
@@ -69,10 +75,25 @@ export default function SchedulingConfirmDialog({
   defaultInvoice,
 }: SchedulingConfirmDialogProps) {
   const [invoices, setInvoices] = useState<InvoiceType[]>([]);
+  const [technicians, setTechnicians] = useState<
+    { id: string; name: string }[]
+  >([]);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedInvoiceId, setSelectedInvoiceId] = useState<string | null>(
     defaultInvoice?._id?.toString() || null,
   );
+  const {
+    control,
+    watch,
+    setValue,
+    formState: { errors },
+  } = useForm<{ assignedTechnicians: string[] }>({
+    defaultValues: {
+      assignedTechnicians: [],
+    },
+    mode: "onChange",
+  });
+  const selectedTechnicians = watch("assignedTechnicians") || [];
 
   // Fetch client invoices when dialog opens
   useEffect(() => {
@@ -82,14 +103,17 @@ export default function SchedulingConfirmDialog({
       if (!isOpen || !clientId) return;
       setIsLoading(true);
       try {
-        const result = await getClientInvoicesForScheduling(clientId);
+        const [invoiceResult, technicianResult] = await Promise.all([
+          getClientInvoicesForScheduling(clientId),
+          getTechnicians(),
+        ]);
         if (isCancelled) return;
 
-        if (result.success && result.invoices) {
-          setInvoices(result.invoices);
+        if (invoiceResult.success && invoiceResult.invoices) {
+          setInvoices(invoiceResult.invoices);
           // Auto-select the first invoice if none selected
-          if (result.invoices.length > 0) {
-            const firstInvoice = result.invoices[0];
+          if (invoiceResult.invoices.length > 0) {
+            const firstInvoice = invoiceResult.invoices[0];
             if (firstInvoice) {
               setSelectedInvoiceId((current) =>
                 current ? current : firstInvoice._id?.toString() || null,
@@ -98,13 +122,26 @@ export default function SchedulingConfirmDialog({
           }
         } else {
           setInvoices([]);
-          toast.error(result.error || "Failed to load invoices");
+          toast.error(invoiceResult.error || "Failed to load invoices");
+        }
+
+        if (Array.isArray(technicianResult)) {
+          const normalizedTechnicians = technicianResult.map((technician) => ({
+            id: technician.id,
+            name: technician.name || "Unknown",
+          }));
+          setTechnicians(normalizedTechnicians);
+
+          if (normalizedTechnicians.length === 1 && normalizedTechnicians[0]) {
+            setValue("assignedTechnicians", [normalizedTechnicians[0].id]);
+          }
         }
       } catch (error) {
         if (!isCancelled) {
           setInvoices([]);
+          setTechnicians([]);
           console.error("Error fetching invoices:", error);
-          toast.error("Failed to load invoices");
+          toast.error("Failed to load invoice setup data");
         }
       } finally {
         if (!isCancelled) {
@@ -118,7 +155,7 @@ export default function SchedulingConfirmDialog({
     return () => {
       isCancelled = true;
     };
-  }, [isOpen, clientId]);
+  }, [isOpen, clientId, setValue]);
 
   const selectedInvoice = invoices.find(
     (inv) => inv._id?.toString() === selectedInvoiceId,
@@ -137,7 +174,7 @@ export default function SchedulingConfirmDialog({
       toast.error("Please select an invoice to copy from");
       return;
     }
-    await onConfirm(selectedInvoiceId);
+    await onConfirm(selectedInvoiceId, selectedTechnicians);
   };
 
   return (
@@ -286,6 +323,28 @@ export default function SchedulingConfirmDialog({
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+
+            <Card className="mb-4 shrink-0">
+              <CardContent className="p-4">
+                <h4 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+                  Assign Technicians (Optional)
+                </h4>
+                {technicians.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    No technicians found. You can assign later from Schedule.
+                  </p>
+                ) : (
+                  <TechnicianSelect
+                    control={control}
+                    name="assignedTechnicians"
+                    technicians={technicians}
+                    placeholder="Select technicians..."
+                    error={errors.assignedTechnicians}
+                    required={false}
+                  />
+                )}
               </CardContent>
             </Card>
 

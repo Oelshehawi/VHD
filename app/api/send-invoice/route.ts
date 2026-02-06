@@ -6,6 +6,7 @@ import {
   getBaseUrl,
   formatDateStringUTC,
 } from "../../lib/utils";
+import { generateClientAccessLink } from "../../lib/clerkClientPortal";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -171,7 +172,9 @@ export async function POST(request: Request) {
       }
     }
 
-    const templateModel = {
+    let hasClientPortalBlock: any = false;
+
+    const templateModel: Record<string, any> = {
       client_name: clientDetails.clientName,
       invoice_number: invoiceData.invoiceId,
       jobTitle: invoiceData.jobTitle,
@@ -183,6 +186,52 @@ export async function POST(request: Request) {
       email_title: "Invoice - Vent Cleaning & Certification",
       has_online_payment: hasOnlinePaymentBlock,
     };
+
+    try {
+      const clientMongoId = clientDetails._id?.toString?.() || "";
+      const existingAccessToken = clientDetails.portalAccessToken?.trim();
+      const portalEmail =
+        getEmailForPurpose(clientDetails, "primary") ||
+        getEmailForPurpose(clientDetails, "accounting") ||
+        getEmailForPurpose(clientDetails, "scheduling") ||
+        clientDetails.email;
+
+      if (clientMongoId && existingAccessToken && clientDetails.clerkUserId) {
+        const existingUrl = new URL("/acceptToken", getBaseUrl());
+        existingUrl.searchParams.set("clientId", clientMongoId);
+        existingUrl.searchParams.set("accessToken", existingAccessToken);
+        const existingPortalUrl = existingUrl.toString();
+        hasClientPortalBlock = {
+          client_portal_url: existingPortalUrl,
+        };
+      } else if (clientMongoId && portalEmail) {
+        const generatedLink = await generateClientAccessLink(
+          clientMongoId,
+          clientDetails.clientName,
+          portalEmail,
+        );
+        if (generatedLink.success && generatedLink.magicLink) {
+          hasClientPortalBlock = {
+            client_portal_url: generatedLink.magicLink,
+          };
+        }
+      } else if (clientMongoId && existingAccessToken) {
+        const existingUrl = new URL("/acceptToken", getBaseUrl());
+        existingUrl.searchParams.set("clientId", clientMongoId);
+        existingUrl.searchParams.set("accessToken", existingAccessToken);
+        const existingPortalUrl = existingUrl.toString();
+        hasClientPortalBlock = {
+          client_portal_url: existingPortalUrl,
+        };
+      }
+    } catch (portalError) {
+      console.error(
+        "Failed to include client portal link in invoice email:",
+        portalError,
+      );
+    }
+
+    templateModel.has_client_portal = hasClientPortalBlock;
 
     const emailResult = await postmarkClient.sendEmailWithTemplate({
       From: "payables@vancouverventcleaning.ca",

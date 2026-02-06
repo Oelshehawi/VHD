@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useUser } from "@clerk/nextjs";
 import {
   ScheduleType,
@@ -89,6 +89,7 @@ export default function JobDetailsModal({
     null,
   );
   const [isLoadingMedia, setIsLoadingMedia] = useState(false);
+  const [hasLoadedMedia, setHasLoadedMedia] = useState(false);
   // Local state mirrors for optimistic UI updates
   const [localOnSiteContact, setLocalOnSiteContact] = useState(
     job?.onSiteContact,
@@ -109,54 +110,65 @@ export default function JobDetailsModal({
       setExistingReportData(null);
       setIsCheckingReport(false);
       setShowReportModal(false); // Reset report modal state
+      setMediaPhotos([]);
+      setMediaSignature(null);
+      setIsLoadingMedia(false);
+      setHasLoadedMedia(false);
     }
   }, [job]);
 
-  useEffect(() => {
-    const loadMedia = async () => {
-      if (!job || !isOpen) return;
-      setIsLoadingMedia(true);
-      try {
-        const data = await getSchedulePhotos(job._id.toString());
-        const photos = data
-          .filter((photo) => photo.type === "before" || photo.type === "after")
-          .map((photo) => ({
-            _id: photo.id,
-            url: photo.cloudinaryUrl,
-            timestamp: new Date(photo.timestamp),
-            technicianId: photo.technicianId,
-            type: photo.type as "before" | "after",
-          }));
-        const signature = data.find((photo) => photo.type === "signature");
+  const loadMedia = useCallback(async () => {
+    if (!job || !isOpen) return;
 
-        setMediaPhotos(photos);
-        setMediaSignature(
-          signature
-            ? {
-                _id: signature.id,
-                url: signature.cloudinaryUrl,
-                timestamp: new Date(signature.timestamp),
-                signerName: signature.signerName || "Customer",
-                technicianId: signature.technicianId,
-              }
-            : null,
-        );
-      } catch (error) {
-        console.error("Failed to load media:", error);
-        setMediaPhotos([]);
-        setMediaSignature(null);
-      } finally {
-        setIsLoadingMedia(false);
-      }
-    };
+    setIsLoadingMedia(true);
+    try {
+      const data = await getSchedulePhotos(job._id.toString());
+      const photos = data
+        .filter((photo) => photo.type === "before" || photo.type === "after")
+        .map((photo) => ({
+          _id: photo.id,
+          url: photo.cloudinaryUrl,
+          timestamp: new Date(photo.timestamp),
+          technicianId: photo.technicianId,
+          type: photo.type as "before" | "after",
+        }));
+      const signature = data.find((photo) => photo.type === "signature");
 
-    if (isOpen && job) {
-      void loadMedia();
-    } else {
+      setMediaPhotos(photos);
+      setMediaSignature(
+        signature
+          ? {
+              _id: signature.id,
+              url: signature.cloudinaryUrl,
+              timestamp: new Date(signature.timestamp),
+              signerName: signature.signerName || "Customer",
+              technicianId: signature.technicianId,
+            }
+          : null,
+      );
+    } catch (error) {
+      console.error("Failed to load media:", error);
       setMediaPhotos([]);
       setMediaSignature(null);
+    } finally {
+      setIsLoadingMedia(false);
+      setHasLoadedMedia(true);
     }
   }, [isOpen, job]);
+
+  useEffect(() => {
+    if (!isOpen) {
+      setMediaPhotos([]);
+      setMediaSignature(null);
+      setIsLoadingMedia(false);
+      setHasLoadedMedia(false);
+      return;
+    }
+
+    if (activeView === "media" && !hasLoadedMedia && !isLoadingMedia) {
+      void loadMedia();
+    }
+  }, [activeView, hasLoadedMedia, isLoadingMedia, isOpen, loadMedia]);
 
   // Check for existing report when switching to report view
   useEffect(() => {
@@ -373,6 +385,10 @@ export default function JobDetailsModal({
     if (!open) {
       setShowReportModal(false);
       setIsCheckingReport(false);
+      setMediaPhotos([]);
+      setMediaSignature(null);
+      setIsLoadingMedia(false);
+      setHasLoadedMedia(false);
       setActiveView("details");
       onClose();
     }
@@ -407,12 +423,10 @@ export default function JobDetailsModal({
         >
           <TabsList>
             <TabsTrigger value="details">Details</TabsTrigger>
-            {(isLoadingMedia || hasMedia) && (
-              <TabsTrigger value="media">
-                <Camera className="mr-1 h-4 w-4" />
-                Media
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="media">
+              <Camera className="mr-1 h-4 w-4" />
+              Media
+            </TabsTrigger>
             <TabsTrigger value="estimatePhotos">
               <FileImage className="mr-1 h-4 w-4" />
               Estimate Photos
@@ -596,7 +610,7 @@ export default function JobDetailsModal({
             </TabsContent>
 
             <TabsContent value="media" className="p-6">
-              {isLoadingMedia ? (
+              {isLoadingMedia || !hasLoadedMedia ? (
                 <div className="py-8 text-center">
                   <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2"></div>
                   <p className="text-muted-foreground text-sm">
@@ -747,7 +761,9 @@ export default function JobDetailsModal({
                             </AlertDialogTrigger>
                             <AlertDialogContent>
                               <AlertDialogHeader>
-                                <AlertDialogTitle>Delete Report</AlertDialogTitle>
+                                <AlertDialogTitle>
+                                  Delete Report
+                                </AlertDialogTitle>
                                 <AlertDialogDescription>
                                   Are you sure you want to delete this report?
                                   This action cannot be undone.

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Printer, Loader2, Download } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
 import { Button } from "../ui/button";
@@ -71,7 +71,11 @@ const LazyPDFButton: React.FC<LazyPDFButtonProps> = ({
   showScaleSelector = false,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
-  const [scale, setScale] = useState(80);
+  const [scale, setScale] = useState(pdfData?.type === "report" ? 100 : 80);
+
+  useEffect(() => {
+    setScale(pdfData?.type === "report" ? 100 : 80);
+  }, [pdfData?.type]);
 
   // Generate the appropriate document based on data type
   const generateDocument = useCallback(

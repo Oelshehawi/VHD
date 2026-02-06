@@ -13,6 +13,7 @@ import {
 import { DueInvoiceType } from "../typeDefinitions";
 import { getEmailForPurpose, getBaseUrl, formatDateStringUTC } from "../utils";
 import { generateSchedulingToken } from "./autoScheduling.actions";
+import { generateClientAccessLink } from "../clerkClientPortal";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -22,6 +23,16 @@ import ReportPdfDocument from "../../../_components/pdf/ReportPdfDocument";
 
 const postmark = require("postmark");
 import { clerkClient } from "@clerk/nextjs/server";
+
+function buildExistingPortalAccessUrl(
+  clientId: string,
+  accessToken: string,
+): string {
+  const url = new URL("/acceptToken", getBaseUrl());
+  url.searchParams.set("clientId", clientId);
+  url.searchParams.set("accessToken", accessToken);
+  return url.toString();
+}
 
 /**
  * Send a cleaning reminder email using Postmark
@@ -265,6 +276,48 @@ export async function sendInvoiceDeliveryEmail(
       Boolean(hasOnlinePaymentBlock),
     );
 
+    // Ensure client portal link is always available for invoice emails.
+    let clientPortalUrl = "";
+    let hasClientPortalBlock: any = false;
+    try {
+      const clientMongoId = clientDetails._id?.toString?.() || "";
+      const existingAccessToken = clientDetails.portalAccessToken?.trim();
+      const portalEmail =
+        getEmailForPurpose(clientDetails, "primary") ||
+        getEmailForPurpose(clientDetails, "accounting") ||
+        getEmailForPurpose(clientDetails, "scheduling") ||
+        clientDetails.email;
+
+      if (clientMongoId && existingAccessToken && clientDetails.clerkUserId) {
+        clientPortalUrl = buildExistingPortalAccessUrl(
+          clientMongoId,
+          existingAccessToken,
+        );
+      } else if (clientMongoId && portalEmail) {
+        const accessLinkResult = await generateClientAccessLink(
+          clientMongoId,
+          clientDetails.clientName,
+          portalEmail,
+        );
+        if (accessLinkResult.success && accessLinkResult.magicLink) {
+          clientPortalUrl = accessLinkResult.magicLink;
+        }
+      } else if (clientMongoId && existingAccessToken) {
+        clientPortalUrl = buildExistingPortalAccessUrl(
+          clientMongoId,
+          existingAccessToken,
+        );
+      }
+    } catch (portalError) {
+      console.error("Failed to generate client portal link:", portalError);
+    }
+
+    if (clientPortalUrl) {
+      hasClientPortalBlock = {
+        client_portal_url: clientPortalUrl,
+      };
+    }
+
     // Prepare template model
     const templateModel: Record<string, any> = {
       client_name: clientDetails.clientName,
@@ -278,6 +331,7 @@ export async function sendInvoiceDeliveryEmail(
       header_title: "Invoice - Vent Cleaning & Certification",
       email_title: "Invoice - Vent Cleaning & Certification",
       has_online_payment: hasOnlinePaymentBlock,
+      has_client_portal: hasClientPortalBlock,
     };
 
     // Build attachments array

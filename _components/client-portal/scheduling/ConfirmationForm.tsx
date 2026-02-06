@@ -22,9 +22,7 @@ import { Label } from "../../ui/label";
 
 const confirmationSchema = z
   .object({
-    addressConfirmed: z.boolean().refine((val) => val === true, {
-      message: "Please confirm the service address",
-    }),
+    addressConfirmed: z.boolean(),
     preferredContact: z.enum(["phone", "email", "either", "other"]),
     customContactMethod: z.string().optional(),
     onSiteContactName: z.string().min(1, "On-site contact name is required"),
@@ -38,6 +36,21 @@ const confirmationSchema = z
       ),
     specialInstructions: z.string().optional(),
   })
+  .refine(
+    (data) => {
+      if (data.addressConfirmed) {
+        return true;
+      }
+      return Boolean(
+        data.specialInstructions && data.specialInstructions.trim(),
+      );
+    },
+    {
+      message:
+        "Address may be incorrect. Please add the correct service address in Special Instructions.",
+      path: ["specialInstructions"],
+    },
+  )
   .refine(
     (data) => {
       if (data.preferredContact === "other") {
@@ -86,6 +99,10 @@ export default function ConfirmationForm({
     control: form.control,
     name: "preferredContact",
   });
+  const addressConfirmed = useWatch({
+    control: form.control,
+    name: "addressConfirmed",
+  });
 
   const handleSubmit = (data: ConfirmationDetails) => {
     onSubmit(data);
@@ -124,9 +141,17 @@ export default function ConfirmationForm({
                       />
                     </FormControl>
                     <div className="space-y-1 leading-none">
-                      <FormLabel>
-                        I confirm this is the correct service address
-                      </FormLabel>
+                      <FormLabel>This is the correct service address</FormLabel>
+                      <FormDescription>
+                        If this is wrong, leave unchecked and add the correct
+                        service address in Special Instructions below.
+                      </FormDescription>
+                      {!addressConfirmed && (
+                        <p className="text-xs text-amber-700 dark:text-amber-400">
+                          Please include the full corrected service address
+                          below so we can update it before scheduling.
+                        </p>
+                      )}
                       <FormMessage />
                     </div>
                   </FormItem>

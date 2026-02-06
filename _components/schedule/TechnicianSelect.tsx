@@ -12,6 +12,7 @@ interface TechnicianSelectProps {
   placeholder?: string;
   error?: any;
   theme?: "light" | "dark";
+  required?: boolean;
 }
 
 const TechnicianSelect: React.FC<TechnicianSelectProps> = ({
@@ -21,6 +22,7 @@ const TechnicianSelect: React.FC<TechnicianSelectProps> = ({
   placeholder = "Select Technicians",
   error,
   theme = "light",
+  required = true,
 }) => {
   const options: MultiSelectOption[] = technicians.map((tech) => ({
     value: tech.id,
@@ -32,7 +34,9 @@ const TechnicianSelect: React.FC<TechnicianSelectProps> = ({
       <Controller
         control={control}
         name={name}
-        rules={{ required: "At least one technician is required" }}
+        rules={
+          required ? { required: "At least one technician is required" } : {}
+        }
         render={({ field: { onChange, value } }) => (
           <MultiSelect
             options={options}
@@ -47,7 +51,9 @@ const TechnicianSelect: React.FC<TechnicianSelectProps> = ({
         )}
       />
       {error && (
-        <p className={`mt-1 text-sm ${theme === "dark" ? "text-red-400" : "text-destructive"}`}>
+        <p
+          className={`mt-1 text-sm ${theme === "dark" ? "text-red-400" : "text-destructive"}`}
+        >
           {error.message}
         </p>
       )}

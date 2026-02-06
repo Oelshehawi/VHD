@@ -98,6 +98,7 @@ const INSPECTION_ITEMS = [
   "Safe access to fan/roof?",
   "Exhaust fan operational?",
   "Grease buildup on roof?",
+  "System cleaned per code?",
   "Adequate access panels?",
 ];
 
@@ -153,7 +154,8 @@ const INSPECTION_KEY_MAPPINGS: Record<number, string> = {
   5: "safeAccessToFan",
   6: "exhaustFanOperational",
   7: "greaseBuildupOnRoof",
-  8: "adequateAccessPanels",
+  8: "systemCleanedPerCode",
+  9: "adequateAccessPanels",
 };
 
 interface ReportModalProps {

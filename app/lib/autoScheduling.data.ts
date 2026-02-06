@@ -24,6 +24,19 @@ import {
   RequestedTime,
 } from "./typeDefinitions";
 
+const SCHEDULING_HORIZON_DAYS = 365; // hard cap at 1 year from today
+
+export function getSchedulingDateRange(_dueDateInput?: string | Date | null): {
+  startDate: Date;
+  endDate: Date;
+} {
+  const startDate = new Date();
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + SCHEDULING_HORIZON_DAYS);
+
+  return { startDate, endDate };
+}
+
 /**
  * Validate a scheduling token and return full context for the scheduling page
  */
@@ -87,10 +100,10 @@ export async function getSchedulingContext(
     const timeToCheck = requestedTime ||
       pattern?.usualTime || { hour: 9, minute: 0 };
 
-    // Get available days for next 12 weeks
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 84); // 12 weeks
+    // Get available days across the scheduling horizon.
+    const { startDate, endDate } = getSchedulingDateRange(
+      jobsDueSoon.dateDue || invoice.dateDue,
+    );
 
     const availableDays = await getAvailableDays(
       startDate.toISOString().slice(0, 10),
@@ -379,10 +392,7 @@ export async function refreshAvailability(
       return [];
     }
 
-    // Get availability for next 12 weeks
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 84); // 12 weeks
+    const { startDate, endDate } = getSchedulingDateRange(jobsDueSoon.dateDue);
 
     return await getAvailableDays(
       startDate.toISOString().slice(0, 10),

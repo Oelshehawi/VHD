@@ -65,6 +65,66 @@ const MONTH_NAMES = [
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+interface CalendarDateParts {
+  year: number;
+  month: number;
+  day: number;
+}
+
+interface DueBannerState {
+  title: "SERVICE DUE" | "SERVICE DUE SOON" | "SERVICE OVERDUE";
+  subtitle: string;
+  containerClassName: string;
+  titleClassName: string;
+  dateClassName: string;
+}
+
+const parseDateInputToParts = (
+  dateInput: string | Date | null | undefined,
+): CalendarDateParts | null => {
+  if (!dateInput) return null;
+
+  const dateStr =
+    dateInput instanceof Date ? dateInput.toISOString() : String(dateInput);
+  const datePart = dateStr.split("T")[0] || dateStr;
+  const [yearStr, monthStr, dayStr] = datePart.split("-");
+
+  if (!yearStr || !monthStr || !dayStr) return null;
+
+  const year = Number.parseInt(yearStr, 10);
+  const month = Number.parseInt(monthStr, 10);
+  const day = Number.parseInt(dayStr, 10);
+
+  const hasValidParts =
+    Number.isFinite(year) &&
+    Number.isFinite(month) &&
+    Number.isFinite(day) &&
+    month >= 1 &&
+    month <= 12 &&
+    day >= 1 &&
+    day <= 31;
+
+  if (!hasValidParts) return null;
+
+  const localDate = new Date(year, month - 1, day);
+  if (
+    Number.isNaN(localDate.getTime()) ||
+    localDate.getFullYear() !== year ||
+    localDate.getMonth() !== month - 1 ||
+    localDate.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day };
+};
+
+const toYmd = (parts: CalendarDateParts): string =>
+  `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+
+const getUtcDayNumber = (parts: CalendarDateParts): number =>
+  Math.floor(Date.UTC(parts.year, parts.month - 1, parts.day) / 86_400_000);
+
 // Helper to format exact time
 const formatExactTime = (hour: number, minute: number): string => {
   const period = hour >= 12 ? "PM" : "AM";
@@ -124,9 +184,119 @@ export default function SchedulingWizard({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  const dueDateParts = useMemo(
+    () => parseDateInputToParts(jobsDueSoon.dateDue),
+    [jobsDueSoon.dateDue],
+  );
+  const dueDateYmd = useMemo(
+    () => (dueDateParts ? toYmd(dueDateParts) : ""),
+    [dueDateParts],
+  );
+  const dueDateDisplay = useMemo(
+    () => (dueDateYmd ? formatDateWithWeekdayUTC(dueDateYmd) : ""),
+    [dueDateYmd],
+  );
+  const todayYmd = useMemo(() => {
+    const now = new Date();
+    return toYmd({
+      year: now.getFullYear(),
+      month: now.getMonth() + 1,
+      day: now.getDate(),
+    });
+  }, []);
+
+  const dueBannerState = useMemo<DueBannerState | null>(() => {
+    if (!dueDateParts || !dueDateDisplay) return null;
+    const todayParts = parseDateInputToParts(todayYmd);
+    if (!todayParts) return null;
+
+    const dueDayNumber = getUtcDayNumber(dueDateParts);
+    const todayDayNumber = getUtcDayNumber(todayParts);
+    const daysPastDue = todayDayNumber - dueDayNumber;
+    const daysUntilDue = dueDayNumber - todayDayNumber;
+    const dayLabel = daysPastDue === 1 || daysUntilDue === 1 ? "day" : "days";
+
+    if (daysPastDue > 7) {
+      return {
+        title: "SERVICE OVERDUE",
+        subtitle: `${daysPastDue} ${dayLabel} overdue`,
+        containerClassName:
+          "rounded-md border border-red-300 bg-red-50 px-3 py-2 lg:min-w-[290px] dark:border-red-900/50 dark:bg-red-950/20",
+        titleClassName:
+          "text-xs font-medium tracking-wide text-red-700 dark:text-red-300",
+        dateClassName: "text-sm font-semibold text-red-800 dark:text-red-200",
+      };
+    }
+
+    if (daysPastDue > 0) {
+      return {
+        title: "SERVICE OVERDUE",
+        subtitle: `${daysPastDue} ${dayLabel} overdue`,
+        containerClassName:
+          "rounded-md border border-amber-300 bg-amber-50 px-3 py-2 lg:min-w-[290px] dark:border-amber-900/50 dark:bg-amber-950/20",
+        titleClassName:
+          "text-xs font-medium tracking-wide text-amber-700 dark:text-amber-300",
+        dateClassName:
+          "text-sm font-semibold text-amber-800 dark:text-amber-200",
+      };
+    }
+
+    if (daysUntilDue <= 7) {
+      return {
+        title: "SERVICE DUE SOON",
+        subtitle:
+          daysUntilDue === 0
+            ? "Due today"
+            : `Due in ${daysUntilDue} ${dayLabel}`,
+        containerClassName:
+          "rounded-md border border-amber-300 bg-amber-50 px-3 py-2 lg:min-w-[290px] dark:border-amber-900/50 dark:bg-amber-950/20",
+        titleClassName:
+          "text-xs font-medium tracking-wide text-amber-700 dark:text-amber-300",
+        dateClassName:
+          "text-sm font-semibold text-amber-800 dark:text-amber-200",
+      };
+    }
+
+    return {
+      title: "SERVICE DUE",
+      subtitle: "On schedule",
+      containerClassName:
+        "rounded-md border border-blue-200 bg-blue-50 px-3 py-2 lg:min-w-[290px] dark:border-blue-900/50 dark:bg-blue-950/20",
+      titleClassName:
+        "text-xs font-medium tracking-wide text-blue-700 dark:text-blue-300",
+      dateClassName: "text-sm font-semibold text-blue-800 dark:text-blue-200",
+    };
+  }, [dueDateDisplay, dueDateParts, todayYmd]);
+
   const [currentMonth, setCurrentMonth] = useState(() => {
     const today = new Date();
-    return new Date(today.getFullYear(), today.getMonth(), 1);
+    const thisMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+    const initialDueDateParts = parseDateInputToParts(jobsDueSoon.dateDue);
+    if (!initialDueDateParts) {
+      return thisMonth;
+    }
+
+    const initialDueYmd = toYmd(initialDueDateParts);
+    const initialSortedDates = initialAvailableDays
+      .map((day) => day.date)
+      .sort();
+    const initialStart = initialSortedDates[0] || "";
+    const initialEnd = initialSortedDates[initialSortedDates.length - 1] || "";
+
+    if (
+      initialStart &&
+      initialEnd &&
+      initialDueYmd >= initialStart &&
+      initialDueYmd <= initialEnd
+    ) {
+      return new Date(
+        initialDueDateParts.year,
+        initialDueDateParts.month - 1,
+        1,
+      );
+    }
+
+    return thisMonth;
   });
 
   // Custom time state
@@ -162,12 +332,19 @@ export default function SchedulingWizard({
     return map;
   }, [availableDays]);
 
+  const availabilityRange = useMemo(() => {
+    if (availableDays.length === 0) return null;
+    const sortedDates = availableDays.map((day) => day.date).sort();
+    const start = sortedDates[0] || "";
+    const end = sortedDates[sortedDates.length - 1] || "";
+    if (!start || !end) return null;
+    return { start, end };
+  }, [availableDays]);
+
   // Get max available date for "contact us" message
   const maxAvailableDate = useMemo(() => {
-    if (availableDays.length === 0) return null;
-    const dates = availableDays.map((day) => new Date(day.date));
-    return new Date(Math.max(...dates.map((d) => d.getTime())));
-  }, [availableDays]);
+    return availabilityRange?.end || null;
+  }, [availabilityRange]);
 
   // Generate calendar days
   const calendarDays = useMemo(() => {
@@ -230,6 +407,34 @@ export default function SchedulingWizard({
     if (!availability) return false;
     return availability.available;
   };
+
+  const getDueDateRelationInfo = useCallback(
+    (selectedDate: string | Date) => {
+      if (!dueDateYmd) return null;
+
+      const selectedParts = parseDateInputToParts(selectedDate);
+      if (!selectedParts) return null;
+      const selectedYmd = toYmd(selectedParts);
+
+      if (selectedYmd < dueDateYmd) {
+        return {
+          label: "Selected date is before due date",
+          className: "text-amber-700 dark:text-amber-400",
+        };
+      }
+      if (selectedYmd > dueDateYmd) {
+        return {
+          label: "Selected date is after due date",
+          className: "text-blue-700 dark:text-blue-400",
+        };
+      }
+      return {
+        label: "Selected date is on due date",
+        className: "text-emerald-700 dark:text-emerald-400",
+      };
+    },
+    [dueDateYmd],
+  );
 
   // Handle date selection - uses current scheduling time
   const handleDateSelect = (dateStr: string) => {
@@ -539,39 +744,61 @@ export default function SchedulingWizard({
                 animate="visible"
                 className="from-primary/10 to-primary/5 border-b bg-gradient-to-r px-4 py-3 sm:px-6"
               >
-                <div className="flex flex-col gap-2">
-                  {/* Label Row */}
-                  <p className="text-foreground font-medium">
-                    {useCustomTime ? "Custom time" : "Your usual time is"}
-                  </p>
-
-                  {/* Time Picker Row */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={handleOpenTimePicker}
-                      className="bg-background text-primary hover:text-primary focus:ring-primary h-9 px-3 text-base font-semibold"
-                    >
-                      {formatExactTime(
-                        currentSchedulingTime.hour,
-                        currentSchedulingTime.minute,
-                      )}
-                    </Button>
-                    <span className="text-muted-foreground text-sm">
-                      (±15 min)
-                    </span>
-                    {useCustomTime && pattern?.usualTime && (
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+                  <div className="flex flex-col gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-foreground font-medium">
+                        {useCustomTime ? "Custom time" : "Your usual time is"}
+                      </p>
+                      <span className="text-primary bg-primary/10 rounded px-2 py-0.5 text-xs font-medium">
+                        Tap time to edit
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
                       <Button
+                        type="button"
                         variant="outline"
-                        size="sm"
-                        onClick={handleUseUsualTime}
-                        className="ml-auto sm:ml-2"
+                        onClick={handleOpenTimePicker}
+                        title="Change your preferred time"
+                        aria-label="Change your preferred time"
+                        className="bg-background text-primary hover:text-primary focus:ring-primary h-9 px-3 text-base font-semibold"
                       >
-                        Reset to usual
+                        {formatExactTime(
+                          currentSchedulingTime.hour,
+                          currentSchedulingTime.minute,
+                        )}
                       </Button>
-                    )}
+                      <span className="text-muted-foreground text-sm">
+                        (±15 min)
+                      </span>
+                      {useCustomTime && pattern?.usualTime && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleUseUsualTime}
+                          className="ml-auto sm:ml-2"
+                        >
+                          Reset to usual
+                        </Button>
+                      )}
+                    </div>
                   </div>
+
+                  {dueDateDisplay && dueBannerState && (
+                    <div className={dueBannerState.containerClassName}>
+                      <p className={dueBannerState.titleClassName}>
+                        {dueBannerState.title}
+                      </p>
+                      <p className={dueBannerState.dateClassName}>
+                        {dueDateDisplay}
+                      </p>
+                      <p
+                        className={`mt-0.5 text-xs ${dueBannerState.titleClassName}`}
+                      >
+                        {dueBannerState.subtitle}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </motion.div>
 
@@ -686,6 +913,38 @@ export default function SchedulingWizard({
                     </Button>
                   </div>
 
+                  <div className="mb-3 flex flex-wrap items-center justify-center gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (!dueDateParts) return;
+                        setCurrentMonth(
+                          new Date(
+                            dueDateParts.year,
+                            dueDateParts.month - 1,
+                            1,
+                          ),
+                        );
+                      }}
+                      disabled={!dueDateParts}
+                    >
+                      Jump to Due Date
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const today = new Date();
+                        setCurrentMonth(
+                          new Date(today.getFullYear(), today.getMonth(), 1),
+                        );
+                      }}
+                    >
+                      Jump to Today
+                    </Button>
+                  </div>
+
                   {/* Day Names */}
                   <div className="mb-2 grid grid-cols-7">
                     {DAY_NAMES.map((day) => (
@@ -722,16 +981,23 @@ export default function SchedulingWizard({
                         const hasAvailability = dayHasAvailability(
                           day.availability,
                         );
+                        const hasAvailabilityData = day.availability !== null;
                         const isPrimary =
                           primarySelection?.date === day.dateStr;
                         const isBackup = backupSelection?.date === day.dateStr;
+                        const isDueDate = dueDateYmd === day.dateStr;
+                        const isToday = day.isToday;
+                        const isDueAndToday = isDueDate && isToday;
+                        const isOutOfRange = !hasAvailabilityData;
                         const isDisabled =
                           !hasAvailability ||
                           day.isPast ||
-                          day.isFridayOrSaturday;
+                          day.isFridayOrSaturday ||
+                          isOutOfRange;
 
                         // Check if day is booked (has schedule conflict)
                         const isBooked =
+                          hasAvailabilityData &&
                           !hasAvailability &&
                           !day.isPast &&
                           !day.isFridayOrSaturday;
@@ -739,6 +1005,9 @@ export default function SchedulingWizard({
                         // Determine conflict reason for tooltip
                         const conflictReason =
                           day.availability?.conflictReason ||
+                          (isOutOfRange
+                            ? "Date is outside the scheduling range"
+                            : undefined) ||
                           (day.isPast
                             ? "Date has passed"
                             : day.isFridayOrSaturday
@@ -753,9 +1022,23 @@ export default function SchedulingWizard({
                             }
                             disabled={isDisabled}
                             title={conflictReason}
-                            className={`relative flex h-10 flex-col items-center justify-center rounded-lg text-sm transition-colors sm:h-12 sm:text-base ${isPrimary ? "bg-primary/20 text-primary ring-primary ring-1" : ""} ${isBackup ? "bg-secondary text-secondary-foreground ring-secondary ring-1" : ""} ${day.isToday && !isPrimary && !isBackup ? "text-primary font-bold" : ""} ${day.isFridayOrSaturday && !isPrimary && !isBackup ? "cursor-not-allowed bg-red-50 text-red-400 dark:bg-red-900/20 dark:text-red-500" : ""} ${isBooked && !isPrimary && !isBackup ? "cursor-not-allowed bg-orange-50 text-orange-400 dark:bg-orange-900/20 dark:text-orange-500" : ""} ${day.isPast && !day.isFridayOrSaturday && !isPrimary && !isBackup ? "text-muted-foreground/40 cursor-not-allowed" : ""} ${!isDisabled && !isPrimary && !isBackup ? "hover:bg-accent text-foreground cursor-pointer" : ""} `}
+                            className={`relative flex h-10 flex-col items-center justify-center rounded-lg text-sm transition-colors sm:h-12 sm:text-base ${isPrimary ? "bg-primary/20 text-primary ring-primary ring-1" : ""} ${isBackup ? "bg-secondary text-secondary-foreground ring-secondary ring-1" : ""} ${isDueAndToday && !isPrimary && !isBackup ? "ring-1 ring-sky-500/80" : ""} ${isDueDate && !isToday && !isPrimary && !isBackup ? "ring-1 ring-blue-500/70" : ""} ${isToday && !isDueDate && !isPrimary && !isBackup ? "ring-1 ring-emerald-500/70" : ""} ${isToday && !isPrimary && !isBackup ? "text-primary font-bold" : ""} ${isOutOfRange && !isPrimary && !isBackup ? "bg-muted/40 text-muted-foreground/60 cursor-not-allowed" : ""} ${day.isFridayOrSaturday && !isPrimary && !isBackup ? "cursor-not-allowed bg-red-50 text-red-400 dark:bg-red-900/20 dark:text-red-500" : ""} ${isBooked && !isPrimary && !isBackup ? "cursor-not-allowed bg-orange-50 text-orange-400 dark:bg-orange-900/20 dark:text-orange-500" : ""} ${day.isPast && !day.isFridayOrSaturday && !isPrimary && !isBackup ? "text-muted-foreground/40 cursor-not-allowed" : ""} ${!isDisabled && !isPrimary && !isBackup ? "hover:bg-accent text-foreground cursor-pointer" : ""} `}
                           >
                             {day.date.getDate()}
+                            {(isDueDate || isToday) && (
+                              <span className="absolute top-0.5 left-0.5 flex flex-col gap-0.5">
+                                {isDueDate && (
+                                  <span className="rounded bg-blue-600 px-1 py-0 text-[9px] leading-3 text-white">
+                                    Due
+                                  </span>
+                                )}
+                                {isToday && (
+                                  <span className="rounded bg-emerald-600 px-1 py-0 text-[9px] leading-3 text-white">
+                                    Today
+                                  </span>
+                                )}
+                              </span>
+                            )}
                             {hasAvailability &&
                               !day.isPast &&
                               !day.isFridayOrSaturday &&
@@ -792,6 +1075,16 @@ export default function SchedulingWizard({
                     <div className="flex items-center gap-1">
                       <span className="h-2 w-2 rounded-full bg-red-400" />
                       <span>Closed (Fri/Sat)</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="rounded bg-emerald-600 px-1 py-0 text-[10px] leading-3 text-white">
+                        Today
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <span className="rounded bg-blue-600 px-1 py-0 text-[10px] leading-3 text-white">
+                        Due
+                      </span>
                     </div>
                   </div>
 
@@ -873,6 +1166,20 @@ export default function SchedulingWizard({
                                           currentSchedulingTime.minute,
                                         )}
                                       </p>
+                                      {(() => {
+                                        const relationInfo =
+                                          getDueDateRelationInfo(
+                                            primarySelection.date,
+                                          );
+                                        if (!relationInfo) return null;
+                                        return (
+                                          <p
+                                            className={`mt-1 text-xs ${relationInfo.className}`}
+                                          >
+                                            {relationInfo.label}
+                                          </p>
+                                        );
+                                      })()}
                                     </div>
                                     <Button
                                       variant="ghost"
@@ -931,6 +1238,20 @@ export default function SchedulingWizard({
                                             currentSchedulingTime.minute,
                                           )}
                                         </p>
+                                        {(() => {
+                                          const relationInfo =
+                                            getDueDateRelationInfo(
+                                              backupSelection.date,
+                                            );
+                                          if (!relationInfo) return null;
+                                          return (
+                                            <p
+                                              className={`mt-1 text-xs ${relationInfo.className}`}
+                                            >
+                                              {relationInfo.label}
+                                            </p>
+                                          );
+                                        })()}
                                       </div>
                                       <Button
                                         variant="ghost"
@@ -1112,6 +1433,14 @@ export default function SchedulingWizard({
                             Location:
                           </span>{" "}
                           {invoice.location}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">
+                            Service address:
+                          </span>{" "}
+                          {confirmationDetails.addressConfirmed
+                            ? "Confirmed"
+                            : "Needs update (see instructions)"}
                         </p>
                         <p>
                           <span className="text-muted-foreground">

@@ -334,8 +334,19 @@ export async function createSchedulingRequest(data: {
       return { success: false, error: "Invalid or expired scheduling link" };
     }
 
-    if (!data.confirmationDetails.addressConfirmed) {
-      return { success: false, error: "Please confirm the service address" };
+    const trimmedSpecialInstructions = (
+      data.confirmationDetails.specialInstructions || ""
+    ).trim();
+
+    if (
+      !data.confirmationDetails.addressConfirmed &&
+      !trimmedSpecialInstructions
+    ) {
+      return {
+        success: false,
+        error:
+          "Address not confirmed. Please add the correct service address in Special Instructions.",
+      };
     }
 
     const normalizeDate = (dateValue: string): string =>
@@ -399,7 +410,7 @@ export async function createSchedulingRequest(data: {
       addressConfirmed: data.confirmationDetails.addressConfirmed,
       parkingNotes: data.confirmationDetails.parkingNotes || "",
       accessNotes: data.confirmationDetails.accessNotes || "",
-      specialInstructions: data.confirmationDetails.specialInstructions || "",
+      specialInstructions: trimmedSpecialInstructions,
       preferredContact: data.confirmationDetails.preferredContact,
       customContactMethod: data.confirmationDetails.customContactMethod || "",
       onSiteContactName: data.confirmationDetails.onSiteContactName,
@@ -757,13 +768,10 @@ export async function refreshAvailabilityAction(
       .lean();
     const hours = (invoice as any)?.estimatedHours || estimatedHours;
 
-    // Get availability for next 12 weeks
-    const startDate = new Date();
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + 84); // 12 weeks
-
-    // Import getAvailableDays dynamically to avoid circular dependency
-    const { getAvailableDays } = await import("../autoScheduling.data");
+    // Import dynamically to avoid circular dependency
+    const { getAvailableDays, getSchedulingDateRange } =
+      await import("../autoScheduling.data");
+    const { startDate, endDate } = getSchedulingDateRange(jobsDueSoon.dateDue);
 
     return await getAvailableDays(
       startDate.toISOString().slice(0, 10),
@@ -818,6 +826,7 @@ interface ConfirmWithInvoiceData {
   confirmedDate: string;
   confirmedTime: RequestedTime;
   sourceInvoiceId: string; // The invoice to copy data from
+  assignedTechnicians?: string[];
   internalNotes?: string;
 }
 
@@ -961,7 +970,10 @@ export async function confirmSchedulingWithInvoice(
       jobTitle: sourceInvoice.jobTitle,
       location: sourceInvoice.location,
       startDateTime,
-      assignedTechnicians: [],
+      assignedTechnicians:
+        data.assignedTechnicians?.filter(
+          (technicianId) => typeof technicianId === "string" && technicianId,
+        ) || [],
       confirmed: false,
       hours: (sourceInvoice as any)?.estimatedHours || 4,
       onSiteContact: {
