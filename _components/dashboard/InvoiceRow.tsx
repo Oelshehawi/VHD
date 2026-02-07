@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
 import { updateInvoiceScheduleStatus } from "../../app/lib/actions/actions";
 import { sendCleaningReminderEmail } from "../../app/lib/actions/email.actions";
@@ -34,6 +35,7 @@ import { Badge } from "../ui/badge";
 
 const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
   const router = useRouter();
+  const { user } = useUser();
   const [callLogOpen, setCallLogOpen] = useState(false);
   const [callHistoryOpen, setCallHistoryOpen] = useState(false);
   const [schedulingLinkOpen, setSchedulingLinkOpen] = useState(false);
@@ -56,8 +58,14 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
   };
 
   const lastCall = getLastCallInfo();
-  const needsFollowUp =
-    lastCall?.followUpDate && new Date(lastCall.followUpDate) <= new Date();
+  const todayDatePart = new Date().toISOString().split("T")[0] || "";
+  const followUpDatePart = lastCall?.followUpDate
+    ? (lastCall.followUpDate instanceof Date
+        ? lastCall.followUpDate.toISOString()
+        : String(lastCall.followUpDate)
+      ).split("T")[0] || ""
+    : "";
+  const needsFollowUp = !!followUpDatePart && followUpDatePart <= todayDatePart;
 
   return (
     <TableRow className="group hover:bg-muted/50 cursor-pointer">
@@ -286,8 +294,13 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
         onSend={async (includeSchedulingLink) => {
           try {
             setIsSendingEmail(true);
-            await sendCleaningReminderEmail(invoiceData, includeSchedulingLink);
+            await sendCleaningReminderEmail(
+              invoiceData,
+              includeSchedulingLink,
+              user?.fullName || user?.firstName || user?.id || "user",
+            );
             toast.success("Reminder email sent successfully");
+            router.refresh();
           } catch (error) {
             console.error("Error sending email:", error);
             toast.error("Failed to send reminder email");
@@ -298,6 +311,7 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
         jobTitle={invoiceData.jobTitle}
         isSending={isSendingEmail}
         emailAlreadySent={invoiceData.emailSent}
+        emailHistory={invoiceData.emailHistory || []}
       />
     </TableRow>
   );

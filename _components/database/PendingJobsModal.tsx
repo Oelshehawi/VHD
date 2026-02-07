@@ -236,8 +236,8 @@ const PendingJobsModalContent = ({
 
   return (
     <>
-      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-h-[85vh] w-full max-w-4xl overflow-hidden p-0">
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-h-[90vh] max-w-7xl! w-full overflow-hidden p-0">
           <DialogHeader className="space-y-4 p-6 pb-4">
             <DialogTitle className="text-xl font-bold">
               Pending Jobs
@@ -254,10 +254,10 @@ const PendingJobsModalContent = ({
             </div>
           </DialogHeader>
 
-          <ScrollArea className="max-h-[calc(85vh-140px)] p-6 pt-2">
-            <div className="space-y-6">
+          <ScrollArea className="max-h-[calc(90vh-140px)] p-6 pt-2">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
               {filteredInvoices.length === 0 ? (
-                <p className="text-muted-foreground py-8 text-center">
+                <p className="text-muted-foreground col-span-full py-8 text-center">
                   {searchQuery
                     ? "No jobs match your search."
                     : "No pending jobs."}
@@ -267,9 +267,9 @@ const PendingJobsModalContent = ({
                   return (
                     <div
                       key={invoice._id as string}
-                      className="bg-card rounded-lg border p-6 shadow-sm transition-shadow hover:shadow-md"
+                      className="bg-card h-full rounded-lg border p-5 shadow-sm transition-shadow hover:shadow-md"
                     >
-                      <div className="flex flex-col gap-4 space-y-4 md:flex-row md:items-start md:justify-between md:space-y-0">
+                      <div className="flex flex-col gap-4">
                         <div className="flex-1 space-y-3">
                           <Link href={`/invoices/${invoice._id}`}>
                             <h3 className="text-foreground hover:text-primary line-clamp-2 text-lg font-semibold underline-offset-4 hover:underline">
@@ -304,7 +304,7 @@ const PendingJobsModalContent = ({
                           </div>
                         </div>
 
-                        <div className="flex w-full flex-col space-y-3 md:w-56">
+                        <div className="flex w-full flex-col space-y-3">
                           <Select
                             value={invoice.status}
                             onValueChange={(val) =>

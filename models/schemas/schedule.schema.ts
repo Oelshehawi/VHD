@@ -196,6 +196,19 @@ export const jobsDueSoonSchema = new Schema<DueInvoiceType>({
   dateDue: { type: Date, required: true },
   isScheduled: { type: Boolean, default: false },
   emailSent: { type: Boolean, default: false },
+  emailHistory: {
+    type: [
+      {
+        sentAt: { type: Date, required: true, default: Date.now },
+        recipient: { type: String, required: true },
+        includeSchedulingLink: { type: Boolean, default: true },
+        templateAlias: { type: String, default: "cleaning-due-reminder-1" },
+        messageStream: { type: String, default: "outbound" },
+        performedBy: { type: String },
+      },
+    ],
+    default: [],
+  },
   clientId: {
     type: ObjectId,
     ref: "Client",

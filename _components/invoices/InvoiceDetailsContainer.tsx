@@ -1,6 +1,7 @@
 "use client";
 import { useState, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 import { FaReceipt, FaPaperPlane, FaCreditCard } from "react-icons/fa";
 import { Loader2, FileText, Settings } from "lucide-react";
 import InlineEditInvoice from "./EditInvoiceModal";
@@ -43,6 +44,7 @@ const InvoiceDetailsContainer = ({
   initialReportStatus: { hasSchedule: boolean; hasReport: boolean };
 }) => {
   const { user } = useUser();
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [showBillToOverride, setShowBillToOverride] = useState(false);
@@ -84,6 +86,7 @@ const InvoiceDetailsContainer = ({
       }
       // Close modal after successful send
       setShowConfirmationModal(false);
+      router.refresh();
     },
     successMessage: "Invoice email sent successfully",
     delay: 500,

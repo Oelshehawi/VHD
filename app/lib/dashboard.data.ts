@@ -173,45 +173,65 @@ const fetchJobsDue = async (monthNumber: number, year: number) => {
   ]);
 
   // Serialize and return in DueInvoiceType shape
-  return jobs.map((job) => ({
-    _id: job._id.toString(), // JobsDueSoon _id for scheduling links
-    clientId: job.clientId?.toString(),
-    invoiceId: job.invoiceId,
-    jobTitle: job.jobTitle,
-    dateDue: new Date(
-      Date.UTC(
-        new Date(job.dateDue).getUTCFullYear(),
-        new Date(job.dateDue).getUTCMonth(),
-        new Date(job.dateDue).getUTCDate(),
-      ),
-    ).toISOString(),
-    isScheduled: job.isScheduled || false,
-    emailSent: job.emailSent || false,
-    emailExists: job.emailExists || false,
-    notesExists: job.notesExists || false,
-    schedulingRequestsCount: Number(job.schedulingRequestsCount || 0),
-    // Properly serialize callHistory to avoid MongoDB ObjectId issues
-    callHistory: job.callHistory
-      ? job.callHistory.map((call: any) => ({
-          _id: call._id?.toString() || null,
-          callerId: String(call.callerId || ""),
-          callerName: String(call.callerName || ""),
-          timestamp:
-            call.timestamp instanceof Date
-              ? call.timestamp.toISOString()
-              : String(call.timestamp || ""),
-          outcome: String(call.outcome || ""),
-          notes: String(call.notes || ""),
-          followUpDate:
-            call.followUpDate instanceof Date
-              ? call.followUpDate.toISOString()
-              : call.followUpDate
-                ? String(call.followUpDate)
-                : null,
-          duration: call.duration ? Number(call.duration) : null,
-        }))
-      : [],
-  }));
+  return jobs.map((job) => {
+    const rawDateDue =
+      job.dateDue instanceof Date
+        ? job.dateDue.toISOString()
+        : String(job.dateDue || "");
+    const dateDuePart = rawDateDue.split("T")[0] || rawDateDue;
+
+    return {
+      _id: job._id.toString(), // JobsDueSoon _id for scheduling links
+      clientId: job.clientId?.toString(),
+      invoiceId: job.invoiceId,
+      jobTitle: job.jobTitle,
+      dateDue: `${dateDuePart}T00:00:00.000Z`,
+      isScheduled: job.isScheduled || false,
+      emailSent: job.emailSent || false,
+      emailHistory:
+        job.emailHistory?.map((entry: any) => ({
+          sentAt:
+            entry.sentAt instanceof Date
+              ? entry.sentAt.toISOString()
+              : String(entry.sentAt || ""),
+          recipient: String(entry.recipient || ""),
+          includeSchedulingLink: Boolean(entry.includeSchedulingLink),
+          templateAlias: entry.templateAlias
+            ? String(entry.templateAlias)
+            : undefined,
+          messageStream: entry.messageStream
+            ? String(entry.messageStream)
+            : undefined,
+          performedBy: entry.performedBy
+            ? String(entry.performedBy)
+            : undefined,
+        })) || [],
+      emailExists: job.emailExists || false,
+      notesExists: job.notesExists || false,
+      schedulingRequestsCount: Number(job.schedulingRequestsCount || 0),
+      // Properly serialize callHistory to avoid MongoDB ObjectId issues
+      callHistory: job.callHistory
+        ? job.callHistory.map((call: any) => ({
+            _id: call._id?.toString() || null,
+            callerId: String(call.callerId || ""),
+            callerName: String(call.callerName || ""),
+            timestamp:
+              call.timestamp instanceof Date
+                ? call.timestamp.toISOString()
+                : String(call.timestamp || ""),
+            outcome: String(call.outcome || ""),
+            notes: String(call.notes || ""),
+            followUpDate:
+              call.followUpDate instanceof Date
+                ? call.followUpDate.toISOString()
+                : call.followUpDate
+                  ? String(call.followUpDate)
+                  : null,
+            duration: call.duration ? Number(call.duration) : null,
+          }))
+        : [],
+    };
+  });
 };
 
 /**

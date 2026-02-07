@@ -307,70 +307,109 @@ export async function updateInvoice(
 
     let jobsDueSoonUpdate: any = {};
 
-    if (formData.dateIssued) {
-      const getDateParts = (value: any) => {
-        const dateStr =
-          value instanceof Date ? value.toISOString() : String(value);
-        const datePart = dateStr.split("T")[0] || dateStr;
-        const parts = datePart.split("-");
-        if (parts.length !== 3) return null;
-        const [yearStr, monthStr, dayStr] = parts;
-        const year = Number.parseInt(yearStr || "", 10);
-        const month = Number.parseInt(monthStr || "", 10) - 1;
-        const day = Number.parseInt(dayStr || "", 10);
-        const isValidNumber =
-          Number.isFinite(year) &&
-          Number.isFinite(month) &&
-          Number.isFinite(day);
-        const isValidRange = month >= 0 && month <= 11 && day >= 1 && day <= 31;
-        if (!isValidNumber || !isValidRange) return null;
-        return { year, month, day };
-      };
+    const getDateParts = (value: any) => {
+      const dateStr =
+        value instanceof Date ? value.toISOString() : String(value);
+      const datePart = dateStr.split("T")[0] || dateStr;
+      const parts = datePart.split("-");
+      if (parts.length !== 3) return null;
+      const [yearStr, monthStr, dayStr] = parts;
+      const year = Number.parseInt(yearStr || "", 10);
+      const month = Number.parseInt(monthStr || "", 10) - 1;
+      const day = Number.parseInt(dayStr || "", 10);
+      const isValidNumber =
+        Number.isFinite(year) && Number.isFinite(month) && Number.isFinite(day);
+      const isValidRange = month >= 0 && month <= 11 && day >= 1 && day <= 31;
+      if (!isValidNumber || !isValidRange) return null;
+      return { year, month, day };
+    };
 
-      const nextParts = getDateParts(formData.dateIssued);
-      const currentParts = currentInvoice?.dateIssued
-        ? getDateParts(currentInvoice.dateIssued)
-        : null;
-      const dateChanged =
-        !currentParts ||
-        !nextParts ||
-        currentParts.year !== nextParts.year ||
-        currentParts.month !== nextParts.month ||
-        currentParts.day !== nextParts.day;
+    const areDatePartsEqual = (
+      a: { year: number; month: number; day: number } | null,
+      b: { year: number; month: number; day: number } | null,
+    ) => {
+      if (!a || !b) return false;
+      return a.year === b.year && a.month === b.month && a.day === b.day;
+    };
 
-      if (dateChanged && nextParts) {
-        const frequency = formData.frequency ?? currentInvoice?.frequency;
-        const nextDateIssued = new Date(
-          Date.UTC(nextParts.year, nextParts.month, nextParts.day),
+    const currentIssuedParts = currentInvoice?.dateIssued
+      ? getDateParts(currentInvoice.dateIssued)
+      : null;
+    const nextIssuedParts = getDateParts(
+      formData.dateIssued ?? currentInvoice?.dateIssued,
+    );
+    const dateIssuedChanged = formData.dateIssued
+      ? !areDatePartsEqual(
+          currentIssuedParts,
+          getDateParts(formData.dateIssued),
+        )
+      : false;
+
+    const currentDueParts = currentInvoice?.dateDue
+      ? getDateParts(currentInvoice.dateDue)
+      : null;
+    const submittedDueParts = formData.dateDue
+      ? getDateParts(formData.dateDue)
+      : null;
+    const dateDueChanged =
+      !!formData.dateDue &&
+      !areDatePartsEqual(currentDueParts, submittedDueParts);
+
+    const currentFrequency = Number(currentInvoice?.frequency);
+    const nextFrequency = Number(
+      formData.frequency ?? currentInvoice?.frequency,
+    );
+    const frequencyChanged =
+      formData.frequency !== undefined &&
+      Number.isFinite(currentFrequency) &&
+      Number.isFinite(nextFrequency) &&
+      currentFrequency !== nextFrequency;
+
+    // Keep JobsDueSoon aligned whenever due-date inputs change.
+    const shouldSyncJobsDueSoonDate =
+      !!nextIssuedParts &&
+      (dateIssuedChanged || frequencyChanged || dateDueChanged);
+
+    if (shouldSyncJobsDueSoonDate && nextIssuedParts) {
+      const nextDateIssued = new Date(
+        Date.UTC(
+          nextIssuedParts.year,
+          nextIssuedParts.month,
+          nextIssuedParts.day,
+        ),
+      );
+      const newDateDue = calculateDueDate(
+        nextDateIssued,
+        formData.frequency ?? currentInvoice?.frequency,
+      );
+      if (newDateDue) {
+        jobsDueSoonUpdate.dateDue = newDateDue;
+      }
+    }
+
+    if (dateIssuedChanged && nextIssuedParts) {
+      // Recalculate nextReminderDate if reminders are enabled and none have been sent
+      const reminderSettings = currentInvoice?.paymentReminders;
+      const shouldRecalcReminders =
+        reminderSettings?.enabled &&
+        reminderSettings.frequency &&
+        reminderSettings.frequency !== "none" &&
+        (!reminderSettings.reminderHistory ||
+          reminderSettings.reminderHistory.length === 0);
+
+      if (shouldRecalcReminders) {
+        // nextIssuedParts.month is 0-indexed here, but helper expects 1-indexed
+        const nextReminderDate = calculateNextReminderDateFromParts(
+          {
+            year: nextIssuedParts.year,
+            month: nextIssuedParts.month + 1,
+            day: nextIssuedParts.day,
+          },
+          reminderSettings.frequency,
         );
-        const newDateDue = calculateDueDate(nextDateIssued, frequency);
-        if (newDateDue) {
-          jobsDueSoonUpdate.dateDue = newDateDue;
-        }
-
-        // Recalculate nextReminderDate if reminders are enabled and none have been sent
-        const reminderSettings = currentInvoice?.paymentReminders;
-        const shouldRecalcReminders =
-          reminderSettings?.enabled &&
-          reminderSettings.frequency &&
-          reminderSettings.frequency !== "none" &&
-          (!reminderSettings.reminderHistory ||
-            reminderSettings.reminderHistory.length === 0);
-
-        if (shouldRecalcReminders) {
-          // nextParts.month is 0-indexed from getDateParts, but calculateNextReminderDateFromParts expects 1-indexed
-          const nextReminderDate = calculateNextReminderDateFromParts(
-            {
-              year: nextParts.year,
-              month: nextParts.month + 1,
-              day: nextParts.day,
-            },
-            reminderSettings.frequency,
-          );
-          await Invoice.findByIdAndUpdate(invoiceId, {
-            "paymentReminders.nextReminderDate": nextReminderDate,
-          });
-        }
+        await Invoice.findByIdAndUpdate(invoiceId, {
+          "paymentReminders.nextReminderDate": nextReminderDate,
+        });
       }
     }
 

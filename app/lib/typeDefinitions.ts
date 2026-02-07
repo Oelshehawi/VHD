@@ -12,6 +12,24 @@ export interface CallLogEntry {
   duration?: number; // in minutes, optional for manual entry
 }
 
+export interface CleaningReminderEmailHistoryEntry {
+  sentAt: Date | string;
+  recipient: string;
+  includeSchedulingLink: boolean;
+  templateAlias?: string;
+  messageStream?: string;
+  performedBy?: string;
+}
+
+export interface InvoiceEmailHistoryEntry {
+  sentAt: Date | string;
+  recipients: string[];
+  includeReport: boolean;
+  templateAlias?: string;
+  messageStream?: string;
+  performedBy?: string;
+}
+
 export type SearchParamProps = {
   params: { [key: string]: string };
   searchParams: { [key: string]: string | string[] | undefined };
@@ -244,6 +262,7 @@ export interface InvoiceType {
   photos?: PhotoType[];
   signature?: SignatureType;
   callHistory?: CallLogEntry[];
+  emailDeliveryHistory?: InvoiceEmailHistoryEntry[];
 }
 
 export interface InvoiceItem {
@@ -371,6 +390,7 @@ export interface DueInvoiceType {
   dateDue: Date | string;
   isScheduled: boolean;
   emailSent: boolean;
+  emailHistory?: CleaningReminderEmailHistoryEntry[];
   emailExists?: boolean;
   notesExists?: boolean;
   callHistory?: CallLogEntry[];

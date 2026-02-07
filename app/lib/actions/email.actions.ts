@@ -43,6 +43,7 @@ function buildExistingPortalAccessUrl(
 export async function sendCleaningReminderEmail(
   dueInvoiceData: DueInvoiceType,
   includeSchedulingLink: boolean = true,
+  performedBy: string = "system",
 ) {
   await connectMongo();
 
@@ -110,7 +111,19 @@ export async function sendCleaningReminderEmail(
     // Update emailSent field in JobsDueSoon
     await JobsDueSoon.findOneAndUpdate(
       { invoiceId: invoiceId },
-      { $set: { emailSent: true } },
+      {
+        $set: { emailSent: true },
+        $push: {
+          emailHistory: {
+            sentAt: new Date(),
+            recipient: clientEmail,
+            includeSchedulingLink,
+            templateAlias: "cleaning-due-reminder-1",
+            messageStream: "outbound",
+            performedBy,
+          },
+        },
+      },
       { new: true },
     );
 
@@ -199,13 +212,12 @@ export async function sendInvoiceDeliveryEmail(
     const baseMonth = parseInt(parts[1], 10) - 1; // JS months are 0-indexed
     const baseDay = parseInt(parts[2], 10);
 
-    // Create date in local timezone
-    const issueDate = new Date(baseYear, baseMonth, baseDay);
-    const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + 14);
+    // Build UTC dates from parsed parts to avoid timezone drift.
+    const issueDate = new Date(Date.UTC(baseYear, baseMonth, baseDay));
+    const dueDate = new Date(issueDate.getTime());
+    dueDate.setUTCDate(dueDate.getUTCDate() + 14);
 
-    // Use formatDateStringUTC to avoid timezone shift
-    const { formatDateStringUTC } = await import("../utils");
+    // Use UTC-safe formatter for display.
     const formattedDueDate = formatDateStringUTC(dueDate);
     const formattedIssueDate = formatDateStringUTC(issueDate);
 
@@ -477,6 +489,19 @@ export async function sendInvoiceDeliveryEmail(
         },
       },
       success: true,
+    });
+
+    await Invoice.findByIdAndUpdate(invoiceId, {
+      $push: {
+        emailDeliveryHistory: {
+          sentAt: new Date(),
+          recipients: emailRecipients,
+          includeReport,
+          templateAlias: "invoice-delivery-1",
+          messageStream: "invoice-delivery",
+          performedBy,
+        },
+      },
     });
 
     revalidatePath("/invoices");

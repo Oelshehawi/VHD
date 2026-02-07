@@ -228,6 +228,26 @@ export const fetchInvoiceById = async (invoiceId: string) => {
               : call.followUpDate,
           duration: call.duration,
         })) || [],
+      emailDeliveryHistory:
+        invoice.emailDeliveryHistory?.map((entry: any) => ({
+          sentAt:
+            entry.sentAt instanceof Date
+              ? entry.sentAt.toISOString()
+              : String(entry.sentAt || ""),
+          recipients: Array.isArray(entry.recipients)
+            ? entry.recipients.map((recipient: any) => String(recipient))
+            : [],
+          includeReport: Boolean(entry.includeReport),
+          templateAlias: entry.templateAlias
+            ? String(entry.templateAlias)
+            : undefined,
+          messageStream: entry.messageStream
+            ? String(entry.messageStream)
+            : undefined,
+          performedBy: entry.performedBy
+            ? String(entry.performedBy)
+            : undefined,
+        })) || [],
       paymentReminders: invoice.paymentReminders
         ? {
             enabled: invoice.paymentReminders.enabled,

@@ -112,6 +112,19 @@ export const invoiceSchema = new Schema<InvoiceType>({
     ],
   },
   callHistory: { type: [CallLogEntrySchema], default: [] },
+  emailDeliveryHistory: {
+    type: [
+      {
+        sentAt: { type: Date, required: true, default: Date.now },
+        recipients: { type: [String], required: true, default: [] },
+        includeReport: { type: Boolean, default: false },
+        templateAlias: { type: String, default: "invoice-delivery-1" },
+        messageStream: { type: String, default: "invoice-delivery" },
+        performedBy: { type: String },
+      },
+    ],
+    default: [],
+  },
 });
 
 // Indexes for invoice queries

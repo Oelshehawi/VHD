@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { Mail, Link2, CheckCircle2 } from "lucide-react";
+import { formatDateTimeStringUTC } from "../../app/lib/utils";
+import { CleaningReminderEmailHistoryEntry } from "../../app/lib/typeDefinitions";
 import {
   Dialog,
   DialogContent,
@@ -21,6 +23,7 @@ interface SendCleaningReminderDialogProps {
   jobTitle: string;
   isSending: boolean;
   emailAlreadySent: boolean;
+  emailHistory: CleaningReminderEmailHistoryEntry[];
 }
 
 export default function SendCleaningReminderDialog({
@@ -30,8 +33,14 @@ export default function SendCleaningReminderDialog({
   jobTitle,
   isSending,
   emailAlreadySent,
+  emailHistory,
 }: SendCleaningReminderDialogProps) {
   const [includeSchedulingLink, setIncludeSchedulingLink] = useState(true);
+  const toSortableTimestamp = (value: Date | string) =>
+    value instanceof Date ? value.toISOString() : String(value || "");
+  const sortedEmailHistory = [...(emailHistory || [])].sort((a, b) =>
+    toSortableTimestamp(b.sentAt).localeCompare(toSortableTimestamp(a.sentAt)),
+  );
 
   const handleSend = async () => {
     await onSend(includeSchedulingLink);
@@ -68,6 +77,38 @@ export default function SendCleaningReminderDialog({
                   A reminder was previously sent. You can send another if
                   needed.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {sortedEmailHistory.length > 0 && (
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-sm font-medium">Reminder Email Timeline</p>
+              <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
+                {sortedEmailHistory.map((entry, index) => (
+                  <div
+                    key={`${entry.recipient}-${entry.sentAt}-${index}`}
+                    className="bg-muted/50 rounded-md border p-2"
+                  >
+                    <p className="text-sm font-medium">
+                      {formatDateTimeStringUTC(entry.sentAt)}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      To: {entry.recipient}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Scheduling link:{" "}
+                      {entry.includeSchedulingLink
+                        ? "Included"
+                        : "Not included"}
+                    </p>
+                    {entry.performedBy && (
+                      <p className="text-muted-foreground text-xs">
+                        Sent by: {entry.performedBy}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

@@ -2,7 +2,11 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
-import { calculateSubtotal, calculateGST } from "../../app/lib/utils";
+import {
+  calculateSubtotal,
+  calculateGST,
+  formatDateTimeStringUTC,
+} from "../../app/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -108,6 +112,14 @@ export default function SendInvoiceModal({
   const subtotal = calculateSubtotal(invoice.items);
   const gst = calculateGST(subtotal);
   const total = subtotal + gst;
+  const toSortableTimestamp = (value: Date | string) =>
+    value instanceof Date ? value.toISOString() : String(value || "");
+  const sortedDeliveryHistory = [...(invoice.emailDeliveryHistory || [])].sort(
+    (a, b) =>
+      toSortableTimestamp(b.sentAt).localeCompare(
+        toSortableTimestamp(a.sentAt),
+      ),
+  );
 
   // Validate email format
   const isValidEmail = (email: string) => {
@@ -203,6 +215,35 @@ export default function SendInvoiceModal({
                   The cleaning report for this job has not been completed. You
                   must complete the report before sending the invoice.
                 </p>
+              </div>
+            </div>
+          )}
+
+          {sortedDeliveryHistory.length > 0 && (
+            <div className="space-y-2 rounded-lg border p-3">
+              <p className="text-sm font-medium">Invoice Email Timeline</p>
+              <div className="max-h-44 space-y-2 overflow-y-auto pr-1">
+                {sortedDeliveryHistory.map((entry, index) => (
+                  <div
+                    key={`${entry.sentAt}-${index}`}
+                    className="bg-muted/50 rounded-md border p-2"
+                  >
+                    <p className="text-sm font-medium">
+                      {formatDateTimeStringUTC(entry.sentAt)}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      To: {(entry.recipients || []).join(", ")}
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Report attached: {entry.includeReport ? "Yes" : "No"}
+                    </p>
+                    {entry.performedBy && (
+                      <p className="text-muted-foreground text-xs">
+                        Sent by: {entry.performedBy}
+                      </p>
+                    )}
+                  </div>
+                ))}
               </div>
             </div>
           )}

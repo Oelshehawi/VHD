@@ -96,18 +96,21 @@ async function TopRowSection() {
   const overdueInvoices = invoices.filter((inv) => inv.status === "overdue");
 
   const now = new Date();
-  const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentMonthStartDatePart = `${now.getFullYear()}-${String(
+    now.getMonth() + 1,
+  ).padStart(2, "0")}-01`;
   const urgentUnscheduledJobs = unscheduledJobs.filter((job) => {
-    const dueDate = new Date(job.dateDue);
-    return dueDate < currentMonthStart;
+    const dateInput =
+      job.dateDue instanceof Date
+        ? job.dateDue.toISOString()
+        : String(job.dateDue);
+    const dueDatePart = dateInput.split("T")[0] || dateInput;
+    return dueDatePart < currentMonthStartDatePart;
   });
 
   return (
     <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
-      <PendingAmountContainer
-        amount={totalAmount}
-        pendingInvoices={invoices}
-      />
+      <PendingAmountContainer amount={totalAmount} pendingInvoices={invoices} />
       <UrgentAttention
         overdueInvoices={overdueInvoices}
         unscheduledJobs={urgentUnscheduledJobs}
