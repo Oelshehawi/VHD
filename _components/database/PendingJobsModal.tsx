@@ -13,16 +13,13 @@ import {
   PaymentInfo,
   PaymentReminderSettings,
 } from "../../app/lib/typeDefinitions";
-import { FaCog, FaPhone, FaHistory, FaSearch } from "react-icons/fa";
+import { FaSearch, FaComments } from "react-icons/fa";
 import { CgUnavailable } from "react-icons/cg";
 import { updateInvoice } from "../../app/lib/actions/actions";
 import { toast } from "sonner";
 import { formatAmount, formatDateStringUTC } from "../../app/lib/utils";
 import Link from "next/link";
 import PaymentModal from "../payments/PaymentModal";
-import ReminderConfigModal from "./ReminderConfigModal";
-import CallLogModal from "./CallLogModal";
-import CallHistoryModal from "./CallHistoryModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -35,6 +32,7 @@ import {
 } from "../ui/select";
 import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
+import UnifiedCommunicationsModal from "../communications/UnifiedCommunicationsModal";
 
 interface ExtendedPendingInvoiceType extends PendingInvoiceType {
   emailExists?: boolean;
@@ -55,21 +53,10 @@ const PendingJobsModalContent = ({
   const { user } = useUser();
   const [isPending, startTransition] = useTransition();
   const [showPaymentModal, setShowPaymentModal] = useState<string | null>(null);
-  const [showReminderModal, setShowReminderModal] = useState<string | null>(
-    null,
-  );
-  const [callLogOpen, setCallLogOpen] = useState(false);
-  const [callLogContext, setCallLogContext] = useState<{
-    type: "job" | "invoice";
-    id: string;
+  const [communicationsContext, setCommunicationsContext] = useState<{
+    invoiceId: string;
     title: string;
-    clientName?: string;
   } | null>(null);
-  const [callHistoryOpen, setCallHistoryOpen] = useState(false);
-  const [callHistoryData, setCallHistoryData] = useState<{
-    callHistory: any[];
-    jobTitle: string;
-  }>({ callHistory: [], jobTitle: "" });
   const [searchQuery, setSearchQuery] = useState("");
 
   const [optimisticInvoices, setOptimisticInvoice] = useOptimistic(
@@ -236,11 +223,11 @@ const PendingJobsModalContent = ({
 
   return (
     <>
-    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="max-h-[90vh] max-w-7xl! w-full overflow-hidden p-0">
+      <Dialog open={isOpen} onOpenChange={handleOpenChange}>
+        <DialogContent className="max-h-[90vh] w-full max-w-7xl! overflow-hidden p-0">
           <DialogHeader className="space-y-4 p-6 pb-4">
             <DialogTitle className="text-xl font-bold">
-              Pending Jobs
+              Pending Payments
             </DialogTitle>
             <div className="relative">
               <FaSearch className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
@@ -259,11 +246,14 @@ const PendingJobsModalContent = ({
               {filteredInvoices.length === 0 ? (
                 <p className="text-muted-foreground col-span-full py-8 text-center">
                   {searchQuery
-                    ? "No jobs match your search."
-                    : "No pending jobs."}
+                    ? "No invoices match your search."
+                    : "No pending payments."}
                 </p>
               ) : (
                 filteredInvoices.map((invoice) => {
+                  const communicationsCount = Number(
+                    invoice.communicationsCount || 0,
+                  );
                   return (
                     <div
                       key={invoice._id as string}
@@ -330,59 +320,28 @@ const PendingJobsModalContent = ({
                             </SelectContent>
                           </Select>
 
-                          {/* Call Logging Buttons */}
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => {
-                                setCallLogContext({
-                                  type: "invoice",
-                                  id: invoice._id as string,
-                                  title: invoice.jobTitle,
-                                });
-                                setCallLogOpen(true);
-                              }}
-                              className="flex-1"
-                              title="Log payment call"
-                            >
-                              <FaPhone className="mr-2 h-3 w-3" />
-                              Log Call
-                            </Button>
-                            {invoice.callHistory &&
-                              invoice.callHistory.length > 0 && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => {
-                                    setCallHistoryData({
-                                      callHistory: invoice.callHistory || [],
-                                      jobTitle: invoice.jobTitle,
-                                    });
-                                    setCallHistoryOpen(true);
-                                  }}
-                                  className="px-2"
-                                  title="View call history"
-                                >
-                                  <FaHistory className="h-3 w-3" />
-                                  <span className="ml-1 text-xs">
-                                    {invoice.callHistory.length}
-                                  </span>
-                                </Button>
-                              )}
-                          </div>
-
-                          {/* Configure Reminders Button */}
                           <Button
-                            variant="default"
+                            variant="outline"
                             size="sm"
                             onClick={() =>
-                              setShowReminderModal(invoice._id as string)
+                              setCommunicationsContext({
+                                invoiceId: invoice._id as string,
+                                title: invoice.jobTitle,
+                              })
                             }
-                            title="Configure auto reminders"
                           >
-                            <FaCog className="mr-2 h-4 w-4" />
-                            Configure Reminders
+                            <FaComments className="mr-2 h-3 w-3" />
+                            <span className="flex items-center gap-2">
+                              Communications
+                              {communicationsCount > 0 && (
+                                <Badge
+                                  variant="secondary"
+                                  className="px-2 text-[10px]"
+                                >
+                                  {communicationsCount}
+                                </Badge>
+                              )}
+                            </span>
                           </Button>
 
                           {/* Reminder Status Badge */}
@@ -408,40 +367,19 @@ const PendingJobsModalContent = ({
         isLoading={isPending}
       />
 
-      {/* Reminder Configuration Modal */}
-      <ReminderConfigModal
-        isOpen={!!showReminderModal}
-        onClose={() => setShowReminderModal(null)}
-        invoiceId={showReminderModal || ""}
-        onSettingsUpdate={(invoiceId, settings) => {
-          // Optimistic update for settings
-          startTransition(() => {
-            setOptimisticInvoice({ id: invoiceId, paymentReminders: settings });
-          });
-        }}
-      />
-
-      {/* Call Log Modal */}
-      {callLogContext && (
-        <CallLogModal
-          open={callLogOpen}
-          onClose={() => {
-            setCallLogOpen(false);
-            setCallLogContext(null);
-          }}
-          context={callLogContext}
-        />
-      )}
-
-      {/* Call History Modal */}
-      <CallHistoryModal
-        open={callHistoryOpen}
-        onClose={() => {
-          setCallHistoryOpen(false);
-          setCallHistoryData({ callHistory: [], jobTitle: "" });
-        }}
-        callHistory={callHistoryData.callHistory}
-        jobTitle={callHistoryData.jobTitle}
+      <UnifiedCommunicationsModal
+        open={Boolean(communicationsContext)}
+        onClose={() => setCommunicationsContext(null)}
+        hideSendInvoice={true}
+        context={
+          communicationsContext
+            ? {
+                type: "invoice",
+                invoiceId: communicationsContext.invoiceId,
+                title: communicationsContext.title,
+              }
+            : null
+        }
       />
     </>
   );

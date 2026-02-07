@@ -11,6 +11,7 @@ import {
   fetchRecentActions,
   fetchJobsDueData,
 } from "../../lib/dashboard.data";
+import { getUrgentFollowUpItems } from "../../lib/communications.data";
 import ActionsFeed from "../../../_components/dashboard/ActionsFeed";
 import MobileTabInterface from "../../../_components/dashboard/MobileTabInterface";
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
@@ -88,10 +89,12 @@ const DashboardPage = () => {
 
 // Async server component for top row
 async function TopRowSection() {
-  const [{ invoices, totalAmount }, unscheduledJobs] = await Promise.all([
-    getPendingInvoicesData(),
-    getUnscheduledJobs(), // Keep fetching all for admin visibility
-  ]);
+  const [{ invoices, totalAmount }, unscheduledJobs, followUpItems] =
+    await Promise.all([
+      getPendingInvoicesData(),
+      getUnscheduledJobs(), // Keep fetching all for admin visibility
+      getUrgentFollowUpItems(),
+    ]);
 
   const overdueInvoices = invoices.filter((inv) => inv.status === "overdue");
 
@@ -114,6 +117,7 @@ async function TopRowSection() {
       <UrgentAttention
         overdueInvoices={overdueInvoices}
         unscheduledJobs={urgentUnscheduledJobs}
+        followUpItems={followUpItems}
       />
     </div>
   );

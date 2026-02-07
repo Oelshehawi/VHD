@@ -331,76 +331,95 @@ export const getPendingInvoices = async () => {
 };
 
 const formatPendingInvoices = (invoices: any[]) => {
-  return invoices.map((invoice) => ({
-    _id: invoice._id.toString(),
-    invoiceId: invoice.invoiceId,
-    jobTitle: invoice.jobTitle,
-    status: invoice.status,
-    paymentReminders: invoice.paymentReminders
-      ? {
-          enabled: invoice.paymentReminders.enabled,
-          frequency: invoice.paymentReminders.frequency,
-          nextReminderDate:
-            invoice.paymentReminders.nextReminderDate instanceof Date
-              ? invoice.paymentReminders.nextReminderDate.toISOString()
-              : invoice.paymentReminders.nextReminderDate,
-          lastReminderSent:
-            invoice.paymentReminders.lastReminderSent instanceof Date
-              ? invoice.paymentReminders.lastReminderSent.toISOString()
-              : invoice.paymentReminders.lastReminderSent,
-          reminderHistory:
-            invoice.paymentReminders.reminderHistory?.map((entry: any) => {
-              // Create a new plain object without MongoDB properties
-              const plainEntry: any = {};
-              if (entry.sentAt !== undefined) {
-                plainEntry.sentAt =
-                  entry.sentAt instanceof Date
-                    ? entry.sentAt.toISOString()
-                    : String(entry.sentAt);
-              }
-              if (entry.emailTemplate !== undefined) {
-                plainEntry.emailTemplate = entry.emailTemplate;
-              }
-              if (entry.success !== undefined) {
-                plainEntry.success = entry.success;
-              }
-              if (entry.sequence !== undefined) {
-                plainEntry.sequence = entry.sequence;
-              }
-              if (entry.errorMessage !== undefined) {
-                plainEntry.errorMessage = entry.errorMessage;
-              }
-              return plainEntry;
-            }) || [],
-        }
-      : {
-          enabled: false,
-          frequency: "none",
-        },
-    callHistory:
-      invoice.callHistory?.map((call: any) => ({
-        _id: call._id?.toString(),
-        callerId: call.callerId,
-        callerName: call.callerName,
-        timestamp:
-          call.timestamp instanceof Date
-            ? call.timestamp.toISOString()
-            : call.timestamp,
-        outcome: call.outcome,
-        notes: call.notes,
-        followUpDate:
-          call.followUpDate instanceof Date
-            ? call.followUpDate.toISOString()
-            : call.followUpDate,
-        duration: call.duration,
-      })) || [],
-    emailExists: invoice.emailExists,
-    dateIssued: invoice.dateIssued.toISOString().split("T")[0],
-    amount: invoice.items.reduce(
-      (acc: number, item: { price: number }) => acc + item.price,
-      0,
-    ),
-  }));
+  return invoices.map((invoice) => {
+    const reminderHistoryCount = Array.isArray(
+      invoice.paymentReminders?.reminderHistory,
+    )
+      ? invoice.paymentReminders.reminderHistory.length
+      : 0;
+    const callHistoryCount = Array.isArray(invoice.callHistory)
+      ? invoice.callHistory.length
+      : 0;
+    const emailDeliveryHistoryCount = Array.isArray(
+      invoice.emailDeliveryHistory,
+    )
+      ? invoice.emailDeliveryHistory.length
+      : 0;
+
+    return {
+      _id: invoice._id.toString(),
+      invoiceId: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+      status: invoice.status,
+      paymentReminders: invoice.paymentReminders
+        ? {
+            enabled: invoice.paymentReminders.enabled,
+            frequency: invoice.paymentReminders.frequency,
+            nextReminderDate:
+              invoice.paymentReminders.nextReminderDate instanceof Date
+                ? invoice.paymentReminders.nextReminderDate.toISOString()
+                : invoice.paymentReminders.nextReminderDate,
+            lastReminderSent:
+              invoice.paymentReminders.lastReminderSent instanceof Date
+                ? invoice.paymentReminders.lastReminderSent.toISOString()
+                : invoice.paymentReminders.lastReminderSent,
+            reminderHistory:
+              invoice.paymentReminders.reminderHistory?.map((entry: any) => {
+                // Create a new plain object without MongoDB properties
+                const plainEntry: any = {};
+                if (entry.sentAt !== undefined) {
+                  plainEntry.sentAt =
+                    entry.sentAt instanceof Date
+                      ? entry.sentAt.toISOString()
+                      : String(entry.sentAt);
+                }
+                if (entry.emailTemplate !== undefined) {
+                  plainEntry.emailTemplate = entry.emailTemplate;
+                }
+                if (entry.success !== undefined) {
+                  plainEntry.success = entry.success;
+                }
+                if (entry.sequence !== undefined) {
+                  plainEntry.sequence = entry.sequence;
+                }
+                if (entry.errorMessage !== undefined) {
+                  plainEntry.errorMessage = entry.errorMessage;
+                }
+                return plainEntry;
+              }) || [],
+          }
+        : {
+            enabled: false,
+            frequency: "none",
+          },
+      callHistory:
+        invoice.callHistory?.map((call: any) => ({
+          _id: call._id?.toString(),
+          callerId: call.callerId,
+          callerName: call.callerName,
+          timestamp:
+            call.timestamp instanceof Date
+              ? call.timestamp.toISOString()
+              : call.timestamp,
+          outcome: call.outcome,
+          notes: call.notes,
+          followUpDate:
+            call.followUpDate instanceof Date
+              ? call.followUpDate.toISOString()
+              : call.followUpDate,
+          duration: call.duration,
+        })) || [],
+      emailExists: invoice.emailExists,
+      dateIssued: invoice.dateIssued.toISOString().split("T")[0],
+      amount: invoice.items.reduce(
+        (acc: number, item: { price: number }) => acc + item.price,
+        0,
+      ),
+      emailDeliveryHistoryCount,
+      communicationsCount:
+        callHistoryCount + reminderHistoryCount + emailDeliveryHistoryCount,
+    };
+  });
 };
 
 export const fetchYearlySalesData = async (

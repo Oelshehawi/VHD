@@ -146,3 +146,48 @@ export const calculateNextReminderDateFromParts = (
     0,
   );
 };
+
+/**
+ * Format communication timestamps using the viewer's local timezone.
+ *
+ * Communication events represent exact instants (calls/emails), so local-time
+ * rendering is preferred for operator context. This is display-only and does
+ * not change persistence behavior.
+ */
+export const formatCommunicationDateTimeLocal = (
+  dateInput: string | Date,
+): string => {
+  let dateObj: Date;
+
+  if (dateInput instanceof Date) {
+    dateObj = dateInput;
+  } else {
+    const raw = String(dateInput || "").trim();
+    if (!raw) return "Invalid Date";
+
+    // If only a calendar date is present, show midnight local.
+    if (!raw.includes("T")) {
+      const dateParts = parseDateParts(raw);
+      if (!dateParts) return "Invalid Date";
+      dateObj = new Date(dateParts.year, dateParts.month - 1, dateParts.day);
+    } else {
+      dateObj = new Date(raw);
+    }
+  }
+
+  if (Number.isNaN(dateObj.getTime())) {
+    return "Invalid Date";
+  }
+
+  const datePart = new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(dateObj);
+  const timePart = new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+  }).format(dateObj);
+
+  return `${datePart} at ${timePart}`;
+};

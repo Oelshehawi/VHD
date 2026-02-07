@@ -25,6 +25,7 @@ import { DatePicker } from "../ui/date-picker";
 interface CallLogModalProps {
   open: boolean;
   onClose: () => void;
+  onLogged?: () => void | Promise<void>;
   context: {
     type: "job" | "invoice";
     id: string;
@@ -33,7 +34,12 @@ interface CallLogModalProps {
   };
 }
 
-const CallLogModal = ({ open, onClose, context }: CallLogModalProps) => {
+const CallLogModal = ({
+  open,
+  onClose,
+  onLogged,
+  context,
+}: CallLogModalProps) => {
   const { user } = useUser();
   const [selectedOutcome, setSelectedOutcome] = useState<CallOutcome | null>(
     null,
@@ -83,6 +89,7 @@ const CallLogModal = ({ open, onClose, context }: CallLogModalProps) => {
       }
 
       if (result && result.success) {
+        await onLogged?.();
         toast.success("Call logged successfully");
         handleClose();
       } else {

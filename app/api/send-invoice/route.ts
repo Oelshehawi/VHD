@@ -270,6 +270,19 @@ export async function POST(request: Request) {
       success: true,
     });
 
+    await Invoice.findByIdAndUpdate(invoiceRef, {
+      $push: {
+        emailDeliveryHistory: {
+          sentAt: new Date(),
+          recipients: [clientEmail],
+          includeReport: false,
+          templateAlias: "invoice-delivery-1",
+          messageStream: "invoice-delivery",
+          performedBy: technicianId || "system",
+        },
+      },
+    });
+
     return NextResponse.json({
       message: "Invoice sent successfully",
       emailMessageId: emailResult.MessageID,

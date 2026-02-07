@@ -2,7 +2,13 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { AlertTriangle, Clock, CalendarX, Search } from "lucide-react";
+import {
+  AlertTriangle,
+  Clock,
+  CalendarX,
+  Search,
+  PhoneCall,
+} from "lucide-react";
 import { Card, CardContent } from "../ui/card";
 import { Badge } from "../ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -14,33 +20,38 @@ import {
   SelectValue,
 } from "../ui/select";
 import { formatAmount, formatDateStringUTC } from "../../app/lib/utils";
+import type { UrgentFollowUpItem } from "../../app/lib/communications/types";
 
 interface UrgentAttentionProps {
   overdueInvoices: any[];
   unscheduledJobs: any[];
+  followUpItems: UrgentFollowUpItem[];
 }
 
-type FilterType = "all" | "overdue" | "unscheduled";
+type FilterType = "all" | "overdue" | "unscheduled" | "followups";
 
 export default function UrgentAttention({
   overdueInvoices,
   unscheduledJobs,
+  followUpItems,
 }: UrgentAttentionProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [filter, setFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const totalUrgent = overdueInvoices.length + unscheduledJobs.length;
+  const totalUrgent =
+    overdueInvoices.length + unscheduledJobs.length + followUpItems.length;
 
   // Filter items based on filter type and search query
   const filteredItems = useMemo(() => {
     const items: Array<{
       id: string;
-      type: "overdue" | "unscheduled";
+      type: "overdue" | "unscheduled" | "followup";
       title: string;
       subtitle: string;
       badge: string;
       href: string;
+      contextBadge?: string;
     }> = [];
 
     // Add overdue invoices
@@ -73,18 +84,34 @@ export default function UrgentAttention({
       });
     }
 
+    // Add follow-up due items (from call histories only)
+    if (filter === "all" || filter === "followups") {
+      followUpItems.forEach((item) => {
+        items.push({
+          id: item.id,
+          type: "followup",
+          title: item.title,
+          subtitle: item.latestOutcome,
+          badge: `Follow-up: ${formatDateStringUTC(item.followUpDate)}`,
+          href: item.href,
+          contextBadge: item.contextBadge,
+        });
+      });
+    }
+
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       return items.filter(
         (item) =>
           item.title.toLowerCase().includes(query) ||
-          item.subtitle.toLowerCase().includes(query),
+          item.subtitle.toLowerCase().includes(query) ||
+          item.badge.toLowerCase().includes(query),
       );
     }
 
     return items;
-  }, [overdueInvoices, unscheduledJobs, filter, searchQuery]);
+  }, [overdueInvoices, unscheduledJobs, followUpItems, filter, searchQuery]);
 
   if (totalUrgent === 0) {
     return null;
@@ -115,6 +142,11 @@ export default function UrgentAttention({
                     " • "}
                   {unscheduledJobs.length > 0 &&
                     `${unscheduledJobs.length} unscheduled`}
+                  {(overdueInvoices.length > 0 || unscheduledJobs.length > 0) &&
+                    followUpItems.length > 0 &&
+                    " • "}
+                  {followUpItems.length > 0 &&
+                    `${followUpItems.length} follow-ups`}
                 </p>
               </div>
             </div>
@@ -172,6 +204,9 @@ export default function UrgentAttention({
                 <SelectItem value="unscheduled">
                   Unscheduled ({unscheduledJobs.length})
                 </SelectItem>
+                <SelectItem value="followups">
+                  Follow-ups ({followUpItems.length})
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -194,11 +229,23 @@ export default function UrgentAttention({
                     <div className="flex min-w-0 flex-1 items-center gap-3">
                       {item.type === "overdue" ? (
                         <Clock className="text-destructive h-4 w-4 shrink-0" />
+                      ) : item.type === "followup" ? (
+                        <PhoneCall className="h-4 w-4 shrink-0 text-sky-600" />
                       ) : (
                         <CalendarX className="text-muted-foreground h-4 w-4 shrink-0" />
                       )}
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium">{item.title}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="truncate font-medium">{item.title}</p>
+                          {item.contextBadge && (
+                            <Badge
+                              variant="outline"
+                              className="shrink-0 text-[10px]"
+                            >
+                              {item.contextBadge}
+                            </Badge>
+                          )}
+                        </div>
                         <p className="text-muted-foreground truncate text-xs">
                           {item.subtitle}
                         </p>
@@ -206,7 +253,11 @@ export default function UrgentAttention({
                     </div>
                     <Badge
                       variant={
-                        item.type === "overdue" ? "destructive" : "secondary"
+                        item.type === "overdue"
+                          ? "destructive"
+                          : item.type === "followup"
+                            ? "outline"
+                            : "secondary"
                       }
                       className="ml-2 shrink-0"
                     >

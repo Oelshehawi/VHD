@@ -59,6 +59,8 @@ export interface PendingInvoiceType {
   amount: number;
   paymentEmailSent?: boolean;
   callHistory?: CallLogEntry[];
+  emailDeliveryHistoryCount?: number;
+  communicationsCount?: number;
 }
 
 export interface ScheduleType {

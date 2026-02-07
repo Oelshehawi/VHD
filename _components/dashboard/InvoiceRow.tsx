@@ -7,20 +7,14 @@ import { updateInvoiceScheduleStatus } from "../../app/lib/actions/actions";
 import { sendCleaningReminderEmail } from "../../app/lib/actions/email.actions";
 import { formatDateStringUTC } from "../../app/lib/utils";
 import { DueInvoiceType } from "../../app/lib/typeDefinitions";
-import {
-  FaPhone,
-  FaEllipsisV,
-  FaCheck,
-  FaEnvelope,
-  FaHistory,
-} from "react-icons/fa";
-import { ClipboardList, Loader2, Link2 } from "lucide-react";
+import { FaPhone, FaEllipsisV, FaCheck, FaEnvelope } from "react-icons/fa";
+import { ClipboardList, Loader2, Link2, MessageSquare } from "lucide-react";
 import { CALL_OUTCOME_LABELS } from "../../app/lib/callLogConstants";
 import CallLogModal from "../database/CallLogModal";
-import CallHistoryModal from "../database/CallHistoryModal";
 import SchedulingLinkDialog from "./SchedulingLinkDialog";
 import SendCleaningReminderDialog from "./SendCleaningReminderDialog";
 import SchedulingRequestsDialog from "./SchedulingRequestsDialog";
+import UnifiedCommunicationsModal from "../communications/UnifiedCommunicationsModal";
 
 import { TableRow, TableCell } from "../ui/table";
 import { Button } from "../ui/button";
@@ -37,10 +31,10 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
   const router = useRouter();
   const { user } = useUser();
   const [callLogOpen, setCallLogOpen] = useState(false);
-  const [callHistoryOpen, setCallHistoryOpen] = useState(false);
   const [schedulingLinkOpen, setSchedulingLinkOpen] = useState(false);
   const [schedulingRequestsOpen, setSchedulingRequestsOpen] = useState(false);
   const [sendEmailOpen, setSendEmailOpen] = useState(false);
+  const [communicationsOpen, setCommunicationsOpen] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isMarkingScheduled, setIsMarkingScheduled] = useState(false);
 
@@ -66,6 +60,9 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
       ).split("T")[0] || ""
     : "";
   const needsFollowUp = !!followUpDatePart && followUpDatePart <= todayDatePart;
+  const communicationsCount =
+    (invoiceData.callHistory?.length || 0) +
+    (invoiceData.emailHistory?.length || 0);
 
   return (
     <TableRow className="group hover:bg-muted/50 cursor-pointer">
@@ -172,18 +169,20 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
               </span>
             </DropdownMenuItem>
 
-            {invoiceData.callHistory && invoiceData.callHistory.length > 0 && (
-              <DropdownMenuItem
-                onClick={() => {
-                  setCallHistoryOpen(true);
-                }}
-              >
-                <FaHistory className="mr-2 h-4 w-4 text-purple-500" />
-                <span>
-                  View Call History ({invoiceData.callHistory.length})
-                </span>
-              </DropdownMenuItem>
-            )}
+            <DropdownMenuItem
+              onClick={() => setCommunicationsOpen(true)}
+              disabled={!invoiceData._id}
+            >
+              <MessageSquare className="mr-2 h-4 w-4 text-sky-600" />
+              <span className="flex items-center gap-2">
+                Communications
+                {communicationsCount > 0 && (
+                  <Badge variant="secondary" className="px-2 text-[10px]">
+                    {communicationsCount}
+                  </Badge>
+                )}
+              </span>
+            </DropdownMenuItem>
 
             <DropdownMenuSeparator />
 
@@ -258,18 +257,15 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
       <CallLogModal
         open={callLogOpen}
         onClose={() => setCallLogOpen(false)}
+        onLogged={() => {
+          router.refresh();
+        }}
         context={{
           type: "job",
           id: invoiceData.invoiceId,
           title: invoiceData.jobTitle,
           clientName: invoiceData.invoiceId,
         }}
-      />
-      <CallHistoryModal
-        open={callHistoryOpen}
-        onClose={() => setCallHistoryOpen(false)}
-        callHistory={invoiceData.callHistory || []}
-        jobTitle={invoiceData.jobTitle}
       />
       {invoiceData._id && (
         <SchedulingLinkDialog
@@ -312,6 +308,19 @@ const InvoiceRow = ({ invoiceData }: { invoiceData: DueInvoiceType }) => {
         isSending={isSendingEmail}
         emailAlreadySent={invoiceData.emailSent}
         emailHistory={invoiceData.emailHistory || []}
+      />
+      <UnifiedCommunicationsModal
+        open={communicationsOpen}
+        onClose={() => setCommunicationsOpen(false)}
+        context={
+          invoiceData._id
+            ? {
+                type: "jobsDueSoon",
+                jobsDueSoonId: invoiceData._id.toString(),
+                title: invoiceData.jobTitle,
+              }
+            : null
+        }
       />
     </TableRow>
   );
