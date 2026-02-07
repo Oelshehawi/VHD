@@ -143,9 +143,9 @@ export async function sendInvoiceDeliveryEmail(
   recipients?: string[],
   includeReport: boolean = false,
 ) {
-  await connectMongo();
-
   try {
+    await connectMongo();
+
     // Find the invoice
     const invoiceDoc = await Invoice.findById(invoiceId);
     if (!invoiceDoc) {
@@ -245,22 +245,12 @@ export async function sendInvoiceDeliveryEmail(
     // Check for Stripe payment link
     let hasOnlinePaymentBlock: any = false;
 
-    console.log(
-      "Online payment enabled:",
-      Boolean(invoice.stripePaymentSettings?.enabled),
-    );
-    console.log(
-      "Payment link token present:",
-      Boolean(invoice.stripePaymentSettings?.paymentLinkToken),
-    );
-
     if (
       invoice.stripePaymentSettings?.enabled &&
       invoice.stripePaymentSettings?.paymentLinkToken
     ) {
       const expiresAt = invoice.stripePaymentSettings.paymentLinkExpiresAt;
       const isExpired = expiresAt ? new Date() > new Date(expiresAt) : false;
-      console.log("Payment link active:", !isExpired);
 
       if (!isExpired) {
         const paymentLinkUrl = `${getBaseUrl()}/pay?token=${invoice.stripePaymentSettings.paymentLinkToken}`;
@@ -270,11 +260,6 @@ export async function sendInvoiceDeliveryEmail(
         };
       }
     }
-
-    console.log(
-      "Online payment block included:",
-      Boolean(hasOnlinePaymentBlock),
-    );
 
     // Ensure client portal link is always available for invoice emails.
     let clientPortalUrl = "";
@@ -433,17 +418,41 @@ export async function sendInvoiceDeliveryEmail(
       process.env.POSTMARK_CLIENT,
     );
 
-    // Send to all recipients
-    for (const recipient of emailRecipients) {
-      await postmarkClient.sendEmailWithTemplate({
-        From: "payables@vancouverventcleaning.ca",
-        To: recipient,
-        TemplateAlias: "invoice-delivery-1",
-        TemplateModel: templateModel,
-        Attachments: attachments,
-        TrackOpens: true,
-        MessageStream: "invoice-delivery",
+    // Send to all recipients in parallel to reduce end-to-end latency.
+    const sendResults = await Promise.allSettled(
+      emailRecipients.map(async (recipient) => {
+        await postmarkClient.sendEmailWithTemplate({
+          From: "payables@vancouverventcleaning.ca",
+          To: recipient,
+          TemplateAlias: "invoice-delivery-1",
+          TemplateModel: templateModel,
+          Attachments: attachments,
+          TrackOpens: true,
+          MessageStream: "invoice-delivery",
+        });
+      }),
+    );
+
+    const failedRecipients: { recipient: string; reason: string }[] = [];
+    sendResults.forEach((result, index) => {
+      if (result.status === "rejected") {
+        failedRecipients.push({
+          recipient: emailRecipients[index] || "unknown",
+          reason:
+            result.reason instanceof Error
+              ? result.reason.message
+              : String(result.reason),
+        });
+      }
+    });
+
+    if (failedRecipients.length > 0) {
+      console.error("Failed to send invoice to one or more recipients", {
+        failedRecipients,
       });
+      throw new Error(
+        `Failed to send invoice to ${failedRecipients.length} recipient(s)`,
+      );
     }
 
     // Create audit log entry for invoice email sent
