@@ -63,20 +63,17 @@ const WeekCalendar = ({
   };
 
   return (
-    <div className="bg-background h-full">
-      {/* Modern Calendar Container */}
-      <div className="bg-card border-border h-full rounded-t-2xl border shadow-xl">
-        <CalendarGrid
-          week={currentWeek}
-          selectedDayJobs={selectedDayJobs}
-          canManage={canManage}
-          holidays={holidays}
-          technicians={technicians}
-          availability={availability}
-          showAvailability={showAvailability}
-          timeOffRequests={timeOffRequests}
-        />
-      </div>
+    <div className="h-full">
+      <CalendarGrid
+        week={currentWeek}
+        selectedDayJobs={selectedDayJobs}
+        canManage={canManage}
+        holidays={holidays}
+        technicians={technicians}
+        availability={availability}
+        showAvailability={showAvailability}
+        timeOffRequests={timeOffRequests}
+      />
     </div>
   );
 };

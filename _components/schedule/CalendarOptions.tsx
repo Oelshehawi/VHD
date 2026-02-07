@@ -23,7 +23,6 @@ import { ChevronLeft, ChevronRight, Plus, BarChart3 } from "lucide-react";
 import AddJob from "./AddJob";
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
-import { Card } from "../ui/card";
 
 const isMobileDevice = (): boolean => {
   if (typeof window !== "undefined") {
@@ -218,6 +217,25 @@ const CalendarOptions = ({
     updateURLInstant("day", newDay);
   };
 
+  const navigateMonth = (direction: "prev" | "next") => {
+    const parsedCurrentDate = currentDate
+      ? parse(currentDate, "yyyy-MM-dd", new Date())
+      : null;
+    const baseDate =
+      parsedCurrentDate && isValid(parsedCurrentDate)
+        ? parsedCurrentDate
+        : currentDay;
+    const firstDayOfCurrentMonth = new Date(
+      baseDate.getFullYear(),
+      baseDate.getMonth(),
+      1,
+    );
+    const newMonthDate = add(firstDayOfCurrentMonth, {
+      months: direction === "prev" ? -1 : 1,
+    });
+    updateURLInstant("month", newMonthDate);
+  };
+
   const handleViewChange = (view: "day" | "week" | "month") => {
     setCurrentView(view);
     const dateToUse = view === "day" ? currentDay : (currentWeek[0] as Date);
@@ -250,36 +268,39 @@ const CalendarOptions = ({
   };
 
   return (
-    <div className="bg-background flex h-dvh flex-col overflow-hidden">
-      <Header
-        currentView={currentView}
-        onViewChange={handleViewChange}
-        scheduledJobs={scheduledJobs}
-        previousWeek={() => navigateWeek("prev")}
-        nextWeek={() => navigateWeek("next")}
-        previousDay={() => navigateDay("prev")}
-        nextDay={() => navigateDay("next")}
-        goToToday={navigateToToday}
-        currentWeek={currentWeek}
-        currentDay={currentDay}
-        canManage={canManage}
-        isMobile={isMobileDevice()}
-        technicians={technicians}
-        isOptimizationModalOpen={isOptimizationModalOpen}
-        setIsOptimizationModalOpen={setIsOptimizationModalOpen}
-        showAvailability={showAvailability}
-      />
+    <div className="bg-background flex h-dvh flex-col overflow-hidden p-2 sm:p-3 lg:p-4">
+      <div className="border-border bg-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border shadow-xl">
+        <Header
+          currentView={currentView}
+          onViewChange={handleViewChange}
+          scheduledJobs={scheduledJobs}
+          previousWeek={() => navigateWeek("prev")}
+          nextWeek={() => navigateWeek("next")}
+          previousDay={() => navigateDay("prev")}
+          nextDay={() => navigateDay("next")}
+          goToToday={navigateToToday}
+          currentWeek={currentWeek}
+          currentDay={currentDay}
+          currentDate={currentDate}
+          canManage={canManage}
+          isMobile={isMobileDevice()}
+          technicians={technicians}
+          isOptimizationModalOpen={isOptimizationModalOpen}
+          setIsOptimizationModalOpen={setIsOptimizationModalOpen}
+          showAvailability={showAvailability}
+          previousMonth={() => navigateMonth("prev")}
+          nextMonth={() => navigateMonth("next")}
+        />
 
-      <OptimizationModal
-        isOpen={isOptimizationModalOpen}
-        onClose={() => setIsOptimizationModalOpen(false)}
-        canManage={canManage}
-      />
+        <OptimizationModal
+          isOpen={isOptimizationModalOpen}
+          onClose={() => setIsOptimizationModalOpen(false)}
+          canManage={canManage}
+        />
 
-      <main className="bg-background min-w-0 flex-1 overflow-y-auto">
-        {currentView === "month" ? (
-          <div className="flex min-w-0 items-start justify-center p-2 md:items-center md:p-4 lg:h-full">
-            <Card className="flex w-full flex-col lg:h-full">
+        <main className="min-w-0 flex-1 overflow-y-auto">
+          {currentView === "month" ? (
+            <div className="h-full">
               <MonthCalendar
                 key={currentDate}
                 scheduledJobs={scheduledJobs}
@@ -290,43 +311,44 @@ const CalendarOptions = ({
                 timeOffRequests={timeOffRequests}
                 onDateChange={handleDateChange}
                 initialDate={currentDate}
+                showDesktopHeader={false}
               />
-            </Card>
-          </div>
-        ) : currentView === "week" ? (
-          <div className="h-full">
-            <WeekCalendar
-              scheduledJobs={scheduledJobs}
-              canManage={canManage}
-              currentWeek={currentWeek}
-              holidays={holidays}
-              technicians={technicians}
-              availability={availability}
-              showAvailability={showAvailability}
-              timeOffRequests={timeOffRequests}
-            />
-          </div>
-        ) : (
-          <div className="h-full">
-            <DayCalendar
-              scheduledJobs={scheduledJobs}
-              canManage={canManage}
-              currentDay={currentDay}
-              holidays={holidays}
-              technicians={technicians}
-              availability={availability}
-              showAvailability={showAvailability}
-              timeOffRequests={timeOffRequests}
-              onDateSelect={(date: Date | undefined) => {
-                if (date) {
-                  setCurrentDay(startOfDay(date));
-                  updateURLInstant("day", date);
-                }
-              }}
-            />
-          </div>
-        )}
-      </main>
+            </div>
+          ) : currentView === "week" ? (
+            <div className="h-full">
+              <WeekCalendar
+                scheduledJobs={scheduledJobs}
+                canManage={canManage}
+                currentWeek={currentWeek}
+                holidays={holidays}
+                technicians={technicians}
+                availability={availability}
+                showAvailability={showAvailability}
+                timeOffRequests={timeOffRequests}
+              />
+            </div>
+          ) : (
+            <div className="h-full">
+              <DayCalendar
+                scheduledJobs={scheduledJobs}
+                canManage={canManage}
+                currentDay={currentDay}
+                holidays={holidays}
+                technicians={technicians}
+                availability={availability}
+                showAvailability={showAvailability}
+                timeOffRequests={timeOffRequests}
+                onDateSelect={(date: Date | undefined) => {
+                  if (date) {
+                    setCurrentDay(startOfDay(date));
+                    updateURLInstant("day", date);
+                  }
+                }}
+              />
+            </div>
+          )}
+        </main>
+      </div>
     </div>
   );
 };
@@ -339,10 +361,13 @@ const Header = ({
   scheduledJobs,
   currentWeek,
   currentDay,
+  currentDate,
   previousWeek,
   nextWeek,
   previousDay,
   nextDay,
+  previousMonth,
+  nextMonth,
   goToToday,
   canManage,
   isMobile,
@@ -355,10 +380,13 @@ const Header = ({
   scheduledJobs: ScheduleType[];
   currentWeek: Date[];
   currentDay: Date;
+  currentDate: string | null;
   previousWeek: () => void;
   nextWeek: () => void;
   previousDay: () => void;
   nextDay: () => void;
+  previousMonth: () => void;
+  nextMonth: () => void;
   goToToday: () => void;
   canManage: boolean;
   isMobile: boolean;
@@ -373,11 +401,19 @@ const Header = ({
   const weekEnd = currentWeek[currentWeek.length - 1];
   const weekLabel = `${format(weekStart as Date, "MMM d")} - ${format(weekEnd as Date, "MMM d, yyyy")}`;
   const dayLabel = format(currentDay, "EEEE, MMM d, yyyy");
+  const parsedCurrentDate = currentDate
+    ? parse(currentDate, "yyyy-MM-dd", new Date())
+    : null;
+  const monthAnchorDate =
+    parsedCurrentDate && isValid(parsedCurrentDate)
+      ? parsedCurrentDate
+      : currentDay;
+  const monthLabel = format(monthAnchorDate, "MMMM yyyy");
 
   const getNavigationLabel = () => {
     if (currentView === "day") return dayLabel;
     if (currentView === "week") return weekLabel;
-    return null;
+    return monthLabel;
   };
 
   const handleNavigation = (direction: "prev" | "next") => {
@@ -385,12 +421,14 @@ const Header = ({
       direction === "prev" ? previousDay() : nextDay();
     } else if (currentView === "week") {
       direction === "prev" ? previousWeek() : nextWeek();
+    } else {
+      direction === "prev" ? previousMonth() : nextMonth();
     }
   };
 
   return (
-    <div className="border-border bg-card rounded-t-lg border-b">
-      <div className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center lg:justify-between">
+    <div className="border-border bg-card border-b">
+      <div className="flex flex-col gap-3 p-3 sm:p-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto_auto] lg:items-center">
         {/* Row 1: Search + Add Job */}
         <div className="flex min-w-0 flex-1 items-center gap-2">
           {/* Search */}
@@ -415,14 +453,14 @@ const Header = ({
           )}
         </div>
 
-        {/* Navigation Controls (Day/Week views) - Only on desktop */}
-        {(currentView === "day" || currentView === "week") && (
-          <div className="hidden flex-shrink-0 items-center gap-2 lg:flex">
+        {/* Navigation Controls - Desktop */}
+        <div className="hidden flex-shrink-0 items-center gap-2 lg:flex">
+          <div className="border-border bg-background flex items-center rounded-md border p-0.5">
             <Button
               onClick={() => handleNavigation("prev")}
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-7 w-7 rounded-sm"
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
@@ -430,30 +468,30 @@ const Header = ({
               onClick={() => handleNavigation("next")}
               variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-7 w-7 rounded-sm"
             >
               <ChevronRight className="h-4 w-4" />
             </Button>
-
-            <span className="text-foreground min-w-[140px] text-center text-sm font-medium sm:min-w-[200px]">
-              {getNavigationLabel()}
-            </span>
-
-            <Button
-              onClick={goToToday}
-              variant="outline"
-              size="sm"
-              className="h-8"
-            >
-              Today
-            </Button>
           </div>
-        )}
+
+          <span className="text-foreground min-w-[170px] text-center text-sm font-semibold sm:min-w-[220px]">
+            {getNavigationLabel()}
+          </span>
+
+          <Button
+            onClick={goToToday}
+            variant="outline"
+            size="sm"
+            className="h-8 px-3"
+          >
+            Today
+          </Button>
+        </div>
 
         {/* Right Section: Actions + View Tabs */}
         <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2 lg:flex-nowrap lg:justify-start">
           {/* Today Button - Month view only, show on mobile too */}
-          {currentView === "month" && (
+          {currentView === "month" && isMobile && (
             <Button
               onClick={goToToday}
               variant="outline"

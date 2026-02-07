@@ -31,14 +31,17 @@ const CalendarGrid = ({
   timeOffRequests?: TimeOffRequestType[];
 }) => {
   return (
-    <div className="bg-card flex h-full flex-col">
+    <div className="bg-card flex h-full min-h-0 flex-col">
       {/* Day Headers */}
-      <div className="border-border flex border-b">
+      <div className="border-border/70 bg-muted/30 flex border-b">
         {/* Time column header */}
-        <div className="border-border/50 bg-muted/30 w-14 flex-none border-r sm:w-16" />
+        <div className="border-border/60 bg-muted/40 text-muted-foreground flex w-14 flex-none items-center justify-center border-r text-[10px] font-semibold tracking-[0.14em] uppercase sm:w-16 sm:text-xs">
+          Time
+        </div>
 
         {/* Day headers */}
         {week.map((day, idx) => {
+          const today = isToday(day);
           const dayJobs = selectedDayJobs(day);
           const jobCount = dayJobs.length;
 
@@ -46,16 +49,16 @@ const CalendarGrid = ({
             <div
               key={idx}
               className={cn(
-                "relative flex flex-1 flex-col items-center py-3 transition-colors",
-                isToday(day) ? "bg-primary/5" : "hover:bg-muted/30",
-                idx < week.length - 1 && "border-border/50 border-r",
+                "relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2.5 transition-colors sm:py-3",
+                today ? "bg-primary/10" : "hover:bg-muted/30",
+                idx < week.length - 1 && "border-border/60 border-r",
               )}
             >
               {/* Day name */}
               <span
                 className={cn(
-                  "text-xs font-medium tracking-wide uppercase",
-                  isToday(day) ? "text-primary" : "text-muted-foreground",
+                  "text-[10px] font-semibold tracking-[0.14em] uppercase sm:text-xs",
+                  today ? "text-primary" : "text-muted-foreground",
                 )}
               >
                 {format(day, "EEE")}
@@ -64,8 +67,10 @@ const CalendarGrid = ({
               {/* Date number */}
               <span
                 className={cn(
-                  "mt-1 text-xl font-semibold",
-                  isToday(day) ? "text-primary" : "text-foreground",
+                  "inline-flex h-7 min-w-7 items-center justify-center rounded-full px-1.5 text-sm font-semibold sm:h-8 sm:min-w-8 sm:text-base",
+                  today
+                    ? "bg-primary text-primary-foreground shadow-sm"
+                    : "text-foreground",
                 )}
               >
                 {format(day, "d")}
@@ -73,10 +78,13 @@ const CalendarGrid = ({
 
               {/* Job count badge */}
               {jobCount > 0 && (
-                <div className="absolute top-1 right-1">
+                <div className="absolute top-1.5 right-1.5">
                   <Badge
-                    variant="secondary"
-                    className="h-4 min-w-[16px] px-1 text-[9px] font-medium"
+                    variant={today ? "default" : "secondary"}
+                    className={cn(
+                      "h-4 min-w-[16px] rounded-full px-1 text-[9px] font-semibold",
+                      today && "bg-primary text-primary-foreground",
+                    )}
                   >
                     {jobCount}
                   </Badge>
@@ -88,16 +96,16 @@ const CalendarGrid = ({
       </div>
 
       {/* Scrollable content */}
-      <div className="relative flex-1 overflow-y-auto">
+      <div className="relative flex-1 overflow-auto">
         <div className="flex min-h-[1200px] md:min-h-[1440px]">
           {/* Time axis */}
-          <div className="border-border/50 bg-muted/30 sticky left-0 z-10 w-14 flex-none border-r sm:w-16">
+          <div className="border-border/60 bg-muted/40 sticky left-0 z-20 w-14 flex-none border-r sm:w-16">
             {HOURS.map((hour) => (
               <div
                 key={hour}
-                className="border-border/30 relative h-[50px] border-b sm:h-[60px]"
+                className="border-border/40 relative h-[50px] border-b sm:h-[60px]"
               >
-                <span className="text-muted-foreground absolute -top-2.5 right-2 text-xs">
+                <span className="text-muted-foreground absolute -top-2 right-1.5 text-[10px] font-medium sm:right-2 sm:text-xs">
                   {format(new Date().setHours(hour, 0, 0, 0), "h a")}
                 </span>
               </div>
@@ -111,8 +119,8 @@ const CalendarGrid = ({
                 key={idx}
                 className={cn(
                   "relative flex-1",
-                  idx < week.length - 1 && "border-border/50 border-r",
-                  isToday(day) ? "bg-primary/5" : "bg-card",
+                  idx < week.length - 1 && "border-border/60 border-r",
+                  isToday(day) ? "bg-primary/[0.06]" : "bg-card",
                 )}
               >
                 <CalendarColumn

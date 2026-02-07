@@ -52,6 +52,7 @@ export default function MonthCalendar({
   timeOffRequests = [],
   onDateChange,
   initialDate,
+  showDesktopHeader = true,
 }: {
   scheduledJobs: ScheduleType[];
   canManage: boolean;
@@ -61,6 +62,7 @@ export default function MonthCalendar({
   timeOffRequests?: TimeOffRequestType[];
   onDateChange?: (date: Date, view: "week" | "month") => void;
   initialDate?: string | null;
+  showDesktopHeader?: boolean;
 }) {
   let today = startOfToday();
 
@@ -240,33 +242,40 @@ export default function MonthCalendar({
       {/* DESKTOP VIEW - Full calendar with events on days */}
       <div className="hidden h-full lg:block">
         <CardContent className="flex h-full flex-col p-4">
-          {/* Header */}
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-foreground text-xl font-bold">
-              {format(firstDayCurrentMonth, "MMMM yyyy")}
-            </h2>
-            <div className="flex items-center gap-1">
-              <Button
-                type="button"
-                onClick={previousMonth}
-                variant="ghost"
-                size="icon"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </Button>
-              <Button
-                onClick={nextMonth}
-                type="button"
-                variant="ghost"
-                size="icon"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </Button>
+          {/* Desktop month nav can be rendered by parent header for a single connected control strip */}
+          {showDesktopHeader && (
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-foreground text-xl font-bold">
+                {format(firstDayCurrentMonth, "MMMM yyyy")}
+              </h2>
+              <div className="flex items-center gap-1">
+                <Button
+                  type="button"
+                  onClick={previousMonth}
+                  variant="ghost"
+                  size="icon"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </Button>
+                <Button
+                  onClick={nextMonth}
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Weekday headers */}
-          <div className="text-muted-foreground border-border mb-1 grid grid-cols-7 border-b pb-2 text-center text-xs font-semibold">
+          <div
+            className={cn(
+              "text-muted-foreground border-border grid grid-cols-7 border-b text-center text-xs font-semibold",
+              showDesktopHeader ? "mb-1 pb-2" : "mb-2 py-2",
+            )}
+          >
             <div>Sun</div>
             <div>Mon</div>
             <div>Tue</div>
