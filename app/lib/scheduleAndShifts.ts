@@ -5,7 +5,7 @@
 import connectMongo from "./connect";
 import { Schedule, PayrollPeriod } from "../../models/reactDataSchema";
 import { ScheduleType, ShiftType, PayrollPeriodType } from "./typeDefinitions";
-import { clerkClient } from "@clerk/nextjs/server";
+import { clerkClient, auth } from "@clerk/nextjs/server";
 
 /**
  * Fetch all scheduled jobs with their shifts.
@@ -58,6 +58,47 @@ export const fetchAllScheduledJobsWithShifts = async (
     console.error("Database Error:", error);
     throw new Error("Failed to fetch all scheduled jobs with shifts");
   }
+};
+
+/**
+ * Server action for client-side incremental schedule loading.
+ * Applies the same visibility rules as the schedule page initial fetch.
+ */
+export const fetchVisibleScheduledJobsWithShifts = async (
+  rangeStartISO: string,
+  rangeEndISO: string,
+): Promise<ScheduleType[]> => {
+  const rangeStart = new Date(rangeStartISO);
+  const rangeEnd = new Date(rangeEndISO);
+
+  if (Number.isNaN(rangeStart.getTime()) || Number.isNaN(rangeEnd.getTime())) {
+    throw new Error("Invalid schedule range");
+  }
+
+  if (rangeStart > rangeEnd) {
+    throw new Error("Invalid schedule range bounds");
+  }
+
+  const [scheduledJobs, authResult] = await Promise.all([
+    fetchAllScheduledJobsWithShifts(rangeStart, rangeEnd),
+    auth(),
+  ]);
+
+  const { sessionClaims, userId } = authResult as any;
+  const canManage =
+    (sessionClaims as any)?.isManager?.isManager === true ? true : false;
+
+  if (canManage) {
+    return scheduledJobs;
+  }
+
+  if (!userId) {
+    return [];
+  }
+
+  return scheduledJobs.filter((job) =>
+    job.assignedTechnicians.includes(userId),
+  );
 };
 
 /**

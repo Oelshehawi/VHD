@@ -122,6 +122,8 @@ const Schedule = async ({
           timeOffRequests={timeOffRequests}
           initialView={view}
           initialDate={date}
+          initialRangeStart={rangeStart.toISOString()}
+          initialRangeEnd={rangeEnd.toISOString()}
         />
       </div>
     </div>

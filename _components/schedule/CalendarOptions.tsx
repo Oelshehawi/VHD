@@ -4,7 +4,7 @@ import WeekCalendar from "./views/WeekCalendar";
 import DayCalendar from "./views/DayCalendar";
 import SearchSelect from "./JobSearchSelect";
 import OptimizationModal from "../optimization/OptimizationModal";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import {
   ScheduleType,
   AvailabilityType,
@@ -12,23 +12,176 @@ import {
 } from "../../app/lib/typeDefinitions";
 import {
   add,
+  addMonths,
   startOfWeek,
   eachDayOfInterval,
   format,
   parse,
   isValid,
   startOfDay,
+  endOfDay,
+  startOfMonth,
+  endOfMonth,
+  endOfWeek,
+  subDays,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, BarChart3 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  BarChart3,
+  Loader2,
+} from "lucide-react";
 import AddJob from "./AddJob";
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
+import { fetchVisibleScheduledJobsWithShifts } from "../../app/lib/scheduleAndShifts";
 
 const isMobileDevice = (): boolean => {
   if (typeof window !== "undefined") {
     return /Mobi|Android/i.test(navigator.userAgent);
   }
   return false;
+};
+
+type LoadedRange = {
+  startMs: number;
+  endMs: number;
+};
+
+const RANGE_WINDOW_PAST_DAYS = 14;
+const RANGE_WINDOW_FUTURE_MONTHS = 2;
+const RANGE_FETCH_DEBOUNCE_MS = 200;
+
+const parseRangeFromIso = (
+  startIso?: string,
+  endIso?: string,
+): LoadedRange | null => {
+  if (!startIso || !endIso) return null;
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  if (start.getTime() > end.getTime()) return null;
+
+  return { startMs: start.getTime(), endMs: end.getTime() };
+};
+
+const mergeLoadedRanges = (ranges: LoadedRange[]): LoadedRange[] => {
+  if (ranges.length <= 1) return ranges;
+
+  const sorted = [...ranges].sort((a, b) => a.startMs - b.startMs);
+  const merged: LoadedRange[] = [sorted[0] as LoadedRange];
+
+  for (let i = 1; i < sorted.length; i += 1) {
+    const current = sorted[i] as LoadedRange;
+    const last = merged[merged.length - 1] as LoadedRange;
+
+    if (current.startMs <= last.endMs + 1) {
+      last.endMs = Math.max(last.endMs, current.endMs);
+      continue;
+    }
+
+    merged.push(current);
+  }
+
+  return merged;
+};
+
+const isRangeCovered = (
+  requiredRange: LoadedRange,
+  loadedRanges: LoadedRange[],
+): boolean => {
+  if (loadedRanges.length === 0) return false;
+
+  let cursor = requiredRange.startMs;
+  const sorted = [...loadedRanges].sort((a, b) => a.startMs - b.startMs);
+
+  for (const range of sorted) {
+    if (range.endMs < cursor) continue;
+    if (range.startMs > cursor) return false;
+
+    cursor = Math.max(cursor, range.endMs + 1);
+    if (cursor > requiredRange.endMs) return true;
+  }
+
+  return false;
+};
+
+const buildFetchWindowForDate = (anchor: Date): LoadedRange => {
+  const start = startOfDay(subDays(anchor, RANGE_WINDOW_PAST_DAYS));
+  const end = endOfDay(addMonths(anchor, RANGE_WINDOW_FUTURE_MONTHS));
+  return { startMs: start.getTime(), endMs: end.getTime() };
+};
+
+const getVisibleWindow = ({
+  currentView,
+  currentDay,
+  currentWeek,
+  currentDate,
+}: {
+  currentView: "day" | "week" | "month";
+  currentDay: Date;
+  currentWeek: Date[];
+  currentDate: string | null;
+}): { requiredRange: LoadedRange; anchorDate: Date } => {
+  if (currentView === "day") {
+    const dayStart = startOfDay(currentDay);
+    const dayEnd = endOfDay(currentDay);
+    return {
+      requiredRange: { startMs: dayStart.getTime(), endMs: dayEnd.getTime() },
+      anchorDate: dayStart,
+    };
+  }
+
+  if (currentView === "week") {
+    const weekStartRaw = currentWeek[0] ?? currentDay;
+    const weekEndRaw =
+      currentWeek[currentWeek.length - 1] ?? add(weekStartRaw, { days: 6 });
+    const weekStart = startOfDay(weekStartRaw);
+    const weekEnd = endOfDay(weekEndRaw);
+    return {
+      requiredRange: { startMs: weekStart.getTime(), endMs: weekEnd.getTime() },
+      anchorDate: weekStart,
+    };
+  }
+
+  const parsedCurrentDate = currentDate
+    ? parse(currentDate, "yyyy-MM-dd", new Date())
+    : null;
+  const monthAnchor =
+    parsedCurrentDate && isValid(parsedCurrentDate)
+      ? parsedCurrentDate
+      : currentDay;
+  const monthGridStart = startOfWeek(startOfMonth(monthAnchor), {
+    weekStartsOn: 0,
+  });
+  const monthGridEnd = endOfWeek(endOfMonth(monthAnchor), { weekStartsOn: 0 });
+
+  return {
+    requiredRange: {
+      startMs: monthGridStart.getTime(),
+      endMs: monthGridEnd.getTime(),
+    },
+    anchorDate: monthAnchor,
+  };
+};
+
+const mergeJobsById = (
+  existingJobs: ScheduleType[],
+  incomingJobs: ScheduleType[],
+): ScheduleType[] => {
+  const jobsById = new Map<string, ScheduleType>();
+
+  for (const job of existingJobs) {
+    jobsById.set(job._id.toString(), job);
+  }
+
+  for (const job of incomingJobs) {
+    jobsById.set(job._id.toString(), job);
+  }
+
+  return Array.from(jobsById.values());
 };
 
 const CalendarOptions = ({
@@ -40,6 +193,8 @@ const CalendarOptions = ({
   timeOffRequests = [],
   initialView,
   initialDate,
+  initialRangeStart,
+  initialRangeEnd,
 }: {
   scheduledJobs: ScheduleType[];
   canManage: boolean;
@@ -49,6 +204,8 @@ const CalendarOptions = ({
   timeOffRequests?: TimeOffRequestType[];
   initialView?: string;
   initialDate?: string | null;
+  initialRangeStart?: string;
+  initialRangeEnd?: string;
 }) => {
   // Initialize calendar view from URL or default to mobile detection
   const [currentView, setCurrentView] = useState<"day" | "week" | "month">(
@@ -78,9 +235,31 @@ const CalendarOptions = ({
     useState<boolean>(false);
   // Availability is always shown - no toggle needed
   const showAvailability = true;
+  const [jobsData, setJobsData] = useState<ScheduleType[]>(scheduledJobs);
   const [currentDate, setCurrentDate] = useState<string | null>(
     initialDate || null,
   );
+  const [isRangeLoading, setIsRangeLoading] = useState<boolean>(false);
+  const [loadedRanges, setLoadedRanges] = useState<LoadedRange[]>(() => {
+    const initialRange = parseRangeFromIso(initialRangeStart, initialRangeEnd);
+    return initialRange ? [initialRange] : [];
+  });
+  const latestRequestIdRef = useRef(0);
+  const loadedRangesRef = useRef<LoadedRange[]>(loadedRanges);
+
+  useEffect(() => {
+    loadedRangesRef.current = loadedRanges;
+  }, [loadedRanges]);
+
+  useEffect(() => {
+    setJobsData(scheduledJobs);
+    const initialRange = parseRangeFromIso(initialRangeStart, initialRangeEnd);
+    const nextRanges = initialRange ? [initialRange] : [];
+    setLoadedRanges(nextRanges);
+    loadedRangesRef.current = nextRanges;
+    setIsRangeLoading(false);
+    latestRequestIdRef.current += 1;
+  }, [scheduledJobs, initialRangeStart, initialRangeEnd]);
 
   // Initialize current week from URL date or default to today
   const [currentWeek, setCurrentWeek] = useState<Date[]>(() => {
@@ -267,13 +446,77 @@ const CalendarOptions = ({
     }
   };
 
+  const fetchRangeForAnchorDate = useCallback(async (anchorDate: Date) => {
+    const fetchWindow = buildFetchWindowForDate(anchorDate);
+    if (isRangeCovered(fetchWindow, loadedRangesRef.current)) {
+      return;
+    }
+
+    const requestId = latestRequestIdRef.current + 1;
+    latestRequestIdRef.current = requestId;
+    setIsRangeLoading(true);
+
+    try {
+      const fetchedJobs = await fetchVisibleScheduledJobsWithShifts(
+        new Date(fetchWindow.startMs).toISOString(),
+        new Date(fetchWindow.endMs).toISOString(),
+      );
+
+      if (requestId !== latestRequestIdRef.current) return;
+
+      setJobsData((previousJobs) => mergeJobsById(previousJobs, fetchedJobs));
+      setLoadedRanges((previousRanges) => {
+        const mergedRanges = mergeLoadedRanges([
+          ...previousRanges,
+          fetchWindow,
+        ]);
+        loadedRangesRef.current = mergedRanges;
+        return mergedRanges;
+      });
+    } catch (error) {
+      if (requestId === latestRequestIdRef.current) {
+        console.error("Failed to fetch schedule range:", error);
+      }
+    } finally {
+      if (requestId === latestRequestIdRef.current) {
+        setIsRangeLoading(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const { requiredRange, anchorDate } = getVisibleWindow({
+      currentView,
+      currentDay,
+      currentWeek,
+      currentDate,
+    });
+
+    if (isRangeCovered(requiredRange, loadedRanges)) return;
+
+    const timer = window.setTimeout(() => {
+      void fetchRangeForAnchorDate(anchorDate);
+    }, RANGE_FETCH_DEBOUNCE_MS);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    currentView,
+    currentDay,
+    currentWeek,
+    currentDate,
+    loadedRanges,
+    fetchRangeForAnchorDate,
+  ]);
+
   return (
     <div className="bg-background flex h-dvh flex-col overflow-hidden p-2 sm:p-3 lg:p-4">
       <div className="border-border bg-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border shadow-xl">
         <Header
           currentView={currentView}
           onViewChange={handleViewChange}
-          scheduledJobs={scheduledJobs}
+          scheduledJobs={jobsData}
           previousWeek={() => navigateWeek("prev")}
           nextWeek={() => navigateWeek("next")}
           previousDay={() => navigateDay("prev")}
@@ -299,54 +542,70 @@ const CalendarOptions = ({
         />
 
         <main className="min-w-0 flex-1 overflow-y-auto">
-          {currentView === "month" ? (
-            <div className="h-full">
-              <MonthCalendar
-                key={currentDate}
-                scheduledJobs={scheduledJobs}
-                canManage={canManage}
-                technicians={technicians}
-                availability={availability}
-                showAvailability={showAvailability}
-                timeOffRequests={timeOffRequests}
-                onDateChange={handleDateChange}
-                initialDate={currentDate}
-                showDesktopHeader={false}
-              />
-            </div>
-          ) : currentView === "week" ? (
-            <div className="h-full">
-              <WeekCalendar
-                scheduledJobs={scheduledJobs}
-                canManage={canManage}
-                currentWeek={currentWeek}
-                holidays={holidays}
-                technicians={technicians}
-                availability={availability}
-                showAvailability={showAvailability}
-                timeOffRequests={timeOffRequests}
-              />
-            </div>
-          ) : (
-            <div className="h-full">
-              <DayCalendar
-                scheduledJobs={scheduledJobs}
-                canManage={canManage}
-                currentDay={currentDay}
-                holidays={holidays}
-                technicians={technicians}
-                availability={availability}
-                showAvailability={showAvailability}
-                timeOffRequests={timeOffRequests}
-                onDateSelect={(date: Date | undefined) => {
-                  if (date) {
-                    setCurrentDay(startOfDay(date));
-                    updateURLInstant("day", date);
-                  }
-                }}
-              />
-            </div>
-          )}
+          <div
+            className={`relative h-full transition-opacity ${
+              isRangeLoading ? "opacity-80" : "opacity-100"
+            }`}
+            aria-busy={isRangeLoading}
+            aria-live="polite"
+          >
+            {currentView === "month" ? (
+              <div className="h-full">
+                <MonthCalendar
+                  key={currentDate}
+                  scheduledJobs={jobsData}
+                  canManage={canManage}
+                  technicians={technicians}
+                  availability={availability}
+                  showAvailability={showAvailability}
+                  timeOffRequests={timeOffRequests}
+                  onDateChange={handleDateChange}
+                  initialDate={currentDate}
+                  showDesktopHeader={false}
+                />
+              </div>
+            ) : currentView === "week" ? (
+              <div className="h-full">
+                <WeekCalendar
+                  scheduledJobs={jobsData}
+                  canManage={canManage}
+                  currentWeek={currentWeek}
+                  holidays={holidays}
+                  technicians={technicians}
+                  availability={availability}
+                  showAvailability={showAvailability}
+                  timeOffRequests={timeOffRequests}
+                />
+              </div>
+            ) : (
+              <div className="h-full">
+                <DayCalendar
+                  scheduledJobs={jobsData}
+                  canManage={canManage}
+                  currentDay={currentDay}
+                  holidays={holidays}
+                  technicians={technicians}
+                  availability={availability}
+                  showAvailability={showAvailability}
+                  timeOffRequests={timeOffRequests}
+                  onDateSelect={(date: Date | undefined) => {
+                    if (date) {
+                      setCurrentDay(startOfDay(date));
+                      updateURLInstant("day", date);
+                    }
+                  }}
+                />
+              </div>
+            )}
+            {isRangeLoading && (
+              <div className="pointer-events-none absolute inset-0 z-10 bg-black/15">
+                <div className="absolute top-3 right-3 flex items-center gap-2 rounded-md bg-black/45 px-2.5 py-1.5 text-xs font-medium text-white shadow">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Loading schedule...
+                </div>
+              </div>
+            )}
+          </div>
         </main>
       </div>
     </div>
