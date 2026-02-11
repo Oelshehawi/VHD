@@ -80,16 +80,6 @@ export interface ScheduleType {
   accessInstructions?: string;
 }
 
-export interface TechnicianLocationType {
-  technicianId: string;
-  latitude: number;
-  longitude: number;
-  timestamp: Date;
-  isActive: Boolean;
-  currentJobId: string | undefined;
-  accuracy: string | undefined;
-}
-
 export interface AvailabilityType {
   _id?: ObjectId | string;
   technicianId: string;
@@ -597,53 +587,6 @@ export interface EstimateType {
   terms?: string;
   notes?: string;
   convertedToInvoice?: ObjectId | string;
-}
-
-// Simplified Scheduling Optimization Types - for Cloud Run
-export interface LocationGeocodeType {
-  _id: ObjectId | string;
-  address: string; // raw address from invoice: "123 Main St, Vancouver, BC"
-  normalizedAddress: string; // cleaned version: "123 Main Street, Vancouver, BC V6B 1A1"
-  coordinates: [number, number]; // [lng, lat] for OpenRouteService
-  lastGeocoded: Date;
-  source: "openroute" | "manual"; // how coordinates were obtained
-}
-
-// Simple distance matrix cache for OR Tools VRP
-export interface DistanceMatrixCacheType {
-  _id: ObjectId | string;
-  locationHash: string; // unique hash of sorted locations for cache key
-  locations: string[]; // ordered array of addresses
-  coordinates: [number, number][]; // corresponding [lng, lat] pairs
-  matrix: {
-    durations: number[][]; // travel times in minutes
-    distances: number[][]; // distances in kilometers
-  };
-  calculatedAt: Date;
-  expiresAt: Date; // cache expiration (e.g., 30 days)
-}
-
-// Job data for sending to Cloud Run optimization service
-export interface JobOptimizationData {
-  jobId: string;
-  invoiceId: string;
-  jobTitle: string;
-  location: string;
-  normalizedLocation: string;
-  clientName: string;
-  dateDue: Date;
-  estimatedDuration: number; // minutes
-  constraints: {
-    earliestStart: Date;
-    latestStart: Date;
-  };
-  // Optional fixed scheduling for jobs that must be at specific times
-  fixedSchedule?: {
-    scheduledDateTime: Date;
-    isFixed: boolean; // true if this job cannot be moved during optimization
-  };
-  // Temporary field for historical time data
-  historicalTime?: { hour: number; minute: number } | null;
 }
 
 // Notification Types Enum

@@ -3,7 +3,6 @@ import MonthCalendar from "./views/MonthCalendar";
 import WeekCalendar from "./views/WeekCalendar";
 import DayCalendar from "./views/DayCalendar";
 import SearchSelect from "./JobSearchSelect";
-import OptimizationModal from "../optimization/OptimizationModal";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   ScheduleType,
@@ -25,13 +24,7 @@ import {
   endOfWeek,
   subDays,
 } from "date-fns";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  BarChart3,
-  Loader2,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 import AddJob from "./AddJob";
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
@@ -232,8 +225,6 @@ const CalendarOptions = ({
     return startOfDay(new Date());
   });
 
-  const [isOptimizationModalOpen, setIsOptimizationModalOpen] =
-    useState<boolean>(false);
   // Availability is always shown - no toggle needed
   const showAvailability = true;
   const [jobsData, setJobsData] = useState<ScheduleType[]>(scheduledJobs);
@@ -564,15 +555,8 @@ const CalendarOptions = ({
           canManage={canManage}
           isMobile={isMobileDevice()}
           technicians={technicians}
-          setIsOptimizationModalOpen={setIsOptimizationModalOpen}
           previousMonth={() => navigateMonth("prev")}
           nextMonth={() => navigateMonth("next")}
-        />
-
-        <OptimizationModal
-          isOpen={isOptimizationModalOpen}
-          onClose={() => setIsOptimizationModalOpen(false)}
-          canManage={canManage}
         />
 
         <main className="min-w-0 flex-1 overflow-y-auto">
@@ -669,7 +653,6 @@ const Header = ({
   canManage,
   isMobile,
   technicians,
-  setIsOptimizationModalOpen,
 }: {
   currentView: "day" | "week" | "month";
   onViewChange: (view: "day" | "week" | "month") => void;
@@ -687,7 +670,6 @@ const Header = ({
   canManage: boolean;
   isMobile: boolean;
   technicians: { id: string; name: string }[];
-  setIsOptimizationModalOpen: (open: boolean) => void;
 }) => {
   const [open, setOpen] = useState(false);
 
@@ -793,18 +775,6 @@ const Header = ({
               className="h-8 flex-shrink-0"
             >
               Today
-            </Button>
-          )}
-
-          {/* Optimize Button - Hide on small screens */}
-          {canManage && (
-            <Button
-              onClick={() => setIsOptimizationModalOpen(true)}
-              size="sm"
-              className="hidden h-8 flex-shrink-0 lg:flex"
-            >
-              <BarChart3 className="h-4 w-4 sm:mr-1.5" />
-              <span className="hidden sm:inline">Optimize</span>
             </Button>
           )}
 

@@ -8,8 +8,6 @@
     "start": "next start",
     "lint:eslint": "eslint",
     "lint:types": "tsc --noEmit",
-    "test-optimization": "tsx scripts/test-august-optimization.ts",
-    "test-openroute": "tsx scripts/test-openroute-integration.ts",
     "cleanup-spaces": "tsx scripts/cleanupLeadingSpaces.ts",
     "migrate-reminders": "tsx scripts/migrate-reminders-schema.ts",
     "cloudinary:shrink": "tsx scripts/cloudinary-shrink.ts --dry-run=true --prefix=\"vhd-app\" --limit=100 --thresholdMB=2",

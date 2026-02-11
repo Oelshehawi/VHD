@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**VHD** is a Next.js 16-based Progressive Web App for invoice and client management in service-based businesses. It provides comprehensive features for managing clients, invoices, job schedules, employee payroll, availability tracking, and route optimization.
+**VHD** is a Next.js 16-based Progressive Web App for invoice and client management in service-based businesses. It provides comprehensive features for managing clients, invoices, job schedules, employee payroll, and availability tracking.
 
 **Key Technologies:** React 19.2, Next.js 16 (App Router), TypeScript 5.4, MongoDB + Mongoose, Clerk Authentication, Tailwind CSS 4, Stripe Payments
 
@@ -40,10 +40,6 @@ pnpm run lint:eslint
 
 # Install dependencies
 pnpm install
-
-# Optimization and integration tests
-pnpm run test-optimization      # Test route optimization
-pnpm run test-openroute         # Test OpenRoute integration
 
 # Maintenance scripts
 pnpm run cleanup-spaces         # Clean up leading spaces
@@ -105,7 +101,6 @@ Components are organized in `_components/` by feature domain:
 - **Database:** MongoDB with Mongoose ODM
 - **Email:** Postmark (sending invoices, notifications)
 - **Image Storage:** Cloudinary (before/after photos, optimization)
-- **Route Optimization:** OpenRoute Service API (scheduling algorithm)
 - **PDF Generation:** @react-pdf/renderer (invoices, receipts, reports)
 - **Payments:** Stripe (credit card and PAD payments, client-facing payment page, webhook handling)
 - **Analytics:** Vercel Analytics and Speed Insights
@@ -118,7 +113,6 @@ Server actions are organized by domain in `app/lib/actions/`:
 - `availability.actions.ts` - Employee availability management
 - `email.actions.ts` - Sending emails
 - `estimates.actions.ts` - Estimate operations
-- `optimization.actions.ts` - Route optimization requests
 - `reminder.actions.ts` - Reminder processing
 - `scheduleJobs.actions.ts` - Job scheduling
 - `stripe.actions.ts` - Stripe payment processing
@@ -196,13 +190,6 @@ Both checks must pass before committing. Fix any errors reported by these tools.
 - Mongoose handles connection pooling
 - TypeScript interfaces mirror schema structure
 
-### Route Optimization
-
-- **OpenRoute Service** for scheduling optimization
-- Rate-limited API calls to avoid quota issues
-- Caching of geocodes and distance matrices to minimize API usage
-- Optimization algorithm in `app/lib/schedulingOptimizations/`
-
 ### Scheduled Tasks
 
 - Daily cron job at 16:00 UTC (`/api/cron/process-reminders`)
@@ -248,7 +235,7 @@ Both checks must pass before committing. Fix any errors reported by these tools.
 
 ## Environment Variables
 
-Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, OpenRoute, Stripe):
+Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, Stripe):
 
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
@@ -256,7 +243,6 @@ Key environment variables needed (from Clerk, MongoDB, Cloudinary, Postmark, Ope
 - `CLOUDINARY_CLOUD_NAME`
 - `CLOUDINARY_API_KEY`
 - `POSTMARK_API_TOKEN`
-- `OPENROUTE_API_KEY`
 - `STRIPE_SECRET_KEY`
 - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY`
 - `STRIPE_WEBHOOK_SECRET`
@@ -303,5 +289,4 @@ const utcDate = parts ? toUtcDateFromParts(parts) : undefined;
 **ESLint Rule:** The codebase has an ESLint rule that warns against using `toLocaleDateString()`. Use the UTC-safe utilities above instead.
 
 For more details, see the workflow: `.agent/workflows/date-handling.md`
-
 

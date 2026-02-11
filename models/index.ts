@@ -14,11 +14,6 @@ export {
   JobsDueSoon,
 } from "./schemas/schedule.schema";
 export { Photo } from "./schemas/photo.schema";
-export {
-  LocationGeocode,
-  DistanceMatrixCache,
-  TechnicianLocation,
-} from "./schemas/optimization.schema";
 export { AuditLog } from "./schemas/audit.schema";
 export { Availability, TimeOffRequest } from "./schemas/availability.schema";
 export { SchedulingRequest } from "./schemas/schedulingRequest.schema";
