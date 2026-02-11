@@ -1,7 +1,6 @@
 "use server";
 
 import { createHash } from "crypto";
-import { fromZonedTime } from "date-fns-tz";
 import connectMongo from "../connect";
 import { TravelTimeCache } from "../../../models";
 import type {
@@ -12,6 +11,7 @@ import type {
   ScheduleType,
 } from "../typeDefinitions";
 import { SERVICE_DAY_CUTOFF_HOUR } from "../utils/scheduleDayUtils";
+import { fakeUtcStoredToRealUtcIso } from "../serviceDurationRules";
 
 // Address normalization
 
@@ -35,35 +35,6 @@ function normalizeAddress(address: string): string {
 const BUSINESS_TIME_ZONE = "America/Vancouver";
 const HOUR_BUCKET_SIZE = 1;
 
-/**
- * Reinterpret a "fake UTC" date as a real UTC instant.
- *
- * Schedule dates are stored as PST/PDT wall-clock values baked into UTC
- * (e.g. 8 AM PST is stored as 2026-02-10T08:00:00Z). This function
- * extracts the UTC components and treats them as Vancouver local time,
- * returning the true UTC instant (2026-02-10T16:00:00Z for PST).
- *
- * Handles DST correctly via date-fns-tz / IANA data.
- */
-function fakeUtcToRealUtc(fakeUtcIso: string): string {
-  const d = new Date(fakeUtcIso);
-  if (Number.isNaN(d.getTime())) return fakeUtcIso;
-
-  // Build a plain Date whose *local* components match the stored UTC values.
-  // fromZonedTime interprets these local components as Vancouver wall-clock.
-  const wallClock = new Date(
-    d.getUTCFullYear(),
-    d.getUTCMonth(),
-    d.getUTCDate(),
-    d.getUTCHours(),
-    d.getUTCMinutes(),
-    d.getUTCSeconds(),
-    d.getUTCMilliseconds(),
-  );
-
-  return fromZonedTime(wallClock, BUSINESS_TIME_ZONE).toISOString();
-}
-
 const WEEKDAY_INDEX: Record<string, number> = {
   Sun: 0,
   Mon: 1,
@@ -81,8 +52,14 @@ const DEPARTURE_BUCKET_FORMATTER = new Intl.DateTimeFormat("en-US", {
   hour12: false,
 });
 
+/**
+ * Convert stored schedule fake-UTC to real UTC before routing bucketing.
+ * This uses the shared helper so travel-time math stays consistent with
+ * duration analysis and sync/write logic.
+ */
 function getDepartureBucketKey(departureDateTimeIso: string): string {
-  const realUtc = fakeUtcToRealUtc(departureDateTimeIso);
+  const realUtc =
+    fakeUtcStoredToRealUtcIso(departureDateTimeIso) ?? departureDateTimeIso;
   const parsed = new Date(realUtc);
   if (Number.isNaN(parsed.getTime())) {
     return "wX|hX";
@@ -226,7 +203,9 @@ async function fetchGoogleRoute(
           travelMode: "DRIVE",
           routingPreference: "TRAFFIC_AWARE",
           ...(() => {
-            const realDeparture = fakeUtcToRealUtc(pair.departureDateTimeIso);
+            const realDeparture =
+              fakeUtcStoredToRealUtcIso(pair.departureDateTimeIso) ??
+              pair.departureDateTimeIso;
             return new Date(realDeparture).getTime() > Date.now()
               ? { departureTime: realDeparture }
               : {};

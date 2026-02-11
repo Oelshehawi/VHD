@@ -53,6 +53,8 @@ export const fetchAllScheduledJobsWithShifts = async (
       technicianNotes: job.technicianNotes,
       onSiteContact: job.onSiteContact || undefined,
       accessInstructions: job.accessInstructions || undefined,
+      actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+      actualServiceDurationSource: job.actualServiceDurationSource,
     }));
   } catch (error) {
     console.error("Database Error:", error);
@@ -129,6 +131,11 @@ export const fetchScheduledJobsByPayrollPeriod = async (
       shifts: job.shifts || [],
       payrollPeriod: job.payrollPeriod.toString(),
       deadRun: job.deadRun,
+      technicianNotes: job.technicianNotes,
+      onSiteContact: job.onSiteContact || undefined,
+      accessInstructions: job.accessInstructions || undefined,
+      actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+      actualServiceDurationSource: job.actualServiceDurationSource,
     }));
   } catch (error) {
     console.error("Database Error:", error);
@@ -251,6 +258,8 @@ export const fetchSchedulesForTechnician = async (
     technicianNotes: schedule.technicianNotes,
     onSiteContact: schedule.onSiteContact || undefined,
     accessInstructions: schedule.accessInstructions || undefined,
+    actualServiceDurationMinutes: schedule.actualServiceDurationMinutes,
+    actualServiceDurationSource: schedule.actualServiceDurationSource,
   }));
 };
 

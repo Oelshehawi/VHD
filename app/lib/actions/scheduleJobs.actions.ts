@@ -22,6 +22,10 @@ import {
   minutesToPayrollHours,
   formatDateTimeStringUTC,
 } from "../utils";
+import {
+  ACTUAL_SERVICE_DURATION_MAX_MINUTES,
+  evaluateDurationConfidence,
+} from "../serviceDurationRules";
 import { v2 as cloudinary } from "cloudinary";
 import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
 import { createNotification } from "./notifications.actions";
@@ -54,6 +58,18 @@ async function safeRunAutoInsights(params: {
   } catch (error) {
     console.error("Auto schedule insight analysis failed:", error);
   }
+}
+
+function sumInvoiceTotal(
+  items: InvoiceType["items"] | undefined,
+): number | null {
+  if (!Array.isArray(items)) return null;
+  const total = items.reduce((sum: number, item: any) => {
+    const parsed = Number(item?.price);
+    if (!Number.isFinite(parsed)) return sum;
+    return sum + parsed;
+  }, 0);
+  return Number.isFinite(total) ? total : null;
 }
 
 /**
@@ -473,6 +489,181 @@ export const updateSchedule = async ({
     throw new Error("Failed to update the schedule");
   }
 };
+
+export async function getScheduleActualDurationReview(
+  scheduleId: string,
+): Promise<{
+  success: boolean;
+  message?: string;
+  data?: {
+    scheduleId: string;
+    actualServiceDurationMinutes?: number;
+    actualServiceDurationSource?:
+      | "after_photo"
+      | "mark_completed"
+      | "admin_edit";
+    confidence: "good" | "needs_review";
+    reasons: { code: string; message: string }[];
+    priceCheckStatus: string;
+    expectedMinutesFromPrice: number | null;
+    expectedRangeLabel: string | null;
+    cutoffMinutes: number;
+  };
+}> {
+  await connectMongo();
+  try {
+    const schedule = await Schedule.findById(
+      scheduleId,
+    ).lean<ScheduleType | null>();
+    if (!schedule) {
+      return { success: false, message: "Schedule not found" };
+    }
+
+    const invoice = await Invoice.findById(schedule.invoiceRef)
+      .select("items")
+      .lean<Pick<InvoiceType, "items"> | null>();
+    const invoiceTotal = sumInvoiceTotal(invoice?.items);
+
+    const review = evaluateDurationConfidence({
+      actualServiceDurationMinutes: schedule.actualServiceDurationMinutes,
+      scheduleHours: schedule.hours,
+      invoiceTotal,
+    });
+
+    return {
+      success: true,
+      data: {
+        scheduleId: schedule._id.toString(),
+        actualServiceDurationMinutes: schedule.actualServiceDurationMinutes,
+        actualServiceDurationSource: schedule.actualServiceDurationSource,
+        confidence: review.confidence,
+        reasons: review.reasons,
+        priceCheckStatus: review.priceCheckStatus,
+        expectedMinutesFromPrice: review.expectedMinutesFromPrice,
+        expectedRangeLabel: review.expectedRangeLabel,
+        cutoffMinutes: review.cutoffMinutes,
+      },
+    };
+  } catch (error) {
+    console.error("Database Error:", error);
+    return { success: false, message: "Failed to evaluate schedule duration" };
+  }
+}
+
+export async function updateScheduleActualServiceDuration(input: {
+  scheduleId: string;
+  actualServiceDurationMinutes?: number;
+  clear?: boolean;
+  performedBy?: string;
+}): Promise<{
+  success: boolean;
+  message: string;
+  schedule?: ScheduleType;
+}> {
+  await connectMongo();
+  try {
+    const scheduleId = input.scheduleId?.trim();
+    if (!scheduleId) {
+      return { success: false, message: "scheduleId is required" };
+    }
+
+    const clear = input.clear === true;
+    if (!clear) {
+      if (
+        typeof input.actualServiceDurationMinutes !== "number" ||
+        !Number.isFinite(input.actualServiceDurationMinutes)
+      ) {
+        return {
+          success: false,
+          message: "actualServiceDurationMinutes must be a finite number",
+        };
+      }
+
+      if (input.actualServiceDurationMinutes < 0) {
+        return {
+          success: false,
+          message: "actualServiceDurationMinutes must be non-negative",
+        };
+      }
+
+      if (
+        input.actualServiceDurationMinutes > ACTUAL_SERVICE_DURATION_MAX_MINUTES
+      ) {
+        return {
+          success: false,
+          message: `actualServiceDurationMinutes must be <= ${ACTUAL_SERVICE_DURATION_MAX_MINUTES}`,
+        };
+      }
+    }
+
+    const updateQuery = clear
+      ? {
+          $unset: {
+            actualServiceDurationMinutes: 1,
+            actualServiceDurationSource: 1,
+          },
+        }
+      : {
+          $set: {
+            actualServiceDurationMinutes: input.actualServiceDurationMinutes,
+            actualServiceDurationSource: "admin_edit",
+          },
+        };
+
+    const schedule = await Schedule.findByIdAndUpdate(scheduleId, updateQuery, {
+      new: true,
+      runValidators: true,
+    }).lean<ScheduleType | null>();
+
+    if (!schedule) {
+      return { success: false, message: "Schedule not found" };
+    }
+
+    const invoice = await Invoice.findById(
+      schedule.invoiceRef,
+    ).lean<InvoiceType | null>();
+    if (invoice) {
+      await AuditLog.create({
+        invoiceId: invoice.invoiceId,
+        action: "schedule_updated",
+        timestamp: new Date(),
+        performedBy: input.performedBy || "manager",
+        details: {
+          newValue: {
+            scheduleId: schedule._id.toString(),
+            actualServiceDurationMinutes:
+              schedule.actualServiceDurationMinutes ?? null,
+            actualServiceDurationSource:
+              schedule.actualServiceDurationSource ?? null,
+          },
+          reason: clear
+            ? "Actual service duration cleared by admin"
+            : "Actual service duration edited by admin",
+          metadata: {
+            clientId: invoice.clientId,
+          },
+        },
+        success: true,
+      });
+    }
+
+    revalidatePath("/schedule");
+
+    return {
+      success: true,
+      message: clear
+        ? "Actual service duration cleared"
+        : "Actual service duration updated",
+      schedule,
+    };
+  } catch (error) {
+    console.error("Database Error:", error);
+    return {
+      success: false,
+      message: "Failed to update actual service duration",
+    };
+  }
+}
 
 export const updateJob = async ({
   scheduleId,

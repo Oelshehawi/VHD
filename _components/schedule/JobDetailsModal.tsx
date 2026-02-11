@@ -14,6 +14,8 @@ import {
   updateSchedule,
   getReportByScheduleId,
   deleteReport,
+  getScheduleActualDurationReview,
+  updateScheduleActualServiceDuration,
 } from "../../app/lib/actions/scheduleJobs.actions";
 import { getSchedulePhotos } from "../../app/lib/actions/photos.actions";
 import DeleteModal from "../DeleteModal";
@@ -23,7 +25,6 @@ import EstimatePhotosTab from "./EstimatePhotosTab";
 import LazyPDFButton, { type PDFData } from "../pdf/LazyPDFButton";
 import MediaDisplay from "../invoices/MediaDisplay";
 import {
-  X,
   Clock,
   MapPin,
   Users,
@@ -50,6 +51,7 @@ import {
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "../ui/tabs";
 import { Card, CardContent } from "../ui/card";
+import { Input } from "../ui/input";
 import { format } from "date-fns-tz";
 import { formatDateStringUTC } from "../../app/lib/utils";
 import JobConfirmationModal from "./JobConfirmationModal";
@@ -63,6 +65,18 @@ interface JobDetailsModalProps {
 }
 
 type ModalView = "details" | "media" | "report" | "edit" | "estimatePhotos";
+
+interface ActualDurationReviewData {
+  scheduleId: string;
+  actualServiceDurationMinutes?: number;
+  actualServiceDurationSource?: "after_photo" | "mark_completed" | "admin_edit";
+  confidence: "good" | "needs_review";
+  reasons: { code: string; message: string }[];
+  priceCheckStatus: string;
+  expectedMinutesFromPrice: number | null;
+  expectedRangeLabel: string | null;
+  cutoffMinutes: number;
+}
 
 export default function JobDetailsModal({
   job,
@@ -97,6 +111,11 @@ export default function JobDetailsModal({
   const [localAccessInstructions, setLocalAccessInstructions] = useState(
     job?.accessInstructions,
   );
+  const [durationReview, setDurationReview] =
+    useState<ActualDurationReviewData | null>(null);
+  const [isLoadingDurationReview, setIsLoadingDurationReview] = useState(false);
+  const [durationInputMinutes, setDurationInputMinutes] = useState("");
+  const [isSavingDuration, setIsSavingDuration] = useState(false);
 
   // Update state when job changes
   useEffect(() => {
@@ -114,6 +133,14 @@ export default function JobDetailsModal({
       setMediaSignature(null);
       setIsLoadingMedia(false);
       setHasLoadedMedia(false);
+      setDurationReview(null);
+      setIsLoadingDurationReview(false);
+      setDurationInputMinutes(
+        job.actualServiceDurationMinutes != null
+          ? String(job.actualServiceDurationMinutes)
+          : "",
+      );
+      setIsSavingDuration(false);
     }
   }, [job]);
 
@@ -162,6 +189,8 @@ export default function JobDetailsModal({
       setMediaSignature(null);
       setIsLoadingMedia(false);
       setHasLoadedMedia(false);
+      setDurationReview(null);
+      setIsLoadingDurationReview(false);
       return;
     }
 
@@ -169,6 +198,32 @@ export default function JobDetailsModal({
       void loadMedia();
     }
   }, [activeView, hasLoadedMedia, isLoadingMedia, isOpen, loadMedia]);
+
+  const refreshDurationReview = useCallback(async () => {
+    if (!job || !canManage) return;
+
+    setIsLoadingDurationReview(true);
+    try {
+      const reviewResponse = await getScheduleActualDurationReview(
+        job._id.toString(),
+      );
+      if (reviewResponse.success && reviewResponse.data) {
+        setDurationReview(reviewResponse.data);
+        setDurationInputMinutes(
+          reviewResponse.data.actualServiceDurationMinutes != null
+            ? String(reviewResponse.data.actualServiceDurationMinutes)
+            : "",
+        );
+      } else {
+        setDurationReview(null);
+      }
+    } catch (error) {
+      console.error("Error loading duration review:", error);
+      setDurationReview(null);
+    } finally {
+      setIsLoadingDurationReview(false);
+    }
+  }, [canManage, job]);
 
   // Check for existing report when switching to report view
   useEffect(() => {
@@ -192,9 +247,12 @@ export default function JobDetailsModal({
     };
 
     if (activeView === "report" && job) {
-      checkForExistingReport();
+      void checkForExistingReport();
+      if (canManage) {
+        void refreshDurationReview();
+      }
     }
-  }, [job, activeView]);
+  }, [job, activeView, canManage, refreshDurationReview]);
 
   const toggleConfirmedStatus = async () => {
     if (!job || isLoading || !canManage) {
@@ -318,6 +376,47 @@ export default function JobDetailsModal({
     }
   };
 
+  const saveAdminDurationValue = async (value: number) => {
+    if (!job || !canManage) return;
+
+    setIsSavingDuration(true);
+    try {
+      const performedBy = user?.fullName || user?.firstName || "manager";
+      const result = await updateScheduleActualServiceDuration({
+        scheduleId: job._id.toString(),
+        actualServiceDurationMinutes: value,
+        performedBy,
+      });
+
+      if (!result.success) {
+        toast.error(result.message || "Failed to update actual duration");
+        return;
+      }
+
+      toast.success("Actual duration updated");
+      await refreshDurationReview();
+    } catch (error) {
+      console.error("Failed to save duration:", error);
+      toast.error("Failed to update actual duration");
+    } finally {
+      setIsSavingDuration(false);
+    }
+  };
+
+  const handleSaveDuration = async () => {
+    const raw = durationInputMinutes.trim();
+    if (!raw) {
+      toast.error("Duration is required");
+      return;
+    }
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed) || parsed < 0) {
+      toast.error("Duration must be a non-negative number");
+      return;
+    }
+    await saveAdminDurationValue(parsed);
+  };
+
   const hasBeforePhotos = mediaPhotos.some((photo) => photo.type === "before");
   const hasAfterPhotos = mediaPhotos.some((photo) => photo.type === "after");
   const hasSignature = !!mediaSignature;
@@ -396,7 +495,7 @@ export default function JobDetailsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleModalClose}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-hidden">
+      <DialogContent className="max-h-[90vh] w-full overflow-hidden sm:!max-w-3xl">
         <DialogHeader>
           <div className="flex items-start justify-between">
             <div className="min-w-0 flex-1">
@@ -627,6 +726,121 @@ export default function JobDetailsModal({
             </TabsContent>
 
             <TabsContent value="report" className="space-y-4 p-6">
+              {canManage && (
+                <Card className="gap-0 py-0">
+                  <CardContent className="space-y-3 p-4">
+                    <div className="flex items-center justify-between gap-3">
+                      <h4 className="text-foreground font-medium">
+                        Actual Service Duration
+                      </h4>
+                      {isLoadingDurationReview ? (
+                        <span className="text-muted-foreground text-xs">
+                          Loading...
+                        </span>
+                      ) : durationReview ? (
+                        <span
+                          className={`rounded px-2 py-1 text-xs font-medium ${
+                            durationReview.confidence === "good"
+                              ? "bg-green-100 text-green-800"
+                              : "bg-amber-100 text-amber-800"
+                          }`}
+                        >
+                          {durationReview.confidence === "good"
+                            ? "Good"
+                            : "Needs Review"}
+                        </span>
+                      ) : null}
+                    </div>
+
+                    {durationReview ? (
+                      <div className="space-y-2 text-sm">
+                        <div>
+                          <span className="font-medium">Current:</span>{" "}
+                          {durationReview.actualServiceDurationMinutes != null
+                            ? `${durationReview.actualServiceDurationMinutes} min`
+                            : "Not set on this schedule"}
+                        </div>
+                        <div>
+                          <span className="font-medium">Source:</span>{" "}
+                          {durationReview.actualServiceDurationSource ||
+                            "unknown"}
+                        </div>
+                        {durationReview.expectedRangeLabel && (
+                          <div>
+                            <span className="font-medium">
+                              Price baseline (soft check):
+                            </span>{" "}
+                            expected {durationReview.expectedRangeLabel} from
+                            invoice amount (
+                            {durationReview.priceCheckStatus ===
+                            "review: short vs price"
+                              ? "short vs price (info)"
+                              : durationReview.priceCheckStatus}
+                            )
+                          </div>
+                        )}
+                        <p className="text-muted-foreground text-xs">
+                          Price baseline is a reference estimate based on
+                          invoice total, used to flag unusual durations for
+                          review.
+                        </p>
+                        {durationReview.reasons.length > 0 && (
+                          <div className="rounded border border-amber-200 bg-amber-50 p-3 text-amber-900">
+                            <p className="mb-1 text-xs font-semibold">
+                              Needs Review Reason
+                            </p>
+                            <ul className="list-disc space-y-1 pl-5 text-xs">
+                              {durationReview.reasons.map((reason) => (
+                                <li key={reason.code}>{reason.message}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                        {durationReview.actualServiceDurationMinutes ==
+                          null && (
+                          <p className="text-muted-foreground text-xs">
+                            This job may not have qualified for backfill; you
+                            can set an override below.
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      !isLoadingDurationReview && (
+                        <p className="text-muted-foreground text-sm">
+                          Unable to load duration review details.
+                        </p>
+                      )
+                    )}
+
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                      <div className="w-full sm:w-[190px]">
+                        <p className="text-muted-foreground mb-1 text-xs">
+                          Override minutes
+                        </p>
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          value={durationInputMinutes}
+                          onChange={(e) =>
+                            setDurationInputMinutes(e.target.value)
+                          }
+                          placeholder="e.g. 120"
+                          className="bg-background text-foreground placeholder:text-muted-foreground w-full"
+                          disabled={isSavingDuration || isLoadingDurationReview}
+                        />
+                      </div>
+                      <Button
+                        variant="default"
+                        onClick={handleSaveDuration}
+                        disabled={isSavingDuration || isLoadingDurationReview}
+                      >
+                        {isSavingDuration ? "Saving..." : "Save Override"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {isCheckingReport ? (
                 <div className="py-8 text-center">
                   <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2"></div>
@@ -870,6 +1084,9 @@ export default function JobDetailsModal({
                     setIsCheckingReport(false);
                   };
                   checkForExistingReport();
+                  if (canManage) {
+                    void refreshDurationReview();
+                  }
                 }, 100);
               }
             }}

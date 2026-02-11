@@ -17,6 +17,8 @@
     "migrate:user-ids:execute": "node --env-file=.env --import=tsx scripts/migrate-user-ids.ts --execute",
     "check-jobs-due-soon": "tsx scripts/check-jobs-due-soon.ts",
     "analyze:after-photo-duration": "node --env-file=.env --import=tsx scripts/analyze-after-photo-duration.ts",
+    "backfill:actual-service-duration": "node --env-file=.env --import=tsx scripts/backfill-actual-service-duration.ts",
+    "backfill:actual-service-duration:execute": "node --env-file=.env --import=tsx scripts/backfill-actual-service-duration.ts --execute",
     "migrate:photos": "node --env-file=.env --import=tsx scripts/migrate-photos-collection.ts",
     "migrate:photos:execute": "node --env-file=.env --import=tsx scripts/migrate-photos-collection.ts --execute"
   },

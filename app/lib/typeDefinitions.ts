@@ -78,6 +78,8 @@ export interface ScheduleType {
   technicianNotes?: string;
   onSiteContact?: OnSiteContactType;
   accessInstructions?: string;
+  actualServiceDurationMinutes?: number;
+  actualServiceDurationSource?: "after_photo" | "mark_completed" | "admin_edit";
 }
 
 export interface AvailabilityType {
