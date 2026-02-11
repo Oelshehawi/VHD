@@ -1,4 +1,5 @@
 import { format, isToday } from "date-fns";
+import { Map as MapIcon } from "lucide-react";
 import CalendarColumn from "./CalendarColumn";
 import {
   Holiday,
@@ -9,6 +10,7 @@ import {
 } from "../../app/lib/typeDefinitions";
 import { cn } from "../../app/lib/utils";
 import { Badge } from "../../_components/ui/badge";
+import { Button } from "../../_components/ui/button";
 import TravelTimeDaySummary from "./TravelTimeDaySummary";
 import { SERVICE_DAY_HOUR_ORDER } from "../../app/lib/utils/scheduleDayUtils";
 
@@ -24,6 +26,7 @@ const CalendarGrid = ({
   timeOffRequests = [],
   travelTimeSummaries,
   isTravelTimeLoading,
+  onShowMap,
 }: {
   week: Date[];
   selectedDayJobs: (day: Date) => ScheduleType[];
@@ -34,6 +37,7 @@ const CalendarGrid = ({
   timeOffRequests?: TimeOffRequestType[];
   travelTimeSummaries?: Map<string, DayTravelTimeSummary>;
   isTravelTimeLoading?: boolean;
+  onShowMap?: (day: Date) => void;
 }) => {
   return (
     <div className="bg-card flex h-full min-h-0 flex-col">
@@ -103,6 +107,19 @@ const CalendarGrid = ({
                   summary={travelTimeSummaries?.get(format(day, "yyyy-MM-dd"))}
                   isLoading={isTravelTimeLoading}
                 />
+              )}
+
+              {jobCount > 0 && onShowMap && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 gap-1 px-2 text-[10px]"
+                  onClick={() => onShowMap(day)}
+                >
+                  <MapIcon className="h-3 w-3" />
+                  <span className="hidden md:inline">Map</span>
+                </Button>
               )}
             </div>
           );

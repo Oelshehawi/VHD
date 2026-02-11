@@ -17,3 +17,8 @@ This project is an advanced Invoicing and Client Management System designed to f
 - **Data Persistence:** Integration with MongoDB for reliable and secure data storage.
 
 - **Authentication and Security:** Secure user authentication system to ensure data protection and privacy.
+
+## Business Logic Docs
+
+- Core implementation context lives under `docs/business-logic/`.
+- Start with `docs/business-logic/README.md` to choose the relevant domain overview before changing scheduling, travel-time, communications, or invoice workflow code.

@@ -1,4 +1,5 @@
 import "../global.css";
+import "leaflet/dist/leaflet.css";
 import { Inter } from "next/font/google";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/react";

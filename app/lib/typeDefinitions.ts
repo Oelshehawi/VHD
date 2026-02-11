@@ -771,6 +771,7 @@ export interface TravelTimeSegment {
   typicalMinutes: number;
   km: number;
   travelNotes?: string;
+  routePolyline?: string;
   fromKind?: "depot" | "job";
   toKind?: "depot" | "job";
   fromJobId?: string;

@@ -1,6 +1,7 @@
 // components/MonthCalendar.tsx
 "use client";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import dynamic from "next/dynamic";
+import { CalendarDays, ChevronLeft, ChevronRight, MapPin } from "lucide-react";
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
 import { Card, CardContent } from "../../ui/card";
@@ -35,7 +36,6 @@ import {
   compareScheduleDisplayOrder,
   getScheduleDisplayDateKey,
 } from "../../../app/lib/utils/scheduleDayUtils";
-import { CalendarDays } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import {
   Dialog,
@@ -48,6 +48,10 @@ import TravelTimeDaySummary from "../TravelTimeDaySummary";
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
+
+const ScheduleMap = dynamic(() => import("../map/ScheduleMap"), {
+  ssr: false,
+});
 
 export default function MonthCalendar({
   scheduledJobs,
@@ -64,7 +68,7 @@ export default function MonthCalendar({
 }: {
   scheduledJobs: ScheduleType[];
   canManage: boolean;
-  technicians: { id: string; name: string }[];
+  technicians: { id: string; name: string; depotAddress?: string | null }[];
   availability: AvailabilityType[];
   showAvailability: boolean;
   timeOffRequests?: TimeOffRequestType[];
@@ -102,6 +106,8 @@ export default function MonthCalendar({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [dayJobsModalOpen, setDayJobsModalOpen] = useState(false);
   const [dayJobsModalDate, setDayJobsModalDate] = useState<Date | null>(null);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [mapDateKey, setMapDateKey] = useState<string | null>(null);
 
   // Get all days to display (including days from prev/next month to fill the grid)
   const calendarDays = useMemo(() => {
@@ -215,6 +221,13 @@ export default function MonthCalendar({
     setIsModalOpen(true);
   };
 
+  const handleShowMap = (day: Date) => {
+    const dateKey = format(day, "yyyy-MM-dd");
+    if ((jobsByDate[dateKey] || []).length === 0) return;
+    setMapDateKey(dateKey);
+    setIsMapOpen(true);
+  };
+
   const openDayJobsModal = (day: Date) => {
     setDayJobsModalDate(day);
     setDayJobsModalOpen(true);
@@ -246,6 +259,17 @@ export default function MonthCalendar({
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
   }, []);
+
+  const selectedDayKey = format(selectedDay, "yyyy-MM-dd");
+  const mapDate = mapDateKey
+    ? parse(mapDateKey, "yyyy-MM-dd", new Date())
+    : null;
+  const mapJobs = mapDateKey ? jobsByDate[mapDateKey] || [] : [];
+  const mapSummary = mapDateKey
+    ? travelTimeSummaries?.get(mapDateKey)
+    : undefined;
+  const depotAddress =
+    technicians.find((tech) => tech.depotAddress)?.depotAddress ?? null;
 
   return (
     <>
@@ -348,6 +372,19 @@ export default function MonthCalendar({
                   {/* Job count + travel time badges */}
                   {dayJobs.length > 0 && (
                     <div className="absolute right-1 bottom-1 flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-foreground h-5 w-5"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleShowMap(day);
+                        }}
+                        aria-label={`Open route map for ${format(day, "MMM d, yyyy")}`}
+                      >
+                        <MapPin className="h-3 w-3" />
+                      </Button>
                       <TravelTimeDaySummary
                         summary={travelTimeSummaries?.get(dateKey)}
                         isLoading={isTravelTimeLoading}
@@ -805,10 +842,20 @@ export default function MonthCalendar({
                     </span>
                     <div className="flex items-center gap-2">
                       {selectedDayJobs.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="text-muted-foreground hover:text-foreground h-6 w-6"
+                          onClick={() => handleShowMap(selectedDay)}
+                          aria-label={`Open route map for ${format(selectedDay, "MMM d, yyyy")}`}
+                        >
+                          <MapPin className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                      {selectedDayJobs.length > 0 && (
                         <TravelTimeDaySummary
-                          summary={travelTimeSummaries?.get(
-                            format(selectedDay, "yyyy-MM-dd"),
-                          )}
+                          summary={travelTimeSummaries?.get(selectedDayKey)}
                           isLoading={isTravelTimeLoading}
                         />
                       )}
@@ -916,6 +963,26 @@ export default function MonthCalendar({
         canManage={canManage}
         technicians={technicians}
       />
+
+      {/* Route Map Modal */}
+      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+        <DialogContent className="max-w-[95vw] overflow-hidden p-0 sm:max-w-6xl">
+          <DialogHeader className="border-border border-b px-4 py-3">
+            <DialogTitle className="text-base">
+              Route Map
+              {mapDate ? ` - ${format(mapDate, "EEEE, MMM d")}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 pt-3">
+            <ScheduleMap
+              jobs={mapJobs}
+              summary={mapSummary}
+              technicians={technicians}
+              depotAddress={depotAddress}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Day Jobs Modal (desktop "more" list) */}
       <Dialog open={dayJobsModalOpen} onOpenChange={setDayJobsModalOpen}>

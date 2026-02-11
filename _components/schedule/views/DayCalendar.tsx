@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
+import dynamic from "next/dynamic";
 import { format, isToday, startOfDay } from "date-fns";
-import { CalendarDays, Clock } from "lucide-react";
+import { CalendarDays, Clock, Map } from "lucide-react";
 import { getTechnicianUnavailabilityInfo } from "../../../app/lib/utils/availabilityUtils";
 import { formatTimeRange12hr } from "../../../app/lib/utils/timeFormatUtils";
 import { formatDateStringUTC } from "../../../app/lib/utils";
@@ -14,6 +15,13 @@ import {
 import CalendarColumn from "../CalendarColumn";
 import { Calendar } from "../../ui/calendar";
 import { Badge } from "../../ui/badge";
+import { Button } from "../../ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "../../ui/dialog";
 import { cn } from "../../../app/lib/utils";
 import JobDetailsModal from "../JobDetailsModal";
 import TravelTimeDaySummary from "../TravelTimeDaySummary";
@@ -24,13 +32,16 @@ import {
 } from "../../../app/lib/utils/scheduleDayUtils";
 
 const HOURS = SERVICE_DAY_HOUR_ORDER;
+const ScheduleMap = dynamic(() => import("../map/ScheduleMap"), {
+  ssr: false,
+});
 
 interface DayCalendarProps {
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   currentDay: Date;
   holidays: any;
-  technicians: { id: string; name: string }[];
+  technicians: { id: string; name: string; depotAddress?: string | null }[];
   availability: AvailabilityType[];
   timeOffRequests?: TimeOffRequestType[];
   travelTimeSummaries?: Map<string, DayTravelTimeSummary>;
@@ -53,6 +64,7 @@ const DayCalendar = ({
   // Modal state
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
   // Group jobs by date with optimized performance
   const selectedDayJobsMap = useMemo(() => {
@@ -102,6 +114,10 @@ const DayCalendar = ({
   };
 
   const currentDayJobs = selectedDayJobs(currentDay);
+  const currentDayKey = format(currentDay, "yyyy-MM-dd");
+  const currentDaySummary = travelTimeSummaries?.get(currentDayKey);
+  const depotAddress =
+    technicians.find((tech) => tech.depotAddress)?.depotAddress ?? null;
 
   // Get time-off requests for the current day
   const currentDayTimeOff = useMemo(() => {
@@ -205,13 +221,21 @@ const DayCalendar = ({
 
                     {/* Travel time indicator */}
                     {currentDayJobs.length > 0 && (
-                      <div className="mt-1">
+                      <div className="mt-1 flex items-center gap-2">
                         <TravelTimeDaySummary
-                          summary={travelTimeSummaries?.get(
-                            format(currentDay, "yyyy-MM-dd"),
-                          )}
+                          summary={currentDaySummary}
                           isLoading={isTravelTimeLoading}
                         />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-6 gap-1 px-2 text-[10px]"
+                          onClick={() => setIsMapOpen(true)}
+                        >
+                          <Map className="h-3 w-3" />
+                          Show Map
+                        </Button>
                       </div>
                     )}
 
@@ -320,12 +344,24 @@ const DayCalendar = ({
                     Jobs for {format(currentDay, "MMM d")}
                   </h3>
                   {currentDayJobs.length > 0 && (
-                    <Badge
-                      variant="secondary"
-                      className="h-4 px-1.5 text-[10px]"
-                    >
-                      {currentDayJobs.length}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 gap-1 px-2 text-[10px]"
+                        onClick={() => setIsMapOpen(true)}
+                      >
+                        <Map className="h-3 w-3" />
+                        Show Map
+                      </Button>
+                      <Badge
+                        variant="secondary"
+                        className="h-4 px-1.5 text-[10px]"
+                      >
+                        {currentDayJobs.length}
+                      </Badge>
+                    </div>
                   )}
                 </div>
 
@@ -417,9 +453,7 @@ const DayCalendar = ({
 
                 {/* Travel Time Breakdown */}
                 {(() => {
-                  const daySummary = travelTimeSummaries?.get(
-                    format(currentDay, "yyyy-MM-dd"),
-                  );
+                  const daySummary = currentDaySummary;
                   if (
                     !daySummary &&
                     !isTravelTimeLoading &&
@@ -476,6 +510,24 @@ const DayCalendar = ({
           </div>
         </div>
       </div>
+
+      <Dialog open={isMapOpen} onOpenChange={setIsMapOpen}>
+        <DialogContent className="max-w-[95vw] overflow-hidden p-0 sm:max-w-6xl">
+          <DialogHeader className="border-border border-b px-4 py-3">
+            <DialogTitle className="text-base">
+              Route Map - {format(currentDay, "EEEE, MMM d")}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-4 pt-3">
+            <ScheduleMap
+              jobs={currentDayJobs}
+              summary={currentDaySummary}
+              technicians={technicians}
+              depotAddress={depotAddress}
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Job Details Modal */}
       <JobDetailsModal
