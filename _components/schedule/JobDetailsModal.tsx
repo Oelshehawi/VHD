@@ -200,7 +200,7 @@ export default function JobDetailsModal({
   }, [activeView, hasLoadedMedia, isLoadingMedia, isOpen, loadMedia]);
 
   const refreshDurationReview = useCallback(async () => {
-    if (!job || !canManage) return;
+    if (!job) return;
 
     setIsLoadingDurationReview(true);
     try {
@@ -223,7 +223,7 @@ export default function JobDetailsModal({
     } finally {
       setIsLoadingDurationReview(false);
     }
-  }, [canManage, job]);
+  }, [job]);
 
   // Check for existing report when switching to report view
   useEffect(() => {
@@ -248,11 +248,9 @@ export default function JobDetailsModal({
 
     if (activeView === "report" && job) {
       void checkForExistingReport();
-      if (canManage) {
-        void refreshDurationReview();
-      }
+      void refreshDurationReview();
     }
-  }, [job, activeView, canManage, refreshDurationReview]);
+  }, [job, activeView, refreshDurationReview]);
 
   const toggleConfirmedStatus = async () => {
     if (!job || isLoading || !canManage) {
@@ -377,7 +375,7 @@ export default function JobDetailsModal({
   };
 
   const saveAdminDurationValue = async (value: number) => {
-    if (!job || !canManage) return;
+    if (!job) return;
 
     setIsSavingDuration(true);
     try {
@@ -726,120 +724,116 @@ export default function JobDetailsModal({
             </TabsContent>
 
             <TabsContent value="report" className="space-y-4 p-6">
-              {canManage && (
-                <Card className="gap-0 py-0">
-                  <CardContent className="space-y-3 p-4">
-                    <div className="flex items-center justify-between gap-3">
-                      <h4 className="text-foreground font-medium">
-                        Actual Service Duration
-                      </h4>
-                      {isLoadingDurationReview ? (
-                        <span className="text-muted-foreground text-xs">
-                          Loading...
-                        </span>
-                      ) : durationReview ? (
-                        <span
-                          className={`rounded px-2 py-1 text-xs font-medium ${
-                            durationReview.confidence === "good"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-amber-100 text-amber-800"
-                          }`}
-                        >
-                          {durationReview.confidence === "good"
-                            ? "Good"
-                            : "Needs Review"}
-                        </span>
-                      ) : null}
-                    </div>
-
-                    {durationReview ? (
-                      <div className="space-y-2 text-sm">
-                        <div>
-                          <span className="font-medium">Current:</span>{" "}
-                          {durationReview.actualServiceDurationMinutes != null
-                            ? `${durationReview.actualServiceDurationMinutes} min`
-                            : "Not set on this schedule"}
-                        </div>
-                        <div>
-                          <span className="font-medium">Source:</span>{" "}
-                          {durationReview.actualServiceDurationSource ||
-                            "unknown"}
-                        </div>
-                        {durationReview.expectedRangeLabel && (
-                          <div>
-                            <span className="font-medium">
-                              Price baseline (soft check):
-                            </span>{" "}
-                            expected {durationReview.expectedRangeLabel} from
-                            invoice amount (
-                            {durationReview.priceCheckStatus ===
-                            "review: short vs price"
-                              ? "short vs price (info)"
-                              : durationReview.priceCheckStatus}
-                            )
-                          </div>
-                        )}
-                        <p className="text-muted-foreground text-xs">
-                          Price baseline is a reference estimate based on
-                          invoice total, used to flag unusual durations for
-                          review.
-                        </p>
-                        {durationReview.reasons.length > 0 && (
-                          <div className="rounded border border-amber-200 bg-amber-50 p-3 text-amber-900">
-                            <p className="mb-1 text-xs font-semibold">
-                              Needs Review Reason
-                            </p>
-                            <ul className="list-disc space-y-1 pl-5 text-xs">
-                              {durationReview.reasons.map((reason) => (
-                                <li key={reason.code}>{reason.message}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                        {durationReview.actualServiceDurationMinutes ==
-                          null && (
-                          <p className="text-muted-foreground text-xs">
-                            This job may not have qualified for backfill; you
-                            can set an override below.
-                          </p>
-                        )}
-                      </div>
-                    ) : (
-                      !isLoadingDurationReview && (
-                        <p className="text-muted-foreground text-sm">
-                          Unable to load duration review details.
-                        </p>
-                      )
-                    )}
-
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                      <div className="w-full sm:w-[190px]">
-                        <p className="text-muted-foreground mb-1 text-xs">
-                          Override minutes
-                        </p>
-                        <Input
-                          type="text"
-                          inputMode="numeric"
-                          value={durationInputMinutes}
-                          onChange={(e) =>
-                            setDurationInputMinutes(e.target.value)
-                          }
-                          placeholder="e.g. 120"
-                          className="bg-background text-foreground placeholder:text-muted-foreground w-full"
-                          disabled={isSavingDuration || isLoadingDurationReview}
-                        />
-                      </div>
-                      <Button
-                        variant="default"
-                        onClick={handleSaveDuration}
-                        disabled={isSavingDuration || isLoadingDurationReview}
+              <Card className="gap-0 py-0">
+                <CardContent className="space-y-3 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <h4 className="text-foreground font-medium">
+                      Actual Service Duration
+                    </h4>
+                    {isLoadingDurationReview ? (
+                      <span className="text-muted-foreground text-xs">
+                        Loading...
+                      </span>
+                    ) : durationReview ? (
+                      <span
+                        className={`rounded px-2 py-1 text-xs font-medium ${
+                          durationReview.confidence === "good"
+                            ? "bg-green-100 text-green-800"
+                            : "bg-amber-100 text-amber-800"
+                        }`}
                       >
-                        {isSavingDuration ? "Saving..." : "Save Override"}
-                      </Button>
+                        {durationReview.confidence === "good"
+                          ? "Good"
+                          : "Needs Review"}
+                      </span>
+                    ) : null}
+                  </div>
+
+                  {durationReview ? (
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <span className="font-medium">Current:</span>{" "}
+                        {durationReview.actualServiceDurationMinutes != null
+                          ? `${durationReview.actualServiceDurationMinutes} min`
+                          : "Not set on this schedule"}
+                      </div>
+                      <div>
+                        <span className="font-medium">Source:</span>{" "}
+                        {durationReview.actualServiceDurationSource ||
+                          "unknown"}
+                      </div>
+                      {durationReview.expectedRangeLabel && (
+                        <div>
+                          <span className="font-medium">
+                            Price baseline (soft check):
+                          </span>{" "}
+                          expected {durationReview.expectedRangeLabel} from
+                          invoice amount (
+                          {durationReview.priceCheckStatus ===
+                          "review: short vs price"
+                            ? "short vs price (info)"
+                            : durationReview.priceCheckStatus}
+                          )
+                        </div>
+                      )}
+                      <p className="text-muted-foreground text-xs">
+                        Price baseline is a reference estimate based on invoice
+                        total, used to flag unusual durations for review.
+                      </p>
+                      {durationReview.reasons.length > 0 && (
+                        <div className="rounded border border-amber-200 bg-amber-50 p-3 text-amber-900">
+                          <p className="mb-1 text-xs font-semibold">
+                            Needs Review Reason
+                          </p>
+                          <ul className="list-disc space-y-1 pl-5 text-xs">
+                            {durationReview.reasons.map((reason) => (
+                              <li key={reason.code}>{reason.message}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                      {durationReview.actualServiceDurationMinutes == null && (
+                        <p className="text-muted-foreground text-xs">
+                          This job may not have qualified for backfill; you can
+                          set an override below.
+                        </p>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  ) : (
+                    !isLoadingDurationReview && (
+                      <p className="text-muted-foreground text-sm">
+                        Unable to load duration review details.
+                      </p>
+                    )
+                  )}
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="w-full sm:w-[190px]">
+                      <p className="text-muted-foreground mb-1 text-xs">
+                        Override minutes
+                      </p>
+                      <Input
+                        type="text"
+                        inputMode="numeric"
+                        value={durationInputMinutes}
+                        onChange={(e) =>
+                          setDurationInputMinutes(e.target.value)
+                        }
+                        placeholder="e.g. 120"
+                        className="bg-background text-foreground placeholder:text-muted-foreground w-full"
+                        disabled={isSavingDuration || isLoadingDurationReview}
+                      />
+                    </div>
+                    <Button
+                      variant="default"
+                      onClick={handleSaveDuration}
+                      disabled={isSavingDuration || isLoadingDurationReview}
+                    >
+                      {isSavingDuration ? "Saving..." : "Save Override"}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
 
               {isCheckingReport ? (
                 <div className="py-8 text-center">
@@ -1084,9 +1078,7 @@ export default function JobDetailsModal({
                     setIsCheckingReport(false);
                   };
                   checkForExistingReport();
-                  if (canManage) {
-                    void refreshDurationReview();
-                  }
+                  void refreshDurationReview();
                 }, 100);
               }
             }}

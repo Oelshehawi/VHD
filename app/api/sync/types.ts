@@ -63,7 +63,6 @@ export interface TechnicianNotesData {
   id: string;
   technicianNotes: string;
   actualServiceDurationMinutes?: number;
-  actualServiceDurationSource?: "after_photo" | "mark_completed" | "admin_edit";
 }
 
 // Availability data

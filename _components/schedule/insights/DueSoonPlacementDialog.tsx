@@ -89,7 +89,14 @@ export default function DueSoonPlacementDialog({
   ) => {
     const time = formatTimeUTC(prev.startDateTime);
     const names = prev.technicianNames.join(", ");
-    return `Last: ${time} by ${names} (${prev.hours}h)`;
+    const effectiveMinutes =
+      prev.effectiveServiceDurationMinutes ??
+      Math.round((prev.effectiveServiceDurationHours ?? prev.hours) * 60);
+    const durationLabel =
+      prev.actualServiceDurationMinutes != null
+        ? `${effectiveMinutes}m actual`
+        : `${(prev.effectiveServiceDurationHours ?? prev.hours).toFixed(1)}h`;
+    return `Last: ${time} by ${names} (${durationLabel})`;
   };
 
   const toggleJob = (id: string) => {
@@ -241,12 +248,8 @@ export default function DueSoonPlacementDialog({
                           className="hover:bg-muted/50 flex cursor-pointer items-center gap-3 rounded px-2 py-1.5"
                         >
                           <Checkbox
-                            checked={selectedJobIds.includes(
-                              job.jobsDueSoonId,
-                            )}
-                            onCheckedChange={() =>
-                              toggleJob(job.jobsDueSoonId)
-                            }
+                            checked={selectedJobIds.includes(job.jobsDueSoonId)}
+                            onCheckedChange={() => toggleJob(job.jobsDueSoonId)}
                           />
                           <div className="min-w-0 flex-1">
                             <p className="truncate text-sm font-medium">
@@ -265,10 +268,7 @@ export default function DueSoonPlacementDialog({
                             <Badge variant="outline" className="text-[10px]">
                               Due {formatDateKeyLong(job.dateDue)}
                             </Badge>
-                            <Badge
-                              variant="secondary"
-                              className="text-[10px]"
-                            >
+                            <Badge variant="secondary" className="text-[10px]">
                               {job.estimatedHours}h
                             </Badge>
                           </div>
@@ -378,8 +378,7 @@ export default function DueSoonPlacementDialog({
                                         candidate.scoreBreakdown
                                           .duePenaltyPoints
                                       }{" "}
-                                      (
-                                      {candidate.scoreBreakdown.duePenaltyDays}
+                                      ({candidate.scoreBreakdown.duePenaltyDays}
                                       d) • Load +
                                       {candidate.scoreBreakdown.loadPoints} (
                                       {candidate.scoreBreakdown.loadHours.toFixed(

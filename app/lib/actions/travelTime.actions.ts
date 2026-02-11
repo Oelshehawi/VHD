@@ -11,7 +11,10 @@ import type {
   ScheduleType,
 } from "../typeDefinitions";
 import { SERVICE_DAY_CUTOFF_HOUR } from "../utils/scheduleDayUtils";
-import { fakeUtcStoredToRealUtcIso } from "../serviceDurationRules";
+import {
+  fakeUtcStoredToRealUtcIso,
+  getEffectiveServiceDurationMinutes,
+} from "../serviceDurationRules";
 
 // Address normalization
 
@@ -106,8 +109,12 @@ function getJobEndDateTimeIso(job: ScheduleType): string {
   if (Number.isNaN(start.getTime())) {
     return toIsoStringSafe(job.startDateTime);
   }
-  const hours = Number.isFinite(job.hours) ? Math.max(job.hours, 0) : 0;
-  return new Date(start.getTime() + hours * 60 * 60 * 1000).toISOString();
+  const durationMinutes = getEffectiveServiceDurationMinutes({
+    actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+    scheduleHours: job.hours,
+    fallbackHours: 0,
+  });
+  return new Date(start.getTime() + durationMinutes * 60 * 1000).toISOString();
 }
 
 /**
@@ -145,9 +152,13 @@ function getRoutingJobEndDateTimeIso(job: ScheduleType): string {
   if (!adjustedStart) {
     return getJobEndDateTimeIso(job);
   }
-  const hours = Number.isFinite(job.hours) ? Math.max(job.hours, 0) : 0;
+  const durationMinutes = getEffectiveServiceDurationMinutes({
+    actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+    scheduleHours: job.hours,
+    fallbackHours: 0,
+  });
   return new Date(
-    adjustedStart.getTime() + hours * 60 * 60 * 1000,
+    adjustedStart.getTime() + durationMinutes * 60 * 1000,
   ).toISOString();
 }
 

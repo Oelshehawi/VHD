@@ -38,6 +38,10 @@ import {
   formatTimeUTC,
   formatDateStringUTC,
 } from "../utils";
+import {
+  getEffectiveServiceDurationHours,
+  getEffectiveServiceDurationMinutes,
+} from "../serviceDurationRules";
 
 type ListScheduleInsightsArgs = {
   status?: ScheduleInsightStatus | "all";
@@ -178,17 +182,30 @@ function buildStoredScheduleIso(
   return value.toISOString();
 }
 
-function hoursForJob(job: Pick<ScheduleType, "hours">): number {
-  if (!Number.isFinite(job.hours)) return 4;
-  return Math.max(0, Number(job.hours));
+function hoursForJob(
+  job: Pick<ScheduleType, "hours" | "actualServiceDurationMinutes">,
+): number {
+  return getEffectiveServiceDurationHours({
+    actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+    scheduleHours: job.hours,
+    fallbackHours: 4,
+  });
 }
 
 function getJobEndIso(
-  job: Pick<ScheduleType, "startDateTime" | "hours">,
+  job: Pick<
+    ScheduleType,
+    "startDateTime" | "hours" | "actualServiceDurationMinutes"
+  >,
 ): string {
   const start = new Date(job.startDateTime);
   if (Number.isNaN(start.getTime())) return String(job.startDateTime);
-  const end = new Date(start.getTime() + hoursForJob(job) * 60 * 60 * 1000);
+  const durationMinutes = getEffectiveServiceDurationMinutes({
+    actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+    scheduleHours: job.hours,
+    fallbackHours: 4,
+  });
+  const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
   return end.toISOString();
 }
 
@@ -679,15 +696,14 @@ async function fetchPreviousSchedules(
 
   await connectMongo();
 
-  const objectIds = invoiceRefs.map(
-    (id) => new mongoose.Types.ObjectId(id),
-  );
+  const objectIds = invoiceRefs.map((id) => new mongoose.Types.ObjectId(id));
 
   const results = await Schedule.aggregate<{
     _id: any;
     startDateTime: Date;
     assignedTechnicians: string[];
     hours: number;
+    actualServiceDurationMinutes?: number;
   }>([
     { $match: { invoiceRef: { $in: objectIds } } },
     { $sort: { startDateTime: -1 } },
@@ -697,13 +713,14 @@ async function fetchPreviousSchedules(
         startDateTime: { $first: "$startDateTime" },
         assignedTechnicians: { $first: "$assignedTechnicians" },
         hours: { $first: "$hours" },
+        actualServiceDurationMinutes: {
+          $first: "$actualServiceDurationMinutes",
+        },
       },
     },
   ]);
 
-  const techNameMap = new Map(
-    technicianDirectory.map((t) => [t.id, t.name]),
-  );
+  const techNameMap = new Map(technicianDirectory.map((t) => [t.id, t.name]));
 
   const map = new Map<string, PreviousScheduleReference>();
   for (const row of results) {
@@ -711,11 +728,19 @@ async function fetchPreviousSchedules(
     const techIds = (row.assignedTechnicians || []).map((id) =>
       normalizeId(id),
     );
+    const effectiveDurationMinutes = getEffectiveServiceDurationMinutes({
+      actualServiceDurationMinutes: row.actualServiceDurationMinutes,
+      scheduleHours: row.hours,
+      fallbackHours: 4,
+    });
     map.set(refId, {
       startDateTime: row.startDateTime,
       assignedTechnicians: techIds,
       technicianNames: techIds.map((id) => techNameMap.get(id) || "Unknown"),
       hours: row.hours ?? 4,
+      actualServiceDurationMinutes: row.actualServiceDurationMinutes,
+      effectiveServiceDurationMinutes: effectiveDurationMinutes,
+      effectiveServiceDurationHours: effectiveDurationMinutes / 60,
     });
   }
   return map;
@@ -810,7 +835,16 @@ async function fetchUnscheduledDueSoonInRange(args: {
     for (const suggestion of suggestions) {
       if (suggestion.invoiceRef) {
         const prev = prevMap.get(suggestion.invoiceRef);
-        if (prev) suggestion.previousSchedule = prev;
+        if (prev) {
+          suggestion.previousSchedule = prev;
+          if (
+            Number.isFinite(prev.effectiveServiceDurationHours) &&
+            (prev.effectiveServiceDurationHours as number) > 0
+          ) {
+            suggestion.estimatedHours =
+              prev.effectiveServiceDurationHours as number;
+          }
+        }
       }
     }
   }
@@ -1131,9 +1165,7 @@ function generateCrewCandidatesNoTravel(args: {
   for (const dateKey of allDates) {
     const dayMs = toUtcRangeStart(dateKey).getTime();
     const penaltyDays =
-      dayMs > dueMs
-        ? Math.round((dayMs - dueMs) / (1000 * 60 * 60 * 24))
-        : 0;
+      dayMs > dueMs ? Math.round((dayMs - dueMs) / (1000 * 60 * 60 * 24)) : 0;
     const penaltyPts = duePenaltyPoints(penaltyDays, args.duePolicy);
 
     for (const combo of crewCombos) {
@@ -1144,10 +1176,7 @@ function generateCrewCandidatesNoTravel(args: {
       for (const tech of combo) {
         const dayJobs =
           args.schedulesByTechDay.get(buildTechDayKey(tech.id, dateKey)) || [];
-        const loadHrs = dayJobs.reduce(
-          (sum, job) => sum + hoursForJob(job),
-          0,
-        );
+        const loadHrs = dayJobs.reduce((sum, job) => sum + hoursForJob(job), 0);
         if (loadHrs + args.targetEstimatedHours > 12) {
           hasCapacity = false;
           break;
@@ -1876,9 +1905,7 @@ export async function analyzeDueSoonPlacement(
     dateFrom: args.dateFrom,
     dateTo: args.dateTo,
   });
-  const selectedTechIds = new Set(
-    (args.technicianIds || []).filter(Boolean),
-  );
+  const selectedTechIds = new Set((args.technicianIds || []).filter(Boolean));
   const technicianPool =
     selectedTechIds.size > 0
       ? allTechnicians.filter((t) => selectedTechIds.has(t.id))

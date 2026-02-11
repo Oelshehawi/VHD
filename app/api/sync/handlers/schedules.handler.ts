@@ -115,8 +115,12 @@ export const schedulesHandler: TableHandler = {
 
       if (Object.keys(updateData).length === 0) {
         if (durationWriteSkipped && existingSchedule) {
+          const currentSchedule = await Schedule.findById(toObjectId(id));
+          if (!currentSchedule) {
+            return notFoundError("Schedule not found");
+          }
           return success({
-            schedule: existingSchedule.toObject(),
+            schedule: currentSchedule,
             skippedActualServiceDuration: true,
             skipReason: "admin_edit_override_preserved",
           });

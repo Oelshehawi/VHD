@@ -19,6 +19,10 @@ import {
   compareScheduleDisplayOrder,
   SERVICE_DAY_HOUR_ORDER,
 } from "../../app/lib/utils/scheduleDayUtils";
+import {
+  getEffectiveServiceDurationHours,
+  getEffectiveServiceDurationMinutes,
+} from "../../app/lib/serviceDurationRules";
 
 const parseDate = (dateString: string): Date => {
   const [year, month, day] = dateString.split("-").map(Number);
@@ -219,8 +223,21 @@ const CalendarColumn = ({
                   const { minutes } = getJobTime(job);
                   const topOffset = (minutes / 60) * 100;
 
-                  // Use the hours stored on the schedule directly
-                  const jobDuration = job.hours || 4;
+                  const jobDuration = getEffectiveServiceDurationHours({
+                    actualServiceDurationMinutes:
+                      job.actualServiceDurationMinutes,
+                    scheduleHours: job.hours,
+                    fallbackHours: 4,
+                  });
+                  const jobDurationMinutes = getEffectiveServiceDurationMinutes(
+                    {
+                      actualServiceDurationMinutes:
+                        job.actualServiceDurationMinutes,
+                      scheduleHours: job.hours,
+                      fallbackHours: 4,
+                    },
+                  );
+                  const isCompactJobCard = jobDurationMinutes < 80;
 
                   return (
                     <div
@@ -229,11 +246,13 @@ const CalendarColumn = ({
                       style={{
                         top: `${topOffset}%`,
                         height: `calc(${jobDuration} * var(--slot-height))`,
-                        minHeight: "60px",
+                        minHeight: isCompactJobCard ? "30px" : "60px",
                       }}
                     >
                       <JobItem
                         job={job}
+                        compact={isCompactJobCard}
+                        durationMinutes={jobDurationMinutes}
                         technicians={technicians}
                         onJobClick={handleJobClick}
                         travelSegment={(() => {

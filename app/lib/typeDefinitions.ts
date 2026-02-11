@@ -868,6 +868,9 @@ export interface PreviousScheduleReference {
   assignedTechnicians: string[];
   technicianNames: string[];
   hours: number;
+  actualServiceDurationMinutes?: number;
+  effectiveServiceDurationMinutes?: number;
+  effectiveServiceDurationHours?: number;
 }
 
 // ── Travel Time Types ──────────────────────────────────────────────────────

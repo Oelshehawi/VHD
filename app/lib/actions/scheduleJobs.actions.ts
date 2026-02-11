@@ -31,6 +31,7 @@ import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
 import { createNotification } from "./notifications.actions";
 import { getScheduleDisplayDateKey } from "../utils/scheduleDayUtils";
 import { runAutoScheduleInsightAnalysis } from "./scheduleInsights.actions";
+import { requireAdmin } from "../auth/utils";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -510,8 +511,10 @@ export async function getScheduleActualDurationReview(
     cutoffMinutes: number;
   };
 }> {
-  await connectMongo();
   try {
+    await requireAdmin();
+    await connectMongo();
+
     const schedule = await Schedule.findById(
       scheduleId,
     ).lean<ScheduleType | null>();
@@ -546,6 +549,9 @@ export async function getScheduleActualDurationReview(
     };
   } catch (error) {
     console.error("Database Error:", error);
+    if (error instanceof Error && error.message.includes("Unauthorized")) {
+      return { success: false, message: "Unauthorized" };
+    }
     return { success: false, message: "Failed to evaluate schedule duration" };
   }
 }
@@ -558,10 +564,19 @@ export async function updateScheduleActualServiceDuration(input: {
 }): Promise<{
   success: boolean;
   message: string;
-  schedule?: ScheduleType;
+  data?: {
+    scheduleId: string;
+    actualServiceDurationMinutes?: number;
+    actualServiceDurationSource?:
+      | "after_photo"
+      | "mark_completed"
+      | "admin_edit";
+  };
 }> {
-  await connectMongo();
   try {
+    await requireAdmin();
+    await connectMongo();
+
     const scheduleId = input.scheduleId?.trim();
     if (!scheduleId) {
       return { success: false, message: "scheduleId is required" };
@@ -654,10 +669,20 @@ export async function updateScheduleActualServiceDuration(input: {
       message: clear
         ? "Actual service duration cleared"
         : "Actual service duration updated",
-      schedule,
+      data: {
+        scheduleId: schedule._id.toString(),
+        actualServiceDurationMinutes: schedule.actualServiceDurationMinutes,
+        actualServiceDurationSource: schedule.actualServiceDurationSource,
+      },
     };
   } catch (error) {
     console.error("Database Error:", error);
+    if (error instanceof Error && error.message.includes("Unauthorized")) {
+      return {
+        success: false,
+        message: "Unauthorized",
+      };
+    }
     return {
       success: false,
       message: "Failed to update actual service duration",

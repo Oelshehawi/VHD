@@ -63,6 +63,41 @@ function toFiniteNumber(value: unknown, fallback: number): number {
   return parsed;
 }
 
+function toNonNegativeFiniteNumber(value: unknown): number | null {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return parsed;
+}
+
+export function getEffectiveServiceDurationMinutes(args: {
+  actualServiceDurationMinutes: number | null | undefined;
+  scheduleHours: number | null | undefined;
+  fallbackHours?: number;
+}): number {
+  const actual = toNonNegativeFiniteNumber(args.actualServiceDurationMinutes);
+  if (actual != null && actual <= ACTUAL_SERVICE_DURATION_MAX_MINUTES) {
+    return actual;
+  }
+
+  const scheduleHours = toNonNegativeFiniteNumber(args.scheduleHours);
+  if (scheduleHours != null) {
+    return scheduleHours * 60;
+  }
+
+  const fallbackHours =
+    toNonNegativeFiniteNumber(args.fallbackHours) ??
+    toFiniteNumber(args.fallbackHours, 4);
+  return Math.max(0, fallbackHours) * 60;
+}
+
+export function getEffectiveServiceDurationHours(args: {
+  actualServiceDurationMinutes: number | null | undefined;
+  scheduleHours: number | null | undefined;
+  fallbackHours?: number;
+}): number {
+  return getEffectiveServiceDurationMinutes(args) / 60;
+}
+
 /**
  * Reinterpret a "fake UTC" schedule timestamp as a real UTC instant.
  *
