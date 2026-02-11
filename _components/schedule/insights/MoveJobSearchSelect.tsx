@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { CheckIcon, ChevronsUpDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { CheckIcon, ChevronsUpDown, Loader2 } from "lucide-react";
 import { cn, formatDateStringUTC, formatTimeUTC } from "../../../app/lib/utils";
 import { Button } from "../../ui/button";
 import {
@@ -13,12 +13,13 @@ import {
   CommandList,
 } from "../../ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "../../ui/popover";
-import type { MoveJobOption } from "./types";
+import { searchScheduledJobs } from "../../../app/lib/actions/scheduleJobs.actions";
+import type { MoveJobOptionWithDetails } from "./types";
+import type { ScheduleType } from "../../../app/lib/typeDefinitions";
 
 interface MoveJobSearchSelectProps {
-  jobs: MoveJobOption[];
   value: string;
-  onSelect: (jobId: string) => void;
+  onSelect: (job: MoveJobOptionWithDetails) => void;
 }
 
 function parseStoredScheduleDateTime(value: string | Date): Date | null {
@@ -64,17 +65,75 @@ function parseStoredScheduleDateTime(value: string | Date): Date | null {
   return parsed;
 }
 
+function formatJobDate(startDateTime: string | Date): string {
+  const parsed = parseStoredScheduleDateTime(startDateTime);
+  if (!parsed) return String(startDateTime);
+  return `${formatDateStringUTC(parsed)} at ${formatTimeUTC(parsed)}`;
+}
+
 export default function MoveJobSearchSelect({
-  jobs,
   value,
   onSelect,
 }: MoveJobSearchSelectProps) {
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<ScheduleType[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedDisplay, setSelectedDisplay] = useState<{
+    title: string;
+    dateLabel: string;
+  } | null>(null);
 
-  const selectedJob = jobs.find((job) => String(job._id) === value);
-  const selectedJobStart = selectedJob
-    ? parseStoredScheduleDateTime(selectedJob.startDateTime)
-    : null;
+  useEffect(() => {
+    let isActive = true;
+    const trimmed = query.trim();
+
+    if (!trimmed) {
+      setResults([]);
+      setIsLoading(false);
+      return;
+    }
+
+    setIsLoading(true);
+
+    const timer = setTimeout(async () => {
+      try {
+        const jobs = await searchScheduledJobs(trimmed, 25);
+        if (isActive) {
+          setResults(jobs as ScheduleType[]);
+        }
+      } catch (error) {
+        console.error("Failed to search jobs:", error);
+        if (isActive) setResults([]);
+      } finally {
+        if (isActive) setIsLoading(false);
+      }
+    }, 250);
+
+    return () => {
+      isActive = false;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  const handleSelect = (job: ScheduleType) => {
+    setSelectedDisplay({
+      title: job.jobTitle || "Untitled Job",
+      dateLabel: formatJobDate(job.startDateTime),
+    });
+    onSelect({
+      _id: job._id,
+      jobTitle: job.jobTitle,
+      location: job.location,
+      startDateTime: job.startDateTime,
+      assignedTechnicians: job.assignedTechnicians,
+      hours: job.hours,
+      technicianNotes: job.technicianNotes,
+      onSiteContact: job.onSiteContact,
+      accessInstructions: job.accessInstructions,
+    });
+    setOpen(false);
+  };
 
   return (
     <Popover modal={true} open={open} onOpenChange={setOpen}>
@@ -86,12 +145,9 @@ export default function MoveJobSearchSelect({
           aria-expanded={open}
           className="w-full justify-between"
         >
-          {selectedJob ? (
+          {selectedDisplay ? (
             <span className="truncate">
-              {selectedJob.jobTitle || "Untitled Job"} •{" "}
-              {selectedJobStart
-                ? `${formatDateStringUTC(selectedJobStart)} at ${formatTimeUTC(selectedJobStart)}`
-                : String(selectedJob.startDateTime)}
+              {selectedDisplay.title} • {selectedDisplay.dateLabel}
             </span>
           ) : (
             <span className="text-muted-foreground">
@@ -105,52 +161,53 @@ export default function MoveJobSearchSelect({
         className="w-[var(--radix-popover-trigger-width)] p-0"
         align="start"
       >
-        <Command
-          filter={(itemValue, search) => {
-            if (itemValue.toLowerCase().includes(search.toLowerCase())) {
-              return 1;
-            }
-            return 0;
-          }}
-        >
-          <CommandInput placeholder="Search jobs..." />
+        <Command shouldFilter={false}>
+          <CommandInput
+            placeholder="Search jobs..."
+            value={query}
+            onValueChange={setQuery}
+          />
           <CommandList className="max-h-[300px]">
-            <CommandEmpty>No job found.</CommandEmpty>
-            <CommandGroup>
-              {jobs.map((job) => {
-                const jobId = String(job._id);
-                const parsed = parseStoredScheduleDateTime(job.startDateTime);
-                const dateLabel = !parsed
-                  ? String(job.startDateTime)
-                  : `${formatDateStringUTC(parsed)} at ${formatTimeUTC(parsed)}`;
+            {isLoading && (
+              <div className="text-muted-foreground flex items-center gap-2 px-4 py-3 text-sm">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Searching...
+              </div>
+            )}
+            {!isLoading && query.trim() && results.length === 0 && (
+              <CommandEmpty>No job found.</CommandEmpty>
+            )}
+            {results.length > 0 && (
+              <CommandGroup>
+                {results.map((job) => {
+                  const jobId = String(job._id);
+                  const dateLabel = formatJobDate(job.startDateTime);
 
-                return (
-                  <CommandItem
-                    key={jobId}
-                    value={`${job.jobTitle || "Untitled Job"} ${dateLabel}`}
-                    onSelect={() => {
-                      onSelect(jobId);
-                      setOpen(false);
-                    }}
-                  >
-                    <CheckIcon
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === jobId ? "opacity-100" : "opacity-0",
-                      )}
-                    />
-                    <div className="flex flex-1 items-center justify-between gap-2">
-                      <span className="truncate font-medium">
-                        {job.jobTitle || "Untitled Job"}
-                      </span>
-                      <span className="text-muted-foreground text-xs">
-                        {dateLabel}
-                      </span>
-                    </div>
-                  </CommandItem>
-                );
-              })}
-            </CommandGroup>
+                  return (
+                    <CommandItem
+                      key={jobId}
+                      value={jobId}
+                      onSelect={() => handleSelect(job)}
+                    >
+                      <CheckIcon
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === jobId ? "opacity-100" : "opacity-0",
+                        )}
+                      />
+                      <div className="flex flex-1 items-center justify-between gap-2">
+                        <span className="truncate font-medium">
+                          {job.jobTitle || "Untitled Job"}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          {dateLabel}
+                        </span>
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

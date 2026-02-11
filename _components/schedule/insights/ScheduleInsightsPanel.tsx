@@ -120,7 +120,6 @@ interface ScheduleInsightsPanelProps {
   defaultDateFrom: string;
   defaultDateTo: string;
   technicians?: { id: string; name: string }[];
-  moveJobOptions?: MoveJobOptionWithDetails[];
 }
 
 export default function ScheduleInsightsPanel({
@@ -128,7 +127,6 @@ export default function ScheduleInsightsPanel({
   defaultDateFrom,
   defaultDateTo,
   technicians = [],
-  moveJobOptions = [],
 }: ScheduleInsightsPanelProps) {
   const queryClient = useQueryClient();
   const router = useRouter();
@@ -164,9 +162,10 @@ export default function ScheduleInsightsPanel({
   const [moveCandidates, setMoveCandidates] = useState<
     ScheduleInsightSlotCandidate[]
   >([]);
-  const [moveSelectedJobLabel, setMoveSelectedJobLabel] = useState("");
   const [moveDuePolicy, setMoveDuePolicy] = useState<"hard" | "soft">("soft");
   const [moveJobId, setMoveJobId] = useState("");
+  const [selectedMoveJob, setSelectedMoveJob] =
+    useState<MoveJobOptionWithDetails | null>(null);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState<
@@ -243,10 +242,6 @@ export default function ScheduleInsightsPanel({
       });
     },
     onSuccess: (result) => {
-      const selectedJob = moveJobOptions.find(
-        (job) => String(job._id) === moveJobId,
-      );
-      setMoveSelectedJobLabel(selectedJob?.jobTitle || "Selected job");
       setMoveCandidates(result.candidates);
       setMoveDuePolicy(result.duePolicy === "hard" ? "hard" : "soft");
       toast.success(
@@ -331,15 +326,12 @@ export default function ScheduleInsightsPanel({
 
   const applyMoveSlotMutation = useMutation({
     mutationFn: async (candidate: ScheduleInsightSlotCandidate) => {
-      const selectedJob = moveJobOptions.find(
-        (job) => String(job._id) === moveJobId,
-      );
-      if (!selectedJob) {
+      if (!selectedMoveJob) {
         throw new Error("Selected job not found.");
       }
 
       const selectedStart = parseStoredScheduleDateTime(
-        selectedJob.startDateTime,
+        selectedMoveJob.startDateTime,
       );
       if (!selectedStart) {
         throw new Error("Selected job start time is invalid.");
@@ -392,15 +384,15 @@ export default function ScheduleInsightsPanel({
       );
 
       await updateJob({
-        scheduleId: String(selectedJob._id),
-        jobTitle: selectedJob.jobTitle || "Scheduled Job",
-        location: selectedJob.location || "",
+        scheduleId: String(selectedMoveJob._id),
+        jobTitle: selectedMoveJob.jobTitle || "Scheduled Job",
+        location: selectedMoveJob.location || "",
         startDateTime: preservedStart.toISOString(),
         assignedTechnicians: nextTechnicians,
-        technicianNotes: selectedJob.technicianNotes,
-        hours: selectedJob.hours,
-        onSiteContact: selectedJob.onSiteContact,
-        accessInstructions: selectedJob.accessInstructions,
+        technicianNotes: selectedMoveJob.technicianNotes,
+        hours: selectedMoveJob.hours,
+        onSiteContact: selectedMoveJob.onSiteContact,
+        accessInstructions: selectedMoveJob.accessInstructions,
       });
     },
     onSuccess: () => {
@@ -469,8 +461,8 @@ export default function ScheduleInsightsPanel({
           setMoveDuePolicy("soft");
           setMoveTechnicianIds([]);
           setMoveCandidates([]);
-          setMoveSelectedJobLabel("");
           setMoveJobId("");
+          setSelectedMoveJob(null);
           setIsOpen(true);
         }}
       >
@@ -719,9 +711,11 @@ export default function ScheduleInsightsPanel({
       <MoveJobSuggestionsDialog
         open={isMoveJobModalOpen}
         onOpenChange={setIsMoveJobModalOpen}
-        jobs={moveJobOptions}
         moveJobId={moveJobId}
-        onMoveJobIdChange={setMoveJobId}
+        onSelectJob={(job) => {
+          setMoveJobId(String(job._id));
+          setSelectedMoveJob(job);
+        }}
         moveDateFrom={moveDateFrom}
         moveDateTo={moveDateTo}
         onMoveDateFromChange={setMoveDateFrom}
@@ -731,7 +725,7 @@ export default function ScheduleInsightsPanel({
         onMoveTechnicianIdsChange={setMoveTechnicianIds}
         moveDuePolicy={moveDuePolicy}
         onMoveDuePolicyChange={setMoveDuePolicy}
-        moveSelectedJobLabel={moveSelectedJobLabel}
+        moveSelectedJobLabel={selectedMoveJob?.jobTitle || "Selected job"}
         moveCandidates={moveCandidates}
         isPending={moveJobMutation.isPending}
         isApplyingSlot={applyMoveSlotMutation.isPending}

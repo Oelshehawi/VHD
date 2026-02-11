@@ -32,14 +32,13 @@ import {
   toDateKey,
 } from "./insightFormatting";
 import MoveJobSearchSelect from "./MoveJobSearchSelect";
-import type { MoveJobOption } from "./types";
+import type { MoveJobOptionWithDetails } from "./types";
 
 interface MoveJobSuggestionsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  jobs: MoveJobOption[];
   moveJobId: string;
-  onMoveJobIdChange: (jobId: string) => void;
+  onSelectJob: (job: MoveJobOptionWithDetails) => void;
   moveDateFrom: string;
   moveDateTo: string;
   onMoveDateFromChange: (dateKey: string) => void;
@@ -60,9 +59,8 @@ interface MoveJobSuggestionsDialogProps {
 export default function MoveJobSuggestionsDialog({
   open,
   onOpenChange,
-  jobs,
   moveJobId,
-  onMoveJobIdChange,
+  onSelectJob,
   moveDateFrom,
   moveDateTo,
   onMoveDateFromChange,
@@ -95,9 +93,8 @@ export default function MoveJobSuggestionsDialog({
             <div className="space-y-2">
               <p className="text-xs font-medium">Job to move</p>
               <MoveJobSearchSelect
-                jobs={jobs}
                 value={moveJobId}
-                onSelect={onMoveJobIdChange}
+                onSelect={onSelectJob}
               />
             </div>
 
