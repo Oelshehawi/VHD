@@ -46,6 +46,38 @@ export interface PreviewResult {
   errors: string[];
 }
 
+const PROCESS_REMINDER_CONCURRENCY = 3;
+
+const getFrequencyDays = (
+  frequency: "none" | "3days" | "5days" | "7days" | "14days" | undefined,
+): number | null => {
+  if (!frequency || frequency === "none") return null;
+  if (frequency === "3days") return 3;
+  if (frequency === "5days") return 5;
+  if (frequency === "7days") return 7;
+  return 14;
+};
+
+const calculateNextReminderDate = (
+  now: Date,
+  frequency: "none" | "3days" | "5days" | "7days" | "14days" | undefined,
+): Date | undefined => {
+  const days = getFrequencyDays(frequency);
+  if (!days) return undefined;
+
+  // Set reminder date to 9 AM PST (16:00 UTC) to match cron job schedule
+  const targetDate = new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
+  return new Date(
+    targetDate.getFullYear(),
+    targetDate.getMonth(),
+    targetDate.getDate(),
+    16,
+    0,
+    0,
+    0,
+  );
+};
+
 // Configure reminder settings for an invoice
 export async function configurePaymentReminders(
   invoiceId: string,
@@ -257,65 +289,62 @@ export async function processAutoReminders(): Promise<ProcessResult> {
       "paymentReminders.enabled": true,
       "paymentReminders.nextReminderDate": { $lte: now },
       status: { $in: ["pending", "overdue"] },
-    });
+    })
+      .select("_id invoiceId paymentReminders.frequency")
+      .lean<
+        {
+          _id: string | { toString: () => string };
+          invoiceId: string;
+          paymentReminders?: {
+            frequency?: "none" | "3days" | "5days" | "7days" | "14days";
+          };
+        }[]
+      >();
 
     result.processedCount = dueInvoices.length;
 
-    for (const invoice of dueInvoices) {
-      try {
-        const sendResult = await sendPaymentReminderEmail(
-          invoice._id.toString(),
-          "system",
-        );
+    let currentIndex = 0;
 
-        if (sendResult.success) {
-          result.sentCount++;
+    const workers = Array.from(
+      { length: Math.min(PROCESS_REMINDER_CONCURRENCY, dueInvoices.length) },
+      async () => {
+        while (true) {
+          const invoice = dueInvoices[currentIndex];
+          currentIndex += 1;
+          if (!invoice) return;
 
-          // Calculate next reminder date
-          const frequency = invoice.paymentReminders?.frequency;
-          let nextReminderDate: Date | undefined;
-          if (frequency && frequency !== "none") {
-            const days =
-              frequency === "3days"
-                ? 3
-                : frequency === "5days"
-                  ? 5
-                  : frequency === "7days"
-                    ? 7
-                    : 14;
-
-            // Set reminder date to 9 AM PST (16:00 UTC) to match cron job schedule
-            const targetDate = new Date(
-              now.getTime() + days * 24 * 60 * 60 * 1000,
+          const invoiceId = invoice._id.toString();
+          try {
+            const sendResult = await sendPaymentReminderEmail(
+              invoiceId,
+              "system",
             );
-            nextReminderDate = new Date(
-              targetDate.getFullYear(),
-              targetDate.getMonth(),
-              targetDate.getDate(),
-              16,
-              0,
-              0,
-              0,
-            ); // 16:00 UTC = 9 AM PST
+
+            if (sendResult.success) {
+              result.sentCount++;
+              const nextReminderDate = calculateNextReminderDate(
+                now,
+                invoice.paymentReminders?.frequency,
+              );
+              await Invoice.findByIdAndUpdate(invoiceId, {
+                "paymentReminders.nextReminderDate": nextReminderDate,
+                "paymentReminders.lastReminderSent": new Date(),
+              });
+            } else {
+              result.errors.push(
+                `Failed to send reminder for invoice ${invoice.invoiceId}: ${sendResult.error}`,
+              );
+            }
+          } catch (error) {
+            const errorMsg = `Error processing invoice ${invoice.invoiceId}: ${error instanceof Error ? error.message : String(error)}`;
+            result.errors.push(errorMsg);
+            console.error(errorMsg);
           }
-
-          // Update next reminder date
-          await Invoice.findByIdAndUpdate(invoice._id, {
-            "paymentReminders.nextReminderDate": nextReminderDate,
-          });
-
-          // Note: Audit log is already created by sendPaymentReminderEmail
-        } else {
-          result.errors.push(
-            `Failed to send reminder for invoice ${invoice.invoiceId}: ${sendResult.error}`,
-          );
         }
-      } catch (error) {
-        const errorMsg = `Error processing invoice ${invoice.invoiceId}: ${error instanceof Error ? error.message : String(error)}`;
-        result.errors.push(errorMsg);
-        console.error(errorMsg);
-      }
-    }
+      },
+    );
+
+    await Promise.all(workers);
 
     console.log(
       `Processed ${result.processedCount} invoices, sent ${result.sentCount} reminders`,

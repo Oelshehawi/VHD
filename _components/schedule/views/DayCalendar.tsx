@@ -1,23 +1,29 @@
 "use client";
 import { useMemo, useState } from "react";
-import { format, isToday, isSameDay, startOfDay, parseISO } from "date-fns";
+import { format, isToday, startOfDay } from "date-fns";
 import { CalendarDays, Clock } from "lucide-react";
 import { getTechnicianUnavailabilityInfo } from "../../../app/lib/utils/availabilityUtils";
 import { formatTimeRange12hr } from "../../../app/lib/utils/timeFormatUtils";
 import { formatDateStringUTC } from "../../../app/lib/utils";
 import {
   ScheduleType,
-  InvoiceType,
   AvailabilityType,
   TimeOffRequestType,
+  DayTravelTimeSummary,
 } from "../../../app/lib/typeDefinitions";
 import CalendarColumn from "../CalendarColumn";
 import { Calendar } from "../../ui/calendar";
 import { Badge } from "../../ui/badge";
 import { cn } from "../../../app/lib/utils";
 import JobDetailsModal from "../JobDetailsModal";
+import TravelTimeDaySummary from "../TravelTimeDaySummary";
+import {
+  compareScheduleDisplayOrder,
+  getScheduleDisplayDateKey,
+  SERVICE_DAY_HOUR_ORDER,
+} from "../../../app/lib/utils/scheduleDayUtils";
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const HOURS = SERVICE_DAY_HOUR_ORDER;
 
 interface DayCalendarProps {
   scheduledJobs: ScheduleType[];
@@ -26,8 +32,9 @@ interface DayCalendarProps {
   holidays: any;
   technicians: { id: string; name: string }[];
   availability: AvailabilityType[];
-  showAvailability: boolean;
   timeOffRequests?: TimeOffRequestType[];
+  travelTimeSummaries?: Map<string, DayTravelTimeSummary>;
+  isTravelTimeLoading?: boolean;
   onDateSelect?: (date: Date | undefined) => void;
 }
 
@@ -38,8 +45,9 @@ const DayCalendar = ({
   holidays,
   technicians,
   availability,
-  showAvailability,
   timeOffRequests = [],
+  travelTimeSummaries,
+  isTravelTimeLoading,
   onDateSelect,
 }: DayCalendarProps) => {
   // Modal state
@@ -51,8 +59,7 @@ const DayCalendar = ({
     const jobsMap: { [key: string]: ScheduleType[] } = {};
 
     scheduledJobs.forEach((job) => {
-      const jobDate = new Date(job.startDateTime);
-      const jobDateKey = format(jobDate, "yyyy-MM-dd");
+      const jobDateKey = getScheduleDisplayDateKey(job.startDateTime);
 
       if (!jobsMap[jobDateKey]) {
         jobsMap[jobDateKey] = [];
@@ -64,9 +71,7 @@ const DayCalendar = ({
     // Sort jobs by time within each day
     Object.keys(jobsMap).forEach((dateKey) => {
       (jobsMap[dateKey] as ScheduleType[]).sort((a, b) => {
-        const timeA = new Date(a.startDateTime).getTime();
-        const timeB = new Date(b.startDateTime).getTime();
-        return timeA - timeB;
+        return compareScheduleDisplayOrder(a.startDateTime, b.startDateTime);
       });
     });
 
@@ -198,6 +203,18 @@ const DayCalendar = ({
                       </div>
                     )}
 
+                    {/* Travel time indicator */}
+                    {currentDayJobs.length > 0 && (
+                      <div className="mt-1">
+                        <TravelTimeDaySummary
+                          summary={travelTimeSummaries?.get(
+                            format(currentDay, "yyyy-MM-dd"),
+                          )}
+                          isLoading={isTravelTimeLoading}
+                        />
+                      </div>
+                    )}
+
                     {/* Time-off indicator */}
                     {currentDayTimeOff.length > 0 && (
                       <div className="absolute top-1 left-1 sm:top-2 sm:left-2">
@@ -259,13 +276,15 @@ const DayCalendar = ({
                       <CalendarColumn
                         day={currentDay}
                         jobs={currentDayJobs}
-                        isToday={isToday(currentDay)}
                         canManage={canManage}
                         holidays={holidays}
                         technicians={technicians}
                         availability={availability}
-                        showAvailability={showAvailability}
                         timeOffRequests={currentDayTimeOff}
+                        travelTimeSummary={travelTimeSummaries?.get(
+                          format(currentDay, "yyyy-MM-dd"),
+                        )}
+                        isTravelTimeLoading={isTravelTimeLoading}
                       />
                     </div>
                   </div>
@@ -395,6 +414,27 @@ const DayCalendar = ({
                     })}
                   </div>
                 )}
+
+                {/* Travel Time Breakdown */}
+                {(() => {
+                  const daySummary = travelTimeSummaries?.get(
+                    format(currentDay, "yyyy-MM-dd"),
+                  );
+                  if (
+                    !daySummary &&
+                    !isTravelTimeLoading &&
+                    currentDayJobs.length === 0
+                  )
+                    return null;
+                  return (
+                    <div className="mb-3">
+                      <TravelTimeDaySummary
+                        summary={daySummary}
+                        isLoading={isTravelTimeLoading}
+                      />
+                    </div>
+                  );
+                })()}
 
                 {currentDayJobs.length > 0 ? (
                   <ul className="space-y-1.5">

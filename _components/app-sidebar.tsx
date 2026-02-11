@@ -9,7 +9,6 @@ import {
   Calendar,
   DollarSign,
   BarChart,
-  Settings,
 } from "lucide-react";
 
 import {
@@ -51,7 +50,7 @@ export function AppSidebar({
         { title: "Invoices", url: "/invoices", icon: File },
         { title: "Schedule", url: "/schedule", icon: Calendar },
         {
-          title: "Payroll",
+          title: "Employees",
           url: "/payroll",
           icon: DollarSign,
           badge: pendingTimeOffCount,
@@ -72,30 +71,28 @@ export function AppSidebar({
           <SidebarGroupLabel>Application</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {items.map((item) => (
-                <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.url)}
-                    tooltip={item.title}
-                    className={
-                      isActive(item.url)
-                        ? "bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90 data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
-                        : ""
-                    }
-                  >
-                    <Link href={item.url}>
-                      <item.icon className="h-4 w-4" />
-                      <span>{item.title}</span>
-                      {item.badge ? (
-                        <span className="bg-destructive text-destructive-foreground ml-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px]">
-                          {item.badge}
-                        </span>
-                      ) : null}
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+              {items.map((item) => {
+                const active = isActive(item.url);
+                return (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={active}
+                      tooltip={item.title}
+                    >
+                      <Link href={item.url}>
+                        <item.icon className="h-4 w-4" />
+                        <span>{item.title}</span>
+                        {item.badge != null ? (
+                          <span className="bg-destructive text-destructive-foreground ml-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px]">
+                            {item.badge}
+                          </span>
+                        ) : null}
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                );
+              })}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>

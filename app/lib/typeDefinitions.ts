@@ -121,6 +121,7 @@ export interface TechnicianType {
   name: string;
   hourlyRate?: number;
   overtimeRate?: number;
+  depotAddress?: string | null;
 }
 
 export interface PayrollPeriodType {
@@ -805,4 +806,44 @@ export interface SchedulingContext {
   availableDays?: DayAvailability[]; // Days available for the requested time
   error?: string;
   existingRequest?: SchedulingRequestType; // Populated when request already submitted
+}
+
+// ── Travel Time Types ──────────────────────────────────────────────────────
+
+export interface TravelTimeCacheType {
+  _id?: ObjectId | string;
+  originAddress: string;
+  destinationAddress: string;
+  pairHash: string;
+  typicalMinutes: number;
+  estimatedKm: number;
+  travelNotes?: string;
+  routePolyline?: string;
+  expiresAt: Date;
+}
+
+export interface TravelTimeSegment {
+  from: string; // "Depot" or job title
+  to: string;
+  typicalMinutes: number;
+  km: number;
+  travelNotes?: string;
+  fromKind?: "depot" | "job";
+  toKind?: "depot" | "job";
+  fromJobId?: string;
+  toJobId?: string;
+}
+
+export interface DayTravelTimeSummary {
+  date: string; // yyyy-MM-dd
+  totalTravelMinutes: number;
+  totalTravelKm: number;
+  segments: TravelTimeSegment[];
+  isPartial: boolean; // true when depot not configured
+}
+
+export interface TravelTimeRequest {
+  date: string; // yyyy-MM-dd
+  jobs: ScheduleType[];
+  depotAddress: string | null;
 }

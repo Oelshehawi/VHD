@@ -34,12 +34,6 @@ const PayrollPeriodSelector = ({
   schedules,
   selectedPayrollPeriod,
 }: PayrollPeriodSelectorProps) => {
-  const filteredTechnicians = technicians?.filter(
-    (tech) =>
-      tech.name.includes("Mohnad Elkeliny") ||
-      tech.name.includes("Ahmed Habib"),
-  );
-
   // State for managing selected payroll period
   const [selectedTechnician, setSelectedTechnician] =
     useState<TechnicianType | null>(null);
@@ -103,17 +97,13 @@ const PayrollPeriodSelector = ({
       {selectedPayrollPeriod && (
         <>
           {/* Payroll Breakdown */}
-          <PayrollBreakdown
-            technicians={filteredTechnicians}
-            schedules={schedules}
-          />
+          <PayrollBreakdown technicians={technicians} schedules={schedules} />
 
           {/* Employees Table */}
           <EmployeesTable
             schedules={schedules}
-            technicians={filteredTechnicians}
+            technicians={technicians}
             onViewShifts={handleViewShifts}
-            payrollPeriod={selectedPayrollPeriod}
           />
 
           {/* Employee Modal */}

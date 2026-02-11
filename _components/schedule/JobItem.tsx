@@ -1,18 +1,26 @@
 "use client";
 import React, { useMemo } from "react";
-import { ScheduleType } from "../../app/lib/typeDefinitions";
+import { ScheduleType, TravelTimeSegment } from "../../app/lib/typeDefinitions";
 import { motion } from "framer-motion";
 import { Badge } from "../ui/badge";
 import { format } from "date-fns-tz";
+import TravelTimeBadge from "./TravelTimeBadge";
 
 interface JobItemProps {
   job: ScheduleType;
-  canManage: boolean;
   technicians: { id: string; name: string }[];
   onJobClick?: (job: ScheduleType) => void;
+  travelSegment?: TravelTimeSegment;
+  isTravelTimeLoading?: boolean;
 }
 
-const JobItem = ({ job, technicians, onJobClick }: JobItemProps) => {
+const JobItem = ({
+  job,
+  technicians,
+  onJobClick,
+  travelSegment,
+  isTravelTimeLoading,
+}: JobItemProps) => {
   // Memoize technician names lookup
   const techNames = useMemo(() => {
     return job.assignedTechnicians.map(
@@ -36,7 +44,7 @@ const JobItem = ({ job, technicians, onJobClick }: JobItemProps) => {
       className={`h-full cursor-pointer rounded-md px-2.5 py-1.5 transition-colors ${statusClasses}`}
       onClick={() => onJobClick?.(job)}
     >
-      <div className=".5 flex h-full flex-col">
+      <div className="flex h-full flex-col gap-0.5">
         {/* Job Title */}
         <span className="text-foreground truncate text-sm leading-tight font-medium">
           {job.jobTitle}
@@ -47,10 +55,22 @@ const JobItem = ({ job, technicians, onJobClick }: JobItemProps) => {
           {job.location}
         </span>
 
-        {/* Time */}
-        <span className="text-muted-foreground text-xs font-medium">
-          {format(job.startDateTime, "h:mm a", { timeZone: "PST" })}
-        </span>
+        {/* Time + Travel */}
+        <div className="flex items-center gap-1.5">
+          <span className="text-muted-foreground text-xs font-medium">
+            {format(job.startDateTime, "h:mm a", {
+              timeZone: "America/Vancouver",
+            })}
+          </span>
+          {(travelSegment || isTravelTimeLoading) && (
+            <TravelTimeBadge
+              typicalMinutes={travelSegment?.typicalMinutes ?? 0}
+              km={travelSegment?.km}
+              travelNotes={travelSegment?.travelNotes}
+              isLoading={isTravelTimeLoading}
+            />
+          )}
+        </div>
 
         {/* Technician Pills */}
         <div className="mt-auto flex flex-wrap gap-1">
@@ -75,13 +95,4 @@ const JobItem = ({ job, technicians, onJobClick }: JobItemProps) => {
 };
 
 // Memoize component to prevent unnecessary re-renders
-export default React.memo(JobItem, (prevProps, nextProps) => {
-  return (
-    prevProps.job._id === nextProps.job._id &&
-    prevProps.job.confirmed === nextProps.job.confirmed &&
-    prevProps.job.jobTitle === nextProps.job.jobTitle &&
-    prevProps.job.startDateTime === nextProps.job.startDateTime &&
-    prevProps.job.assignedTechnicians.length ===
-      nextProps.job.assignedTechnicians.length
-  );
-});
+export default React.memo(JobItem);

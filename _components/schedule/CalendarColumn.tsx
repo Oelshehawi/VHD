@@ -9,42 +9,44 @@ import {
   ScheduleType,
   AvailabilityType,
   TimeOffRequestType,
+  DayTravelTimeSummary,
 } from "../../app/lib/typeDefinitions";
 import JobItem from "./JobItem";
 import JobDetailsModal from "./JobDetailsModal";
-import {
-  cn,
-} from "../../app/lib/utils";
+import { cn } from "../../app/lib/utils";
 import { isTechnicianUnavailable } from "../../app/lib/utils/availabilityUtils";
+import {
+  compareScheduleDisplayOrder,
+  SERVICE_DAY_HOUR_ORDER,
+} from "../../app/lib/utils/scheduleDayUtils";
 
 const parseDate = (dateString: string): Date => {
   const [year, month, day] = dateString.split("-").map(Number);
   return new Date(year as number, (month as number) - 1, day as number);
 };
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const HOURS = SERVICE_DAY_HOUR_ORDER;
 
 const CalendarColumn = ({
   day,
   jobs,
-  isToday,
   canManage,
   holidays,
   technicians,
   availability,
-  showAvailability,
   timeOffRequests = [],
+  travelTimeSummary,
+  isTravelTimeLoading,
 }: {
   day: Date;
   jobs: ScheduleType[];
-  isToday: boolean;
   canManage: boolean;
   holidays: Holiday[];
   technicians: { id: string; name: string }[];
   availability: AvailabilityType[];
-  showAvailability: boolean;
-  showOptimization?: boolean;
   timeOffRequests?: TimeOffRequestType[];
+  travelTimeSummary?: DayTravelTimeSummary;
+  isTravelTimeLoading?: boolean;
 }) => {
   const [selectedJob, setSelectedJob] = useState<ScheduleType | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -58,13 +60,13 @@ const CalendarColumn = ({
   // Memoize sorted jobs
   const sortedJobs = useMemo(
     () =>
-      [...jobs].sort(
-        (a, b) =>
-          new Date(a.startDateTime).getTime() -
-          new Date(b.startDateTime).getTime(),
+      [...jobs].sort((a, b) =>
+        compareScheduleDisplayOrder(a.startDateTime, b.startDateTime),
       ),
     [jobs],
   );
+
+  const firstJobId = sortedJobs[0]?._id ? String(sortedJobs[0]._id) : null;
 
   // Get hour and minutes from job's start time
   const getJobTime = (job: ScheduleType) => {
@@ -187,16 +189,18 @@ const CalendarColumn = ({
       )}
 
       {/* Time slots */}
-      <div className="relative h-full">
+      <div className="relative h-full [--slot-height:50px] sm:[--slot-height:60px]">
         {HOURS.map((hour) => {
+          const slotStart = `${String(hour).padStart(2, "0")}:00`;
+          const slotEnd = `${String((hour + 1) % 24).padStart(2, "0")}:00`;
           // Always check unavailability (availability always shown)
           const isUnavailableHour = technicians.some((tech) =>
             isTechnicianUnavailable(
               availability,
               tech.id,
               day,
-              `${String(hour).padStart(2, "0")}:00`,
-              `${String(hour + 1).padStart(2, "0")}:00`,
+              slotStart,
+              slotEnd,
             ),
           );
 
@@ -218,23 +222,39 @@ const CalendarColumn = ({
                   // Use the hours stored on the schedule directly
                   const jobDuration = job.hours || 4;
 
-                  // 50px per hour on mobile, 60px on desktop
-                  const heightInPixels = Math.max(60, jobDuration * 50);
-
                   return (
                     <div
                       key={job._id as string}
                       className="absolute inset-x-1 z-10 sm:inset-x-1.5"
                       style={{
                         top: `${topOffset}%`,
-                        height: `${heightInPixels}px`,
+                        height: `calc(${jobDuration} * var(--slot-height))`,
+                        minHeight: "60px",
                       }}
                     >
                       <JobItem
                         job={job}
-                        canManage={canManage}
                         technicians={technicians}
                         onJobClick={handleJobClick}
+                        travelSegment={(() => {
+                          if (!travelTimeSummary) return undefined;
+                          const currentJobId = String(job._id);
+                          if (firstJobId && currentJobId === firstJobId) {
+                            // First job shows the inbound leg (typically Depot -> Job1).
+                            return travelTimeSummary.segments.find(
+                              (segment) =>
+                                segment.toKind === "job" &&
+                                segment.toJobId === currentJobId,
+                            );
+                          }
+                          // Other jobs show travel FROM this job to the next stop.
+                          return travelTimeSummary.segments.find(
+                            (segment) =>
+                              segment.fromKind === "job" &&
+                              segment.fromJobId === currentJobId,
+                          );
+                        })()}
+                        isTravelTimeLoading={isTravelTimeLoading}
                       />
                     </div>
                   );

@@ -4,7 +4,7 @@ import WeekCalendar from "./views/WeekCalendar";
 import DayCalendar from "./views/DayCalendar";
 import SearchSelect from "./JobSearchSelect";
 import OptimizationModal from "../optimization/OptimizationModal";
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
   ScheduleType,
   AvailabilityType,
@@ -36,6 +36,7 @@ import AddJob from "./AddJob";
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { fetchVisibleScheduledJobsWithShifts } from "../../app/lib/scheduleAndShifts";
+import { useTravelTimeEstimates } from "./hooks/useTravelTimeEstimates";
 
 const isMobileDevice = (): boolean => {
   if (typeof window !== "undefined") {
@@ -199,7 +200,7 @@ const CalendarOptions = ({
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   holidays: any;
-  technicians: { id: string; name: string }[];
+  technicians: { id: string; name: string; depotAddress?: string | null }[];
   availability: AvailabilityType[];
   timeOffRequests?: TimeOffRequestType[];
   initialView?: string;
@@ -510,6 +511,41 @@ const CalendarOptions = ({
     fetchRangeForAnchorDate,
   ]);
 
+  // ── Travel Time ────────────────────────────────────────────────────────
+  // Find the first technician with a depot address
+  const depotAddress = useMemo(() => {
+    const techWithDepot = technicians.find((t) => t.depotAddress);
+    return techWithDepot?.depotAddress ?? null;
+  }, [technicians]);
+
+  // Compute visible date keys based on current view
+  const visibleDateKeys = useMemo(() => {
+    if (currentView === "day") {
+      return [format(currentDay, "yyyy-MM-dd")];
+    }
+    if (currentView === "week") {
+      return currentWeek.map((d) => format(d, "yyyy-MM-dd"));
+    }
+    // Month view
+    const parsedCurrent = currentDate
+      ? parse(currentDate, "yyyy-MM-dd", new Date())
+      : null;
+    const monthAnchor =
+      parsedCurrent && isValid(parsedCurrent) ? parsedCurrent : currentDay;
+    const monthGridStart = startOfWeek(startOfMonth(monthAnchor), {
+      weekStartsOn: 0,
+    });
+    const monthGridEnd = endOfWeek(endOfMonth(monthAnchor), {
+      weekStartsOn: 0,
+    });
+    return eachDayOfInterval({ start: monthGridStart, end: monthGridEnd }).map(
+      (d) => format(d, "yyyy-MM-dd"),
+    );
+  }, [currentView, currentDay, currentWeek, currentDate]);
+
+  const { summaries: travelTimeSummaries, isLoading: isTravelTimeLoading } =
+    useTravelTimeEstimates(jobsData, depotAddress, visibleDateKeys);
+
   return (
     <div className="bg-background flex h-dvh flex-col overflow-hidden p-2 sm:p-3 lg:p-4">
       <div className="border-border bg-card flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border shadow-xl">
@@ -528,9 +564,7 @@ const CalendarOptions = ({
           canManage={canManage}
           isMobile={isMobileDevice()}
           technicians={technicians}
-          isOptimizationModalOpen={isOptimizationModalOpen}
           setIsOptimizationModalOpen={setIsOptimizationModalOpen}
-          showAvailability={showAvailability}
           previousMonth={() => navigateMonth("prev")}
           nextMonth={() => navigateMonth("next")}
         />
@@ -562,6 +596,8 @@ const CalendarOptions = ({
                   onDateChange={handleDateChange}
                   initialDate={currentDate}
                   showDesktopHeader={false}
+                  travelTimeSummaries={travelTimeSummaries}
+                  isTravelTimeLoading={isTravelTimeLoading}
                 />
               </div>
             ) : currentView === "week" ? (
@@ -573,8 +609,9 @@ const CalendarOptions = ({
                   holidays={holidays}
                   technicians={technicians}
                   availability={availability}
-                  showAvailability={showAvailability}
                   timeOffRequests={timeOffRequests}
+                  travelTimeSummaries={travelTimeSummaries}
+                  isTravelTimeLoading={isTravelTimeLoading}
                 />
               </div>
             ) : (
@@ -586,8 +623,9 @@ const CalendarOptions = ({
                   holidays={holidays}
                   technicians={technicians}
                   availability={availability}
-                  showAvailability={showAvailability}
                   timeOffRequests={timeOffRequests}
+                  travelTimeSummaries={travelTimeSummaries}
+                  isTravelTimeLoading={isTravelTimeLoading}
                   onDateSelect={(date: Date | undefined) => {
                     if (date) {
                       setCurrentDay(startOfDay(date));
@@ -601,7 +639,7 @@ const CalendarOptions = ({
               <div className="pointer-events-none absolute inset-0 z-10 bg-black/15">
                 <div className="absolute top-3 right-3 flex items-center gap-2 rounded-md bg-black/45 px-2.5 py-1.5 text-xs font-medium text-white shadow">
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  Loading schedule...
+                  Loading schedule
                 </div>
               </div>
             )}
@@ -631,7 +669,6 @@ const Header = ({
   canManage,
   isMobile,
   technicians,
-  isOptimizationModalOpen,
   setIsOptimizationModalOpen,
 }: {
   currentView: "day" | "week" | "month";
@@ -650,9 +687,7 @@ const Header = ({
   canManage: boolean;
   isMobile: boolean;
   technicians: { id: string; name: string }[];
-  isOptimizationModalOpen: boolean;
   setIsOptimizationModalOpen: (open: boolean) => void;
-  showAvailability: boolean;
 }) => {
   const [open, setOpen] = useState(false);
 

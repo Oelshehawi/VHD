@@ -1,5 +1,5 @@
 "use server";
-import { revalidatePath, unstable_cache } from "next/cache";
+import { revalidatePath, revalidateTag, unstable_cache } from "next/cache";
 import connectMongo from "../connect";
 import {
   Schedule,
@@ -480,14 +480,22 @@ export const updateJob = async ({
       startDateTime: updatedStartDate,
       assignedTechnicians,
       payrollPeriod: payrollPeriod?._id,
-      technicianNotes,
-      onSiteContact,
-      accessInstructions,
     };
 
     // Only include hours if provided
     if (hours !== undefined) {
       updateFields.hours = hours;
+    }
+
+    // Only include optional fields when explicitly provided
+    if (technicianNotes !== undefined) {
+      updateFields.technicianNotes = technicianNotes;
+    }
+    if (onSiteContact !== undefined) {
+      updateFields.onSiteContact = onSiteContact;
+    }
+    if (accessInstructions !== undefined) {
+      updateFields.accessInstructions = accessInstructions;
     }
 
     // Update the schedule with the new details and payroll period
@@ -586,19 +594,103 @@ export async function getTechnicians() {
       });
 
       const technicians = userList.data.filter(
-        (user: any) => user.publicMetadata.isTechnician === true,
+        (user: any) => user.publicMetadata?.isTechnician === true,
       );
       return technicians.map((user: any) => ({
         id: user.id,
-        name: user.fullName,
-        hourlyRate: user.publicMetadata.hourlyRate,
+        name:
+          user.fullName ||
+          [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+          user.primaryEmailAddress?.emailAddress ||
+          user.id,
+        hourlyRate:
+          typeof user.publicMetadata?.hourlyRate === "number"
+            ? user.publicMetadata.hourlyRate
+            : 0,
+        depotAddress:
+          typeof user.publicMetadata?.depotAddress === "string" &&
+          user.publicMetadata.depotAddress.trim().length > 0
+            ? user.publicMetadata.depotAddress.trim()
+            : null,
       }));
     },
     ["getTechnicians"],
-    { revalidate: WEEK_SECONDS },
+    { revalidate: WEEK_SECONDS, tags: ["technicians"] },
   );
 
   return getTechniciansCached();
+}
+
+export async function updateTechnicianDepotAddress(
+  technicianId: string,
+  depotAddress: string | null,
+): Promise<{
+  success: boolean;
+  message: string;
+  depotAddress?: string | null;
+}> {
+  try {
+    const { sessionClaims } = await auth();
+    const canManage = (sessionClaims as any)?.isManager?.isManager === true;
+
+    if (!canManage) {
+      return {
+        success: false,
+        message: "Unauthorized: Manager access required",
+      };
+    }
+
+    const normalizedTechnicianId = technicianId.trim();
+    if (!normalizedTechnicianId) {
+      return {
+        success: false,
+        message: "Technician ID is required",
+      };
+    }
+
+    const normalizedDepotAddress = (depotAddress || "").trim();
+    const nextDepotAddress =
+      normalizedDepotAddress.length > 0 ? normalizedDepotAddress : null;
+
+    const clerk = await clerkClient();
+    const user = await clerk.users.getUser(normalizedTechnicianId);
+
+    const currentMetadata = (user.publicMetadata || {}) as Record<
+      string,
+      unknown
+    >;
+    if (currentMetadata.isTechnician !== true) {
+      return {
+        success: false,
+        message: "Selected user is not marked as a technician",
+      };
+    }
+
+    await clerk.users.updateUser(normalizedTechnicianId, {
+      publicMetadata: {
+        ...currentMetadata,
+        depotAddress: nextDepotAddress,
+      },
+    });
+
+    revalidateTag("technicians", "max");
+    revalidatePath("/payroll");
+    revalidatePath("/schedule");
+
+    return {
+      success: true,
+      message: nextDepotAddress
+        ? "Depot address updated"
+        : "Depot address cleared",
+      depotAddress: nextDepotAddress,
+    };
+  } catch (error) {
+    console.error("Failed to update technician depot address:", error);
+    return {
+      success: false,
+      message: "Failed to update depot address",
+    };
+  }
 }
 
 const escapeRegex = (value: string) =>
@@ -664,32 +756,6 @@ export const updateShiftHoursBatch = async (
   }
 };
 
-export const updateDeadRun = async ({
-  scheduleId,
-  deadRun,
-}: {
-  scheduleId: string;
-  deadRun: boolean;
-}) => {
-  await connectMongo();
-  try {
-    const updatedSchedule = await Schedule.findByIdAndUpdate(
-      scheduleId,
-      { deadRun },
-      { new: true },
-    );
-
-    if (!updatedSchedule) {
-      throw new Error("Schedule not found");
-    }
-
-    revalidatePath("/schedule");
-  } catch (error) {
-    console.error("Database Error:", error);
-    throw new Error("Failed to update deadRun status");
-  }
-};
-
 export const createOrUpdateReport = async (reportData: ReportType) => {
   await connectMongo();
   try {
@@ -699,18 +765,11 @@ export const createOrUpdateReport = async (reportData: ReportType) => {
     });
 
     if (existingReport) {
-      // DEBUG: Log what we're about to update
-      console.log("=== SERVER: createOrUpdateReport UPDATE ===");
       // Update existing report - use $set to completely replace fields (prevents old data from persisting)
       existingReport = await Report.findByIdAndUpdate(
         existingReport._id,
         { $set: reportData },
         { new: true },
-      );
-
-      console.log(
-        "Updated report.ecologyUnit:",
-        JSON.stringify(existingReport?.ecologyUnit, null, 2),
       );
 
       // Return a plain JavaScript object, not a Mongoose document

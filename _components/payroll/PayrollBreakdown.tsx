@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo } from "react";
+import { useMemo } from "react";
 import { TechnicianType, ScheduleType } from "../../app/lib/typeDefinitions";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 
@@ -13,56 +13,24 @@ const PayrollBreakdown = ({
   technicians,
   schedules,
 }: PayrollBreakdownProps) => {
-  // Filter out Ziad and Omar
-  const validTechnicians = useMemo(() => {
-    return technicians.filter(
-      (tech) =>
-        tech.name !== "Ziad" && tech.name !== "Omar" && tech.name !== "Migo",
+  const totals = useMemo(() => {
+    return technicians.reduce(
+      (acc, tech) => {
+        const totalHours = schedules
+          .filter((schedule) => schedule.assignedTechnicians.includes(tech.id))
+          .reduce((hoursAcc, schedule) => hoursAcc + (schedule.hours || 0), 0);
+        const grossPay = totalHours * (tech.hourlyRate || 0);
+        acc.totalHours += totalHours;
+        acc.grossPay += grossPay;
+        return acc;
+      },
+      { totalHours: 0, grossPay: 0 },
     );
-  }, [technicians]);
+  }, [technicians, schedules]);
 
-  // Calculate total hours and gross pay per technician
-  const technicianBreakdown = useMemo(() => {
-    const breakdown: {
-      technicianName: string;
-      totalHours: number;
-      rate: number;
-      grossPay: number;
-    }[] = [];
-
-    validTechnicians.forEach((tech) => {
-      const techSchedules = schedules.filter((schedule) =>
-        schedule.assignedTechnicians.includes(tech.id),
-      );
-
-      const totalHours = techSchedules.reduce(
-        (acc, schedule) => acc + (schedule.hours || 0),
-        0,
-      );
-
-      const rate = tech.hourlyRate || 0;
-      const grossPay = totalHours * rate;
-
-      breakdown.push({
-        technicianName: tech.name,
-        totalHours,
-        rate,
-        grossPay,
-      });
-    });
-
-    return breakdown;
-  }, [validTechnicians, schedules]);
-
-  const totalEmployees = validTechnicians.length;
-  const totalHours = technicianBreakdown.reduce(
-    (acc, tech) => acc + tech.totalHours,
-    0,
-  );
-  const grossPay = technicianBreakdown.reduce(
-    (acc, tech) => acc + tech.grossPay,
-    0,
-  );
+  const totalEmployees = technicians.length;
+  const totalHours = totals.totalHours;
+  const grossPay = totals.grossPay;
 
   return (
     <Card className="bg-primary text-primary-foreground mb-6">

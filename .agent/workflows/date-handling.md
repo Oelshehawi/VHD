@@ -1,90 +1,78 @@
 ---
-description: Date handling guidelines - always display dates as stored without timezone conversion
+description: Date handling guidelines - how dates are stored and displayed, and when timezone conversion is needed
 ---
 
 # Date Handling Guidelines for VHD Project
 
-## Critical Rule
+## How Dates Are Actually Stored
 
-Dates in this project should always be displayed **as stored** without using JavaScript `new Date()` constructor for display purposes, to avoid timezone shifts.
+This project has two categories of dates with different storage conventions:
 
-## Why This Matters
+### 1. Date-Only Fields (invoices, due dates, payroll periods)
 
-- The database stores dates in UTC or as ISO strings
-- Using `new Date(dateString)` can shift the date by a day depending on the user's timezone
-- For example, "2026-01-10" becomes "2026-01-09 16:00:00" in PST when parsed as a Date
+Stored as **midnight UTC** — e.g. `2026-01-10T00:00:00.000Z` for January 10th.
 
-## How to Display Dates Correctly
+These represent calendar dates, not moments in time. Display them by extracting the date string directly — never by constructing a `Date` and calling `toLocaleDateString()`, which can shift the day.
 
-### ✅ Correct Approach
+### 2. DateTime Fields (schedule start times)
+
+Stored as **PST/PDT wall-clock values baked into UTC** — e.g. a job at 8:00 AM PST is stored as `2026-02-10T08:00:00Z`.
+
+This is **not** real UTC. The UTC components hold the intended Vancouver local time. This convention is baked throughout the save pipeline (`EditJobModal.tsx`, `AddJob.tsx` use `Date.UTC(year, month, day, localHour, ...)`).
+
+## Display Pipeline
+
+### Date-Only Fields
+
+Use `formatDateStringUTC()` or parse the ISO string directly:
 
 ```typescript
-// Parse date strings directly by splitting
-const dateStr = "2026-01-10T00:00:00.000Z";
-const datePart = dateStr.split("T")[0]; // "2026-01-10"
-const [year, month, day] = datePart.split("-");
-
-// Or use formatDateStringUTC() utility
 import { formatDateStringUTC } from "@/app/lib/utils";
-const displayDate = formatDateStringUTC(dateValue); // Returns "January 10, 2026"
+const displayDate = formatDateStringUTC(dateValue); // "January 10, 2026"
+
+// Or parse manually
+const datePart = dateStr.split("T")[0]; // "2026-01-10"
 ```
 
-### ❌ Avoid This
+### DateTime Fields (Schedule)
+
+The display pipeline works via a deliberate round-trip:
+
+1. **Server** (`scheduleAndShifts.ts`): `.toLocaleString("en-US", { timeZone: "UTC" })` extracts the fake-UTC components as a string → `"2/10/2026, 8:00:00 AM"`
+2. **Client**: `new Date("2/10/2026, 8:00:00 AM")` re-parses as local time → displays `8:00 AM`
+
+This works because steps 1 and 2 cancel each other out. Do not change this pipeline without a full migration plan.
+
+## When External APIs Need Real UTC
+
+External services (Google Routes API, etc.) interpret ISO timestamps as real UTC. Passing fake-UTC values gives wrong results (e.g. Google would estimate midnight traffic instead of 8 AM traffic).
+
+Use `fakeUtcToRealUtc()` from `app/lib/actions/travelTime.actions.ts`:
 
 ```typescript
-// Don't use new Date() for display purposes
-const date = new Date(dateString); // This may shift the date!
-const formatted = date.toLocaleDateString(); // Wrong day possible
+// Converts fake-UTC (PST-as-UTC) to real UTC instant
+// 2026-02-10T08:00:00Z (8am PST) → 2026-02-10T16:00:00Z (real UTC)
+const realUtc = fakeUtcToRealUtc(job.startDateTime);
 ```
+
+This uses `fromZonedTime` from `date-fns-tz` with `America/Vancouver`, so DST is handled correctly.
+
+**Only needed when communicating with external APIs.** Internal sorting, gap calculations, and display all work correctly with fake-UTC values since the offset cancels out.
+
+## Rules by Context
+
+| Context | Use `new Date()`? | Notes |
+|---|---|---|
+| Date-only display | No | Use `formatDateStringUTC()` or string parsing |
+| Schedule time display | Yes (client-side) | The round-trip pipeline handles it |
+| Sorting / comparing jobs | Yes | Relative ordering is correct with fake-UTC |
+| Gap arithmetic (same day) | Yes | Relative durations are correct |
+| External APIs (Google, etc.) | Convert first | Use `fakeUtcToRealUtc()` |
+| Date arithmetic for reminders | Extract parts | Use `parseDateParts()` + `toUtcDateFromParts()` |
 
 ## Available Utility Functions
 
-- `formatDateStringUTC(dateInput)` - Formats date as "January 10, 2026" without timezone conversion
-- `formatDateToString(dateInput)` - Similar formatting, also timezone-safe
-
-## When Calculating Future Dates
-
-When calculating dates (e.g., reminders), extract year/month/day from the source date string first. Creating `Date` objects with component arguments is acceptable **only for internal date arithmetic** — never use those `Date` objects for display or to convert/persist values. And **never** use `new Date(dateString)` for display or persistence-sensitive logic.
-
-```typescript
-const dateStr =
-  invoice.dateIssued instanceof Date
-    ? invoice.dateIssued.toISOString()
-    : String(invoice.dateIssued);
-const datePart = dateStr.split("T")[0] || dateStr;
-const parts = datePart.split("-");
-if (parts.length !== 3) {
-  throw new Error("Invalid date format (expected YYYY-MM-DD)");
-}
-
-const [yearStr, monthStr, dayStr] = parts;
-const baseYear = Number.parseInt(yearStr || "", 10);
-const baseMonth = Number.parseInt(monthStr || "", 10) - 1; // JS months are 0-indexed
-const baseDay = Number.parseInt(dayStr || "", 10);
-
-const isValidNumber =
-  Number.isFinite(baseYear) && Number.isFinite(baseMonth) && Number.isFinite(baseDay);
-const isValidRange =
-  baseMonth >= 0 && baseMonth <= 11 && baseDay >= 1 && baseDay <= 31;
-
-if (!isValidNumber || !isValidRange) {
-  throw new Error("Malformed date parts; unable to safely parse date");
-}
-
-// Now use these values to create a Date for internal arithmetic only
-const localDate = new Date(baseYear, baseMonth, baseDay);
-if (
-  Number.isNaN(localDate.getTime()) ||
-  localDate.getFullYear() !== baseYear ||
-  localDate.getMonth() !== baseMonth ||
-  localDate.getDate() !== baseDay
-) {
-  throw new Error("Invalid calendar date; refusing to compute with it");
-}
-```
-
-## Summary
-
-1. Always use `formatDateStringUTC()` for displaying dates
-2. Never use `new Date(dateString)` when the exact calendar date matters
-3. Parse date strings by splitting on "T" and "-" when you need year/month/day components
+- `formatDateStringUTC(dateInput)` — Formats date as "January 10, 2026" without timezone conversion
+- `parseDateParts(dateInput)` — Extracts year/month/day from Date or string (timezone-safe)
+- `toUtcDateFromParts(parts)` — Creates UTC Date from parts
+- `fakeUtcToRealUtc(isoString)` — Converts fake-UTC schedule datetime to real UTC for external APIs

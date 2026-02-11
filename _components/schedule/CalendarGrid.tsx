@@ -1,14 +1,18 @@
 import { format, isToday } from "date-fns";
 import CalendarColumn from "./CalendarColumn";
 import {
+  Holiday,
   ScheduleType,
   AvailabilityType,
   TimeOffRequestType,
+  DayTravelTimeSummary,
 } from "../../app/lib/typeDefinitions";
 import { cn } from "../../app/lib/utils";
 import { Badge } from "../../_components/ui/badge";
+import TravelTimeDaySummary from "./TravelTimeDaySummary";
+import { SERVICE_DAY_HOUR_ORDER } from "../../app/lib/utils/scheduleDayUtils";
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const HOURS = SERVICE_DAY_HOUR_ORDER;
 
 const CalendarGrid = ({
   week,
@@ -17,18 +21,19 @@ const CalendarGrid = ({
   holidays,
   technicians,
   availability,
-  showAvailability,
   timeOffRequests = [],
+  travelTimeSummaries,
+  isTravelTimeLoading,
 }: {
   week: Date[];
   selectedDayJobs: (day: Date) => ScheduleType[];
   canManage: boolean;
-  holidays: any;
+  holidays: Holiday[];
   technicians: { id: string; name: string }[];
   availability: AvailabilityType[];
-  showAvailability: boolean;
-  showOptimization?: boolean;
   timeOffRequests?: TimeOffRequestType[];
+  travelTimeSummaries?: Map<string, DayTravelTimeSummary>;
+  isTravelTimeLoading?: boolean;
 }) => {
   return (
     <div className="bg-card flex h-full min-h-0 flex-col">
@@ -44,10 +49,11 @@ const CalendarGrid = ({
           const today = isToday(day);
           const dayJobs = selectedDayJobs(day);
           const jobCount = dayJobs.length;
+          const dayKey = format(day, "yyyy-MM-dd");
 
           return (
             <div
-              key={idx}
+              key={dayKey}
               className={cn(
                 "relative flex flex-1 flex-col items-center justify-center gap-0.5 px-1 py-2.5 transition-colors sm:py-3",
                 today ? "bg-primary/10" : "hover:bg-muted/30",
@@ -90,6 +96,14 @@ const CalendarGrid = ({
                   </Badge>
                 </div>
               )}
+
+              {/* Travel time summary */}
+              {jobCount > 0 && (
+                <TravelTimeDaySummary
+                  summary={travelTimeSummaries?.get(format(day, "yyyy-MM-dd"))}
+                  isLoading={isTravelTimeLoading}
+                />
+              )}
             </div>
           );
         })}
@@ -114,28 +128,31 @@ const CalendarGrid = ({
 
           {/* Calendar columns */}
           <div className="flex flex-1">
-            {week.map((day, idx) => (
-              <div
-                key={idx}
-                className={cn(
-                  "relative flex-1",
-                  idx < week.length - 1 && "border-border/60 border-r",
-                  isToday(day) ? "bg-primary/[0.06]" : "bg-card",
-                )}
-              >
-                <CalendarColumn
-                  day={day}
-                  jobs={selectedDayJobs(day)}
-                  isToday={isToday(day)}
-                  canManage={canManage}
-                  holidays={holidays}
-                  technicians={technicians}
-                  availability={availability}
-                  showAvailability={showAvailability}
-                  timeOffRequests={timeOffRequests}
-                />
-              </div>
-            ))}
+            {week.map((day, idx) => {
+              const dayKey = format(day, "yyyy-MM-dd");
+              return (
+                <div
+                  key={dayKey}
+                  className={cn(
+                    "relative flex-1",
+                    idx < week.length - 1 && "border-border/60 border-r",
+                    isToday(day) ? "bg-primary/[0.06]" : "bg-card",
+                  )}
+                >
+                  <CalendarColumn
+                    day={day}
+                    jobs={selectedDayJobs(day)}
+                    canManage={canManage}
+                    holidays={holidays}
+                    technicians={technicians}
+                    availability={availability}
+                    timeOffRequests={timeOffRequests}
+                    travelTimeSummary={travelTimeSummaries?.get(dayKey)}
+                    isTravelTimeLoading={isTravelTimeLoading}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

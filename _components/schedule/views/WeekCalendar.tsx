@@ -2,12 +2,17 @@
 import { useMemo } from "react";
 import { format } from "date-fns-tz";
 import {
+  Holiday,
   ScheduleType,
-  InvoiceType,
   AvailabilityType,
   TimeOffRequestType,
+  DayTravelTimeSummary,
 } from "../../../app/lib/typeDefinitions";
 import CalendarGrid from "../CalendarGrid";
+import {
+  compareScheduleDisplayOrder,
+  getScheduleDisplayDateKey,
+} from "../../../app/lib/utils/scheduleDayUtils";
 
 const WeekCalendar = ({
   scheduledJobs,
@@ -16,27 +21,26 @@ const WeekCalendar = ({
   holidays,
   technicians,
   availability,
-  showAvailability,
   timeOffRequests = [],
-  showOptimization,
+  travelTimeSummaries,
+  isTravelTimeLoading,
 }: {
   scheduledJobs: ScheduleType[];
   canManage: boolean;
   currentWeek: Date[];
-  holidays: any;
+  holidays: Holiday[];
   technicians: { id: string; name: string }[];
   availability: AvailabilityType[];
-  showAvailability: boolean;
   timeOffRequests?: TimeOffRequestType[];
-  showOptimization?: boolean;
+  travelTimeSummaries?: Map<string, DayTravelTimeSummary>;
+  isTravelTimeLoading?: boolean;
 }) => {
   // Group jobs by date with optimized performance
   const selectedDayJobsMap = useMemo(() => {
     const jobsMap: { [key: string]: ScheduleType[] } = {};
 
     scheduledJobs.forEach((job) => {
-      const jobDate = new Date(job.startDateTime);
-      const jobDateKey = format(jobDate, "yyyy-MM-dd");
+      const jobDateKey = getScheduleDisplayDateKey(job.startDateTime);
 
       if (!jobsMap[jobDateKey]) {
         jobsMap[jobDateKey] = [];
@@ -48,9 +52,7 @@ const WeekCalendar = ({
     // Sort jobs by time within each day
     Object.keys(jobsMap).forEach((dateKey) => {
       (jobsMap[dateKey] as ScheduleType[]).sort((a, b) => {
-        const timeA = new Date(a.startDateTime).getTime();
-        const timeB = new Date(b.startDateTime).getTime();
-        return timeA - timeB;
+        return compareScheduleDisplayOrder(a.startDateTime, b.startDateTime);
       });
     });
 
@@ -71,8 +73,9 @@ const WeekCalendar = ({
         holidays={holidays}
         technicians={technicians}
         availability={availability}
-        showAvailability={showAvailability}
         timeOffRequests={timeOffRequests}
+        travelTimeSummaries={travelTimeSummaries}
+        isTravelTimeLoading={isTravelTimeLoading}
       />
     </div>
   );

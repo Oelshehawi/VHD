@@ -25,11 +25,16 @@ import {
   ScheduleType,
   AvailabilityType,
   TimeOffRequestType,
+  DayTravelTimeSummary,
 } from "../../../app/lib/typeDefinitions";
 import JobDetailsModal from "../JobDetailsModal";
 import { getTechnicianUnavailabilityInfo } from "../../../app/lib/utils/availabilityUtils";
 import { formatTimeRange12hr } from "../../../app/lib/utils/timeFormatUtils";
 import { cn, formatDateStringUTC } from "../../../app/lib/utils";
+import {
+  compareScheduleDisplayOrder,
+  getScheduleDisplayDateKey,
+} from "../../../app/lib/utils/scheduleDayUtils";
 import { CalendarDays } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../../ui/tooltip";
 import {
@@ -38,6 +43,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "../../ui/dialog";
+import TravelTimeDaySummary from "../TravelTimeDaySummary";
 
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -53,6 +59,8 @@ export default function MonthCalendar({
   onDateChange,
   initialDate,
   showDesktopHeader = true,
+  travelTimeSummaries,
+  isTravelTimeLoading,
 }: {
   scheduledJobs: ScheduleType[];
   canManage: boolean;
@@ -63,6 +71,8 @@ export default function MonthCalendar({
   onDateChange?: (date: Date, view: "week" | "month") => void;
   initialDate?: string | null;
   showDesktopHeader?: boolean;
+  travelTimeSummaries?: Map<string, DayTravelTimeSummary>;
+  isTravelTimeLoading?: boolean;
 }) {
   let today = startOfToday();
 
@@ -112,16 +122,14 @@ export default function MonthCalendar({
   const jobsByDate = useMemo(() => {
     const map: Record<string, ScheduleType[]> = {};
     scheduledJobs.forEach((job) => {
-      const dateKey = format(new Date(job.startDateTime), "yyyy-MM-dd");
+      const dateKey = getScheduleDisplayDateKey(job.startDateTime);
       if (!map[dateKey]) map[dateKey] = [];
       map[dateKey]!.push(job);
     });
     // Sort jobs by time within each day
     Object.keys(map).forEach((key) => {
-      map[key]!.sort(
-        (a, b) =>
-          new Date(a.startDateTime).getTime() -
-          new Date(b.startDateTime).getTime(),
+      map[key]!.sort((a, b) =>
+        compareScheduleDisplayOrder(a.startDateTime, b.startDateTime),
       );
     });
     return map;
@@ -182,11 +190,13 @@ export default function MonthCalendar({
   }
 
   let selectedDayJobs = scheduledJobs
-    .filter((job) => isSameDay(new Date(job.startDateTime), selectedDay))
-    .sort(
-      (a, b) =>
-        new Date(a.startDateTime).getTime() -
-        new Date(b.startDateTime).getTime(),
+    .filter(
+      (job) =>
+        getScheduleDisplayDateKey(job.startDateTime) ===
+        format(selectedDay, "yyyy-MM-dd"),
+    )
+    .sort((a, b) =>
+      compareScheduleDisplayOrder(a.startDateTime, b.startDateTime),
     );
 
   // Get time-off requests for selected day
@@ -335,9 +345,13 @@ export default function MonthCalendar({
                     {format(day, "d")}
                   </button>
 
-                  {/* Job count badge */}
+                  {/* Job count + travel time badges */}
                   {dayJobs.length > 0 && (
-                    <div className="absolute right-1 bottom-1">
+                    <div className="absolute right-1 bottom-1 flex items-center gap-1">
+                      <TravelTimeDaySummary
+                        summary={travelTimeSummaries?.get(dateKey)}
+                        isLoading={isTravelTimeLoading}
+                      />
                       <Badge
                         variant="secondary"
                         className="h-4 min-w-[16px] px-1 text-[9px] font-medium"
@@ -789,12 +803,22 @@ export default function MonthCalendar({
                         {format(selectedDay, "MMM dd, yyyy")}
                       </time>
                     </span>
-                    {selectedDayJobs.length > 0 && (
-                      <Badge variant="default">
-                        {selectedDayJobs.length}{" "}
-                        {selectedDayJobs.length === 1 ? "job" : "jobs"}
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2">
+                      {selectedDayJobs.length > 0 && (
+                        <TravelTimeDaySummary
+                          summary={travelTimeSummaries?.get(
+                            format(selectedDay, "yyyy-MM-dd"),
+                          )}
+                          isLoading={isTravelTimeLoading}
+                        />
+                      )}
+                      {selectedDayJobs.length > 0 && (
+                        <Badge variant="default">
+                          {selectedDayJobs.length}{" "}
+                          {selectedDayJobs.length === 1 ? "job" : "jobs"}
+                        </Badge>
+                      )}
+                    </div>
                   </h2>
                 </div>
               </div>
@@ -854,7 +878,6 @@ export default function MonthCalendar({
                     <Job
                       job={job}
                       key={job._id as string}
-                      canManage={canManage}
                       technicians={technicians}
                       onJobClick={handleJobClick}
                     />
@@ -904,15 +927,25 @@ export default function MonthCalendar({
                   ? `Schedule for ${format(dayJobsModalDate, "MMM dd, yyyy")}`
                   : "Schedule"}
               </span>
-              {dayJobsModalDate && (
-                <Badge variant="secondary">
-                  {
-                    (jobsByDate[format(dayJobsModalDate, "yyyy-MM-dd")] || [])
-                      .length
-                  }{" "}
-                  jobs
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {dayJobsModalDate && (
+                  <TravelTimeDaySummary
+                    summary={travelTimeSummaries?.get(
+                      format(dayJobsModalDate, "yyyy-MM-dd"),
+                    )}
+                    isLoading={isTravelTimeLoading}
+                  />
+                )}
+                {dayJobsModalDate && (
+                  <Badge variant="secondary">
+                    {
+                      (jobsByDate[format(dayJobsModalDate, "yyyy-MM-dd")] || [])
+                        .length
+                    }{" "}
+                    jobs
+                  </Badge>
+                )}
+              </div>
             </DialogTitle>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto">
@@ -924,7 +957,6 @@ export default function MonthCalendar({
                 <Job
                   key={job._id as string}
                   job={job}
-                  canManage={canManage}
                   technicians={technicians}
                   onJobClick={(selected) => {
                     setDayJobsModalOpen(false);
@@ -946,7 +978,6 @@ export function Job({
   onJobClick,
 }: {
   job: ScheduleType;
-  canManage: boolean;
   technicians: { id: string; name: string }[];
   onJobClick?: (job: ScheduleType) => void;
 }) {
