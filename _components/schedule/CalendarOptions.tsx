@@ -26,6 +26,9 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
 import AddJob from "./AddJob";
+import ScheduleInsightsPanel, {
+  defaultInsightWindowFromView,
+} from "./insights/ScheduleInsightsPanel";
 import { Button } from "../ui/button";
 import { Tabs, TabsList, TabsTrigger } from "../ui/tabs";
 import { fetchVisibleScheduledJobsWithShifts } from "../../app/lib/scheduleAndShifts";
@@ -176,6 +179,56 @@ const mergeJobsById = (
   }
 
   return Array.from(jobsById.values());
+};
+
+const parseStoredScheduleDateTime = (value: string | Date): Date | null => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value;
+  }
+
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+
+  // Backward compatibility: some schedule payloads use "M/D/YYYY, h:mm:ss AM/PM" in UTC.
+  const legacyMatch = raw.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i,
+  );
+  if (legacyMatch) {
+    const month = Number.parseInt(legacyMatch[1] || "", 10);
+    const day = Number.parseInt(legacyMatch[2] || "", 10);
+    const year = Number.parseInt(legacyMatch[3] || "", 10);
+    const hour12 = Number.parseInt(legacyMatch[4] || "", 10);
+    const minute = Number.parseInt(legacyMatch[5] || "", 10);
+    const second = Number.parseInt(legacyMatch[6] || "0", 10);
+    const meridiem = (legacyMatch[7] || "").toUpperCase();
+
+    if (
+      Number.isFinite(year) &&
+      Number.isFinite(month) &&
+      Number.isFinite(day) &&
+      Number.isFinite(hour12) &&
+      Number.isFinite(minute) &&
+      Number.isFinite(second)
+    ) {
+      const normalizedHour = hour12 % 12;
+      const hour24 = meridiem === "PM" ? normalizedHour + 12 : normalizedHour;
+      const parsed = new Date(
+        Date.UTC(year, month - 1, day, hour24, minute, second, 0),
+      );
+      if (!Number.isNaN(parsed.getTime())) return parsed;
+    }
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed;
+};
+
+const toUtcDateKey = (value: Date): string => {
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(value.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 const CalendarOptions = ({
@@ -685,6 +738,33 @@ const Header = ({
       ? parsedCurrentDate
       : currentDay;
   const monthLabel = format(monthAnchorDate, "MMMM yyyy");
+  const insightWindow = useMemo(() => {
+    return defaultInsightWindowFromView({
+      currentView,
+      currentDay,
+      currentWeek,
+      currentDate,
+    });
+  }, [currentView, currentDay, currentWeek, currentDate]);
+  const moveJobOptions = useMemo(() => {
+    return scheduledJobs
+      .filter((job) => {
+        const parsedJobStart = parseStoredScheduleDateTime(job.startDateTime);
+        if (!parsedJobStart) return false;
+        const jobDate = toUtcDateKey(parsedJobStart);
+        return (
+          jobDate >= insightWindow.dateFrom && jobDate <= insightWindow.dateTo
+        );
+      })
+      .sort((a, b) => {
+        const aMs =
+          parseStoredScheduleDateTime(a.startDateTime)?.getTime() ?? 0;
+        const bMs =
+          parseStoredScheduleDateTime(b.startDateTime)?.getTime() ?? 0;
+        return bMs - aMs;
+      })
+      .slice(0, 80);
+  }, [scheduledJobs, insightWindow.dateFrom, insightWindow.dateTo]);
 
   const getNavigationLabel = () => {
     if (currentView === "day") return dayLabel;
@@ -766,6 +846,16 @@ const Header = ({
 
         {/* Right Section: Actions + View Tabs */}
         <div className="flex flex-shrink-0 flex-wrap items-center justify-end gap-2 lg:flex-nowrap lg:justify-start">
+          {canManage && (
+            <ScheduleInsightsPanel
+              canManage={canManage}
+              defaultDateFrom={insightWindow.dateFrom}
+              defaultDateTo={insightWindow.dateTo}
+              technicians={technicians}
+              moveJobOptions={moveJobOptions}
+            />
+          )}
+
           {/* Today Button - Month view only, show on mobile too */}
           {currentView === "month" && isMobile && (
             <Button

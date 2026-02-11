@@ -13,6 +13,7 @@ interface DatePickerProps {
   date?: Date;
   onSelect?: (date: Date | undefined) => void;
   placeholder?: string;
+  displayFormat?: string;
   disabled?: boolean;
   minDate?: Date;
   maxDate?: Date;
@@ -24,6 +25,7 @@ export function DatePicker({
   date,
   onSelect,
   placeholder = "Select date",
+  displayFormat = "PPP",
   disabled = false,
   minDate,
   maxDate,
@@ -46,7 +48,7 @@ export function DatePicker({
           )}
         >
           <CalendarIcon className="mr-2 h-4 w-4" />
-          {date ? format(date, "PPP") : <span>{placeholder}</span>}
+          {date ? format(date, displayFormat) : <span>{placeholder}</span>}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-auto p-0" align="start">

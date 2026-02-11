@@ -124,6 +124,15 @@ const UTC_MONTH_SHORT_NAMES = [
   "Dec",
 ];
 
+const getOrdinalSuffix = (day: number): string => {
+  const mod10 = day % 10;
+  const mod100 = day % 100;
+  if (mod10 === 1 && mod100 !== 11) return "st";
+  if (mod10 === 2 && mod100 !== 12) return "nd";
+  if (mod10 === 3 && mod100 !== 13) return "rd";
+  return "th";
+};
+
 /**
  * Format a UTC date string in readable format exactly as stored (no timezone conversion)
  * @param dateInput - Date string in ISO format or Date object
@@ -185,6 +194,21 @@ export const formatDateStringUTC = (dateInput: string | Date): string => {
 
   const monthName = UTC_MONTH_NAMES[parseInt(month, 10) - 1];
   return `${monthName} ${parseInt(day, 10)}, ${year}`;
+};
+
+/**
+ * Format a UTC date string with ordinal day, e.g. "January 1st, 2026".
+ * Uses UTC-safe parsing with no timezone conversion.
+ */
+export const formatDateStringOrdinalUTC = (
+  dateInput: string | Date,
+): string => {
+  const parts = getUtcDateParts(dateInput);
+  if (!parts) return "Invalid Date";
+
+  const monthName = UTC_MONTH_NAMES[parts.month - 1];
+  const suffix = getOrdinalSuffix(parts.day);
+  return `${monthName} ${parts.day}${suffix}, ${parts.year}`;
 };
 
 const getUtcDateParts = (dateInput: string | Date) => {

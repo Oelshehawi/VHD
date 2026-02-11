@@ -49,6 +49,7 @@ scheduleSchema.index({ startDateTime: 1, confirmed: 1 });
 scheduleSchema.index({ assignedTechnicians: 1, startDateTime: 1 });
 scheduleSchema.index({ startDateTime: 1, assignedTechnicians: 1 });
 scheduleSchema.index({ location: 1, startDateTime: 1 });
+scheduleSchema.index({ invoiceRef: 1, startDateTime: -1 });
 
 export const Schedule =
   (models.Schedule as typeof Model<ScheduleType>) ||

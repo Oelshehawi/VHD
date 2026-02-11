@@ -25,6 +25,8 @@ import {
 import { v2 as cloudinary } from "cloudinary";
 import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
 import { createNotification } from "./notifications.actions";
+import { getScheduleDisplayDateKey } from "../utils/scheduleDayUtils";
+import { runAutoScheduleInsightAnalysis } from "./scheduleInsights.actions";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -32,6 +34,27 @@ cloudinary.config({
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
+
+async function safeRunAutoInsights(params: {
+  dateKeys: string[];
+  technicianIds?: string[];
+}) {
+  try {
+    const uniqueDateKeys = [...new Set(params.dateKeys.filter(Boolean))];
+    if (uniqueDateKeys.length === 0) return;
+
+    const uniqueTechIds = [
+      ...new Set((params.technicianIds || []).filter(Boolean)),
+    ];
+
+    await runAutoScheduleInsightAnalysis({
+      dateKeys: uniqueDateKeys,
+      technicianIds: uniqueTechIds,
+    });
+  } catch (error) {
+    console.error("Auto schedule insight analysis failed:", error);
+  }
+}
 
 /**
  * Server action to fetch pending and overdue invoices for AddJob modal
@@ -282,6 +305,11 @@ export async function createSchedule(
         }
       }
     }
+
+    void safeRunAutoInsights({
+      dateKeys: [getScheduleDisplayDateKey(scheduleData.startDateTime)],
+      technicianIds: scheduleData.assignedTechnicians || [],
+    });
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to create schedule");
@@ -293,6 +321,10 @@ export async function createSchedule(
 export const deleteJob = async (jobId: string) => {
   await connectMongo();
   try {
+    const scheduleToDelete = await Schedule.findById(
+      jobId,
+    ).lean<ScheduleType | null>();
+
     // Delete estimate photos from Cloudinary and photos collection
     const estimatePhotos = await Photo.find({
       scheduleId: jobId,
@@ -326,6 +358,13 @@ export const deleteJob = async (jobId: string) => {
 
     // Now delete the schedule from MongoDB
     await Schedule.findByIdAndDelete(jobId);
+
+    if (scheduleToDelete) {
+      void safeRunAutoInsights({
+        dateKeys: [getScheduleDisplayDateKey(scheduleToDelete.startDateTime)],
+        technicianIds: scheduleToDelete.assignedTechnicians || [],
+      });
+    }
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to delete job with id");
@@ -421,6 +460,11 @@ export const updateSchedule = async ({
           success: true,
         });
       }
+
+      void safeRunAutoInsights({
+        dateKeys: [getScheduleDisplayDateKey(schedule.startDateTime)],
+        technicianIds: schedule.assignedTechnicians || [],
+      });
     }
 
     revalidatePath("/schedule");
@@ -562,19 +606,20 @@ export const updateJob = async ({
       }
     }
 
-    // Sync invoice dateIssued if this is the only schedule linked to the invoice
+    // Sync linked invoice dateIssued whenever the job is rescheduled.
     if (schedule.invoiceRef) {
-      const schedulesForInvoice = await Schedule.countDocuments({
-        invoiceRef: schedule.invoiceRef,
+      await syncInvoiceDateIssuedAndJobsDueSoon({
+        invoiceId: schedule.invoiceRef.toString(),
+        dateIssued: updatedStartDate,
       });
-
-      if (schedulesForInvoice === 1) {
-        await syncInvoiceDateIssuedAndJobsDueSoon({
-          invoiceId: schedule.invoiceRef.toString(),
-          dateIssued: updatedStartDate,
-        });
-      }
     }
+
+    const oldDateKey = getScheduleDisplayDateKey(schedule.startDateTime);
+    const newDateKey = getScheduleDisplayDateKey(updatedStartDate);
+    void safeRunAutoInsights({
+      dateKeys: [oldDateKey, newDateKey],
+      technicianIds: [...previousTechnicians, ...newTechnicians],
+    });
 
     revalidatePath("/schedule");
   } catch (error) {

@@ -751,6 +751,123 @@ export interface SchedulingContext {
   existingRequest?: SchedulingRequestType; // Populated when request already submitted
 }
 
+// ── Schedule Insight Types ────────────────────────────────────────────────
+
+export const SCHEDULE_INSIGHT_KINDS = {
+  TRAVEL_OVERLOAD_DAY: "travel_overload_day",
+  REST_GAP_WARNING: "rest_gap_warning",
+  SERVICE_DAY_BOUNDARY_RISK: "service_day_boundary_risk",
+  ROUTE_EFFICIENCY_OPPORTUNITY: "route_efficiency_opportunity",
+  MOVE_JOB_RECOMMENDATION: "move_job_recommendation",
+  DUE_SOON_UNSCHEDULED: "due_soon_unscheduled",
+  DUE_SOON_AT_RISK: "due_soon_at_risk",
+  DUE_SOON_BEST_SLOT_CANDIDATES: "due_soon_best_slot_candidates",
+} as const;
+
+export type ScheduleInsightKind =
+  (typeof SCHEDULE_INSIGHT_KINDS)[keyof typeof SCHEDULE_INSIGHT_KINDS];
+
+export type ScheduleInsightSeverity = "info" | "warning" | "critical";
+
+export type ScheduleInsightStatus = "open" | "resolved" | "dismissed";
+
+export type ScheduleInsightSource = "rule" | "ai" | "hybrid";
+
+export interface ScheduleInsightSlotCandidate {
+  date: string; // yyyy-MM-dd
+  startDateTime: Date | string; // persisted value compatible with schedule storage
+  technicianId: string;
+  technicianName?: string;
+  technicianIds?: string[];
+  technicianNames?: string[];
+  estimatedJobHours: number;
+  incrementalTravelMinutes: number;
+  score: number;
+  scoreBreakdown?: {
+    duePenaltyDays: number;
+    duePenaltyPoints: number;
+    loadHours: number;
+    loadPoints: number;
+    travelPoints: number;
+    totalScore: number;
+    duePolicy?: "hard" | "soft";
+  };
+  reason: string;
+  invoiceRef?: string;
+  jobsDueSoonId?: string;
+}
+
+export interface ScheduleInsightPayload {
+  candidates?: ScheduleInsightSlotCandidate[];
+  analysisWindow?: {
+    dateFrom: string;
+    dateTo: string;
+  };
+  metadata?: Record<string, string | number | boolean | null>;
+}
+
+export interface ScheduleInsightType {
+  _id?: ObjectId | string;
+  kind: ScheduleInsightKind;
+  severity: ScheduleInsightSeverity;
+  status: ScheduleInsightStatus;
+  title: string;
+  message: string;
+  dateKey?: string | null;
+  technicianId?: string | null;
+  scheduleIds?: (ObjectId | string)[];
+  jobsDueSoonIds?: (ObjectId | string)[];
+  invoiceIds?: (ObjectId | string)[];
+  suggestionPayload?: ScheduleInsightPayload;
+  fingerprint: string;
+  source: ScheduleInsightSource;
+  confidence?: number;
+  resolvedBy?: string;
+  resolvedAt?: Date | string;
+  resolutionNote?: string;
+  createdAt?: Date | string;
+  updatedAt?: Date | string;
+}
+
+export type ScheduleInsightTrigger =
+  | "auto"
+  | "manual_day"
+  | "manual_range"
+  | "manual_move"
+  | "manual_due_soon";
+
+export interface ScheduleInsightRunType {
+  _id?: ObjectId | string;
+  trigger: ScheduleInsightTrigger;
+  dateFrom: string;
+  dateTo: string;
+  technicianIds?: string[];
+  generatedCount: number;
+  model?: string;
+  durationMs?: number;
+  createdBy?: string;
+  createdAt?: Date | string;
+}
+
+export interface DueSoonPlacementSuggestion {
+  jobsDueSoonId: string;
+  invoiceRef?: string;
+  invoiceId: string;
+  jobTitle: string;
+  location: string;
+  dateDue: string;
+  estimatedHours: number;
+  previousSchedule?: PreviousScheduleReference;
+  candidates: ScheduleInsightSlotCandidate[];
+}
+
+export interface PreviousScheduleReference {
+  startDateTime: Date | string;
+  assignedTechnicians: string[];
+  technicianNames: string[];
+  hours: number;
+}
+
 // ── Travel Time Types ──────────────────────────────────────────────────────
 
 export interface TravelTimeCacheType {
