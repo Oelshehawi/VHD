@@ -44,6 +44,8 @@ interface SchedulingWizardProps {
   invoice: InvoiceType;
   pattern?: ClientSchedulingPattern;
   availableDays: DayAvailability[];
+  requestedEstimatedHours?: number;
+  requestedHistoricalServiceDurationMinutes?: number | null;
 }
 
 type WizardStep = "select" | "confirmation" | "review" | "success";
@@ -164,6 +166,8 @@ export default function SchedulingWizard({
   invoice,
   pattern,
   availableDays: initialAvailableDays,
+  requestedEstimatedHours,
+  requestedHistoricalServiceDurationMinutes,
 }: SchedulingWizardProps) {
   const [step, setStep] = useState<WizardStep>("select");
   const [primarySelection, setPrimarySelection] =
@@ -313,7 +317,14 @@ export default function SchedulingWizard({
   const latestRefreshRequestId = useRef(0);
 
   // Get estimated hours from invoice (default to 4)
-  const estimatedHours = (invoice as any).estimatedHours || 4;
+  const estimatedHours =
+    requestedEstimatedHours || (invoice as any).estimatedHours || 4;
+  const historicalDurationMinutes =
+    requestedHistoricalServiceDurationMinutes != null &&
+    Number.isFinite(requestedHistoricalServiceDurationMinutes) &&
+    requestedHistoricalServiceDurationMinutes >= 0
+      ? Math.round(requestedHistoricalServiceDurationMinutes)
+      : null;
 
   // Get the current scheduling time (either custom or usual from pattern)
   const currentSchedulingTime = useMemo(() => {
@@ -585,6 +596,7 @@ export default function SchedulingWizard({
         token,
         { hour: customHour, minute: customMinute },
         estimatedHours,
+        historicalDurationMinutes,
       );
       setAvailableDays(newAvailability);
     } catch (error) {
@@ -610,6 +622,7 @@ export default function SchedulingWizard({
         token,
         usualTime,
         estimatedHours,
+        historicalDurationMinutes,
       );
       setAvailableDays(newAvailability);
     } catch (error) {
@@ -639,6 +652,7 @@ export default function SchedulingWizard({
           token,
           { hour: newHour, minute: newMinute },
           estimatedHours,
+          historicalDurationMinutes,
         );
         if (latestRefreshRequestId.current === requestId) {
           setAvailableDays(newAvailability);
@@ -651,7 +665,7 @@ export default function SchedulingWizard({
         }
       }
     },
-    [estimatedHours, token],
+    [estimatedHours, historicalDurationMinutes, token],
   );
 
   const handleOpenTimePicker = () => {
@@ -706,7 +720,9 @@ export default function SchedulingWizard({
                     {invoice.jobTitle}
                   </span>
                   <span className="text-muted-foreground text-xs">
-                    Est. {estimatedHours} hours
+                    {historicalDurationMinutes != null
+                      ? `Est. ~${historicalDurationMinutes} min (historical)`
+                      : `Est. ${estimatedHours} hours`}
                   </span>
                   <span className="text-muted-foreground text-xs">
                     {invoice.location}

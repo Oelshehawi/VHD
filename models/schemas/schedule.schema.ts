@@ -47,6 +47,7 @@ export const scheduleSchema = new Schema<ScheduleType>({
     type: String,
     enum: ["after_photo", "mark_completed", "admin_edit"],
   },
+  historicalServiceDurationMinutes: { type: Number, min: 0, max: 24 * 60 },
 });
 
 // Schedule indexes

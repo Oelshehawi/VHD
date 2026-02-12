@@ -226,6 +226,8 @@ const CalendarColumn = ({
                   const jobDuration = getEffectiveServiceDurationHours({
                     actualServiceDurationMinutes:
                       job.actualServiceDurationMinutes,
+                    historicalServiceDurationMinutes:
+                      job.historicalServiceDurationMinutes,
                     scheduleHours: job.hours,
                     fallbackHours: 4,
                   });
@@ -233,6 +235,8 @@ const CalendarColumn = ({
                     {
                       actualServiceDurationMinutes:
                         job.actualServiceDurationMinutes,
+                      historicalServiceDurationMinutes:
+                        job.historicalServiceDurationMinutes,
                       scheduleHours: job.hours,
                       fallbackHours: 4,
                     },

@@ -36,7 +36,7 @@ function normalizeAddress(address: string): string {
 }
 
 const BUSINESS_TIME_ZONE = "America/Vancouver";
-const HOUR_BUCKET_SIZE = 1;
+const HOUR_BUCKET_SIZE = 2;
 
 const WEEKDAY_INDEX: Record<string, number> = {
   Sun: 0,
@@ -97,20 +97,73 @@ function isSelfPair(origin: string, destination: string): boolean {
 }
 
 function toIsoStringSafe(value: Date | string): string {
-  const parsed = new Date(value);
+  const parsed = parseStoredScheduleDateTime(value);
   if (Number.isNaN(parsed.getTime())) {
     return String(value);
   }
   return parsed.toISOString();
 }
 
+/**
+ * Parse schedule datetimes using the project's fake-UTC storage convention.
+ *
+ * Inputs can be:
+ * - real Date objects from Mongo
+ * - ISO-like strings
+ * - UI round-trip strings like "3/2/2026, 10:00:00 AM"
+ *
+ * For UI round-trip strings we rebuild a UTC timestamp from the visible parts
+ * so parsing does not depend on the server's local timezone.
+ */
+function parseStoredScheduleDateTime(value: Date | string): Date {
+  if (value instanceof Date) {
+    return new Date(value.getTime());
+  }
+
+  const raw = String(value || "").trim();
+  if (!raw) {
+    return new Date(NaN);
+  }
+
+  const localeMatch = raw.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i,
+  );
+  if (localeMatch) {
+    const month = Number.parseInt(localeMatch[1] || "0", 10);
+    const day = Number.parseInt(localeMatch[2] || "0", 10);
+    const year = Number.parseInt(localeMatch[3] || "0", 10);
+    const hour12 = Number.parseInt(localeMatch[4] || "0", 10);
+    const minute = Number.parseInt(localeMatch[5] || "0", 10);
+    const second = Number.parseInt(localeMatch[6] || "0", 10);
+    const period = (localeMatch[7] || "").toUpperCase();
+
+    if (
+      Number.isFinite(month) &&
+      Number.isFinite(day) &&
+      Number.isFinite(year) &&
+      Number.isFinite(hour12) &&
+      Number.isFinite(minute) &&
+      Number.isFinite(second)
+    ) {
+      let hour24 = hour12 % 12;
+      if (period === "PM") hour24 += 12;
+      return new Date(
+        Date.UTC(year, Math.max(0, month - 1), day, hour24, minute, second, 0),
+      );
+    }
+  }
+
+  return new Date(raw);
+}
+
 function getJobEndDateTimeIso(job: ScheduleType): string {
-  const start = new Date(job.startDateTime);
+  const start = parseStoredScheduleDateTime(job.startDateTime);
   if (Number.isNaN(start.getTime())) {
     return toIsoStringSafe(job.startDateTime);
   }
   const durationMinutes = getEffectiveServiceDurationMinutes({
     actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+    historicalServiceDurationMinutes: job.historicalServiceDurationMinutes,
     scheduleHours: job.hours,
     fallbackHours: 0,
   });
@@ -129,12 +182,12 @@ function getJobEndDateTimeIso(job: ScheduleType): string {
  * Google departure-time inputs.
  */
 function getServiceDayRoutingStart(value: Date | string): Date | null {
-  const parsed = new Date(value);
+  const parsed = parseStoredScheduleDateTime(value);
   if (Number.isNaN(parsed.getTime())) return null;
 
   const adjusted = new Date(parsed);
-  if (adjusted.getHours() < SERVICE_DAY_CUTOFF_HOUR) {
-    adjusted.setDate(adjusted.getDate() + 1);
+  if (adjusted.getUTCHours() < SERVICE_DAY_CUTOFF_HOUR) {
+    adjusted.setUTCDate(adjusted.getUTCDate() + 1);
   }
   return adjusted;
 }
@@ -154,6 +207,7 @@ function getRoutingJobEndDateTimeIso(job: ScheduleType): string {
   }
   const durationMinutes = getEffectiveServiceDurationMinutes({
     actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+    historicalServiceDurationMinutes: job.historicalServiceDurationMinutes,
     scheduleHours: job.hours,
     fallbackHours: 0,
   });

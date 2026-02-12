@@ -32,6 +32,7 @@ import { createNotification } from "./notifications.actions";
 import { getScheduleDisplayDateKey } from "../utils/scheduleDayUtils";
 import { runAutoScheduleInsightAnalysis } from "./scheduleInsights.actions";
 import { requireAdmin } from "../auth/utils";
+import { resolveHistoricalDurationForLocation } from "../historicalServiceDuration.data";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -223,6 +224,9 @@ export async function createSchedule(
     if (scheduleData.jobTitle) {
       scheduleData.jobTitle = scheduleData.jobTitle.trim();
     }
+    if (scheduleData.location) {
+      scheduleData.location = scheduleData.location.trim();
+    }
 
     if (typeof scheduleData.startDateTime === "string") {
       scheduleData.startDateTime = new Date(
@@ -264,6 +268,16 @@ export async function createSchedule(
 
     // Assign the payrollPeriod ID to the schedule
     scheduleData.payrollPeriod = payrollPeriod?._id || "";
+
+    // Populate historical duration from past completions at same location
+    if (scheduleData.historicalServiceDurationMinutes == null) {
+      const historicalMinutes = await resolveHistoricalDurationForLocation(
+        scheduleData.location,
+      );
+      if (historicalMinutes != null) {
+        scheduleData.historicalServiceDurationMinutes = historicalMinutes;
+      }
+    }
 
     const newSchedule = new Schedule(scheduleData);
     await newSchedule.save();
@@ -715,6 +729,7 @@ export const updateJob = async ({
   try {
     // Trim jobTitle to remove leading/trailing spaces
     const trimmedJobTitle = jobTitle.trim();
+    const trimmedLocation = location.trim();
     // Parse startDateTime - if it's an ISO string, it's already in UTC
     // which is what MongoDB expects
     const updatedStartDate = new Date(startDateTime);
@@ -732,11 +747,13 @@ export const updateJob = async ({
       schedule.startDateTime instanceof Date
         ? schedule.startDateTime
         : new Date(schedule.startDateTime);
+    const previousLocation = String(schedule.location || "").trim();
+    const locationChanged = trimmedLocation !== previousLocation;
 
     // Build update object
     const updateFields: any = {
       jobTitle: trimmedJobTitle,
-      location,
+      location: trimmedLocation,
       startDateTime: updatedStartDate,
       assignedTechnicians,
       payrollPeriod: payrollPeriod?._id,
@@ -758,8 +775,22 @@ export const updateJob = async ({
       updateFields.accessInstructions = accessInstructions;
     }
 
+    let nextHistoricalDurationMinutes: number | null = null;
+    if (locationChanged) {
+      nextHistoricalDurationMinutes =
+        await resolveHistoricalDurationForLocation(trimmedLocation);
+      if (nextHistoricalDurationMinutes != null) {
+        updateFields.historicalServiceDurationMinutes =
+          nextHistoricalDurationMinutes;
+      }
+    }
+
     // Update the schedule with the new details and payroll period
-    await Schedule.findByIdAndUpdate(scheduleId, updateFields, { new: true });
+    const updateQuery: any = { $set: updateFields };
+    if (locationChanged && nextHistoricalDurationMinutes == null) {
+      updateQuery.$unset = { historicalServiceDurationMinutes: 1 };
+    }
+    await Schedule.findByIdAndUpdate(scheduleId, updateQuery, { new: true });
 
     // Detect technician changes and send notifications
     const previousTechnicians = schedule.assignedTechnicians || [];
@@ -776,7 +807,7 @@ export const updateJob = async ({
         await createNotification({
           userId: technicianId,
           title: "New Job Assigned",
-          body: `You've been assigned to: ${trimmedJobTitle} at ${location} on ${formatDateTimeStringUTC(updatedStartDate)}`,
+          body: `You've been assigned to: ${trimmedJobTitle} at ${trimmedLocation} on ${formatDateTimeStringUTC(updatedStartDate)}`,
           type: NOTIFICATION_TYPES.JOB_ASSIGNED,
           metadata: {
             scheduleId: scheduleId,

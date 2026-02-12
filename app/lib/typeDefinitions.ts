@@ -80,6 +80,7 @@ export interface ScheduleType {
   accessInstructions?: string;
   actualServiceDurationMinutes?: number;
   actualServiceDurationSource?: "after_photo" | "mark_completed" | "admin_edit";
+  historicalServiceDurationMinutes?: number;
 }
 
 export interface AvailabilityType {
@@ -749,6 +750,8 @@ export interface SchedulingContext {
   invoice?: InvoiceType;
   pattern?: ClientSchedulingPattern;
   availableDays?: DayAvailability[]; // Days available for the requested time
+  requestedEstimatedHours?: number;
+  requestedHistoricalServiceDurationMinutes?: number | null;
   error?: string;
   existingRequest?: SchedulingRequestType; // Populated when request already submitted
 }
@@ -869,6 +872,7 @@ export interface PreviousScheduleReference {
   technicianNames: string[];
   hours: number;
   actualServiceDurationMinutes?: number;
+  historicalServiceDurationMinutes?: number;
   effectiveServiceDurationMinutes?: number;
   effectiveServiceDurationHours?: number;
 }

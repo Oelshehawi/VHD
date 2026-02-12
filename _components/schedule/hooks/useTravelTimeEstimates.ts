@@ -71,6 +71,7 @@ export function useTravelTimeEstimates(
               startKey,
               String(job.hours),
               String(job.actualServiceDurationMinutes ?? ""),
+              String(job.historicalServiceDurationMinutes ?? ""),
               job.location,
               job.jobTitle || "",
             ].join("::");

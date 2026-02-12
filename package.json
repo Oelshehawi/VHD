@@ -19,6 +19,9 @@
     "analyze:after-photo-duration": "node --env-file=.env --import=tsx scripts/analyze-after-photo-duration.ts",
     "backfill:actual-service-duration": "node --env-file=.env --import=tsx scripts/backfill-actual-service-duration.ts",
     "backfill:actual-service-duration:execute": "node --env-file=.env --import=tsx scripts/backfill-actual-service-duration.ts --execute",
+    "backfill:historical-service-duration": "node --env-file=.env --import=tsx scripts/backfill-historical-duration.ts",
+    "backfill:historical-service-duration:execute": "node --env-file=.env --import=tsx scripts/backfill-historical-duration.ts --execute",
+    "backfill:historical-service-duration:execute:all": "node --env-file=.env --import=tsx scripts/backfill-historical-duration.ts --execute --include-completed",
     "migrate:photos": "node --env-file=.env --import=tsx scripts/migrate-photos-collection.ts",
     "migrate:photos:execute": "node --env-file=.env --import=tsx scripts/migrate-photos-collection.ts --execute"
   },

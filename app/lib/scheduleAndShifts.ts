@@ -55,6 +55,7 @@ export const fetchAllScheduledJobsWithShifts = async (
       accessInstructions: job.accessInstructions || undefined,
       actualServiceDurationMinutes: job.actualServiceDurationMinutes,
       actualServiceDurationSource: job.actualServiceDurationSource,
+      historicalServiceDurationMinutes: job.historicalServiceDurationMinutes,
     }));
   } catch (error) {
     console.error("Database Error:", error);
@@ -115,27 +116,36 @@ export const fetchScheduledJobsByPayrollPeriod = async (
   try {
     const scheduledJobs = await Schedule.find({
       payrollPeriod: payrollPeriodId,
-    });
+    }).lean();
 
-    return scheduledJobs.map((job) => ({
+    return scheduledJobs.map((job: any) => ({
       _id: job._id.toString(),
       invoiceRef: job.invoiceRef.toString(),
       jobTitle: job.jobTitle || "",
       location: job.location,
       assignedTechnicians: job.assignedTechnicians,
-      startDateTime: job.startDateTime.toLocaleString("en-US", {
+      startDateTime: new Date(job.startDateTime).toLocaleString("en-US", {
         timeZone: "UTC",
       }),
       confirmed: job.confirmed,
       hours: job.hours,
-      shifts: job.shifts || [],
-      payrollPeriod: job.payrollPeriod.toString(),
+      shifts:
+        job.shifts?.map((shift: any) => ({
+          _id: shift._id.toString(),
+          technicianId: shift.technicianId,
+          clockIn: shift.clockIn,
+          clockOut: shift.clockOut,
+          jobDetails: shift.jobDetails,
+          hoursWorked: shift.hoursWorked,
+        })) || [],
+      payrollPeriod: job.payrollPeriod ? job.payrollPeriod.toString() : "",
       deadRun: job.deadRun,
       technicianNotes: job.technicianNotes,
       onSiteContact: job.onSiteContact || undefined,
       accessInstructions: job.accessInstructions || undefined,
       actualServiceDurationMinutes: job.actualServiceDurationMinutes,
       actualServiceDurationSource: job.actualServiceDurationSource,
+      historicalServiceDurationMinutes: job.historicalServiceDurationMinutes,
     }));
   } catch (error) {
     console.error("Database Error:", error);
@@ -260,6 +270,7 @@ export const fetchSchedulesForTechnician = async (
     accessInstructions: schedule.accessInstructions || undefined,
     actualServiceDurationMinutes: schedule.actualServiceDurationMinutes,
     actualServiceDurationSource: schedule.actualServiceDurationSource,
+    historicalServiceDurationMinutes: schedule.historicalServiceDurationMinutes,
   }));
 };
 

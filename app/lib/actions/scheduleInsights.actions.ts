@@ -183,10 +183,16 @@ function buildStoredScheduleIso(
 }
 
 function hoursForJob(
-  job: Pick<ScheduleType, "hours" | "actualServiceDurationMinutes">,
+  job: Pick<
+    ScheduleType,
+    | "hours"
+    | "actualServiceDurationMinutes"
+    | "historicalServiceDurationMinutes"
+  >,
 ): number {
   return getEffectiveServiceDurationHours({
     actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+    historicalServiceDurationMinutes: job.historicalServiceDurationMinutes,
     scheduleHours: job.hours,
     fallbackHours: 4,
   });
@@ -195,13 +201,17 @@ function hoursForJob(
 function getJobEndIso(
   job: Pick<
     ScheduleType,
-    "startDateTime" | "hours" | "actualServiceDurationMinutes"
+    | "startDateTime"
+    | "hours"
+    | "actualServiceDurationMinutes"
+    | "historicalServiceDurationMinutes"
   >,
 ): string {
   const start = new Date(job.startDateTime);
   if (Number.isNaN(start.getTime())) return String(job.startDateTime);
   const durationMinutes = getEffectiveServiceDurationMinutes({
     actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+    historicalServiceDurationMinutes: job.historicalServiceDurationMinutes,
     scheduleHours: job.hours,
     fallbackHours: 4,
   });
@@ -704,6 +714,7 @@ async function fetchPreviousSchedules(
     assignedTechnicians: string[];
     hours: number;
     actualServiceDurationMinutes?: number;
+    historicalServiceDurationMinutes?: number;
   }>([
     { $match: { invoiceRef: { $in: objectIds } } },
     { $sort: { startDateTime: -1 } },
@@ -715,6 +726,9 @@ async function fetchPreviousSchedules(
         hours: { $first: "$hours" },
         actualServiceDurationMinutes: {
           $first: "$actualServiceDurationMinutes",
+        },
+        historicalServiceDurationMinutes: {
+          $first: "$historicalServiceDurationMinutes",
         },
       },
     },
@@ -730,6 +744,7 @@ async function fetchPreviousSchedules(
     );
     const effectiveDurationMinutes = getEffectiveServiceDurationMinutes({
       actualServiceDurationMinutes: row.actualServiceDurationMinutes,
+      historicalServiceDurationMinutes: row.historicalServiceDurationMinutes,
       scheduleHours: row.hours,
       fallbackHours: 4,
     });
@@ -739,6 +754,7 @@ async function fetchPreviousSchedules(
       technicianNames: techIds.map((id) => techNameMap.get(id) || "Unknown"),
       hours: row.hours ?? 4,
       actualServiceDurationMinutes: row.actualServiceDurationMinutes,
+      historicalServiceDurationMinutes: row.historicalServiceDurationMinutes,
       effectiveServiceDurationMinutes: effectiveDurationMinutes,
       effectiveServiceDurationHours: effectiveDurationMinutes / 60,
     });
@@ -1388,9 +1404,12 @@ async function generateMoveJobPlacementCandidates(args: {
   schedulesByTechDay: Map<string, ScheduleType[]>;
   technicians: TechnicianDirectoryEntry[];
   invoiceRef?: string;
+  jobsDueSoonId?: string;
   crewSize: number;
   duePolicy: "hard" | "soft";
   bufferMinutes: number;
+  resultLimit?: number;
+  topBaseLimit?: number;
 }): Promise<ScheduleInsightSlotCandidate[]> {
   if (!args.targetLocation || args.technicians.length === 0) return [];
 
@@ -1477,7 +1496,7 @@ async function generateMoveJobPlacementCandidates(args: {
 
   const topBase = baseCandidates
     .sort((a, b) => a.preTravelScore - b.preTravelScore)
-    .slice(0, 28);
+    .slice(0, Math.max(1, args.topBaseLimit ?? 28));
 
   const enriched: ScheduleInsightSlotCandidate[] = [];
 
@@ -1527,10 +1546,13 @@ async function generateMoveJobPlacementCandidates(args: {
       },
       reason: reasonParts.join(" • "),
       invoiceRef: args.invoiceRef,
+      jobsDueSoonId: args.jobsDueSoonId,
     });
   }
 
-  return enriched.sort((a, b) => a.score - b.score).slice(0, 3);
+  return enriched
+    .sort((a, b) => a.score - b.score)
+    .slice(0, Math.max(1, args.resultLimit ?? 3));
 }
 
 async function maybeEnhancePlacementReasonsWithAI(params: {
@@ -1915,27 +1937,31 @@ export async function analyzeDueSoonPlacement(
   const duePolicy = args.duePolicy === "hard" ? "hard" : "soft";
   const schedulesByTechDay = groupSchedulesByTechDay(schedules);
 
-  const suggestions: DueSoonPlacementSuggestion[] = [];
+  const suggestions = await Promise.all(
+    selectedJobs.map(async (item) => {
+      const candidates = await generateMoveJobPlacementCandidates({
+        targetLocation: item.location,
+        targetEstimatedHours: item.estimatedHours,
+        dueDateKey: item.dateDue,
+        windowDateFrom: args.dateFrom,
+        windowDateTo: args.dateTo,
+        schedulesByTechDay,
+        technicians: technicianPool,
+        invoiceRef: item.invoiceRef,
+        jobsDueSoonId: item.jobsDueSoonId,
+        crewSize,
+        duePolicy,
+        bufferMinutes: 30,
+        resultLimit: 5,
+        topBaseLimit: 40,
+      });
 
-  for (const item of selectedJobs) {
-    const candidates = generateCrewCandidatesNoTravel({
-      targetEstimatedHours: item.estimatedHours,
-      dueDateKey: item.dateDue,
-      windowDateFrom: args.dateFrom,
-      windowDateTo: args.dateTo,
-      jobsDueSoonId: item.jobsDueSoonId,
-      invoiceRef: item.invoiceRef,
-      schedulesByTechDay,
-      technicians: technicianPool,
-      crewSize,
-      duePolicy,
-    });
-
-    suggestions.push({
-      ...item,
-      candidates,
-    });
-  }
+      return {
+        ...item,
+        candidates,
+      };
+    }),
+  );
 
   return { suggestions };
 }

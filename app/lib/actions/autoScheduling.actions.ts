@@ -34,6 +34,7 @@ import {
   toUtcDateFromParts,
 } from "../utils/datePartsUtils";
 import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
+import { resolveHistoricalDurationForLocation } from "../historicalServiceDuration.data";
 
 const postmark = require("postmark");
 
@@ -592,7 +593,7 @@ export async function confirmSchedulingRequest(
     const scheduleData = {
       invoiceRef: (invoice as any)?._id || request.invoiceId,
       jobTitle: invoice.jobTitle,
-      location: invoice.location,
+      location: String(invoice.location || "").trim(),
       startDateTime,
       assignedTechnicians: [], // Manager will assign later
       confirmed: false,
@@ -609,6 +610,15 @@ export async function confirmSchedulingRequest(
         .filter(Boolean)
         .join("\n"),
     };
+
+    // Populate historical duration from past completions at same location
+    const historicalMinutes = await resolveHistoricalDurationForLocation(
+      invoice.location,
+    );
+    if (historicalMinutes != null) {
+      (scheduleData as any).historicalServiceDurationMinutes =
+        historicalMinutes;
+    }
 
     const schedule = new Schedule(scheduleData as unknown as ScheduleType);
 
@@ -748,6 +758,7 @@ export async function refreshAvailabilityAction(
   token: string,
   requestedTime: RequestedTime,
   estimatedHours: number = 4,
+  requestedHistoricalServiceDurationMinutes?: number | null,
 ): Promise<DayAvailability[]> {
   await connectMongo();
 
@@ -764,7 +775,7 @@ export async function refreshAvailabilityAction(
 
     // Get invoice for estimated hours
     const invoice = await Invoice.findById(jobsDueSoon.invoiceId)
-      .select("estimatedHours")
+      .select("estimatedHours location")
       .lean();
     const hours = (invoice as any)?.estimatedHours || estimatedHours;
 
@@ -778,6 +789,8 @@ export async function refreshAvailabilityAction(
       endDate.toISOString().slice(0, 10),
       requestedTime,
       hours,
+      (invoice as any)?.location,
+      requestedHistoricalServiceDurationMinutes,
     );
   } catch (error) {
     console.error("Error refreshing availability:", error);
@@ -968,7 +981,7 @@ export async function confirmSchedulingWithInvoice(
     const scheduleData = {
       invoiceRef: newInvoice._id,
       jobTitle: sourceInvoice.jobTitle,
-      location: sourceInvoice.location,
+      location: String(sourceInvoice.location || "").trim(),
       startDateTime,
       assignedTechnicians:
         data.assignedTechnicians?.filter(
@@ -988,6 +1001,15 @@ export async function confirmSchedulingWithInvoice(
         .filter(Boolean)
         .join("\n"),
     };
+
+    // Populate historical duration from past completions at same location
+    const historicalMinutes2 = await resolveHistoricalDurationForLocation(
+      sourceInvoice.location,
+    );
+    if (historicalMinutes2 != null) {
+      (scheduleData as any).historicalServiceDurationMinutes =
+        historicalMinutes2;
+    }
 
     const schedule = new Schedule(scheduleData as unknown as ScheduleType);
     await schedule.save();

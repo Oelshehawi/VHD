@@ -16,7 +16,8 @@ import {
   calculateNextReminderDateFromParts,
   parseDateParts,
   toUtcDateFromParts,
-} from "../utils/datePartsUtils";;
+} from "../utils/datePartsUtils";
+import { resolveHistoricalDurationForLocation } from "../historicalServiceDuration.data";
 
 // Type for creating new estimates (without _id)
 type CreateEstimateData = Omit<
@@ -342,6 +343,11 @@ export async function convertEstimateToClientAndInvoice(
           localDate.getSeconds(),
         ),
       );
+      // Populate historical duration from past completions at same location
+      const historicalMinutes = await resolveHistoricalDurationForLocation(
+        invoiceData.location.trim(),
+      );
+
       const newSchedule = new Schedule({
         invoiceRef: newInvoice._id,
         jobTitle: invoiceData.jobTitle.trim(),
@@ -350,6 +356,9 @@ export async function convertEstimateToClientAndInvoice(
         assignedTechnicians: scheduleData.assignedTechnicians || [],
         technicianNotes: scheduleData.technicianNotes?.trim() || "",
         confirmed: false,
+        ...(historicalMinutes != null && {
+          historicalServiceDurationMinutes: historicalMinutes,
+        }),
       } as any);
       const savedSchedule = await newSchedule.save();
       scheduleId = savedSchedule._id.toString();

@@ -792,12 +792,8 @@ export default function JobDetailsModal({
                           </ul>
                         </div>
                       )}
-                      {durationReview.actualServiceDurationMinutes == null && (
-                        <p className="text-muted-foreground text-xs">
-                          This job may not have qualified for backfill; you can
-                          set an override below.
-                        </p>
-                      )}
+                      
+            
                     </div>
                   ) : (
                     !isLoadingDurationReview && (
@@ -805,6 +801,16 @@ export default function JobDetailsModal({
                         Unable to load duration review details.
                       </p>
                     )
+                  )}
+
+                  {job.historicalServiceDurationMinutes != null && (
+                    <div className="text-sm">
+                      <span className="font-medium">Historical estimate:</span>{" "}
+                      {job.historicalServiceDurationMinutes} min{" "}
+                      <span className="text-muted-foreground text-xs">
+                        (from previous service at this location)
+                      </span>
+                    </div>
                   )}
 
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-end">

@@ -95,7 +95,9 @@ export default function DueSoonPlacementDialog({
     const durationLabel =
       prev.actualServiceDurationMinutes != null
         ? `${effectiveMinutes}m actual`
-        : `${(prev.effectiveServiceDurationHours ?? prev.hours).toFixed(1)}h`;
+        : prev.historicalServiceDurationMinutes != null
+          ? `${effectiveMinutes}m historical`
+          : `${(prev.effectiveServiceDurationHours ?? prev.hours).toFixed(1)}h`;
     return `Last: ${time} by ${names} (${durationLabel})`;
   };
 
@@ -297,7 +299,8 @@ export default function DueSoonPlacementDialog({
                     : `Generate (${selectedJobIds.length} job${selectedJobIds.length !== 1 ? "s" : ""})`}
                 </Button>
                 <p className="text-muted-foreground text-xs">
-                  Score = Due penalty + Crew load. Lower is better.
+                  Score = Due penalty + Crew load + Travel impact. Lower is
+                  better.
                 </p>
               </div>
 
@@ -384,7 +387,8 @@ export default function DueSoonPlacementDialog({
                                       {candidate.scoreBreakdown.loadHours.toFixed(
                                         1,
                                       )}
-                                      h avg)
+                                      h avg) • Travel +
+                                      {candidate.scoreBreakdown.travelPoints}
                                     </p>
                                   ) : null}
                                 </div>

@@ -4,6 +4,7 @@ import { calculateJobDurationFromPrice } from "./utils";
 export const BUSINESS_TIME_ZONE = "America/Vancouver";
 export const DURATION_OVER_SCHEDULE_BUFFER_HOURS = 1.5;
 export const ACTUAL_SERVICE_DURATION_MAX_MINUTES = 24 * 60;
+export const PLANNING_SERVICE_BUFFER_MINUTES = 20;
 
 export type ActualServiceDurationSource =
   | "after_photo"
@@ -71,12 +72,20 @@ function toNonNegativeFiniteNumber(value: unknown): number | null {
 
 export function getEffectiveServiceDurationMinutes(args: {
   actualServiceDurationMinutes: number | null | undefined;
+  historicalServiceDurationMinutes?: number | null | undefined;
   scheduleHours: number | null | undefined;
   fallbackHours?: number;
 }): number {
   const actual = toNonNegativeFiniteNumber(args.actualServiceDurationMinutes);
   if (actual != null && actual <= ACTUAL_SERVICE_DURATION_MAX_MINUTES) {
     return actual;
+  }
+
+  const historical = toNonNegativeFiniteNumber(
+    args.historicalServiceDurationMinutes,
+  );
+  if (historical != null && historical <= ACTUAL_SERVICE_DURATION_MAX_MINUTES) {
+    return historical;
   }
 
   const scheduleHours = toNonNegativeFiniteNumber(args.scheduleHours);
@@ -92,10 +101,52 @@ export function getEffectiveServiceDurationMinutes(args: {
 
 export function getEffectiveServiceDurationHours(args: {
   actualServiceDurationMinutes: number | null | undefined;
+  historicalServiceDurationMinutes?: number | null | undefined;
   scheduleHours: number | null | undefined;
   fallbackHours?: number;
 }): number {
   return getEffectiveServiceDurationMinutes(args) / 60;
+}
+
+export function getPlanningServiceWindowMinutes(args: {
+  actualServiceDurationMinutes: number | null | undefined;
+  historicalServiceDurationMinutes?: number | null | undefined;
+  scheduleHours: number | null | undefined;
+  fallbackHours?: number;
+  bufferMinutes?: number;
+}): number {
+  const baseDurationMinutes = getEffectiveServiceDurationMinutes(args);
+  const bufferMinutes =
+    toNonNegativeFiniteNumber(args.bufferMinutes) ??
+    PLANNING_SERVICE_BUFFER_MINUTES;
+  return baseDurationMinutes + bufferMinutes;
+}
+
+export type DurationSource = "actual" | "historical" | "scheduled" | "default";
+
+export function getEffectiveServiceDurationSource(args: {
+  actualServiceDurationMinutes: number | null | undefined;
+  historicalServiceDurationMinutes?: number | null | undefined;
+  scheduleHours: number | null | undefined;
+}): DurationSource {
+  const actual = toNonNegativeFiniteNumber(args.actualServiceDurationMinutes);
+  if (actual != null && actual <= ACTUAL_SERVICE_DURATION_MAX_MINUTES) {
+    return "actual";
+  }
+
+  const historical = toNonNegativeFiniteNumber(
+    args.historicalServiceDurationMinutes,
+  );
+  if (historical != null && historical <= ACTUAL_SERVICE_DURATION_MAX_MINUTES) {
+    return "historical";
+  }
+
+  const scheduleHours = toNonNegativeFiniteNumber(args.scheduleHours);
+  if (scheduleHours != null) {
+    return "scheduled";
+  }
+
+  return "default";
 }
 
 /**

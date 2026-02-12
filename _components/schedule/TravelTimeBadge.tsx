@@ -1,5 +1,6 @@
 "use client";
 
+import { Car } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "../../app/lib/utils";
 
@@ -61,6 +62,7 @@ export default function TravelTimeBadge({
             className,
           )}
         >
+          <Car className="h-2.5 w-2.5 shrink-0" />
           {formatMinutes(typicalMinutes)}
         </span>
       </TooltipTrigger>

@@ -5,6 +5,10 @@ import { motion } from "framer-motion";
 import { Badge } from "../ui/badge";
 import { format } from "date-fns-tz";
 import TravelTimeBadge from "./TravelTimeBadge";
+import {
+  getEffectiveServiceDurationSource,
+  type DurationSource,
+} from "../../app/lib/serviceDurationRules";
 
 interface JobItemProps {
   job: ScheduleType;
@@ -33,6 +37,20 @@ const JobItem = ({
         "Unknown",
     );
   }, [job.assignedTechnicians, technicians]);
+
+  const durationSource: DurationSource = useMemo(
+    () =>
+      getEffectiveServiceDurationSource({
+        actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+        historicalServiceDurationMinutes: job.historicalServiceDurationMinutes,
+        scheduleHours: job.hours,
+      }),
+    [
+      job.actualServiceDurationMinutes,
+      job.historicalServiceDurationMinutes,
+      job.hours,
+    ],
+  );
 
   // Status-based styling using theme-aware CSS variables
   const statusClasses = job.confirmed
@@ -68,7 +86,15 @@ const JobItem = ({
                 <Badge
                   variant="secondary"
                   className="h-4 shrink-0 px-1.5 text-[10px] leading-none"
+                  title={
+                    durationSource === "historical"
+                      ? "Based on previous service at this location"
+                      : durationSource === "scheduled"
+                        ? "Based on scheduled hours"
+                        : undefined
+                  }
                 >
+                  {durationSource === "historical" ? "~" : ""}
                   {Math.max(1, Math.round(durationMinutes || 0))} min
                 </Badge>
               )}
@@ -94,13 +120,29 @@ const JobItem = ({
               {job.location}
             </span>
 
-            {/* Time + Travel */}
+            {/* Time + Duration + Travel */}
             <div className="flex items-center gap-1.5">
               <span className="text-muted-foreground text-xs font-medium">
                 {format(job.startDateTime, "h:mm a", {
                   timeZone: "America/Vancouver",
                 })}
               </span>
+              {Number.isFinite(durationMinutes) && (
+                <Badge
+                  variant="secondary"
+                  className="h-4 shrink-0 px-1.5 text-[10px] leading-none"
+                  title={
+                    durationSource === "historical"
+                      ? "Based on previous service at this location"
+                      : durationSource === "scheduled"
+                        ? "Based on scheduled hours"
+                        : undefined
+                  }
+                >
+                  {durationSource === "historical" ? "~" : ""}
+                  {Math.max(1, Math.round(durationMinutes || 0))} min
+                </Badge>
+              )}
               {(travelSegment || isTravelTimeLoading) && (
                 <TravelTimeBadge
                   typicalMinutes={travelSegment?.typicalMinutes ?? 0}

@@ -9,6 +9,8 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
+export const dynamic = "force-dynamic";
+
 interface SchedulePageProps {
   searchParams: Promise<{ token?: string }>;
 }
@@ -207,6 +209,10 @@ export default async function SchedulePage({
           invoice={context.invoice!}
           pattern={context.pattern}
           availableDays={context.availableDays || []}
+          requestedEstimatedHours={context.requestedEstimatedHours}
+          requestedHistoricalServiceDurationMinutes={
+            context.requestedHistoricalServiceDurationMinutes
+          }
         />
       </div>
     </div>
