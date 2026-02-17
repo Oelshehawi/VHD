@@ -125,6 +125,38 @@ export interface PayrollPeriodType {
   payDay: Date | string;
 }
 
+export interface PayrollMissingDurationJobType {
+  scheduleId: string;
+  jobTitle: string;
+  startDateTime: Date | string;
+}
+
+export interface PayrollTechnicianDriveMetricsType {
+  technicianId: string;
+  technicianName: string;
+  totalJobs: number;
+  scheduledHours: number;
+  actualHours: number;
+  driveHours: number;
+  scheduledPlusDriveHours: number;
+  actualPlusDriveHours: number;
+  actualVsScheduledPlusDriveHours: number;
+  hasDepotAddress: boolean;
+  missingActualDurationJobs: PayrollMissingDurationJobType[];
+}
+
+export interface PayrollDriveMetricsType {
+  totalJobs: number;
+  totalScheduledHours: number;
+  totalActualHours: number;
+  totalDriveHours: number;
+  totalScheduledPlusDriveHours: number;
+  totalActualPlusDriveHours: number;
+  totalActualVsScheduledPlusDriveHours: number;
+  totalMissingActualDurationJobs: number;
+  technicians: PayrollTechnicianDriveMetricsType[];
+}
+
 export interface ClientType {
   _id: ObjectId | string;
   clientName: string;

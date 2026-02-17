@@ -2,12 +2,13 @@
 import { useState } from "react";
 import {
   PayrollPeriodType,
+  PayrollDriveMetricsType,
   ScheduleType,
   TechnicianType,
 } from "../../app/lib/typeDefinitions";
-import PayrollBreakdown from "./PayrollBreakdown";
 import EmployeesTable from "./EmployeesTable";
 import EmployeeModal from "./EmployeeModal";
+import PayrollDriveTimeSummary from "./PayrollDriveTimeSummary";
 import { formatDateFns } from "../../app/lib/utils";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -26,6 +27,7 @@ interface PayrollPeriodSelectorProps {
   technicians: TechnicianType[];
   schedules: ScheduleType[];
   selectedPayrollPeriod: PayrollPeriodType | null;
+  payrollDriveMetrics: PayrollDriveMetricsType | null;
 }
 
 const PayrollPeriodSelector = ({
@@ -33,6 +35,7 @@ const PayrollPeriodSelector = ({
   technicians,
   schedules,
   selectedPayrollPeriod,
+  payrollDriveMetrics,
 }: PayrollPeriodSelectorProps) => {
   // State for managing selected payroll period
   const [selectedTechnician, setSelectedTechnician] =
@@ -51,6 +54,13 @@ const PayrollPeriodSelector = ({
   const handleSelectChange = (value: string) => {
     router.push(`/payroll?payrollPeriodId=${value}`);
   };
+
+  const selectedTechnicianDriveMetrics =
+    selectedTechnician && payrollDriveMetrics
+      ? payrollDriveMetrics.technicians.find(
+          (tech) => tech.technicianId === selectedTechnician.id,
+        ) || null
+      : null;
 
   return (
     <>
@@ -96,8 +106,8 @@ const PayrollPeriodSelector = ({
 
       {selectedPayrollPeriod && (
         <>
-          {/* Payroll Breakdown */}
-          <PayrollBreakdown technicians={technicians} schedules={schedules} />
+          {/* Drive Time + Actual Duration Summary */}
+          <PayrollDriveTimeSummary payrollDriveMetrics={payrollDriveMetrics} />
 
           {/* Employees Table */}
           <EmployeesTable
@@ -116,6 +126,7 @@ const PayrollPeriodSelector = ({
                 s.assignedTechnicians.includes(selectedTechnician.id),
               )}
               payrollPeriod={selectedPayrollPeriod}
+              driveMetrics={selectedTechnicianDriveMetrics}
             />
           )}
         </>

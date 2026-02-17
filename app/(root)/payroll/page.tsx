@@ -4,12 +4,14 @@ import {
   TechnicianType,
   AvailabilityType,
   TimeOffRequestType,
+  PayrollDriveMetricsType,
 } from "../../lib/typeDefinitions";
 import {
   fetchAllPayrollPeriods,
   fetchScheduledJobsByPayrollPeriod,
 } from "../../lib/scheduleAndShifts";
 import { getTechnicians } from "../../lib/actions/scheduleJobs.actions";
+import { buildPayrollDriveMetrics } from "../../lib/payrollDriveTime.data";
 import {
   fetchTechnicianAvailability,
   fetchTimeOffRequests,
@@ -23,11 +25,22 @@ interface PayrollPageProps {
   searchParams: Promise<{ payrollPeriodId?: string }>;
 }
 
+const EXCLUDED_PAYROLL_TECHNICIAN_NAMES = new Set(["ziad elshehawi"]);
+
+function normalizeName(value: string): string {
+  return value.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
 const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
   const payrollPeriods: PayrollPeriodType[] = await fetchAllPayrollPeriods();
   const technicians: TechnicianType[] = await getTechnicians();
+  const payrollTechnicians = technicians.filter(
+    (technician) =>
+      !EXCLUDED_PAYROLL_TECHNICIAN_NAMES.has(normalizeName(technician.name)),
+  );
   let schedules: ScheduleType[] = [];
   let selectedPayrollPeriod: PayrollPeriodType | null = null;
+  let payrollDriveMetrics: PayrollDriveMetricsType | null = null;
   const { sessionClaims }: any = await auth();
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
@@ -88,6 +101,13 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
     }
   }
 
+  if (canManage && selectedPayrollPeriod) {
+    payrollDriveMetrics = await buildPayrollDriveMetrics({
+      schedules,
+      technicians: payrollTechnicians,
+    });
+  }
+
   if (!canManage)
     return (
       <div className="text-foreground flex min-h-screen items-center justify-center text-3xl font-bold">
@@ -100,9 +120,10 @@ const PayrollPage = async ({ searchParams }: PayrollPageProps) => {
       <div className="p-6">
         <PayrollPageTabs
           payrollPeriods={payrollPeriods}
-          technicians={technicians}
+          technicians={payrollTechnicians}
           schedules={schedules}
           selectedPayrollPeriod={selectedPayrollPeriod}
+          payrollDriveMetrics={payrollDriveMetrics}
           availability={availability}
           timeOffRequests={timeOffRequests}
           pendingTimeOffCount={pendingTimeOffCount}

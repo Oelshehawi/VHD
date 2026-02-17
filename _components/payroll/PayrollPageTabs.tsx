@@ -12,6 +12,7 @@ import {
   TechnicianType,
   AvailabilityType,
   TimeOffRequestType,
+  PayrollDriveMetricsType,
 } from "../../app/lib/typeDefinitions";
 
 interface PayrollPageTabsProps {
@@ -19,6 +20,7 @@ interface PayrollPageTabsProps {
   technicians: TechnicianType[];
   schedules: ScheduleType[];
   selectedPayrollPeriod: PayrollPeriodType | null;
+  payrollDriveMetrics: PayrollDriveMetricsType | null;
   availability: AvailabilityType[];
   timeOffRequests: TimeOffRequestType[];
   pendingTimeOffCount: number;
@@ -30,6 +32,7 @@ const PayrollPageTabs = ({
   technicians,
   schedules,
   selectedPayrollPeriod,
+  payrollDriveMetrics,
   availability,
   timeOffRequests,
   pendingTimeOffCount,
@@ -63,6 +66,7 @@ const PayrollPageTabs = ({
             technicians={technicians}
             schedules={schedules}
             selectedPayrollPeriod={selectedPayrollPeriod}
+            payrollDriveMetrics={payrollDriveMetrics}
           />
         </TabsContent>
 

@@ -1,9 +1,10 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ScheduleType,
   TechnicianType,
   PayrollPeriodType,
+  PayrollTechnicianDriveMetricsType,
 } from "../../app/lib/typeDefinitions";
 import { useForm, Controller } from "react-hook-form";
 import { toast } from "sonner";
@@ -19,6 +20,7 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Card, CardContent } from "../ui/card";
+import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import { Loader2 } from "lucide-react";
 
 interface EmployeeModalProps {
@@ -27,6 +29,7 @@ interface EmployeeModalProps {
   technician: TechnicianType;
   schedules: ScheduleType[];
   payrollPeriod: PayrollPeriodType;
+  driveMetrics?: PayrollTechnicianDriveMetricsType | null;
 }
 
 interface FormValues {
@@ -40,6 +43,10 @@ interface FormContentProps {
   assignedSchedules: ScheduleType[];
   defaultValues: FormValues;
   onClose: () => void;
+}
+
+function formatHours(value: number): string {
+  return `${value.toFixed(2)}h`;
 }
 
 const FormContent = ({
@@ -160,6 +167,7 @@ const EmployeeModal = ({
   onClose,
   technician,
   schedules,
+  driveMetrics,
 }: EmployeeModalProps) => {
   // Extract shifts assigned to the technician
   const assignedSchedules = useMemo(
@@ -179,6 +187,77 @@ const EmployeeModal = ({
     return { shifts: shiftData };
   }, [assignedSchedules]);
 
+  const localComputedMetrics = useMemo(() => {
+    const scheduledHours = assignedSchedules.reduce(
+      (sum, schedule) => sum + (Number(schedule.hours) || 0),
+      0,
+    );
+
+    let actualMinutes = 0;
+    const missingActualDurationJobs = assignedSchedules.flatMap((schedule) => {
+      const actualDuration = schedule.actualServiceDurationMinutes;
+      if (
+        typeof actualDuration === "number" &&
+        Number.isFinite(actualDuration)
+      ) {
+        actualMinutes += Math.max(0, actualDuration);
+        return [];
+      }
+
+      return [
+        {
+          scheduleId: String(schedule._id),
+          jobTitle: schedule.jobTitle?.trim() || "Untitled Job",
+          startDateTime: schedule.startDateTime,
+        },
+      ];
+    });
+
+    const actualHours = actualMinutes / 60;
+    const driveHours = Number(driveMetrics?.driveHours || 0);
+    const scheduledPlusDriveHours = scheduledHours + driveHours;
+    const actualPlusDriveHours = actualHours + driveHours;
+    const actualVsScheduledPlusDriveHours =
+      actualPlusDriveHours - scheduledPlusDriveHours;
+
+    return {
+      scheduledHours,
+      actualHours,
+      driveHours,
+      scheduledPlusDriveHours,
+      actualPlusDriveHours,
+      actualVsScheduledPlusDriveHours,
+      missingActualDurationJobs,
+    };
+  }, [assignedSchedules, driveMetrics?.driveHours]);
+
+  const metrics = {
+    scheduledHours: Number(
+      driveMetrics?.scheduledHours ?? localComputedMetrics.scheduledHours,
+    ),
+    actualHours: Number(
+      driveMetrics?.actualHours ?? localComputedMetrics.actualHours,
+    ),
+    driveHours: Number(
+      driveMetrics?.driveHours ?? localComputedMetrics.driveHours,
+    ),
+    scheduledPlusDriveHours: Number(
+      driveMetrics?.scheduledPlusDriveHours ??
+        localComputedMetrics.scheduledPlusDriveHours,
+    ),
+    actualPlusDriveHours: Number(
+      driveMetrics?.actualPlusDriveHours ??
+        localComputedMetrics.actualPlusDriveHours,
+    ),
+    actualVsScheduledPlusDriveHours: Number(
+      driveMetrics?.actualVsScheduledPlusDriveHours ??
+        localComputedMetrics.actualVsScheduledPlusDriveHours,
+    ),
+    missingActualDurationJobs:
+      driveMetrics?.missingActualDurationJobs ||
+      localComputedMetrics.missingActualDurationJobs,
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="max-w-2xl">
@@ -191,12 +270,84 @@ const EmployeeModal = ({
             No shifts assigned for this period.
           </p>
         ) : (
-          <FormContent
-            key={`${technician.id}-${assignedSchedules.length}`}
-            assignedSchedules={assignedSchedules}
-            defaultValues={defaultValues}
-            onClose={onClose}
-          />
+          <div className="space-y-4">
+            <Card className="border-dashed">
+              <CardContent className="pt-4">
+                <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-6">
+                  <div>
+                    <p className="text-muted-foreground">Scheduled</p>
+                    <p className="font-semibold">
+                      {formatHours(metrics.scheduledHours)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Actual</p>
+                    <p className="font-semibold">
+                      {formatHours(metrics.actualHours)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Drive</p>
+                    <p className="font-semibold">
+                      {formatHours(metrics.driveHours)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Scheduled + Drive</p>
+                    <p className="font-semibold">
+                      {formatHours(metrics.scheduledPlusDriveHours)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Actual + Drive</p>
+                    <p className="font-semibold">
+                      {formatHours(metrics.actualPlusDriveHours)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">
+                      Delta (A+D minus S+D)
+                    </p>
+                    <p
+                      className={`font-semibold ${
+                        metrics.actualVsScheduledPlusDriveHours >= 0
+                          ? "text-emerald-600"
+                          : "text-destructive"
+                      }`}
+                    >
+                      {metrics.actualVsScheduledPlusDriveHours >= 0 ? "+" : ""}
+                      {formatHours(metrics.actualVsScheduledPlusDriveHours)}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {metrics.missingActualDurationJobs.length > 0 && (
+              <Alert variant="destructive">
+                <AlertTitle>
+                  {metrics.missingActualDurationJobs.length} job(s) missing
+                  actualServiceDurationMinutes
+                </AlertTitle>
+                <AlertDescription>
+                  <ul className="list-disc space-y-1 pl-5">
+                    {metrics.missingActualDurationJobs.map((job) => (
+                      <li key={job.scheduleId}>
+                        {job.jobTitle} ({formatDateFns(job.startDateTime)})
+                      </li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <FormContent
+              key={`${technician.id}-${assignedSchedules.length}`}
+              assignedSchedules={assignedSchedules}
+              defaultValues={defaultValues}
+              onClose={onClose}
+            />
+          </div>
         )}
       </DialogContent>
     </Dialog>
