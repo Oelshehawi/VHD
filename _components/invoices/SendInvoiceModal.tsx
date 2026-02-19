@@ -5,7 +5,6 @@ import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
 import {
   calculateSubtotal,
   calculateGST,
-  formatDateTimeStringUTC,
 } from "../../app/lib/utils";
 import {
   Dialog,
@@ -229,7 +228,14 @@ export default function SendInvoiceModal({
                     className="bg-muted/50 rounded-md border p-2"
                   >
                     <p className="text-sm font-medium">
-                      {formatDateTimeStringUTC(entry.sentAt)}
+                      {new Date(entry.sentAt).toLocaleString("en-US", {
+                        month: "long",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                        hour12: true,
+                      })}
                     </p>
                     <p className="text-muted-foreground text-xs">
                       To: {(entry.recipients || []).join(", ")}

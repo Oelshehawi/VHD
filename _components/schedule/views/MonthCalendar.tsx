@@ -326,7 +326,6 @@ export default function MonthCalendar({
               const dayJobs = jobsByDate[dateKey] || [];
               const dayTimeOff = timeOffByDate[dateKey] || [];
               const isCurrentMonth = isSameMonth(day, firstDayCurrentMonth);
-              const isSelected = isEqual(day, selectedDay);
               const isTodayDate = isToday(day);
 
               // Get unavailability info for this day
@@ -355,12 +354,9 @@ export default function MonthCalendar({
                     onClick={() => handleDaySelect(day)}
                     className={cn(
                       "mb-1 flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium transition-colors",
-                      isSelected && "bg-foreground text-background",
-                      !isSelected &&
-                        isTodayDate &&
+                      isTodayDate &&
                         "bg-primary text-primary-foreground",
-                      !isSelected &&
-                        !isTodayDate &&
+                      !isTodayDate &&
                         isCurrentMonth &&
                         "text-foreground hover:bg-muted",
                       !isCurrentMonth && "text-muted-foreground",
@@ -622,27 +618,15 @@ export default function MonthCalendar({
                         onClick={() => handleDaySelect(day)}
                         className={classNames(
                           "group relative flex w-full touch-manipulation flex-col items-center justify-start py-1.5 transition-all duration-200 sm:py-2 md:py-3",
-                          isEqual(day, selectedDay) && "text-background z-10",
-                          !isEqual(day, selectedDay) &&
-                            isToday(day) &&
-                            "text-primary font-bold",
-                          !isEqual(day, selectedDay) &&
-                            !isToday(day) &&
+                          isToday(day) &&
+                            "text-primary font-semibold",
+                          !isToday(day) &&
                             isSameMonth(day, firstDayCurrentMonth) &&
                             "text-foreground",
-                          !isEqual(day, selectedDay) &&
-                            !isToday(day) &&
+                          !isToday(day) &&
                             !isSameMonth(day, firstDayCurrentMonth) &&
                             "text-muted-foreground",
-                          isEqual(day, selectedDay) &&
-                            isToday(day) &&
-                            "bg-primary shadow-lg",
-                          isEqual(day, selectedDay) &&
-                            !isToday(day) &&
-                            "bg-foreground shadow-lg",
-                          !isEqual(day, selectedDay) && "hover:bg-muted",
-                          (isEqual(day, selectedDay) || isToday(day)) &&
-                            "font-semibold",
+                          !isToday(day) && "hover:bg-muted",
                         )}
                       >
                         <time
@@ -655,18 +639,8 @@ export default function MonthCalendar({
                         {jobCount > 0 && (
                           <div className="mt-0.5">
                             <Badge
-                              variant={
-                                isEqual(day, selectedDay)
-                                  ? "secondary"
-                                  : isToday(day)
-                                    ? "default"
-                                    : "secondary"
-                              }
-                              className={classNames(
-                                "h-[14px] min-w-[14px] px-1 text-[8px] font-medium sm:h-[16px] sm:min-w-[16px] sm:text-[9px]",
-                                isEqual(day, selectedDay) &&
-                                  "bg-primary-foreground/30 text-primary-foreground",
-                              )}
+                              variant={isToday(day) ? "default" : "secondary"}
+                              className="h-[14px] min-w-[14px] px-1 text-[8px] font-medium sm:h-[16px] sm:min-w-[16px] sm:text-[9px]"
                             >
                               {jobCount}
                             </Badge>
@@ -769,7 +743,7 @@ export default function MonthCalendar({
                           )}
                         </div>
 
-                        {isToday(day) && !isEqual(day, selectedDay) && (
+                        {isToday(day) && (
                           <div className="border-primary pointer-events-none absolute inset-0 rounded-lg border-2"></div>
                         )}
                       </button>

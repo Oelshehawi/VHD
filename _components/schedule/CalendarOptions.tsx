@@ -1,7 +1,6 @@
 "use client";
 import MonthCalendar from "./views/MonthCalendar";
 import WeekCalendar from "./views/WeekCalendar";
-import DayCalendar from "./views/DayCalendar";
 import SearchSelect from "./JobSearchSelect";
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
@@ -24,8 +23,9 @@ import {
   endOfWeek,
   subDays,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Loader2, Wand2 } from "lucide-react";
 import AddJob from "./AddJob";
+import SmartSchedulePanel from "./smart-scheduling/SmartSchedulePanel";
 import ScheduleInsightsPanel, {
   defaultInsightWindowFromView,
 } from "./insights/ScheduleInsightsPanel";
@@ -117,50 +117,37 @@ const getVisibleWindow = ({
   currentWeek,
   currentDate,
 }: {
-  currentView: "day" | "week" | "month";
+  currentView: "week" | "month";
   currentDay: Date;
   currentWeek: Date[];
   currentDate: string | null;
 }): { requiredRange: LoadedRange; anchorDate: Date } => {
-  if (currentView === "day") {
-    const dayStart = startOfDay(currentDay);
-    const dayEnd = endOfDay(currentDay);
+  if (currentView === "week") {
+    const dayStart = startOfDay(currentWeek[0] as Date);
+    const dayEnd = endOfDay(currentWeek[6] as Date);
     return {
       requiredRange: { startMs: dayStart.getTime(), endMs: dayEnd.getTime() },
       anchorDate: dayStart,
     };
   }
 
-  if (currentView === "week") {
-    const weekStartRaw = currentWeek[0] ?? currentDay;
-    const weekEndRaw =
-      currentWeek[currentWeek.length - 1] ?? add(weekStartRaw, { days: 6 });
-    const weekStart = startOfDay(weekStartRaw);
-    const weekEnd = endOfDay(weekEndRaw);
-    return {
-      requiredRange: { startMs: weekStart.getTime(), endMs: weekEnd.getTime() },
-      anchorDate: weekStart,
-    };
-  }
-
-  const parsedCurrentDate = currentDate
+  // Month view
+  const parsedCurrent = currentDate
     ? parse(currentDate, "yyyy-MM-dd", new Date())
     : null;
   const monthAnchor =
-    parsedCurrentDate && isValid(parsedCurrentDate)
-      ? parsedCurrentDate
-      : currentDay;
-  const monthGridStart = startOfWeek(startOfMonth(monthAnchor), {
-    weekStartsOn: 0,
-  });
-  const monthGridEnd = endOfWeek(endOfMonth(monthAnchor), { weekStartsOn: 0 });
+    parsedCurrent && isValid(parsedCurrent) ? parsedCurrent : currentDay;
+  const monthStart = startOfMonth(monthAnchor);
+  const monthEnd = endOfMonth(monthAnchor);
+  const monthGridStart = startOfWeek(monthStart, { weekStartsOn: 0 });
+  const monthGridEnd = endOfWeek(monthEnd, { weekStartsOn: 0 });
 
   return {
     requiredRange: {
       startMs: monthGridStart.getTime(),
       endMs: monthGridEnd.getTime(),
     },
-    anchorDate: monthAnchor,
+    anchorDate: monthStart,
   };
 };
 
@@ -205,7 +192,7 @@ const CalendarOptions = ({
   initialRangeEnd?: string;
 }) => {
   // Initialize calendar view from URL or default to mobile detection
-  const [currentView, setCurrentView] = useState<"day" | "week" | "month">(
+  const [currentView, setCurrentView] = useState<"week" | "month">(
     () => {
       const isMobile = isMobileDevice();
       // Force month view on mobile regardless of URL
@@ -213,7 +200,8 @@ const CalendarOptions = ({
       // For desktop, respect URL params
       if (initialView === "month") return "month";
       if (initialView === "week") return "week";
-      if (initialView === "day") return "day";
+      // Fallback: if URL has "day", use week for desktop or month for mobile
+      if (initialView === "day") return isMobile ? "month" : "week";
       return "week"; // Default to week view for desktop if no URL param
     },
   );
@@ -275,7 +263,7 @@ const CalendarOptions = ({
   });
 
   // Instant URL update using native History API (Google Calendar style)
-  const updateURLInstant = (view: "day" | "week" | "month", date: Date) => {
+  const updateURLInstant = (view: "week" | "month", date: Date) => {
     const params = new URLSearchParams(window.location.search);
     params.set("view", view);
     params.set("date", format(date, "yyyy-MM-dd"));
@@ -333,7 +321,8 @@ const CalendarOptions = ({
         } else if (urlView === "week") {
           setCurrentView("week");
         } else if (urlView === "day") {
-          setCurrentView("day");
+          // Fallback: redirect day view to week
+          setCurrentView("week");
         }
       }
 
@@ -384,12 +373,6 @@ const CalendarOptions = ({
     updateURLInstant("week", weekStart);
   };
 
-  const navigateDay = (direction: "prev" | "next") => {
-    const days = direction === "prev" ? -1 : 1;
-    const newDay = add(currentDay, { days });
-    setCurrentDay(startOfDay(newDay));
-    updateURLInstant("day", newDay);
-  };
 
   const navigateMonth = (direction: "prev" | "next") => {
     const parsedCurrentDate = currentDate
@@ -410,9 +393,9 @@ const CalendarOptions = ({
     updateURLInstant("month", newMonthDate);
   };
 
-  const handleViewChange = (view: "day" | "week" | "month") => {
+  const handleViewChange = (view: "week" | "month") => {
     setCurrentView(view);
-    const dateToUse = view === "day" ? currentDay : (currentWeek[0] as Date);
+    const dateToUse = currentWeek[0] as Date;
     updateURLInstant(view, dateToUse);
   };
 
@@ -424,9 +407,8 @@ const CalendarOptions = ({
   // Navigate to today
   const navigateToToday = () => {
     const today = startOfDay(new Date());
-    if (currentView === "day") {
-      setCurrentDay(today);
-      updateURLInstant("day", today);
+    if (currentView === "month") {
+      updateURLInstant("month", today);
     } else if (currentView === "week") {
       const weekStart = startOfWeek(today, { weekStartsOn: 0 });
       const newWeek = eachDayOfInterval({
@@ -514,9 +496,6 @@ const CalendarOptions = ({
 
   // Compute visible date keys based on current view
   const visibleDateKeys = useMemo(() => {
-    if (currentView === "day") {
-      return [format(currentDay, "yyyy-MM-dd")];
-    }
     if (currentView === "week") {
       return currentWeek.map((d) => format(d, "yyyy-MM-dd"));
     }
@@ -549,8 +528,8 @@ const CalendarOptions = ({
           scheduledJobs={jobsData}
           previousWeek={() => navigateWeek("prev")}
           nextWeek={() => navigateWeek("next")}
-          previousDay={() => navigateDay("prev")}
-          nextDay={() => navigateDay("next")}
+          previousDay={() => {}}
+          nextDay={() => {}}
           goToToday={navigateToToday}
           currentWeek={currentWeek}
           currentDay={currentDay}
@@ -587,7 +566,7 @@ const CalendarOptions = ({
                   isTravelTimeLoading={isTravelTimeLoading}
                 />
               </div>
-            ) : currentView === "week" ? (
+            ) : (
               <div className="h-full">
                 <WeekCalendar
                   scheduledJobs={jobsData}
@@ -599,26 +578,6 @@ const CalendarOptions = ({
                   timeOffRequests={timeOffRequests}
                   travelTimeSummaries={travelTimeSummaries}
                   isTravelTimeLoading={isTravelTimeLoading}
-                />
-              </div>
-            ) : (
-              <div className="h-full">
-                <DayCalendar
-                  scheduledJobs={jobsData}
-                  canManage={canManage}
-                  currentDay={currentDay}
-                  holidays={holidays}
-                  technicians={technicians}
-                  availability={availability}
-                  timeOffRequests={timeOffRequests}
-                  travelTimeSummaries={travelTimeSummaries}
-                  isTravelTimeLoading={isTravelTimeLoading}
-                  onDateSelect={(date: Date | undefined) => {
-                    if (date) {
-                      setCurrentDay(startOfDay(date));
-                      updateURLInstant("day", date);
-                    }
-                  }}
                 />
               </div>
             )}
@@ -657,8 +616,8 @@ const Header = ({
   isMobile,
   technicians,
 }: {
-  currentView: "day" | "week" | "month";
-  onViewChange: (view: "day" | "week" | "month") => void;
+  currentView: "week" | "month";
+  onViewChange: (view: "week" | "month") => void;
   scheduledJobs: ScheduleType[];
   currentWeek: Date[];
   currentDay: Date;
@@ -675,6 +634,7 @@ const Header = ({
   technicians: { id: string; name: string }[];
 }) => {
   const [open, setOpen] = useState(false);
+  const [smartScheduleOpen, setSmartScheduleOpen] = useState(false);
 
   const weekStart = currentWeek[0];
   const weekEnd = currentWeek[currentWeek.length - 1];
@@ -697,15 +657,12 @@ const Header = ({
     });
   }, [currentView, currentDay, currentWeek, currentDate]);
   const getNavigationLabel = () => {
-    if (currentView === "day") return dayLabel;
     if (currentView === "week") return weekLabel;
     return monthLabel;
   };
 
   const handleNavigation = (direction: "prev" | "next") => {
-    if (currentView === "day") {
-      direction === "prev" ? previousDay() : nextDay();
-    } else if (currentView === "week") {
+    if (currentView === "week") {
       direction === "prev" ? previousWeek() : nextWeek();
     } else {
       direction === "prev" ? previousMonth() : nextMonth();
@@ -728,14 +685,28 @@ const Header = ({
 
           {/* Add Job Button */}
           {canManage && (
-            <Button
-              onClick={() => setOpen(!open)}
-              size="sm"
-              className="flex-shrink-0"
-            >
-              <Plus className="h-4 w-4 sm:mr-1.5" />
-              <span className="hidden sm:inline">Add Job</span>
-            </Button>
+            <>
+              <Button
+                onClick={() => setOpen(!open)}
+                size="sm"
+                className="flex-shrink-0"
+              >
+                <Plus className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Add Job</span>
+              </Button>
+              {/* Smart Schedule Button - Month view only */}
+              {currentView === "month" && (
+                <Button
+                  onClick={() => setSmartScheduleOpen(true)}
+                  size="sm"
+                  variant="outline"
+                  className="flex-shrink-0"
+                >
+                  <Wand2 className="h-4 w-4 sm:mr-1.5" />
+                  <span className="hidden sm:inline">Smart Schedule</span>
+                </Button>
+              )}
+            </>
           )}
         </div>
 
@@ -801,13 +772,10 @@ const Header = ({
           {!isMobile && (
             <Tabs
               value={currentView}
-              onValueChange={(v) => onViewChange(v as "day" | "week" | "month")}
+              onValueChange={(v) => onViewChange(v as "week" | "month")}
               className="flex-shrink-0"
             >
               <TabsList className="h-8">
-                <TabsTrigger value="day" className="px-2 text-xs sm:px-3">
-                  Day
-                </TabsTrigger>
                 <TabsTrigger
                   value="week"
                   className="hidden px-2 text-xs sm:px-3 lg:inline-flex"
@@ -830,6 +798,24 @@ const Header = ({
         technicians={technicians}
         scheduledJobs={scheduledJobs}
       />
+
+      {/* Smart Schedule Panel */}
+      {currentView === "month" && (
+        <SmartSchedulePanel
+          open={smartScheduleOpen}
+          onOpenChange={setSmartScheduleOpen}
+          technicians={technicians}
+          currentMonth={
+            currentDate
+              ? startOfMonth(parse(currentDate, "yyyy-MM-dd", new Date()))
+              : startOfMonth(new Date())
+          }
+          onScheduleCreated={() => {
+            // Refresh the schedule data
+            window.location.reload();
+          }}
+        />
+      )}
     </div>
   );
 };

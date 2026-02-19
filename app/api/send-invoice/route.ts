@@ -6,6 +6,7 @@ import {
   getBaseUrl,
   formatDateStringUTC,
 } from "../../lib/utils";
+import { parseDateParts, toUtcDateFromParts } from "../../lib/utils/datePartsUtils";
 import { generateClientAccessLink } from "../../lib/clerkClientPortal";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
@@ -74,52 +75,18 @@ export async function POST(request: Request) {
     const gst = subtotal * 0.05;
     const totalWithTax = subtotal + gst;
 
-    const dateStr =
-      invoiceData.dateIssued instanceof Date
-        ? invoiceData.dateIssued.toISOString()
-        : String(invoiceData.dateIssued);
-    const datePart = dateStr.split("T")[0] || dateStr;
-    const parts = datePart.split("-");
-    if (parts.length < 3) {
+    // Parse dateIssued using the same utilities as the rest of the codebase
+    const dateParts = parseDateParts(invoiceData.dateIssued);
+    if (!dateParts) {
       return NextResponse.json(
         { message: "Invalid dateIssued format (expected YYYY-MM-DD)" },
         { status: 400 },
       );
     }
-    const baseYear = parseInt(parts[0] || "", 10);
-    const baseMonth = parseInt(parts[1] || "", 10) - 1;
-    const baseDay = parseInt(parts[2] || "", 10);
 
-    const hasValidParts =
-      Number.isFinite(baseYear) &&
-      Number.isFinite(baseMonth) &&
-      Number.isFinite(baseDay) &&
-      baseMonth >= 0 &&
-      baseMonth <= 11 &&
-      baseDay >= 1 &&
-      baseDay <= 31;
-
-    if (!hasValidParts) {
-      return NextResponse.json(
-        { message: "Invalid dateIssued value" },
-        { status: 400 },
-      );
-    }
-
-    const issueDate = new Date(baseYear, baseMonth, baseDay);
-    if (
-      Number.isNaN(issueDate.getTime()) ||
-      issueDate.getFullYear() !== baseYear ||
-      issueDate.getMonth() !== baseMonth ||
-      issueDate.getDate() !== baseDay
-    ) {
-      return NextResponse.json(
-        { message: "Invalid dateIssued value" },
-        { status: 400 },
-      );
-    }
+    const issueDate = toUtcDateFromParts(dateParts);
     const dueDate = new Date(issueDate);
-    dueDate.setDate(dueDate.getDate() + 14);
+    dueDate.setUTCDate(dueDate.getUTCDate() + 14);
 
     const formattedDueDate = formatDateStringUTC(dueDate);
 
