@@ -888,23 +888,30 @@ export async function getTechnicians() {
       const technicians = userList.data.filter(
         (user: any) => user.publicMetadata?.isTechnician === true,
       );
-      return technicians.map((user: any) => ({
-        id: user.id,
-        name:
-          user.fullName ||
-          [user.firstName, user.lastName].filter(Boolean).join(" ") ||
-          user.primaryEmailAddress?.emailAddress ||
-          user.id,
-        hourlyRate:
-          typeof user.publicMetadata?.hourlyRate === "number"
-            ? user.publicMetadata.hourlyRate
-            : 0,
-        depotAddress:
-          typeof user.publicMetadata?.depotAddress === "string" &&
-          user.publicMetadata.depotAddress.trim().length > 0
-            ? user.publicMetadata.depotAddress.trim()
-            : null,
-      }));
+      return technicians.map((user: any) => {
+        const meta = user.publicMetadata || {};
+        const str = (key: string): string | null => {
+          const v = meta[key];
+          return typeof v === "string" && v.trim().length > 0
+            ? v.trim()
+            : null;
+        };
+        return {
+          id: user.id,
+          name:
+            user.fullName ||
+            [user.firstName, user.lastName].filter(Boolean).join(" ") ||
+            user.primaryEmailAddress?.emailAddress ||
+            user.id,
+          hourlyRate:
+            typeof meta.hourlyRate === "number" ? meta.hourlyRate : 0,
+          depotAddress: str("depotAddress"),
+          phoneNumber: str("phoneNumber"),
+          email: str("email"),
+          emergencyContactName: str("emergencyContactName"),
+          emergencyContactPhone: str("emergencyContactPhone"),
+        };
+      });
     },
     ["getTechnicians"],
     { revalidate: WEEK_SECONDS, tags: ["technicians"] },
@@ -913,14 +920,19 @@ export async function getTechnicians() {
   return getTechniciansCached();
 }
 
-export async function updateTechnicianDepotAddress(
-  technicianId: string,
-  depotAddress: string | null,
-): Promise<{
-  success: boolean;
-  message: string;
+interface UpdateTechnicianDetailsPayload {
+  hourlyRate?: number;
   depotAddress?: string | null;
-}> {
+  phoneNumber?: string | null;
+  email?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
+}
+
+export async function updateTechnicianDetails(
+  technicianId: string,
+  payload: UpdateTechnicianDetailsPayload,
+): Promise<{ success: boolean; message: string }> {
   try {
     const { sessionClaims } = await auth();
     const canManage = (sessionClaims as any)?.isManager?.isManager === true;
@@ -934,15 +946,8 @@ export async function updateTechnicianDepotAddress(
 
     const normalizedTechnicianId = technicianId.trim();
     if (!normalizedTechnicianId) {
-      return {
-        success: false,
-        message: "Technician ID is required",
-      };
+      return { success: false, message: "Technician ID is required" };
     }
-
-    const normalizedDepotAddress = (depotAddress || "").trim();
-    const nextDepotAddress =
-      normalizedDepotAddress.length > 0 ? normalizedDepotAddress : null;
 
     const clerk = await clerkClient();
     const user = await clerk.users.getUser(normalizedTechnicianId);
@@ -958,30 +963,57 @@ export async function updateTechnicianDepotAddress(
       };
     }
 
+    // Validate hourlyRate if provided
+    if (payload.hourlyRate !== undefined) {
+      if (
+        typeof payload.hourlyRate !== "number" ||
+        !isFinite(payload.hourlyRate) ||
+        payload.hourlyRate < 0
+      ) {
+        return {
+          success: false,
+          message: "Hourly rate must be a non-negative number",
+        };
+      }
+    }
+
+    // Normalize string fields to trimmed string or null
+    const normalizeStr = (v: string | null | undefined): string | null => {
+      if (v == null) return null;
+      const trimmed = v.trim();
+      return trimmed.length > 0 ? trimmed : null;
+    };
+
+    const updates: Record<string, unknown> = {};
+    if (payload.hourlyRate !== undefined)
+      updates.hourlyRate = payload.hourlyRate;
+    if (payload.depotAddress !== undefined)
+      updates.depotAddress = normalizeStr(payload.depotAddress);
+    if (payload.phoneNumber !== undefined)
+      updates.phoneNumber = normalizeStr(payload.phoneNumber);
+    if (payload.email !== undefined)
+      updates.email = normalizeStr(payload.email);
+    if (payload.emergencyContactName !== undefined)
+      updates.emergencyContactName = normalizeStr(
+        payload.emergencyContactName,
+      );
+    if (payload.emergencyContactPhone !== undefined)
+      updates.emergencyContactPhone = normalizeStr(
+        payload.emergencyContactPhone,
+      );
+
     await clerk.users.updateUser(normalizedTechnicianId, {
-      publicMetadata: {
-        ...currentMetadata,
-        depotAddress: nextDepotAddress,
-      },
+      publicMetadata: { ...currentMetadata, ...updates },
     });
 
     revalidateTag("technicians", "max");
     revalidatePath("/payroll");
     revalidatePath("/schedule");
 
-    return {
-      success: true,
-      message: nextDepotAddress
-        ? "Depot address updated"
-        : "Depot address cleared",
-      depotAddress: nextDepotAddress,
-    };
+    return { success: true, message: "Employee details updated" };
   } catch (error) {
-    console.error("Failed to update technician depot address:", error);
-    return {
-      success: false,
-      message: "Failed to update depot address",
-    };
+    console.error("Failed to update technician details:", error);
+    return { success: false, message: "Failed to update employee details" };
   }
 }
 

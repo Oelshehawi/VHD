@@ -5,9 +5,10 @@
 import { ScheduleType, TechnicianType } from "../../app/lib/typeDefinitions";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { updateTechnicianDepotAddress } from "../../app/lib/actions/scheduleJobs.actions";
+import { updateTechnicianDetails } from "../../app/lib/actions/scheduleJobs.actions";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import {
   Table,
@@ -23,6 +24,7 @@ import { Label } from "../ui/label";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -41,16 +43,182 @@ interface EmployeePayrollData {
   grossPay: number;
 }
 
+interface EditFormValues {
+  hourlyRate: number;
+  depotAddress: string;
+  phoneNumber: string;
+  email: string;
+  emergencyContactName: string;
+  emergencyContactPhone: string;
+}
+
+const EditEmployeeFormContent = ({
+  technician,
+  onClose,
+}: {
+  technician: TechnicianType;
+  onClose: () => void;
+}) => {
+  const router = useRouter();
+  const [isSaving, setIsSaving] = useState(false);
+
+  const { register, handleSubmit } = useForm<EditFormValues>({
+    defaultValues: {
+      hourlyRate: technician.hourlyRate ?? 0,
+      depotAddress: technician.depotAddress ?? "",
+      phoneNumber: technician.phoneNumber ?? "",
+      email: technician.email ?? "",
+      emergencyContactName: technician.emergencyContactName ?? "",
+      emergencyContactPhone: technician.emergencyContactPhone ?? "",
+    },
+  });
+
+  const onSubmit = async (data: EditFormValues) => {
+    setIsSaving(true);
+    try {
+      const result = await updateTechnicianDetails(technician.id, {
+        hourlyRate: data.hourlyRate,
+        depotAddress: data.depotAddress || null,
+        phoneNumber: data.phoneNumber || null,
+        email: data.email || null,
+        emergencyContactName: data.emergencyContactName || null,
+        emergencyContactPhone: data.emergencyContactPhone || null,
+      });
+
+      if (!result.success) {
+        toast.error(result.message);
+        return;
+      }
+
+      toast.success(result.message);
+      onClose();
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to update employee details:", error);
+      toast.error("Failed to update employee details");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="space-y-5 py-2">
+        <div className="text-sm">
+          <span className="font-medium">{technician.name}</span>
+        </div>
+
+        {/* Compensation & Location */}
+        <div className="space-y-3">
+          <h4 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+            Compensation & Location
+          </h4>
+          <div className="space-y-1.5">
+            <Label htmlFor="hourlyRate">Hourly Rate ($)</Label>
+            <Input
+              id="hourlyRate"
+              type="number"
+              step="0.01"
+              disabled={isSaving}
+              {...register("hourlyRate", { valueAsNumber: true, min: 0 })}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="depotAddress">Depot Address</Label>
+            <Input
+              id="depotAddress"
+              placeholder="123 Main St, City, Province"
+              disabled={isSaving}
+              {...register("depotAddress")}
+            />
+          </div>
+        </div>
+
+        {/* Contact Information */}
+        <div className="space-y-3">
+          <h4 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+            Contact Information
+          </h4>
+          <div className="space-y-1.5">
+            <Label htmlFor="phoneNumber">Phone Number</Label>
+            <Input
+              id="phoneNumber"
+              type="tel"
+              placeholder="604-555-0123"
+              disabled={isSaving}
+              {...register("phoneNumber")}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="employee@example.com"
+              disabled={isSaving}
+              {...register("email")}
+            />
+          </div>
+        </div>
+
+        {/* Emergency Contact */}
+        <div className="space-y-3">
+          <h4 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide">
+            Emergency Contact
+          </h4>
+          <div className="space-y-1.5">
+            <Label htmlFor="emergencyContactName">Name</Label>
+            <Input
+              id="emergencyContactName"
+              placeholder="Contact name"
+              disabled={isSaving}
+              {...register("emergencyContactName")}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="emergencyContactPhone">Phone</Label>
+            <Input
+              id="emergencyContactPhone"
+              type="tel"
+              placeholder="604-555-0123"
+              disabled={isSaving}
+              {...register("emergencyContactPhone")}
+            />
+          </div>
+        </div>
+      </div>
+
+      <DialogFooter className="mt-4">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onClose}
+          disabled={isSaving}
+        >
+          Cancel
+        </Button>
+        <Button type="submit" disabled={isSaving}>
+          {isSaving ? (
+            <>
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Saving...
+            </>
+          ) : (
+            "Save Changes"
+          )}
+        </Button>
+      </DialogFooter>
+    </form>
+  );
+};
+
 const EmployeesTable = ({
   schedules,
   technicians,
   onViewShifts,
 }: EmployeesTableProps) => {
-  const router = useRouter();
   const [selectedTechnician, setSelectedTechnician] =
     useState<TechnicianType | null>(null);
-  const [depotAddressInput, setDepotAddressInput] = useState("");
-  const [isSavingDepotAddress, setIsSavingDepotAddress] = useState(false);
 
   // Calculate payroll data for each technician
   const employeeData: EmployeePayrollData[] = useMemo(() => {
@@ -72,42 +240,6 @@ const EmployeesTable = ({
       };
     });
   }, [technicians, schedules]);
-
-  const openDepotAddressDialog = (technician: TechnicianType) => {
-    setSelectedTechnician(technician);
-    setDepotAddressInput(technician.depotAddress || "");
-  };
-
-  const resetDepotAddressDialog = () => {
-    setSelectedTechnician(null);
-    setDepotAddressInput("");
-  };
-
-  const saveDepotAddress = async () => {
-    if (!selectedTechnician) return;
-
-    setIsSavingDepotAddress(true);
-    try {
-      const result = await updateTechnicianDepotAddress(
-        selectedTechnician.id,
-        depotAddressInput,
-      );
-
-      if (!result.success) {
-        toast.error(result.message);
-        return;
-      }
-
-      toast.success(result.message);
-      resetDepotAddressDialog();
-      router.refresh();
-    } catch (error) {
-      console.error("Failed to update depot address:", error);
-      toast.error("Failed to update depot address");
-    } finally {
-      setIsSavingDepotAddress(false);
-    }
-  };
 
   return (
     <>
@@ -156,9 +288,9 @@ const EmployeesTable = ({
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => openDepotAddressDialog(technician)}
+                          onClick={() => setSelectedTechnician(technician)}
                         >
-                          Edit Depot
+                          Edit
                         </Button>
                       </TableCell>
                       <TableCell>
@@ -182,57 +314,23 @@ const EmployeesTable = ({
       <Dialog
         open={selectedTechnician !== null}
         onOpenChange={(open) => {
-          if (!open && !isSavingDepotAddress) {
-            resetDepotAddressDialog();
-          }
+          if (!open) setSelectedTechnician(null);
         }}
       >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>Edit Depot Address</DialogTitle>
+            <DialogTitle>Edit Employee Details</DialogTitle>
+            <DialogDescription>
+              Update compensation, contact info, and emergency contact.
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <div className="text-sm">
-              <span className="font-medium">{selectedTechnician?.name}</span>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="depot-address">Depot Address</Label>
-              <Input
-                id="depot-address"
-                value={depotAddressInput}
-                onChange={(event) => setDepotAddressInput(event.target.value)}
-                placeholder="123 Main St, City, Province"
-                disabled={isSavingDepotAddress}
-              />
-              <p className="text-muted-foreground text-xs">
-                Saved to Clerk public metadata as depotAddress.
-              </p>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={resetDepotAddressDialog}
-              disabled={isSavingDepotAddress}
-            >
-              Cancel
-            </Button>
-            <Button
-              type="button"
-              onClick={saveDepotAddress}
-              disabled={isSavingDepotAddress}
-            >
-              {isSavingDepotAddress ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                "Save"
-              )}
-            </Button>
-          </DialogFooter>
+          {selectedTechnician && (
+            <EditEmployeeFormContent
+              key={selectedTechnician.id}
+              technician={selectedTechnician}
+              onClose={() => setSelectedTechnician(null)}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </>

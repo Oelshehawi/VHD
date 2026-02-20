@@ -115,6 +115,10 @@ export interface TechnicianType {
   hourlyRate?: number;
   overtimeRate?: number;
   depotAddress?: string | null;
+  phoneNumber?: string | null;
+  email?: string | null;
+  emergencyContactName?: string | null;
+  emergencyContactPhone?: string | null;
 }
 
 export interface PayrollPeriodType {
