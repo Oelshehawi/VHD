@@ -71,13 +71,7 @@ ScheduleInsightSchema.index({ technicianId: 1, dateKey: 1 });
 ScheduleInsightSchema.index({ jobsDueSoonIds: 1 });
 ScheduleInsightSchema.index({ fingerprint: 1, status: 1 });
 
-const InsightRunTriggers = [
-  "auto",
-  "manual_day",
-  "manual_range",
-  "manual_move",
-  "manual_due_soon",
-] as const;
+const InsightRunTriggers = ["auto", "manual_day", "manual_range"] as const;
 
 const ScheduleInsightRunSchema = new Schema<ScheduleInsightRunType>(
   {

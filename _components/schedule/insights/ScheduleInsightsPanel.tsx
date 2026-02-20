@@ -1,32 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  Brain,
-  CalendarClock,
-  CheckCircle2,
-  Loader2,
-  Wand2,
-  XCircle,
-} from "lucide-react";
+import { Brain, CheckCircle2, Loader2, Wand2, XCircle } from "lucide-react";
 import { toast } from "sonner";
 import {
-  analyzeDueSoonPlacement,
-  analyzeMoveJob,
   analyzeScheduleWindow,
   dismissScheduleInsight,
-  fetchUnscheduledDueSoonJobs,
   listScheduleInsights,
   resolveScheduleInsight,
 } from "../../../app/lib/actions/scheduleInsights.actions";
-import { updateJob } from "../../../app/lib/actions/scheduleJobs.actions";
-import type {
-  DueSoonPlacementSuggestion,
-  ScheduleInsightSlotCandidate,
-  ScheduleInsightStatus,
-} from "../../../app/lib/typeDefinitions";
+import type { ScheduleInsightStatus } from "../../../app/lib/typeDefinitions";
 import { Button } from "../../ui/button";
 import { Badge } from "../../ui/badge";
 import { DatePicker } from "../../ui/date-picker";
@@ -47,16 +31,11 @@ import {
   SheetTitle,
 } from "../../ui/sheet";
 import { Tabs, TabsList, TabsTrigger } from "../../ui/tabs";
-import { MultiSelectOption } from "../../ui/multi-select";
-import DueSoonPlacementDialog from "./DueSoonPlacementDialog";
 import {
-  candidateTechLabel,
   formatDateKeyLong,
   parseDateKey,
   toDateKey,
 } from "./insightFormatting";
-import MoveJobSuggestionsDialog from "./MoveJobSuggestionsDialog";
-import type { MoveJobOptionWithDetails } from "./types";
 
 function severityVariant(
   severity: string,
@@ -72,112 +51,28 @@ function statusPill(status: ScheduleInsightStatus) {
   return "Open";
 }
 
-function parseStoredScheduleDateTime(value: string | Date): Date | null {
-  if (value instanceof Date) {
-    return Number.isNaN(value.getTime()) ? null : value;
-  }
-
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-
-  // Backward compatibility: schedule fetches can return "M/D/YYYY, h:mm:ss AM/PM" UTC strings.
-  const legacyMatch = raw.match(
-    /^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i,
-  );
-  if (legacyMatch) {
-    const month = Number.parseInt(legacyMatch[1] || "", 10);
-    const day = Number.parseInt(legacyMatch[2] || "", 10);
-    const year = Number.parseInt(legacyMatch[3] || "", 10);
-    const hour12 = Number.parseInt(legacyMatch[4] || "", 10);
-    const minute = Number.parseInt(legacyMatch[5] || "", 10);
-    const second = Number.parseInt(legacyMatch[6] || "0", 10);
-    const meridiem = (legacyMatch[7] || "").toUpperCase();
-
-    if (
-      Number.isFinite(year) &&
-      Number.isFinite(month) &&
-      Number.isFinite(day) &&
-      Number.isFinite(hour12) &&
-      Number.isFinite(minute) &&
-      Number.isFinite(second)
-    ) {
-      const normalizedHour = hour12 % 12;
-      const hour24 = meridiem === "PM" ? normalizedHour + 12 : normalizedHour;
-      const parsed = new Date(
-        Date.UTC(year, month - 1, day, hour24, minute, second, 0),
-      );
-      if (!Number.isNaN(parsed.getTime())) return parsed;
-    }
-  }
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return parsed;
-}
-
 interface ScheduleInsightsPanelProps {
   canManage: boolean;
   defaultDateFrom: string;
   defaultDateTo: string;
-  technicians?: { id: string; name: string }[];
 }
 
 export default function ScheduleInsightsPanel({
   canManage,
   defaultDateFrom,
   defaultDateTo,
-  technicians = [],
 }: ScheduleInsightsPanelProps) {
   const queryClient = useQueryClient();
-  const router = useRouter();
 
   const [isOpen, setIsOpen] = useState(false);
   const [status, setStatus] = useState<ScheduleInsightStatus>("open");
   const [dateFrom, setDateFrom] = useState(defaultDateFrom);
   const [dateTo, setDateTo] = useState(defaultDateTo);
 
-  const [isDueSoonModalOpen, setIsDueSoonModalOpen] = useState(false);
-  const [dueSoonDateFrom, setDueSoonDateFrom] = useState(defaultDateFrom);
-  const [dueSoonDateTo, setDueSoonDateTo] = useState(defaultDateTo);
-  const [dueSoonJobs, setDueSoonJobs] = useState<
-    DueSoonPlacementSuggestion[]
-  >([]);
-  const [selectedDueSoonJobIds, setSelectedDueSoonJobIds] = useState<string[]>(
-    [],
-  );
-  const [dueSoonTechnicianIds, setDueSoonTechnicianIds] = useState<string[]>(
-    [],
-  );
-  const [dueSoonDuePolicy, setDueSoonDuePolicy] = useState<"hard" | "soft">(
-    "soft",
-  );
-  const [dueSoonSuggestions, setDueSoonSuggestions] = useState<
-    DueSoonPlacementSuggestion[]
-  >([]);
-
-  const [isMoveJobModalOpen, setIsMoveJobModalOpen] = useState(false);
-  const [moveDateFrom, setMoveDateFrom] = useState(defaultDateFrom);
-  const [moveDateTo, setMoveDateTo] = useState(defaultDateTo);
-  const [moveTechnicianIds, setMoveTechnicianIds] = useState<string[]>([]);
-  const [moveCandidates, setMoveCandidates] = useState<
-    ScheduleInsightSlotCandidate[]
-  >([]);
-  const [moveDuePolicy, setMoveDuePolicy] = useState<"hard" | "soft">("soft");
-  const [moveJobId, setMoveJobId] = useState("");
-  const [selectedMoveJob, setSelectedMoveJob] =
-    useState<MoveJobOptionWithDetails | null>(null);
-
   const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState<
     "all" | "critical" | "warning" | "info"
   >("all");
-
-  const technicianOptions = useMemo<MultiSelectOption[]>(() => {
-    return technicians.map((tech) => ({
-      value: tech.id,
-      label: tech.name,
-    }));
-  }, [technicians]);
 
   const openCountQuery = useQuery({
     queryKey: ["scheduleInsights", "count", defaultDateFrom, defaultDateTo],
@@ -227,35 +122,6 @@ export default function ScheduleInsightsPanel({
     },
   });
 
-  const moveJobMutation = useMutation({
-    mutationFn: () => {
-      const today = toDateKey(new Date());
-      return analyzeMoveJob({
-        scheduleId: moveJobId,
-        dateFrom: moveDateFrom < today ? today : moveDateFrom,
-        dateTo: moveDateTo < today ? today : moveDateTo,
-        technicianIds: moveTechnicianIds,
-        crewSize: 2,
-        duePolicy: moveDuePolicy,
-        bufferMinutes: 30,
-        includeAI: true,
-      });
-    },
-    onSuccess: (result) => {
-      setMoveCandidates(result.candidates);
-      setMoveDuePolicy(result.duePolicy === "hard" ? "hard" : "soft");
-      toast.success(
-        result.aiUsed
-          ? `Move-job analysis complete: ${result.candidates.length} candidate slot(s) generated.`
-          : `Move-job analysis complete in rule-only mode: ${result.candidates.length} candidate slot(s) generated.`,
-      );
-    },
-    onError: (error) => {
-      console.error(error);
-      toast.error("Failed to analyze move-job options.");
-    },
-  });
-
   const resolveMutation = useMutation({
     mutationFn: (insightId: string) => resolveScheduleInsight({ insightId }),
     onSuccess: () => {
@@ -277,135 +143,6 @@ export default function ScheduleInsightsPanel({
     onError: (error) => {
       console.error(error);
       toast.error("Failed to dismiss insight.");
-    },
-  });
-
-  const fetchDueSoonJobsMutation = useMutation({
-    mutationFn: () =>
-      fetchUnscheduledDueSoonJobs({
-        dateFrom: dueSoonDateFrom,
-        dateTo: dueSoonDateTo,
-      }),
-    onSuccess: (jobs) => {
-      setDueSoonJobs(jobs);
-      setSelectedDueSoonJobIds(jobs.map((j) => j.jobsDueSoonId));
-      setDueSoonSuggestions([]);
-      toast.success(
-        jobs.length > 0
-          ? `Found ${jobs.length} unscheduled due-soon job(s).`
-          : "No unscheduled due-soon jobs in this date range.",
-      );
-    },
-    onError: (error) => {
-      console.error(error);
-      toast.error("Failed to load due-soon jobs.");
-    },
-  });
-
-  const dueSoonGenerateMutation = useMutation({
-    mutationFn: () =>
-      analyzeDueSoonPlacement({
-        jobsDueSoonIds: selectedDueSoonJobIds,
-        dateFrom: dueSoonDateFrom,
-        dateTo: dueSoonDateTo,
-        technicianIds: dueSoonTechnicianIds,
-        crewSize: 1,
-        duePolicy: dueSoonDuePolicy,
-      }),
-    onSuccess: (result) => {
-      setDueSoonSuggestions(result.suggestions);
-      toast.success(
-        `Generated placement candidates for ${result.suggestions.length} job(s).`,
-      );
-    },
-    onError: (error) => {
-      console.error(error);
-      toast.error("Failed to generate due-soon placement suggestions.");
-    },
-  });
-
-  const applyMoveSlotMutation = useMutation({
-    mutationFn: async (candidate: ScheduleInsightSlotCandidate) => {
-      if (!selectedMoveJob) {
-        throw new Error("Selected job not found.");
-      }
-
-      const selectedStart = parseStoredScheduleDateTime(
-        selectedMoveJob.startDateTime,
-      );
-      if (!selectedStart) {
-        throw new Error("Selected job start time is invalid.");
-      }
-
-      const targetSlotStart = parseStoredScheduleDateTime(
-        candidate.startDateTime,
-      );
-      if (!targetSlotStart) {
-        throw new Error("Selected slot start time is invalid.");
-      }
-
-      const nextTechnicians =
-        candidate.technicianIds && candidate.technicianIds.length > 0
-          ? candidate.technicianIds
-          : candidate.technicianId
-            ? [candidate.technicianId]
-            : [];
-
-      if (nextTechnicians.length === 0) {
-        throw new Error("Selected slot is missing technician assignment.");
-      }
-
-      const parts = candidate.date.split("-");
-      const parsedYear = Number.parseInt(parts[0] || "", 10);
-      const parsedMonth = Number.parseInt(parts[1] || "", 10);
-      const parsedDay = Number.parseInt(parts[2] || "", 10);
-
-      const slotYear = Number.isFinite(parsedYear)
-        ? parsedYear
-        : targetSlotStart.getUTCFullYear();
-      const slotMonth = Number.isFinite(parsedMonth)
-        ? parsedMonth
-        : targetSlotStart.getUTCMonth() + 1;
-      const slotDay = Number.isFinite(parsedDay)
-        ? parsedDay
-        : targetSlotStart.getUTCDate();
-
-      // Keep the original job time-of-day; only move the calendar date.
-      const preservedStart = new Date(
-        Date.UTC(
-          slotYear,
-          slotMonth - 1,
-          slotDay,
-          selectedStart.getUTCHours(),
-          selectedStart.getUTCMinutes(),
-          selectedStart.getUTCSeconds(),
-          selectedStart.getUTCMilliseconds(),
-        ),
-      );
-
-      await updateJob({
-        scheduleId: String(selectedMoveJob._id),
-        jobTitle: selectedMoveJob.jobTitle || "Scheduled Job",
-        location: selectedMoveJob.location || "",
-        startDateTime: preservedStart.toISOString(),
-        assignedTechnicians: nextTechnicians,
-        technicianNotes: selectedMoveJob.technicianNotes,
-        hours: selectedMoveJob.hours,
-        onSiteContact: selectedMoveJob.onSiteContact,
-        accessInstructions: selectedMoveJob.accessInstructions,
-      });
-    },
-    onSuccess: () => {
-      setIsMoveJobModalOpen(false);
-      setIsOpen(false);
-      setMoveCandidates([]);
-      toast.success("Job updated to selected slot.");
-      queryClient.invalidateQueries({ queryKey: ["scheduleInsights"] });
-      router.refresh();
-    },
-    onError: (error) => {
-      console.error(error);
-      toast.error("Failed to apply selected slot.");
     },
   });
 
@@ -449,20 +186,6 @@ export default function ScheduleInsightsPanel({
         onClick={() => {
           setDateFrom(defaultDateFrom);
           setDateTo(defaultDateTo);
-          setDueSoonDateFrom(defaultDateFrom);
-          setDueSoonDateTo(defaultDateTo);
-          setDueSoonJobs([]);
-          setSelectedDueSoonJobIds([]);
-          setDueSoonTechnicianIds([]);
-          setDueSoonDuePolicy("soft");
-          setDueSoonSuggestions([]);
-          setMoveDateFrom(defaultDateFrom);
-          setMoveDateTo(defaultDateTo);
-          setMoveDuePolicy("soft");
-          setMoveTechnicianIds([]);
-          setMoveCandidates([]);
-          setMoveJobId("");
-          setSelectedMoveJob(null);
           setIsOpen(true);
         }}
       >
@@ -490,7 +213,7 @@ export default function ScheduleInsightsPanel({
               resolution.
             </SheetDescription>
 
-            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_auto_auto]">
+            <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_auto]">
               <DatePicker
                 date={parseDateKey(dateFrom)}
                 onSelect={(selected) =>
@@ -520,33 +243,6 @@ export default function ScheduleInsightsPanel({
                   <Wand2 className="h-4 w-4" />
                 )}
                 {analyzeMutation.isPending ? "Analyzing..." : "Analyze"}
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setIsDueSoonModalOpen(true)}
-                className="gap-1"
-              >
-                <CalendarClock className="h-4 w-4" />
-                Place Due Soon Jobs
-              </Button>
-            </div>
-
-            <div className="mt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setMoveDateFrom(dateFrom);
-                  setMoveDateTo(dateTo);
-                  setMoveDuePolicy("soft");
-                  setMoveCandidates([]);
-                  setIsMoveJobModalOpen(true);
-                }}
-                className="gap-1"
-              >
-                <Wand2 className="h-4 w-4" />
-                Move Job Suggestions
               </Button>
             </div>
 
@@ -650,8 +346,7 @@ export default function ScheduleInsightsPanel({
                             >
                               <div>
                                 <p className="text-sm font-medium">
-                                  {formatDateKeyLong(candidate.date)} •{" "}
-                                  {candidateTechLabel(candidate)}
+                                  {formatDateKeyLong(candidate.date)}
                                 </p>
                                 <p className="text-muted-foreground text-xs">
                                   {candidate.reason} • Score{" "}
@@ -707,58 +402,6 @@ export default function ScheduleInsightsPanel({
           </ScrollArea>
         </SheetContent>
       </Sheet>
-
-      <MoveJobSuggestionsDialog
-        open={isMoveJobModalOpen}
-        onOpenChange={setIsMoveJobModalOpen}
-        moveJobId={moveJobId}
-        onSelectJob={(job) => {
-          setMoveJobId(String(job._id));
-          setSelectedMoveJob(job);
-        }}
-        moveDateFrom={moveDateFrom}
-        moveDateTo={moveDateTo}
-        onMoveDateFromChange={setMoveDateFrom}
-        onMoveDateToChange={setMoveDateTo}
-        technicianOptions={technicianOptions}
-        moveTechnicianIds={moveTechnicianIds}
-        onMoveTechnicianIdsChange={setMoveTechnicianIds}
-        moveDuePolicy={moveDuePolicy}
-        onMoveDuePolicyChange={setMoveDuePolicy}
-        moveSelectedJobLabel={selectedMoveJob?.jobTitle || "Selected job"}
-        moveCandidates={moveCandidates}
-        isPending={moveJobMutation.isPending}
-        isApplyingSlot={applyMoveSlotMutation.isPending}
-        onGenerate={() => {
-          setMoveCandidates([]);
-          moveJobMutation.mutate();
-        }}
-        onUseSlot={(candidate) => {
-          applyMoveSlotMutation.mutate(candidate);
-        }}
-      />
-
-      <DueSoonPlacementDialog
-        open={isDueSoonModalOpen}
-        onOpenChange={setIsDueSoonModalOpen}
-        dueSoonDateFrom={dueSoonDateFrom}
-        dueSoonDateTo={dueSoonDateTo}
-        onDueSoonDateFromChange={setDueSoonDateFrom}
-        onDueSoonDateToChange={setDueSoonDateTo}
-        dueSoonJobs={dueSoonJobs}
-        isLoadingJobs={fetchDueSoonJobsMutation.isPending}
-        onLoadJobs={() => fetchDueSoonJobsMutation.mutate()}
-        selectedJobIds={selectedDueSoonJobIds}
-        onSelectedJobIdsChange={setSelectedDueSoonJobIds}
-        technicianOptions={technicianOptions}
-        technicianIds={dueSoonTechnicianIds}
-        onTechnicianIdsChange={setDueSoonTechnicianIds}
-        duePolicy={dueSoonDuePolicy}
-        onDuePolicyChange={setDueSoonDuePolicy}
-        suggestions={dueSoonSuggestions}
-        isPending={dueSoonGenerateMutation.isPending}
-        onGenerate={() => dueSoonGenerateMutation.mutate()}
-      />
     </>
   );
 }

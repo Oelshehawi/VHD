@@ -1,7 +1,6 @@
 "use client";
 
 import { format } from "date-fns";
-import type { ScheduleInsightSlotCandidate } from "../../../app/lib/typeDefinitions";
 import { formatDateStringUTC } from "../../../app/lib/utils";
 
 export function toDateKey(date: Date): string {
@@ -32,29 +31,4 @@ export function parseDateKey(dateKey?: string): Date | undefined {
 export function formatDateKeyLong(dateKey?: string): string {
   if (!dateKey) return "Invalid Date";
   return formatDateStringUTC(dateKey);
-}
-
-export function scorePriority(score: number): "low" | "medium" | "high" {
-  if (score >= 240) return "high";
-  if (score >= 120) return "medium";
-  return "low";
-}
-
-export function scorePriorityBadgeVariant(
-  priority: "low" | "medium" | "high",
-): "secondary" | "default" | "destructive" {
-  if (priority === "high") return "destructive";
-  if (priority === "medium") return "default";
-  return "secondary";
-}
-
-export function candidateTechLabel(candidate: ScheduleInsightSlotCandidate): string {
-  if (candidate.technicianNames && candidate.technicianNames.length > 0) {
-    return candidate.technicianNames.join(" + ");
-  }
-  if (candidate.technicianName) return candidate.technicianName;
-  if (candidate.technicianIds && candidate.technicianIds.length > 0) {
-    return candidate.technicianIds.join(" + ");
-  }
-  return candidate.technicianId;
 }

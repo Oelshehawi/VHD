@@ -1,8 +1,6 @@
 "use server";
 
 import { createHash } from "crypto";
-import mongoose from "mongoose";
-import { format, addDays } from "date-fns";
 import { auth } from "@clerk/nextjs/server";
 import connectMongo from "../connect";
 import { requireAdmin } from "../auth/utils";
@@ -19,9 +17,6 @@ import {
   type ScheduleInsightSeverity,
   type ScheduleInsightSource,
   type ScheduleInsightKind,
-  type ScheduleInsightSlotCandidate,
-  type DueSoonPlacementSuggestion,
-  type PreviousScheduleReference,
   SCHEDULE_INSIGHT_KINDS,
   type ScheduleInsightTrigger,
 } from "../typeDefinitions";
@@ -32,12 +27,7 @@ import {
   getScheduleDisplayDateKey,
   SERVICE_DAY_CUTOFF_HOUR,
 } from "../utils/scheduleDayUtils";
-import {
-  calculateJobDurationFromPrice,
-  minutesToPayrollHours,
-  formatTimeUTC,
-  formatDateStringUTC,
-} from "../utils";
+import { formatTimeUTC, formatDateStringUTC } from "../utils";
 import {
   getEffectiveServiceDurationHours,
   getEffectiveServiceDurationMinutes,
@@ -59,26 +49,6 @@ type AnalyzeScheduleWindowArgs = {
   trigger?: ScheduleInsightTrigger;
   includeAI?: boolean;
   skipAuth?: boolean;
-};
-
-type AnalyzeMoveJobArgs = {
-  scheduleId: string;
-  dateFrom: string;
-  dateTo: string;
-  technicianIds?: string[];
-  crewSize?: number;
-  duePolicy?: "hard" | "soft";
-  bufferMinutes?: number;
-  includeAI?: boolean;
-};
-
-type AnalyzeDueSoonPlacementArgs = {
-  jobsDueSoonIds: string[];
-  dateFrom: string;
-  dateTo: string;
-  technicianIds?: string[];
-  crewSize?: number;
-  duePolicy?: "hard" | "soft";
 };
 
 type PersistInsightDraft = {
@@ -113,8 +83,16 @@ type DueSoonAggregateRow = {
     _id?: any;
     location?: string;
     jobTitle?: string;
-    items?: { price?: number }[];
   };
+};
+
+type UnscheduledDueSoonItem = {
+  jobsDueSoonId: string;
+  invoiceRef?: string;
+  invoiceId: string;
+  jobTitle: string;
+  location: string;
+  dateDue: string;
 };
 
 const ANALYSIS_KINDS: ScheduleInsightKind[] = [
@@ -166,20 +144,6 @@ function toUtcRangeEnd(dateKey: string): Date {
   return new Date(
     Date.UTC(year || 1970, (month || 1) - 1, day || 1, 23, 59, 59, 999),
   );
-}
-
-function buildStoredScheduleIso(
-  dateKey: string,
-  hour: number,
-  minute = 0,
-): string {
-  const [year, month, day] = dateKey
-    .split("-")
-    .map((v) => Number.parseInt(v, 10));
-  const value = new Date(
-    Date.UTC(year || 1970, (month || 1) - 1, day || 1, hour, minute, 0, 0),
-  );
-  return value.toISOString();
 }
 
 function hoursForJob(
@@ -238,62 +202,9 @@ function severityRank(severity: ScheduleInsightSeverity): number {
   return 1;
 }
 
-function dateRangeKeys(dateFrom: string, dateTo: string): string[] {
-  const start = toUtcRangeStart(dateFrom);
-  const end = toUtcRangeStart(dateTo);
-  const keys: string[] = [];
-  if (start.getTime() > end.getTime()) return keys;
-
-  let cursor = start;
-  while (cursor.getTime() <= end.getTime()) {
-    keys.push(format(cursor, "yyyy-MM-dd"));
-    cursor = addDays(cursor, 1);
-  }
-  return keys;
-}
-
 function clampConfidence(value: number | undefined): number | undefined {
   if (!Number.isFinite(value)) return undefined;
   return Math.min(1, Math.max(0, Number(value)));
-}
-
-function scoreToSeverity(score: number): ScheduleInsightSeverity {
-  if (score >= 180) return "critical";
-  if (score >= 90) return "warning";
-  return "info";
-}
-
-function duePenaltyPoints(
-  duePenaltyDays: number,
-  duePolicy: "hard" | "soft",
-): number {
-  if (duePenaltyDays <= 0) return 0;
-  if (duePolicy === "hard") return duePenaltyDays * 120;
-  // Soft mode still prefers earlier slots, but caps runaway penalties.
-  return Math.min(duePenaltyDays, 14) * 20;
-}
-
-function pickCombinations<T>(items: T[], size: number): T[][] {
-  if (size <= 0 || size > items.length) return [];
-  if (size === 1) return items.map((item) => [item]);
-
-  const result: T[][] = [];
-  const current: T[] = [];
-
-  function walk(start: number) {
-    if (current.length === size) {
-      result.push([...current]);
-      return;
-    }
-    for (let idx = start; idx < items.length; idx += 1) {
-      current.push(items[idx]!);
-      walk(idx + 1);
-      current.pop();
-    }
-  }
-
-  walk(0);
-  return result;
 }
 
 async function getTechnicianDirectory(): Promise<TechnicianDirectoryEntry[]> {
@@ -305,94 +216,6 @@ async function getTechnicianDirectory(): Promise<TechnicianDirectoryEntry[]> {
       depotAddress: tech.depotAddress ?? null,
     }),
   );
-}
-
-async function fetchGoogleDurationMinutes(
-  origin: string,
-  destination: string,
-  departureIso: string,
-): Promise<number | null> {
-  const apiKey = process.env.GOOGLE_ROUTES_API_KEY;
-  if (!apiKey || !origin || !destination) return null;
-
-  try {
-    const response = await fetch(
-      "https://routes.googleapis.com/directions/v2:computeRoutes",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "X-Goog-Api-Key": apiKey,
-          "X-Goog-FieldMask": "routes.duration",
-        },
-        body: JSON.stringify({
-          origin: { address: origin },
-          destination: { address: destination },
-          travelMode: "DRIVE",
-          routingPreference: "TRAFFIC_AWARE",
-          departureTime: departureIso,
-        }),
-        signal: AbortSignal.timeout(8000),
-      },
-    );
-
-    if (!response.ok) return null;
-    const data = await response.json();
-    const duration = data?.routes?.[0]?.duration;
-    if (typeof duration !== "string") return null;
-    const match = duration.match(/^(\d+)s$/);
-    if (!match) return null;
-    const seconds = Number.parseInt(match[1] || "0", 10);
-    return Math.round(seconds / 60);
-  } catch (error) {
-    console.warn("Google duration fetch failed", error);
-    return null;
-  }
-}
-
-async function calculateIncrementalTailTravelMinutes(args: {
-  previousLocation: string | null;
-  newLocation: string;
-  depotAddress: string | null;
-  departureIso: string;
-}): Promise<number> {
-  const { previousLocation, newLocation, depotAddress, departureIso } = args;
-
-  if (!newLocation) return 0;
-
-  if (!depotAddress) {
-    if (!previousLocation) return 0;
-    const oneHop = await fetchGoogleDurationMinutes(
-      previousLocation,
-      newLocation,
-      departureIso,
-    );
-    return Math.max(0, oneHop ?? 0);
-  }
-
-  if (!previousLocation) {
-    const toJob = await fetchGoogleDurationMinutes(
-      depotAddress,
-      newLocation,
-      departureIso,
-    );
-    const toDepot = await fetchGoogleDurationMinutes(
-      newLocation,
-      depotAddress,
-      departureIso,
-    );
-    return Math.max(0, (toJob ?? 0) + (toDepot ?? 0));
-  }
-
-  const [prevToNew, newToDepot, prevToDepot] = await Promise.all([
-    fetchGoogleDurationMinutes(previousLocation, newLocation, departureIso),
-    fetchGoogleDurationMinutes(newLocation, depotAddress, departureIso),
-    fetchGoogleDurationMinutes(previousLocation, depotAddress, departureIso),
-  ]);
-
-  const added = (prevToNew ?? 0) + (newToDepot ?? 0);
-  const removed = prevToDepot ?? 0;
-  return Math.max(0, Math.round(added - removed));
 }
 
 function extractJsonObject(input: string): any | null {
@@ -698,76 +521,11 @@ async function fetchSchedulesInRange(args: {
   }));
 }
 
-async function fetchPreviousSchedules(
-  invoiceRefs: string[],
-  technicianDirectory: TechnicianDirectoryEntry[],
-): Promise<Map<string, PreviousScheduleReference>> {
-  if (invoiceRefs.length === 0) return new Map();
-
-  await connectMongo();
-
-  const objectIds = invoiceRefs.map((id) => new mongoose.Types.ObjectId(id));
-
-  const results = await Schedule.aggregate<{
-    _id: any;
-    startDateTime: Date;
-    assignedTechnicians: string[];
-    hours: number;
-    actualServiceDurationMinutes?: number;
-    historicalServiceDurationMinutes?: number;
-  }>([
-    { $match: { invoiceRef: { $in: objectIds } } },
-    { $sort: { startDateTime: -1 } },
-    {
-      $group: {
-        _id: "$invoiceRef",
-        startDateTime: { $first: "$startDateTime" },
-        assignedTechnicians: { $first: "$assignedTechnicians" },
-        hours: { $first: "$hours" },
-        actualServiceDurationMinutes: {
-          $first: "$actualServiceDurationMinutes",
-        },
-        historicalServiceDurationMinutes: {
-          $first: "$historicalServiceDurationMinutes",
-        },
-      },
-    },
-  ]);
-
-  const techNameMap = new Map(technicianDirectory.map((t) => [t.id, t.name]));
-
-  const map = new Map<string, PreviousScheduleReference>();
-  for (const row of results) {
-    const refId = normalizeId(row._id);
-    const techIds = (row.assignedTechnicians || []).map((id) =>
-      normalizeId(id),
-    );
-    const effectiveDurationMinutes = getEffectiveServiceDurationMinutes({
-      actualServiceDurationMinutes: row.actualServiceDurationMinutes,
-      historicalServiceDurationMinutes: row.historicalServiceDurationMinutes,
-      scheduleHours: row.hours,
-      fallbackHours: 4,
-    });
-    map.set(refId, {
-      startDateTime: row.startDateTime,
-      assignedTechnicians: techIds,
-      technicianNames: techIds.map((id) => techNameMap.get(id) || "Unknown"),
-      hours: row.hours ?? 4,
-      actualServiceDurationMinutes: row.actualServiceDurationMinutes,
-      historicalServiceDurationMinutes: row.historicalServiceDurationMinutes,
-      effectiveServiceDurationMinutes: effectiveDurationMinutes,
-      effectiveServiceDurationHours: effectiveDurationMinutes / 60,
-    });
-  }
-  return map;
-}
-
 async function fetchUnscheduledDueSoonInRange(args: {
   dateFrom: string;
   dateTo: string;
   maxJobs?: number;
-  technicianDirectory?: TechnicianDirectoryEntry[];
-}): Promise<DueSoonPlacementSuggestion[]> {
+}): Promise<UnscheduledDueSoonItem[]> {
   await connectMongo();
 
   const rows = await JobsDueSoon.aggregate<DueSoonAggregateRow>([
@@ -799,7 +557,6 @@ async function fetchUnscheduledDueSoonInRange(args: {
               _id: 1,
               location: 1,
               jobTitle: 1,
-              items: 1,
             },
           },
         ],
@@ -813,16 +570,7 @@ async function fetchUnscheduledDueSoonInRange(args: {
     },
   ]);
 
-  const suggestions: DueSoonPlacementSuggestion[] = rows.map((row) => {
-    const prices = (row.invoice?.items || []).map((item) =>
-      Number(item.price || 0),
-    );
-    const total = prices.reduce((sum, value) => sum + value, 0);
-    const estimatedHours =
-      total > 0
-        ? minutesToPayrollHours(calculateJobDurationFromPrice(total))
-        : 4;
-
+  const suggestions: UnscheduledDueSoonItem[] = rows.map((row) => {
     const invoiceRef = row.invoice?._id
       ? normalizeId(row.invoice._id)
       : undefined;
@@ -834,36 +582,8 @@ async function fetchUnscheduledDueSoonInRange(args: {
       jobTitle: row.jobTitle || row.invoice?.jobTitle || "Due Soon Job",
       location: row.invoice?.location || "",
       dateDue: getScheduleDisplayDateKey(row.dateDue),
-      estimatedHours,
-      candidates: [] as ScheduleInsightSlotCandidate[],
     };
   });
-
-  // Attach previous schedule data when technician directory is available
-  if (args.technicianDirectory) {
-    const invoiceRefs = suggestions
-      .map((s) => s.invoiceRef)
-      .filter((ref): ref is string => !!ref);
-    const prevMap = await fetchPreviousSchedules(
-      invoiceRefs,
-      args.technicianDirectory,
-    );
-    for (const suggestion of suggestions) {
-      if (suggestion.invoiceRef) {
-        const prev = prevMap.get(suggestion.invoiceRef);
-        if (prev) {
-          suggestion.previousSchedule = prev;
-          if (
-            Number.isFinite(prev.effectiveServiceDurationHours) &&
-            (prev.effectiveServiceDurationHours as number) > 0
-          ) {
-            suggestion.estimatedHours =
-              prev.effectiveServiceDurationHours as number;
-          }
-        }
-      }
-    }
-  }
 
   return suggestions;
 }
@@ -1109,7 +829,7 @@ function buildTravelDrafts(args: {
 }
 
 function buildDueSoonUnscheduledDrafts(
-  items: DueSoonPlacementSuggestion[],
+  items: UnscheduledDueSoonItem[],
 ): PersistInsightDraft[] {
   const drafts: PersistInsightDraft[] = [];
 
@@ -1125,7 +845,7 @@ function buildDueSoonUnscheduledDrafts(
       kind: SCHEDULE_INSIGHT_KINDS.DUE_SOON_UNSCHEDULED,
       severity,
       title: "Due Soon Job Not Scheduled",
-      message: `${item.jobTitle} due ${formatDateStringUTC(item.dateDue)}. Open Due Soon Placement to assign a slot.`,
+      message: `${item.jobTitle} due ${formatDateStringUTC(item.dateDue)} and is still unscheduled.`,
       dateKey: item.dateDue,
       jobsDueSoonIds: [item.jobsDueSoonId],
       invoiceIds: item.invoiceRef ? [item.invoiceRef] : [],
@@ -1140,463 +860,6 @@ function buildDueSoonUnscheduledDrafts(
   }
 
   return drafts;
-}
-
-function generateCrewCandidatesNoTravel(args: {
-  targetEstimatedHours: number;
-  dueDateKey: string;
-  windowDateFrom: string;
-  windowDateTo: string;
-  jobsDueSoonId?: string;
-  invoiceRef?: string;
-  schedulesByTechDay: Map<string, ScheduleType[]>;
-  technicians: TechnicianDirectoryEntry[];
-  crewSize: number;
-  duePolicy: "hard" | "soft";
-}): ScheduleInsightSlotCandidate[] {
-  if (args.technicians.length === 0) return [];
-
-  const allDates = dateRangeKeys(args.windowDateFrom, args.windowDateTo);
-  if (allDates.length === 0) return [];
-
-  const dueMs = toUtcRangeStart(args.dueDateKey).getTime();
-  const normalizedCrewSize = Math.max(
-    1,
-    Math.min(args.crewSize, args.technicians.length),
-  );
-  const crewCombos = pickCombinations(args.technicians, normalizedCrewSize);
-  if (crewCombos.length === 0) return [];
-
-  const baseCandidates: Array<{
-    dateKey: string;
-    duePenaltyDays: number;
-    duePenaltyPts: number;
-    loadHours: number;
-    loadPoints: number;
-    techs: TechnicianDirectoryEntry[];
-    startIso: string;
-    preTravelScore: number;
-  }> = [];
-
-  for (const dateKey of allDates) {
-    const dayMs = toUtcRangeStart(dateKey).getTime();
-    const penaltyDays =
-      dayMs > dueMs ? Math.round((dayMs - dueMs) / (1000 * 60 * 60 * 24)) : 0;
-    const penaltyPts = duePenaltyPoints(penaltyDays, args.duePolicy);
-
-    for (const combo of crewCombos) {
-      const starts: number[] = [];
-      let loadSum = 0;
-      let hasCapacity = true;
-
-      for (const tech of combo) {
-        const dayJobs =
-          args.schedulesByTechDay.get(buildTechDayKey(tech.id, dateKey)) || [];
-        const loadHrs = dayJobs.reduce((sum, job) => sum + hoursForJob(job), 0);
-        if (loadHrs + args.targetEstimatedHours > 12) {
-          hasCapacity = false;
-          break;
-        }
-
-        loadSum += loadHrs;
-        const lastJob = dayJobs.length > 0 ? dayJobs[dayJobs.length - 1] : null;
-        starts.push(
-          lastJob
-            ? new Date(getJobEndIso(lastJob)).getTime() + 30 * 60 * 1000
-            : new Date(buildStoredScheduleIso(dateKey, 9, 0)).getTime(),
-        );
-      }
-
-      if (!hasCapacity) continue;
-
-      const loadHours = loadSum / combo.length;
-      const loadPts = Math.round(loadHours * 10);
-      const latestStartMs = Math.max(...starts);
-      const startIso = Number.isFinite(latestStartMs)
-        ? new Date(latestStartMs).toISOString()
-        : buildStoredScheduleIso(dateKey, 9, 0);
-
-      baseCandidates.push({
-        dateKey,
-        duePenaltyDays: penaltyDays,
-        duePenaltyPts: penaltyPts,
-        loadHours,
-        loadPoints: loadPts,
-        techs: combo,
-        startIso,
-        preTravelScore: penaltyPts + loadPts,
-      });
-    }
-  }
-
-  const topBase = baseCandidates
-    .sort((a, b) => a.preTravelScore - b.preTravelScore)
-    .slice(0, 5);
-
-  return topBase.map((base) => {
-    const technicianNames = base.techs.map((t) => t.name);
-    const technicianIds = base.techs.map((t) => t.id);
-    const score = base.preTravelScore;
-
-    const reasonParts = [
-      `Crew load ${base.loadHours.toFixed(1)}h avg`,
-      base.duePenaltyDays > 0
-        ? `${base.duePenaltyDays} day(s) past due (${args.duePolicy} due mode)`
-        : "on/before due date",
-    ];
-
-    return {
-      date: base.dateKey,
-      startDateTime: base.startIso,
-      technicianId: technicianIds[0] || "",
-      technicianName: technicianNames[0],
-      technicianIds,
-      technicianNames,
-      estimatedJobHours: args.targetEstimatedHours,
-      incrementalTravelMinutes: 0,
-      score,
-      scoreBreakdown: {
-        duePenaltyDays: base.duePenaltyDays,
-        duePenaltyPoints: base.duePenaltyPts,
-        loadHours: base.loadHours,
-        loadPoints: base.loadPoints,
-        travelPoints: 0,
-        totalScore: score,
-        duePolicy: args.duePolicy,
-      },
-      reason: reasonParts.join(" • "),
-      invoiceRef: args.invoiceRef,
-      jobsDueSoonId: args.jobsDueSoonId,
-    } satisfies ScheduleInsightSlotCandidate;
-  });
-}
-
-async function generatePlacementCandidates(args: {
-  targetLocation: string;
-  targetJobTitle: string;
-  targetEstimatedHours: number;
-  dueDateKey: string;
-  windowDateFrom: string;
-  windowDateTo: string;
-  jobsDueSoonId?: string;
-  invoiceRef?: string;
-  schedulesByTechDay: Map<string, ScheduleType[]>;
-  technicians: TechnicianDirectoryEntry[];
-}): Promise<ScheduleInsightSlotCandidate[]> {
-  const { targetLocation, targetEstimatedHours, dueDateKey } = args;
-  if (!targetLocation || args.technicians.length === 0) return [];
-
-  const allDates = dateRangeKeys(args.windowDateFrom, args.windowDateTo);
-  const dueMs = toUtcRangeStart(dueDateKey).getTime();
-
-  const baseCandidates: Array<{
-    tech: TechnicianDirectoryEntry;
-    dateKey: string;
-    loadHours: number;
-    duePenaltyDays: number;
-  }> = [];
-
-  for (const tech of args.technicians) {
-    const dateOptions = allDates
-      .map((dateKey) => {
-        const key = buildTechDayKey(tech.id, dateKey);
-        const dayJobs = args.schedulesByTechDay.get(key) || [];
-        const loadHours = dayJobs.reduce(
-          (sum, job) => sum + hoursForJob(job),
-          0,
-        );
-        const dayMs = toUtcRangeStart(dateKey).getTime();
-        const duePenaltyDays =
-          dayMs > dueMs
-            ? Math.round((dayMs - dueMs) / (1000 * 60 * 60 * 24))
-            : 0;
-
-        return { dateKey, loadHours, duePenaltyDays };
-      })
-      .filter((option) => option.loadHours + targetEstimatedHours <= 12)
-      .sort((a, b) => {
-        if (a.duePenaltyDays !== b.duePenaltyDays) {
-          return a.duePenaltyDays - b.duePenaltyDays;
-        }
-        return a.loadHours - b.loadHours;
-      })
-      .slice(0, 2);
-
-    for (const option of dateOptions) {
-      baseCandidates.push({
-        tech,
-        dateKey: option.dateKey,
-        loadHours: option.loadHours,
-        duePenaltyDays: option.duePenaltyDays,
-      });
-    }
-  }
-
-  const enriched: ScheduleInsightSlotCandidate[] = [];
-
-  for (const base of baseCandidates) {
-    const dayJobs =
-      args.schedulesByTechDay.get(
-        buildTechDayKey(base.tech.id, base.dateKey),
-      ) || [];
-    const lastJob = dayJobs.length > 0 ? dayJobs[dayJobs.length - 1] : null;
-
-    const startIso = lastJob
-      ? new Date(
-          new Date(getJobEndIso(lastJob)).getTime() + 30 * 60 * 1000,
-        ).toISOString()
-      : buildStoredScheduleIso(base.dateKey, 9, 0);
-
-    const previousLocation = lastJob?.location || null;
-    const incrementalTravel = await calculateIncrementalTailTravelMinutes({
-      previousLocation,
-      newLocation: targetLocation,
-      depotAddress: base.tech.depotAddress,
-      departureIso: startIso,
-    });
-
-    const loadPoints = Math.round(base.loadHours * 10);
-    const penaltyPoints = duePenaltyPoints(base.duePenaltyDays, "hard");
-    const score = penaltyPoints + loadPoints + incrementalTravel;
-
-    const reasonParts = [
-      `Load ${base.loadHours.toFixed(1)}h`,
-      incrementalTravel > 0
-        ? `+${incrementalTravel}m travel`
-        : "low travel impact",
-      base.duePenaltyDays > 0
-        ? `${base.duePenaltyDays} day(s) past due`
-        : "on/before due date",
-    ];
-
-    enriched.push({
-      date: base.dateKey,
-      startDateTime: startIso,
-      technicianId: base.tech.id,
-      technicianName: base.tech.name,
-      estimatedJobHours: targetEstimatedHours,
-      incrementalTravelMinutes: incrementalTravel,
-      score,
-      scoreBreakdown: {
-        duePenaltyDays: base.duePenaltyDays,
-        duePenaltyPoints: penaltyPoints,
-        loadHours: base.loadHours,
-        loadPoints,
-        travelPoints: incrementalTravel,
-        totalScore: score,
-        duePolicy: "hard",
-      },
-      reason: reasonParts.join(" • "),
-      invoiceRef: args.invoiceRef,
-      jobsDueSoonId: args.jobsDueSoonId,
-    });
-  }
-
-  return enriched.sort((a, b) => a.score - b.score).slice(0, 3);
-}
-
-async function generateMoveJobPlacementCandidates(args: {
-  targetLocation: string;
-  targetEstimatedHours: number;
-  dueDateKey: string;
-  windowDateFrom: string;
-  windowDateTo: string;
-  schedulesByTechDay: Map<string, ScheduleType[]>;
-  technicians: TechnicianDirectoryEntry[];
-  invoiceRef?: string;
-  jobsDueSoonId?: string;
-  crewSize: number;
-  duePolicy: "hard" | "soft";
-  bufferMinutes: number;
-  resultLimit?: number;
-  topBaseLimit?: number;
-}): Promise<ScheduleInsightSlotCandidate[]> {
-  if (!args.targetLocation || args.technicians.length === 0) return [];
-
-  const allDates = dateRangeKeys(args.windowDateFrom, args.windowDateTo);
-  if (allDates.length === 0) return [];
-
-  const dueMs = toUtcRangeStart(args.dueDateKey).getTime();
-  const normalizedCrewSize = Math.max(
-    1,
-    Math.min(args.crewSize || 2, args.technicians.length),
-  );
-  const crewCombos = pickCombinations(args.technicians, normalizedCrewSize);
-  if (crewCombos.length === 0) return [];
-
-  const baseCandidates: Array<{
-    dateKey: string;
-    duePenaltyDays: number;
-    duePenaltyPoints: number;
-    loadHours: number;
-    loadPoints: number;
-    techs: TechnicianDirectoryEntry[];
-    lastLocations: Array<string | null>;
-    startIso: string;
-    preTravelScore: number;
-  }> = [];
-
-  for (const dateKey of allDates) {
-    const dayMs = toUtcRangeStart(dateKey).getTime();
-    const duePenaltyDays =
-      dayMs > dueMs ? Math.round((dayMs - dueMs) / (1000 * 60 * 60 * 24)) : 0;
-    const penaltyPoints = duePenaltyPoints(duePenaltyDays, args.duePolicy);
-
-    for (const combo of crewCombos) {
-      const starts: number[] = [];
-      const lastLocations: Array<string | null> = [];
-      let loadSum = 0;
-      let hasCapacity = true;
-
-      for (const tech of combo) {
-        const dayJobs =
-          args.schedulesByTechDay.get(buildTechDayKey(tech.id, dateKey)) || [];
-        const loadHours = dayJobs.reduce(
-          (sum, job) => sum + hoursForJob(job),
-          0,
-        );
-        if (loadHours + args.targetEstimatedHours > 12) {
-          hasCapacity = false;
-          break;
-        }
-
-        loadSum += loadHours;
-        const lastJob = dayJobs.length > 0 ? dayJobs[dayJobs.length - 1] : null;
-        lastLocations.push(lastJob?.location || null);
-        starts.push(
-          lastJob
-            ? new Date(getJobEndIso(lastJob)).getTime() +
-                args.bufferMinutes * 60 * 1000
-            : new Date(buildStoredScheduleIso(dateKey, 9, 0)).getTime(),
-        );
-      }
-
-      if (!hasCapacity) continue;
-
-      const loadHours = loadSum / combo.length;
-      const loadPoints = Math.round(loadHours * 10);
-      const latestStartMs = Math.max(...starts);
-      const startIso = Number.isFinite(latestStartMs)
-        ? new Date(latestStartMs).toISOString()
-        : buildStoredScheduleIso(dateKey, 9, 0);
-
-      baseCandidates.push({
-        dateKey,
-        duePenaltyDays,
-        duePenaltyPoints: penaltyPoints,
-        loadHours,
-        loadPoints,
-        techs: combo,
-        lastLocations,
-        startIso,
-        preTravelScore: penaltyPoints + loadPoints,
-      });
-    }
-  }
-
-  const topBase = baseCandidates
-    .sort((a, b) => a.preTravelScore - b.preTravelScore)
-    .slice(0, Math.max(1, args.topBaseLimit ?? 28));
-
-  const enriched: ScheduleInsightSlotCandidate[] = [];
-
-  for (const base of topBase) {
-    const travelLegs = await Promise.all(
-      base.techs.map((tech, index) =>
-        calculateIncrementalTailTravelMinutes({
-          previousLocation: base.lastLocations[index] || null,
-          newLocation: args.targetLocation,
-          depotAddress: tech.depotAddress,
-          departureIso: base.startIso,
-        }),
-      ),
-    );
-
-    const travelPoints = travelLegs.reduce((sum, value) => sum + value, 0);
-    const score = base.preTravelScore + travelPoints;
-    const technicianNames = base.techs.map((tech) => tech.name);
-    const technicianIds = base.techs.map((tech) => tech.id);
-
-    const reasonParts = [
-      `Crew load ${base.loadHours.toFixed(1)}h avg`,
-      travelPoints > 0 ? `+${travelPoints}m travel` : "low travel impact",
-      base.duePenaltyDays > 0
-        ? `${base.duePenaltyDays} day(s) past due (${args.duePolicy} due mode)`
-        : "on/before due date",
-    ];
-
-    enriched.push({
-      date: base.dateKey,
-      startDateTime: base.startIso,
-      technicianId: technicianIds[0] || "",
-      technicianName: technicianNames[0],
-      technicianIds,
-      technicianNames,
-      estimatedJobHours: args.targetEstimatedHours,
-      incrementalTravelMinutes: travelPoints,
-      score,
-      scoreBreakdown: {
-        duePenaltyDays: base.duePenaltyDays,
-        duePenaltyPoints: base.duePenaltyPoints,
-        loadHours: base.loadHours,
-        loadPoints: base.loadPoints,
-        travelPoints,
-        totalScore: score,
-        duePolicy: args.duePolicy,
-      },
-      reason: reasonParts.join(" • "),
-      invoiceRef: args.invoiceRef,
-      jobsDueSoonId: args.jobsDueSoonId,
-    });
-  }
-
-  return enriched
-    .sort((a, b) => a.score - b.score)
-    .slice(0, Math.max(1, args.resultLimit ?? 3));
-}
-
-async function maybeEnhancePlacementReasonsWithAI(params: {
-  jobTitle: string;
-  dueDate: string;
-  candidates: ScheduleInsightSlotCandidate[];
-}): Promise<ScheduleInsightSlotCandidate[]> {
-  if (params.candidates.length === 0) return params.candidates;
-
-  const result = await callOpenRouterJson<{
-    items?: Array<{ index: number; reason?: string }>;
-  }>({
-    systemPrompt:
-      "You are a scheduling assistant. Rewrite candidate reasons to be concise and practical. Return JSON only.",
-    userPrompt: JSON.stringify({
-      jobTitle: params.jobTitle,
-      dueDate: params.dueDate,
-      candidates: params.candidates.map((candidate, index) => ({
-        index,
-        date: candidate.date,
-        tech:
-          candidate.technicianNames && candidate.technicianNames.length > 0
-            ? candidate.technicianNames.join(" + ")
-            : candidate.technicianName || candidate.technicianId,
-        score: candidate.score,
-        incrementalTravelMinutes: candidate.incrementalTravelMinutes,
-        reason: candidate.reason,
-      })),
-      responseShape: { items: [{ index: 0, reason: "string" }] },
-    }),
-    maxTokens: 600,
-  });
-
-  if (!result?.items) return params.candidates;
-
-  const next = [...params.candidates];
-  for (const item of result.items) {
-    const idx = Number(item.index);
-    if (!Number.isInteger(idx) || idx < 0 || idx >= next.length) continue;
-    if (typeof item.reason !== "string" || !item.reason.trim()) continue;
-    next[idx] = { ...next[idx]!, reason: item.reason.trim() };
-  }
-
-  return next;
 }
 
 async function writeRunLog(args: {
@@ -1784,186 +1047,6 @@ export async function runAutoScheduleInsightAnalysis(args: {
     includeAI: false,
     skipAuth: true,
   });
-}
-
-export async function analyzeMoveJob(args: AnalyzeMoveJobArgs) {
-  const startedAt = Date.now();
-  await requireAdmin();
-  await connectMongo();
-
-  const schedule = await Schedule.findById(
-    args.scheduleId,
-  ).lean<ScheduleType | null>();
-  if (!schedule) {
-    throw new Error("Schedule not found");
-  }
-
-  const existingSchedules = await fetchSchedulesInRange({
-    dateFrom: args.dateFrom,
-    dateTo: args.dateTo,
-  });
-
-  const filtered = existingSchedules.filter(
-    (job) => normalizeId(job._id) !== normalizeId(schedule._id),
-  );
-
-  const technicians = await getTechnicianDirectory();
-  const requestedCrewSize = Math.max(1, args.crewSize ?? 2);
-  const duePolicy = args.duePolicy === "hard" ? "hard" : "soft";
-  const selectedTechnicianIds = new Set(
-    (args.technicianIds || []).filter(Boolean),
-  );
-  const technicianPool =
-    selectedTechnicianIds.size > 0
-      ? technicians.filter((tech) => selectedTechnicianIds.has(tech.id))
-      : technicians;
-
-  if (technicianPool.length < requestedCrewSize) {
-    throw new Error(
-      `Select at least ${requestedCrewSize} technicians to build crew suggestions.`,
-    );
-  }
-
-  const byTechDay = groupSchedulesByTechDay(filtered);
-
-  const dueDate = getScheduleDisplayDateKey(schedule.startDateTime);
-
-  let candidates = await generateMoveJobPlacementCandidates({
-    targetLocation: schedule.location,
-    targetEstimatedHours: hoursForJob(schedule),
-    dueDateKey: dueDate,
-    windowDateFrom: args.dateFrom,
-    windowDateTo: args.dateTo,
-    schedulesByTechDay: byTechDay,
-    technicians: technicianPool,
-    invoiceRef: normalizeId(schedule.invoiceRef),
-    crewSize: requestedCrewSize,
-    duePolicy,
-    bufferMinutes: Math.max(0, args.bufferMinutes ?? 30),
-  });
-
-  const requestedAI = args.includeAI ?? true;
-  const aiAvailability = requestedAI ? getOpenRouterAvailability() : null;
-  let aiUsed = requestedAI && Boolean(aiAvailability?.available);
-  let aiSkipReason =
-    requestedAI && !aiUsed ? aiAvailability?.reason : undefined;
-
-  if (aiUsed) {
-    candidates = await maybeEnhancePlacementReasonsWithAI({
-      jobTitle: schedule.jobTitle || "Scheduled Job",
-      dueDate,
-      candidates,
-    });
-    const postRunAvailability = getOpenRouterAvailability();
-    if (!postRunAvailability.available) {
-      aiUsed = false;
-      aiSkipReason = postRunAvailability.reason;
-    }
-  }
-
-  await writeRunLog({
-    trigger: "manual_move",
-    dateFrom: args.dateFrom,
-    dateTo: args.dateTo,
-    technicianIds:
-      selectedTechnicianIds.size > 0
-        ? Array.from(selectedTechnicianIds)
-        : schedule.assignedTechnicians,
-    generatedCount: candidates.length,
-    durationMs: Date.now() - startedAt,
-  });
-
-  return {
-    candidates,
-    aiUsed,
-    aiSkipReason,
-    duePolicy,
-    crewSize: requestedCrewSize,
-  };
-}
-
-export async function fetchUnscheduledDueSoonJobs(args: {
-  dateFrom: string;
-  dateTo: string;
-}): Promise<DueSoonPlacementSuggestion[]> {
-  await requireAdmin();
-  const technicianDirectory = await getTechnicianDirectory();
-  return fetchUnscheduledDueSoonInRange({
-    dateFrom: args.dateFrom,
-    dateTo: args.dateTo,
-    technicianDirectory,
-  });
-}
-
-export async function analyzeDueSoonPlacement(
-  args: AnalyzeDueSoonPlacementArgs,
-): Promise<{
-  suggestions: DueSoonPlacementSuggestion[];
-}> {
-  await requireAdmin();
-
-  if (!args.jobsDueSoonIds || args.jobsDueSoonIds.length === 0) {
-    return { suggestions: [] };
-  }
-
-  const allTechnicians = await getTechnicianDirectory();
-
-  const allDueSoon = await fetchUnscheduledDueSoonInRange({
-    dateFrom: args.dateFrom,
-    dateTo: args.dateTo,
-    technicianDirectory: allTechnicians,
-  });
-
-  const requestedIds = new Set(args.jobsDueSoonIds);
-  const selectedJobs = allDueSoon.filter((job) =>
-    requestedIds.has(job.jobsDueSoonId),
-  );
-
-  if (selectedJobs.length === 0) {
-    return { suggestions: [] };
-  }
-
-  const schedules = await fetchSchedulesInRange({
-    dateFrom: args.dateFrom,
-    dateTo: args.dateTo,
-  });
-  const selectedTechIds = new Set((args.technicianIds || []).filter(Boolean));
-  const technicianPool =
-    selectedTechIds.size > 0
-      ? allTechnicians.filter((t) => selectedTechIds.has(t.id))
-      : allTechnicians;
-
-  const crewSize = Math.max(1, args.crewSize ?? 1);
-  const duePolicy = args.duePolicy === "hard" ? "hard" : "soft";
-  const schedulesByTechDay = groupSchedulesByTechDay(schedules);
-
-  const suggestions = await Promise.all(
-    selectedJobs.map(async (item) => {
-      const candidates = await generateMoveJobPlacementCandidates({
-        targetLocation: item.location,
-        targetEstimatedHours: item.estimatedHours,
-        dueDateKey: item.dateDue,
-        windowDateFrom: args.dateFrom,
-        windowDateTo: args.dateTo,
-        schedulesByTechDay,
-        technicians: technicianPool,
-        invoiceRef: item.invoiceRef,
-        jobsDueSoonId: item.jobsDueSoonId,
-        crewSize,
-        duePolicy,
-        bufferMinutes: 30,
-        resultLimit: 5,
-        topBaseLimit: 40,
-      });
-
-      return {
-        ...item,
-        candidates,
-      };
-    }),
-  );
-
-  return { suggestions };
 }
 
 export async function resolveScheduleInsight(args: {

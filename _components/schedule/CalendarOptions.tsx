@@ -192,19 +192,17 @@ const CalendarOptions = ({
   initialRangeEnd?: string;
 }) => {
   // Initialize calendar view from URL or default to mobile detection
-  const [currentView, setCurrentView] = useState<"week" | "month">(
-    () => {
-      const isMobile = isMobileDevice();
-      // Force month view on mobile regardless of URL
-      if (isMobile) return "month";
-      // For desktop, respect URL params
-      if (initialView === "month") return "month";
-      if (initialView === "week") return "week";
-      // Fallback: if URL has "day", use week for desktop or month for mobile
-      if (initialView === "day") return isMobile ? "month" : "week";
-      return "week"; // Default to week view for desktop if no URL param
-    },
-  );
+  const [currentView, setCurrentView] = useState<"week" | "month">(() => {
+    const isMobile = isMobileDevice();
+    // Force month view on mobile regardless of URL
+    if (isMobile) return "month";
+    // For desktop, respect URL params
+    if (initialView === "month") return "month";
+    if (initialView === "week") return "week";
+    // Fallback: if URL has "day", use week for desktop or month for mobile
+    if (initialView === "day") return isMobile ? "month" : "week";
+    return "week"; // Default to week view for desktop if no URL param
+  });
 
   const [currentDay, setCurrentDay] = useState<Date>(() => {
     if (initialDate) {
@@ -372,7 +370,6 @@ const CalendarOptions = ({
     setCurrentWeek(newWeek);
     updateURLInstant("week", weekStart);
   };
-
 
   const navigateMonth = (direction: "prev" | "next") => {
     const parsedCurrentDate = currentDate
@@ -752,7 +749,6 @@ const Header = ({
               canManage={canManage}
               defaultDateFrom={insightWindow.dateFrom}
               defaultDateTo={insightWindow.dateTo}
-              technicians={technicians}
             />
           )}
 

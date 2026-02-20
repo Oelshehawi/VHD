@@ -866,12 +866,7 @@ export interface ScheduleInsightType {
   updatedAt?: Date | string;
 }
 
-export type ScheduleInsightTrigger =
-  | "auto"
-  | "manual_day"
-  | "manual_range"
-  | "manual_move"
-  | "manual_due_soon";
+export type ScheduleInsightTrigger = "auto" | "manual_day" | "manual_range";
 
 export interface ScheduleInsightRunType {
   _id?: ObjectId | string;
@@ -884,29 +879,6 @@ export interface ScheduleInsightRunType {
   durationMs?: number;
   createdBy?: string;
   createdAt?: Date | string;
-}
-
-export interface DueSoonPlacementSuggestion {
-  jobsDueSoonId: string;
-  invoiceRef?: string;
-  invoiceId: string;
-  jobTitle: string;
-  location: string;
-  dateDue: string;
-  estimatedHours: number;
-  previousSchedule?: PreviousScheduleReference;
-  candidates: ScheduleInsightSlotCandidate[];
-}
-
-export interface PreviousScheduleReference {
-  startDateTime: Date | string;
-  assignedTechnicians: string[];
-  technicianNames: string[];
-  hours: number;
-  actualServiceDurationMinutes?: number;
-  historicalServiceDurationMinutes?: number;
-  effectiveServiceDurationMinutes?: number;
-  effectiveServiceDurationHours?: number;
 }
 
 // ── Travel Time Types ──────────────────────────────────────────────────────
