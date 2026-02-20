@@ -2,26 +2,38 @@
 
 import { useState, useEffect } from "react";
 import { useForm, Controller } from "react-hook-form";
-import { useUser } from "@clerk/nextjs";
 import { toast } from "sonner";
-import { ChevronLeft, ChevronRight, Loader2, Check } from "lucide-react";
-import { createInvoiceAndScheduleFromJob } from "../../../app/lib/actions/smartScheduling.actions";
+import {
+  CalendarIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  DocumentTextIcon,
+  MapPinIcon,
+} from "@heroicons/react/24/outline";
+import {
+  createInvoiceAndScheduleFromJob,
+  getScheduleJobDetails,
+  type SmartScheduleJobDetails,
+} from "../../../app/lib/actions/smartScheduling.actions";
 import TechnicianSelect from "../TechnicianSelect";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
 } from "../../ui/dialog";
 import { Button } from "../../ui/button";
+import { Card, CardContent } from "../../ui/card";
+import { DatePickerWithTime } from "../../ui/date-picker-with-time";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
+import { ScrollArea } from "../../ui/scroll-area";
+import { Separator } from "../../ui/separator";
+import { Skeleton } from "../../ui/skeleton";
 import { Textarea } from "../../ui/textarea";
-import { DatePickerWithTime } from "../../ui/date-picker-with-time";
-import { Badge } from "../../ui/badge";
-import { formatDateStringUTC } from "../../../app/lib/utils";
-import type { ScheduleType } from "../../../app/lib/typeDefinitions";
+import { formatAmount, formatDateWithWeekdayUTC } from "../../../app/lib/utils";
 import { parse, format } from "date-fns";
 
 interface ScheduleWizardModalProps {
@@ -36,7 +48,24 @@ interface ScheduleWizardModalProps {
   onComplete: () => void;
 }
 
-type WizardStep = 1 | 2 | 3;
+type SmartScheduleFormValues = {
+  startDateTime: Date | string | undefined;
+  assignedTechnicians: string[];
+  technicianNotes?: string;
+  accessInstructions?: string;
+  onSiteContact?: {
+    name?: string;
+    phone?: string;
+    email?: string;
+  };
+};
+
+function calculateTotal(items: Array<{ price?: number }> | undefined) {
+  const subtotal =
+    items?.reduce((sum, item) => sum + (item.price || 0), 0) || 0;
+  const gst = subtotal * 0.05;
+  return { subtotal, gst, total: subtotal + gst };
+}
 
 export default function ScheduleWizardModal({
   open,
@@ -49,9 +78,10 @@ export default function ScheduleWizardModal({
   technicians,
   onComplete,
 }: ScheduleWizardModalProps) {
-  const { user } = useUser();
-  const [currentStep, setCurrentStep] = useState<WizardStep>(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoadingDetails, setIsLoadingDetails] = useState(false);
+  const [sourceDetails, setSourceDetails] =
+    useState<SmartScheduleJobDetails | null>(null);
 
   const {
     register,
@@ -61,59 +91,74 @@ export default function ScheduleWizardModal({
     setValue,
     watch,
     reset,
-  } = useForm<ScheduleType>({
+  } = useForm<SmartScheduleFormValues>({
     defaultValues: {
-      jobTitle,
-      location,
       startDateTime: undefined,
       assignedTechnicians: [],
-      invoiceRef: "",
-      confirmed: false,
       technicianNotes: "",
-      hours: 4,
-      onSiteContact: { name: "", phone: "", email: "" },
       accessInstructions: "",
+      onSiteContact: { name: "", phone: "", email: "" },
     },
+    mode: "onChange",
   });
 
   const startDateTime = watch("startDateTime");
-  const assignedTechnicians = watch("assignedTechnicians");
+  const assignedTechnicians = watch("assignedTechnicians") || [];
 
-  // Initialize startDateTime from selectedDate and source job time if provided
   useEffect(() => {
-    if (open && selectedDate) {
-      const date = parse(selectedDate, "yyyy-MM-dd", new Date());
-      if (sourceStartTime) {
-        const [h, m] = sourceStartTime.split(":").map(Number);
-        date.setHours(h ?? 8, m ?? 0, 0, 0);
-      } else {
-        date.setHours(8, 0, 0, 0);
-      }
-      setValue("startDateTime", date);
+    if (!open || !selectedDate) return;
+
+    const date = parse(selectedDate, "yyyy-MM-dd", new Date());
+    if (sourceStartTime) {
+      const [h, m] = sourceStartTime.split(":").map(Number);
+      date.setHours(h ?? 8, m ?? 0, 0, 0);
+    } else {
+      date.setHours(8, 0, 0, 0);
     }
+    setValue("startDateTime", date, { shouldValidate: true });
   }, [open, selectedDate, sourceStartTime, setValue]);
 
-  // Reset form when modal closes
+  useEffect(() => {
+    let isCancelled = false;
+
+    const fetchDetails = async () => {
+      if (!open || !sourceScheduleJobId) return;
+      setIsLoadingDetails(true);
+
+      try {
+        const details = await getScheduleJobDetails(sourceScheduleJobId);
+        if (!isCancelled) {
+          setSourceDetails(details);
+        }
+      } catch (error) {
+        if (!isCancelled) {
+          console.error("Error loading source schedule details:", error);
+          setSourceDetails(null);
+          toast.error("Failed to load source job details");
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsLoadingDetails(false);
+        }
+      }
+    };
+
+    fetchDetails();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [open, sourceScheduleJobId]);
+
   useEffect(() => {
     if (!open) {
       reset();
-      setCurrentStep(1);
+      setSourceDetails(null);
+      setIsLoadingDetails(false);
     }
   }, [open, reset]);
 
-  const handleNext = () => {
-    if (currentStep < 3) {
-      setCurrentStep((prev) => (prev + 1) as WizardStep);
-    }
-  };
-
-  const handleBack = () => {
-    if (currentStep > 1) {
-      setCurrentStep((prev) => (prev - 1) as WizardStep);
-    }
-  };
-
-  const onSubmit = async (data: ScheduleType) => {
+  const onSubmit = async (data: SmartScheduleFormValues) => {
     setIsSubmitting(true);
     try {
       if (!data.startDateTime) {
@@ -143,14 +188,23 @@ export default function ScheduleWizardModal({
       );
       const startDateTimeISO = normalizedStartDateTime.toISOString();
 
+      const normalizedOnSiteContact =
+        data.onSiteContact?.name?.trim() || data.onSiteContact?.phone?.trim()
+          ? {
+              name: data.onSiteContact?.name?.trim() || "",
+              phone: data.onSiteContact?.phone?.trim() || "",
+              email: data.onSiteContact?.email?.trim() || undefined,
+            }
+          : undefined;
+
       const result = await createInvoiceAndScheduleFromJob(
         sourceScheduleJobId,
         selectedDate,
         startDateTimeISO,
-        data.assignedTechnicians,
+        data.assignedTechnicians || [],
         data.technicianNotes,
         data.accessInstructions,
-        data.onSiteContact,
+        normalizedOnSiteContact,
       );
 
       if (result.success) {
@@ -167,232 +221,306 @@ export default function ScheduleWizardModal({
     }
   };
 
-  const canProceedToStep2 = jobTitle && location;
-  const canProceedToStep3 = startDateTime && assignedTechnicians.length > 0;
+  const selectedInvoice = sourceDetails?.invoice;
+  const selectedClient = sourceDetails?.client;
+  const totals = calculateTotal(selectedInvoice?.items);
+  const canSubmit =
+    Boolean(startDateTime) && assignedTechnicians.length > 0 && !isSubmitting;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Scheduling Wizard</DialogTitle>
-          <DialogDescription>
-            Step {currentStep} of 3: {currentStep === 1 && "Review Invoice"}
-            {currentStep === 2 && "Schedule Details"}
-            {currentStep === 3 && "Confirm & Create"}
+      <DialogContent className="flex max-h-[90vh] !max-w-7xl flex-col overflow-hidden">
+        <DialogHeader className="shrink-0 pb-4">
+          <DialogTitle className="flex items-center gap-2 text-xl">
+            <DocumentTextIcon className="h-6 w-6" />
+            Confirm Scheduling & Create Invoice + Job
+          </DialogTitle>
+          <DialogDescription className="text-base">
+            Review details, then confirm to create both a new invoice and a new
+            scheduled job from this source job.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-          {/* Step 1: Review Invoice */}
-          {currentStep === 1 && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg border p-4">
-                <h3 className="mb-3 font-medium">Invoice Details</h3>
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <Label className="text-muted-foreground">Job Title</Label>
-                    <Input
-                      {...register("jobTitle", { required: true })}
-                      className="mt-1"
-                    />
-                    {errors.jobTitle && (
-                      <p className="text-destructive mt-1 text-xs">
-                        Job title is required
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">Location</Label>
-                    <Input
-                      {...register("location", { required: true })}
-                      className="mt-1"
-                    />
-                    {errors.location && (
-                      <p className="text-destructive mt-1 text-xs">
-                        Location is required
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <Label className="text-muted-foreground">
-                      Selected Date
-                    </Label>
-                    <p className="font-medium">
-                      {formatDateStringUTC(selectedDate)}
-                    </p>
-                  </div>
-                </div>
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <div className="flex min-h-0 flex-1 gap-6">
+            <div className="flex min-h-0 w-1/2 flex-col">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-muted-foreground text-sm font-semibold tracking-wide uppercase">
+                  Source Invoice
+                </h3>
               </div>
-            </div>
-          )}
 
-          {/* Step 2: Schedule Details */}
-          {currentStep === 2 && (
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="startDateTime">Start Date & Time</Label>
-                <Controller
-                  name="startDateTime"
-                  control={control}
-                  rules={{ required: true }}
-                  render={({ field }) => (
-                    <DatePickerWithTime
-                      date={
-                        field.value instanceof Date
-                          ? field.value
-                          : field.value
-                            ? new Date(field.value)
-                            : undefined
-                      }
-                      onSelect={(date) => field.onChange(date)}
-                      className="mt-1"
-                    />
-                  )}
-                />
-                {errors.startDateTime && (
-                  <p className="text-destructive mt-1 text-xs">
-                    Start date and time is required
-                  </p>
+              <ScrollArea className="bg-muted/30 max-h-[60vh] min-h-0 flex-1 rounded-lg border p-2">
+                {isLoadingDetails ? (
+                  <div className="space-y-3 p-2">
+                    <Skeleton className="h-28 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                    <Skeleton className="h-24 w-full rounded-lg" />
+                  </div>
+                ) : selectedInvoice ? (
+                  <Card>
+                    <CardContent className="space-y-4 p-4">
+                      <div className="space-y-3">
+                        <div>
+                          <p className="text-muted-foreground text-xs">
+                            Client
+                          </p>
+                          <p className="font-medium">
+                            {selectedClient?.clientName || "Unknown"}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground text-xs">
+                            Job Title
+                          </p>
+                          <p className="font-medium">
+                            {selectedInvoice.jobTitle || jobTitle}
+                          </p>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <MapPinIcon className="text-muted-foreground h-4 w-4 shrink-0" />
+                          <div>
+                            <p className="text-muted-foreground text-xs">
+                              Location
+                            </p>
+                            <p className="text-sm">
+                              {selectedInvoice.location || location}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div>
+                        <p className="text-muted-foreground mb-2 text-xs font-medium">
+                          Line Items
+                        </p>
+                        <div className="space-y-2">
+                          {selectedInvoice.items?.map(
+                            (item: any, idx: number) => (
+                              <div
+                                key={idx}
+                                className="bg-muted/50 flex justify-between rounded px-3 py-2 text-sm"
+                              >
+                                <span className="flex-1">
+                                  {item.description}
+                                </span>
+                                <span className="font-medium">
+                                  {formatAmount(item.price || 0)}
+                                </span>
+                              </div>
+                            ),
+                          )}
+                        </div>
+                      </div>
+
+                      <Separator />
+
+                      <div className="space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            Subtotal
+                          </span>
+                          <span>{formatAmount(totals.subtotal)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">
+                            GST (5%)
+                          </span>
+                          <span>{formatAmount(totals.gst)}</span>
+                        </div>
+                        <div className="flex items-center justify-between border-t pt-2 font-semibold">
+                          <span>Total</span>
+                          <span className="text-lg">
+                            {formatAmount(totals.total)}
+                          </span>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <div className="text-muted-foreground flex h-40 items-center justify-center">
+                    Source invoice details not found.
+                  </div>
                 )}
-              </div>
-
-              <div>
-                <Label>Assign Technicians</Label>
-                <TechnicianSelect
-                  control={control}
-                  name="assignedTechnicians"
-                  technicians={technicians}
-                  placeholder="Select technicians..."
-                  required={true}
-                  error={errors.assignedTechnicians}
-                />
-                {errors.assignedTechnicians && (
-                  <p className="text-destructive mt-1 text-xs">
-                    At least one technician must be assigned
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <Label htmlFor="technicianNotes">Notes (Optional)</Label>
-                <Textarea
-                  {...register("technicianNotes")}
-                  placeholder="Add any notes for technicians..."
-                  className="mt-1"
-                  rows={3}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="accessInstructions">
-                  Access Instructions (Optional)
-                </Label>
-                <Textarea
-                  {...register("accessInstructions")}
-                  placeholder="Parking, entry codes, etc..."
-                  className="mt-1"
-                  rows={2}
-                />
-              </div>
+              </ScrollArea>
             </div>
-          )}
 
-          {/* Step 3: Confirm */}
-          {currentStep === 3 && (
-            <div className="space-y-4">
-              <div className="bg-muted/50 rounded-lg border p-4">
-                <h3 className="mb-3 font-medium">Summary</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Job Title:</span>
-                    <span className="font-medium">{watch("jobTitle")}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Location:</span>
-                    <span className="font-medium">{watch("location")}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Date & Time:</span>
-                    <span className="font-medium">
-                      {startDateTime
-                        ? format(
-                            new Date(startDateTime),
-                            "MMM d, yyyy 'at' h:mm a",
-                          )
-                        : "Not set"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Technicians:</span>
-                    <div className="flex gap-1">
-                      {assignedTechnicians.map((techId) => {
-                        const tech = technicians.find((t) => t.id === techId);
-                        return (
-                          <Badge key={techId} variant="secondary">
-                            {tech?.name || "Unknown"}
-                          </Badge>
-                        );
-                      })}
+            <div className="flex min-h-0 w-1/2 flex-col">
+              <Card className="border-primary/30 from-primary/5 to-primary/10 mb-4 shrink-0 bg-gradient-to-br">
+                <CardContent className="p-4">
+                  <h4 className="text-primary mb-3 text-xs font-semibold tracking-wide uppercase">
+                    New Schedule
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex items-center gap-2">
+                      <CalendarIcon className="text-primary h-5 w-5" />
+                      <div>
+                        <p className="text-muted-foreground text-xs">Date</p>
+                        <p className="font-medium">
+                          {formatDateWithWeekdayUTC(selectedDate)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ClockIcon className="text-primary h-5 w-5" />
+                      <div>
+                        <p className="text-muted-foreground text-xs">Time</p>
+                        <p className="font-medium">
+                          {startDateTime
+                            ? format(new Date(startDateTime), "h:mm a")
+                            : "Not set"}
+                        </p>
+                      </div>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="rounded-lg border border-green-500/50 bg-green-500/10 p-4">
-                <div className="flex items-center gap-2">
-                  <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
-                  <p className="text-sm font-medium">
-                    Ready to create schedule. Click &ldquo;Create
-                    Schedule&rdquo; to confirm.
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
+                  <div className="mt-4">
+                    <Label htmlFor="startDateTime">Start Date & Time</Label>
+                    <Controller
+                      name="startDateTime"
+                      control={control}
+                      rules={{ required: true }}
+                      render={({ field }) => (
+                        <DatePickerWithTime
+                          date={
+                            field.value instanceof Date
+                              ? field.value
+                              : field.value
+                                ? new Date(field.value)
+                                : undefined
+                          }
+                          onSelect={(date) => field.onChange(date)}
+                          className="mt-1"
+                        />
+                      )}
+                    />
+                    {errors.startDateTime && (
+                      <p className="text-destructive mt-1 text-xs">
+                        Start date and time is required
+                      </p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between border-t pt-4">
-            <div>
-              {currentStep > 1 && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleBack}
-                  disabled={isSubmitting}
-                >
-                  <ChevronLeft className="mr-1 h-4 w-4" />
-                  Back
-                </Button>
-              )}
-            </div>
-            <div className="flex gap-2">
-              {currentStep < 3 ? (
-                <Button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={
-                    (currentStep === 1 && !canProceedToStep2) ||
-                    (currentStep === 2 && !canProceedToStep3) ||
-                    isSubmitting
-                  }
-                >
-                  Next
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Button>
-              ) : (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Creating...
-                    </>
-                  ) : (
-                    "Create Schedule"
+              <Card className="mb-4 shrink-0">
+                <CardContent className="p-4">
+                  <h4 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+                    Assign Technicians
+                  </h4>
+                  <TechnicianSelect
+                    control={control}
+                    name="assignedTechnicians"
+                    technicians={technicians}
+                    placeholder="Select technicians..."
+                    required={true}
+                    error={errors.assignedTechnicians}
+                  />
+                  {errors.assignedTechnicians && (
+                    <p className="text-destructive mt-1 text-xs">
+                      At least one technician must be assigned
+                    </p>
                   )}
-                </Button>
-              )}
+                </CardContent>
+              </Card>
+
+              <ScrollArea className="min-h-0 flex-1 rounded-lg border p-4">
+                <h4 className="text-muted-foreground mb-3 text-xs font-semibold tracking-wide uppercase">
+                  Optional Notes
+                </h4>
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="technicianNotes">Technician Notes</Label>
+                    <Textarea
+                      id="technicianNotes"
+                      {...register("technicianNotes")}
+                      placeholder="Add notes for technicians..."
+                      className="mt-1"
+                      rows={3}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="accessInstructions">
+                      Access Instructions
+                    </Label>
+                    <Textarea
+                      id="accessInstructions"
+                      {...register("accessInstructions")}
+                      placeholder="Parking, entry codes, etc..."
+                      className="mt-1"
+                      rows={3}
+                    />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div>
+                      <Label htmlFor="contactName">On-site Contact Name</Label>
+                      <Input
+                        id="contactName"
+                        {...register("onSiteContact.name")}
+                        placeholder="Name"
+                        className="mt-1"
+                      />
+                    </div>
+                    <div>
+                      <Label htmlFor="contactPhone">
+                        On-site Contact Phone
+                      </Label>
+                      <Input
+                        id="contactPhone"
+                        {...register("onSiteContact.phone")}
+                        placeholder="Phone"
+                        className="mt-1"
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="contactEmail">On-site Contact Email</Label>
+                    <Input
+                      id="contactEmail"
+                      {...register("onSiteContact.email")}
+                      placeholder="Email (optional)"
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </ScrollArea>
             </div>
           </div>
+
+          <Separator className="my-4" />
+
+          <DialogFooter className="shrink-0 gap-2 sm:gap-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!canSubmit}
+              className="min-w-[180px] bg-green-600 hover:bg-green-700"
+            >
+              {isSubmitting ? (
+                <span className="flex items-center gap-2">
+                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                  Creating...
+                </span>
+              ) : (
+                <span className="flex items-center gap-2">
+                  <CheckCircleIcon className="h-4 w-4" />
+                  Confirm & Create Invoice + Job
+                </span>
+              )}
+            </Button>
+          </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

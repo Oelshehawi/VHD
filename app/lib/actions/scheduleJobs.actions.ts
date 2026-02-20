@@ -33,6 +33,7 @@ import { getScheduleDisplayDateKey } from "../utils/scheduleDayUtils";
 import { runAutoScheduleInsightAnalysis } from "./scheduleInsights.actions";
 import { requireAdmin } from "../auth/utils";
 import { resolveHistoricalDurationForLocation } from "../historicalServiceDuration.data";
+import { resolveHistoricalDurationForScheduleCreate } from "../scheduleHistoricalDuration";
 
 // Configure Cloudinary
 cloudinary.config({
@@ -269,14 +270,14 @@ export async function createSchedule(
     // Assign the payrollPeriod ID to the schedule
     scheduleData.payrollPeriod = payrollPeriod?._id || "";
 
-    // Populate historical duration from past completions at same location
-    if (scheduleData.historicalServiceDurationMinutes == null) {
-      const historicalMinutes = await resolveHistoricalDurationForLocation(
-        scheduleData.location,
-      );
-      if (historicalMinutes != null) {
-        scheduleData.historicalServiceDurationMinutes = historicalMinutes;
-      }
+    // Populate historical duration with centralized precedence.
+    const historicalMinutes = await resolveHistoricalDurationForScheduleCreate({
+      location: scheduleData.location,
+      explicitHistoricalServiceDurationMinutes:
+        scheduleData.historicalServiceDurationMinutes,
+    });
+    if (historicalMinutes != null) {
+      scheduleData.historicalServiceDurationMinutes = historicalMinutes;
     }
 
     const newSchedule = new Schedule(scheduleData);
@@ -892,9 +893,7 @@ export async function getTechnicians() {
         const meta = user.publicMetadata || {};
         const str = (key: string): string | null => {
           const v = meta[key];
-          return typeof v === "string" && v.trim().length > 0
-            ? v.trim()
-            : null;
+          return typeof v === "string" && v.trim().length > 0 ? v.trim() : null;
         };
         return {
           id: user.id,
@@ -903,8 +902,7 @@ export async function getTechnicians() {
             [user.firstName, user.lastName].filter(Boolean).join(" ") ||
             user.primaryEmailAddress?.emailAddress ||
             user.id,
-          hourlyRate:
-            typeof meta.hourlyRate === "number" ? meta.hourlyRate : 0,
+          hourlyRate: typeof meta.hourlyRate === "number" ? meta.hourlyRate : 0,
           depotAddress: str("depotAddress"),
           phoneNumber: str("phoneNumber"),
           email: str("email"),
@@ -994,9 +992,7 @@ export async function updateTechnicianDetails(
     if (payload.email !== undefined)
       updates.email = normalizeStr(payload.email);
     if (payload.emergencyContactName !== undefined)
-      updates.emergencyContactName = normalizeStr(
-        payload.emergencyContactName,
-      );
+      updates.emergencyContactName = normalizeStr(payload.emergencyContactName);
     if (payload.emergencyContactPhone !== undefined)
       updates.emergencyContactPhone = normalizeStr(
         payload.emergencyContactPhone,

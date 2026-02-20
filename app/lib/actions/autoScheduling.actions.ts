@@ -34,7 +34,7 @@ import {
   toUtcDateFromParts,
 } from "../utils/datePartsUtils";
 import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
-import { resolveHistoricalDurationForLocation } from "../historicalServiceDuration.data";
+import { resolveHistoricalDurationForScheduleCreate } from "../scheduleHistoricalDuration";
 
 const postmark = require("postmark");
 
@@ -611,10 +611,10 @@ export async function confirmSchedulingRequest(
         .join("\n"),
     };
 
-    // Populate historical duration from past completions at same location
-    const historicalMinutes = await resolveHistoricalDurationForLocation(
-      invoice.location,
-    );
+    // Populate historical duration with centralized precedence.
+    const historicalMinutes = await resolveHistoricalDurationForScheduleCreate({
+      location: invoice.location,
+    });
     if (historicalMinutes != null) {
       (scheduleData as any).historicalServiceDurationMinutes =
         historicalMinutes;
@@ -1002,9 +1002,11 @@ export async function confirmSchedulingWithInvoice(
         .join("\n"),
     };
 
-    // Populate historical duration from past completions at same location
-    const historicalMinutes2 = await resolveHistoricalDurationForLocation(
-      sourceInvoice.location,
+    // Populate historical duration with centralized precedence.
+    const historicalMinutes2 = await resolveHistoricalDurationForScheduleCreate(
+      {
+        location: sourceInvoice.location,
+      },
     );
     if (historicalMinutes2 != null) {
       (scheduleData as any).historicalServiceDurationMinutes =

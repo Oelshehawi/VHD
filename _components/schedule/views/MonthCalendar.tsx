@@ -49,6 +49,16 @@ function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
 }
 
+function formatDurationMinutes(minutes?: number): string {
+  if (typeof minutes !== "number" || !Number.isFinite(minutes)) return "N/A";
+  return `${Math.round(minutes)} min`;
+}
+
+function formatScheduleHours(hours?: number): string {
+  if (typeof hours !== "number" || !Number.isFinite(hours)) return "N/A";
+  return `${hours}h`;
+}
+
 const ScheduleMap = dynamic(() => import("../map/ScheduleMap"), {
   ssr: false,
 });
@@ -354,8 +364,7 @@ export default function MonthCalendar({
                     onClick={() => handleDaySelect(day)}
                     className={cn(
                       "mb-1 flex h-7 w-7 items-center justify-center rounded-full text-sm font-medium transition-colors",
-                      isTodayDate &&
-                        "bg-primary text-primary-foreground",
+                      isTodayDate && "bg-primary text-primary-foreground",
                       !isTodayDate &&
                         isCurrentMonth &&
                         "text-foreground hover:bg-muted",
@@ -495,30 +504,56 @@ export default function MonthCalendar({
                             text: "text-destructive",
                           };
                       return (
-                        <button
-                          key={job._id as string}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleJobClick(job);
-                          }}
-                          className={cn(
-                            "flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded border-l-2 px-1.5 py-0.5 text-left text-[11px] transition-opacity hover:opacity-80",
-                            color.bg,
-                            color.border,
-                          )}
-                        >
-                          <span
-                            className={cn(
-                              "min-w-0 flex-1 truncate font-medium",
-                              color.text,
-                            )}
-                          >
-                            {job.jobTitle}
-                          </span>
-                          <span className="text-muted-foreground flex-shrink-0 text-[10px]">
-                            {format(new Date(job.startDateTime), "h:mm a")}
-                          </span>
-                        </button>
+                        <Tooltip key={job._id as string}>
+                          <TooltipTrigger asChild>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleJobClick(job);
+                              }}
+                              className={cn(
+                                "flex w-full min-w-0 cursor-pointer items-center gap-1.5 rounded border-l-2 px-1.5 py-0.5 text-left text-[11px] transition-opacity hover:opacity-80",
+                                color.bg,
+                                color.border,
+                              )}
+                            >
+                              <span
+                                className={cn(
+                                  "min-w-0 flex-1 truncate font-medium",
+                                  color.text,
+                                )}
+                              >
+                                {job.jobTitle}
+                              </span>
+                              <span className="text-muted-foreground flex-shrink-0 text-[10px]">
+                                {format(new Date(job.startDateTime), "h:mm a")}
+                              </span>
+                            </button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top" className="max-w-xs">
+                            <div className="space-y-1 text-xs">
+                              <div className="font-semibold">
+                                {job.jobTitle}
+                              </div>
+                              <div className="text-muted-foreground">
+                                Actual Duration:{" "}
+                                {formatDurationMinutes(
+                                  job.actualServiceDurationMinutes,
+                                )}
+                              </div>
+                              <div className="text-muted-foreground">
+                                Historical Estimate:{" "}
+                                {formatDurationMinutes(
+                                  job.historicalServiceDurationMinutes,
+                                )}
+                              </div>
+                              <div className="text-muted-foreground">
+                                Schedule Hours: {formatScheduleHours(job.hours)}
+                              </div>
+                            </div>
+                          </TooltipContent>
+                        </Tooltip>
                       );
                     })}
                     {dayJobs.length > 3 && (
@@ -618,8 +653,7 @@ export default function MonthCalendar({
                         onClick={() => handleDaySelect(day)}
                         className={classNames(
                           "group relative flex w-full touch-manipulation flex-col items-center justify-start py-1.5 transition-all duration-200 sm:py-2 md:py-3",
-                          isToday(day) &&
-                            "text-primary font-semibold",
+                          isToday(day) && "text-primary font-semibold",
                           !isToday(day) &&
                             isSameMonth(day, firstDayCurrentMonth) &&
                             "text-foreground",

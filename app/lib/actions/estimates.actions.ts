@@ -17,7 +17,7 @@ import {
   parseDateParts,
   toUtcDateFromParts,
 } from "../utils/datePartsUtils";
-import { resolveHistoricalDurationForLocation } from "../historicalServiceDuration.data";
+import { resolveHistoricalDurationForScheduleCreate } from "../scheduleHistoricalDuration";
 
 // Type for creating new estimates (without _id)
 type CreateEstimateData = Omit<
@@ -343,10 +343,11 @@ export async function convertEstimateToClientAndInvoice(
           localDate.getSeconds(),
         ),
       );
-      // Populate historical duration from past completions at same location
-      const historicalMinutes = await resolveHistoricalDurationForLocation(
-        invoiceData.location.trim(),
-      );
+      // Populate historical duration with centralized precedence.
+      const historicalMinutes =
+        await resolveHistoricalDurationForScheduleCreate({
+          location: invoiceData.location.trim(),
+        });
 
       const newSchedule = new Schedule({
         invoiceRef: newInvoice._id,

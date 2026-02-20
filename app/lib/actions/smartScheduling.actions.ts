@@ -22,7 +22,7 @@ import {
   calculateNextReminderDateFromParts,
 } from "../utils/datePartsUtils";
 import { createJobsDueSoonForInvoice } from "./actions";
-import { resolveHistoricalDurationForLocation } from "../historicalServiceDuration.data";
+import { resolveHistoricalDurationForScheduleCreate } from "../scheduleHistoricalDuration";
 
 export interface ScheduleJobSearchResult {
   _id: string;
@@ -73,6 +73,30 @@ export interface DaySchedulingOption {
   existingJobs: SerializedScheduleJob[];
   projectedSegments: SerializedTravelSegment[];
   isPartial: boolean;
+}
+
+export interface SmartScheduleJobDetails {
+  invoice: {
+    _id: string;
+    invoiceId: string;
+    jobTitle: string;
+    location: string;
+    dateIssued?: string;
+    dateDue?: string;
+    status?: string;
+    items: Array<{
+      description: string;
+      details?: string;
+      price: number;
+    }>;
+  };
+  client: {
+    _id: string;
+    clientName: string;
+    email?: string;
+    phoneNumber?: string;
+    prefix?: string;
+  };
 }
 
 function pad2(value: number): string {
@@ -447,13 +471,11 @@ export async function analyzeSchedulingOptions(
 }
 
 /**
- * Get full Schedule job details including invoice and client info
+ * Get plain, client-safe source details needed by smart-scheduling confirmation UI.
  */
-export async function getScheduleJobDetails(scheduleJobId: string): Promise<{
-  schedule: ScheduleType;
-  invoice: any;
-  client: any;
-} | null> {
+export async function getScheduleJobDetails(
+  scheduleJobId: string,
+): Promise<SmartScheduleJobDetails | null> {
   await connectMongo();
 
   const schedule = (await Schedule.findById(scheduleJobId).lean()) as any;
@@ -472,9 +494,39 @@ export async function getScheduleJobDetails(scheduleJobId: string): Promise<{
   }
 
   return {
-    schedule: schedule as unknown as ScheduleType,
-    invoice,
-    client,
+    invoice: {
+      _id: String((invoice as any)._id || ""),
+      invoiceId: String((invoice as any).invoiceId || ""),
+      jobTitle: String((invoice as any).jobTitle || ""),
+      location: String((invoice as any).location || ""),
+      dateIssued: (invoice as any).dateIssued
+        ? new Date((invoice as any).dateIssued).toISOString()
+        : undefined,
+      dateDue: (invoice as any).dateDue
+        ? new Date((invoice as any).dateDue).toISOString()
+        : undefined,
+      status: (invoice as any).status
+        ? String((invoice as any).status)
+        : undefined,
+      items: Array.isArray((invoice as any).items)
+        ? (invoice as any).items.map((item: any) => ({
+            description: String(item?.description || ""),
+            details: item?.details ? String(item.details) : undefined,
+            price: Number(item?.price || 0),
+          }))
+        : [],
+    },
+    client: {
+      _id: String((client as any)._id || ""),
+      clientName: String((client as any).clientName || "Unknown"),
+      email: (client as any).email ? String((client as any).email) : undefined,
+      phoneNumber: (client as any).phoneNumber
+        ? String((client as any).phoneNumber)
+        : undefined,
+      prefix: (client as any).prefix
+        ? String((client as any).prefix)
+        : undefined,
+    },
   };
 }
 
@@ -626,9 +678,11 @@ export async function createInvoiceAndScheduleFromJob(
       onSiteContact: onSiteContact || undefined,
     };
 
-    const historicalMinutes = await resolveHistoricalDurationForLocation(
-      scheduleData.location,
-    );
+    const historicalMinutes = await resolveHistoricalDurationForScheduleCreate({
+      location: scheduleData.location,
+      sourceHistoricalServiceDurationMinutes:
+        sourceSchedule.historicalServiceDurationMinutes,
+    });
     if (historicalMinutes != null) {
       scheduleData.historicalServiceDurationMinutes = historicalMinutes;
     }

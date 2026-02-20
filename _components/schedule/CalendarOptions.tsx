@@ -691,18 +691,15 @@ const Header = ({
                 <Plus className="h-4 w-4 sm:mr-1.5" />
                 <span className="hidden sm:inline">Add Job</span>
               </Button>
-              {/* Smart Schedule Button - Month view only */}
-              {currentView === "month" && (
-                <Button
-                  onClick={() => setSmartScheduleOpen(true)}
-                  size="sm"
-                  variant="outline"
-                  className="flex-shrink-0"
-                >
-                  <Wand2 className="h-4 w-4 sm:mr-1.5" />
-                  <span className="hidden sm:inline">Smart Schedule</span>
-                </Button>
-              )}
+              <Button
+                onClick={() => setSmartScheduleOpen(true)}
+                size="sm"
+                variant="outline"
+                className="flex-shrink-0"
+              >
+                <Wand2 className="h-4 w-4 sm:mr-1.5" />
+                <span className="hidden sm:inline">Smart Schedule</span>
+              </Button>
             </>
           )}
         </div>
@@ -796,22 +793,16 @@ const Header = ({
       />
 
       {/* Smart Schedule Panel */}
-      {currentView === "month" && (
-        <SmartSchedulePanel
-          open={smartScheduleOpen}
-          onOpenChange={setSmartScheduleOpen}
-          technicians={technicians}
-          currentMonth={
-            currentDate
-              ? startOfMonth(parse(currentDate, "yyyy-MM-dd", new Date()))
-              : startOfMonth(new Date())
-          }
-          onScheduleCreated={() => {
-            // Refresh the schedule data
-            window.location.reload();
-          }}
-        />
-      )}
+      <SmartSchedulePanel
+        open={smartScheduleOpen}
+        onOpenChange={setSmartScheduleOpen}
+        technicians={technicians}
+        currentMonth={startOfMonth(monthAnchorDate)}
+        onScheduleCreated={() => {
+          // Refresh the schedule data
+          window.location.reload();
+        }}
+      />
     </div>
   );
 };
