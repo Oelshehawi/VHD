@@ -451,8 +451,13 @@ export const isTextKey = (evt: any) => {
 };
 
 export const formatPhoneNumber = (phoneNumber: any) => {
-  if (phoneNumber.length === 10) {
-    return `(${phoneNumber.substring(0, 3)})-${phoneNumber.substring(3, 6)}-${phoneNumber.substring(6)}`;
+  if (!phoneNumber) return phoneNumber;
+  const digits = String(phoneNumber).replace(/\D/g, "");
+  if (digits.length === 11 && digits.startsWith("1")) {
+    return `${digits.substring(1, 4)}-${digits.substring(4, 7)}-${digits.substring(7)}`;
+  }
+  if (digits.length === 10) {
+    return `${digits.substring(0, 3)}-${digits.substring(3, 6)}-${digits.substring(6)}`;
   }
   return phoneNumber;
 };

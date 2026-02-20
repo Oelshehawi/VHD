@@ -338,6 +338,7 @@ export async function fetchFilteredClients(
 ) {
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
   const escapedQuery = escapeRegex(query);
+  const queryDigits = query.replace(/\D/g, "");
 
   // Build archive filter
   let archiveFilter = {};
@@ -348,18 +349,21 @@ export async function fetchFilteredClients(
   }
   // If "all" or undefined, don't filter by archive status
 
+  const orConditions: Record<string, unknown>[] = [
+    { clientName: { $regex: escapedQuery, $options: "i" } },
+    { email: { $regex: escapedQuery, $options: "i" } },
+    { phoneNumber: { $regex: escapedQuery, $options: "i" } },
+    { notes: { $regex: escapedQuery, $options: "i" } },
+  ];
+  // If query contains digits, also match stripped digits against phone numbers
+  if (queryDigits.length > 0) {
+    orConditions.push({
+      phoneNumber: { $regex: escapeRegex(queryDigits), $options: "i" },
+    });
+  }
+
   let matchQuery = {
-    $and: [
-      archiveFilter,
-      {
-        $or: [
-          { clientName: { $regex: escapedQuery, $options: "i" } },
-          { email: { $regex: escapedQuery, $options: "i" } },
-          { phoneNumber: { $regex: escapedQuery, $options: "i" } },
-          { notes: { $regex: escapedQuery, $options: "i" } },
-        ],
-      },
-    ],
+    $and: [archiveFilter, { $or: orConditions }],
   };
 
   const sortQuery = { clientName: Number(sort) };
@@ -387,6 +391,7 @@ export async function fetchClientsPages(
   await connectMongo();
   try {
     const escapedQuery = escapeRegex(query);
+    const queryDigits = query.replace(/\D/g, "");
 
     // Build archive filter
     let archiveFilter = {};
@@ -396,18 +401,20 @@ export async function fetchClientsPages(
       archiveFilter = { isArchived: true };
     }
 
+    const orConditions: Record<string, unknown>[] = [
+      { clientName: { $regex: escapedQuery, $options: "i" } },
+      { email: { $regex: escapedQuery, $options: "i" } },
+      { phoneNumber: { $regex: escapedQuery, $options: "i" } },
+      { notes: { $regex: escapedQuery, $options: "i" } },
+    ];
+    if (queryDigits.length > 0) {
+      orConditions.push({
+        phoneNumber: { $regex: escapeRegex(queryDigits), $options: "i" },
+      });
+    }
+
     const matchQuery = {
-      $and: [
-        archiveFilter,
-        {
-          $or: [
-            { clientName: { $regex: escapedQuery, $options: "i" } },
-            { email: { $regex: escapedQuery, $options: "i" } },
-            { phoneNumber: { $regex: escapedQuery, $options: "i" } },
-            { notes: { $regex: escapedQuery, $options: "i" } },
-          ],
-        },
-      ],
+      $and: [archiveFilter, { $or: orConditions }],
     };
 
     const countResult = await Client.aggregate([

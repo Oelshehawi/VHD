@@ -3,6 +3,7 @@ import { FaPenSquare, FaUser, FaUsers } from "react-icons/fa";
 import DeleteModal from "../DeleteModal";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import { fetchFilteredClients } from "../../app/lib/data";
+import { formatPhoneNumber } from "../../app/lib/utils";
 import {
   Table,
   TableBody,
@@ -80,7 +81,7 @@ const ClientTable = async ({
                           {client.email}
                         </div>
                         <div className="text-muted-foreground truncate text-sm">
-                          {client.phoneNumber}
+                          {formatPhoneNumber(client.phoneNumber)}
                         </div>
                       </div>
                     </div>
@@ -89,7 +90,7 @@ const ClientTable = async ({
                     <div className="truncate">{client.email}</div>
                   </TableCell>
                   <TableCell className="text-muted-foreground hidden min-w-[150px] lg:table-cell">
-                    <div className="truncate">{client.phoneNumber}</div>
+                    <div className="truncate">{formatPhoneNumber(client.phoneNumber)}</div>
                   </TableCell>
                   <TableCell className="w-[100px]">
                     <div className="flex items-center justify-center gap-2">
