@@ -113,15 +113,8 @@ export async function createJobsDueSoonForInvoice(
 export async function deleteInvoice(invoiceId: string) {
   await connectMongo();
   try {
-    const job = await JobsDueSoon.findOne({ invoiceId: invoiceId.toString() });
-    if (job) {
-      console.log(`Deleting JobsDueSoon record for invoice ${invoiceId}`);
-      await JobsDueSoon.findByIdAndDelete(job._id);
-    }
-    const scheduledJob = await Schedule.findOne({ invoiceRef: invoiceId });
-    if (scheduledJob) {
-      await Schedule.findByIdAndDelete(scheduledJob._id);
-    }
+    await JobsDueSoon.deleteMany({ invoiceId: invoiceId.toString() });
+    await Schedule.deleteMany({ invoiceRef: invoiceId });
     await Invoice.findByIdAndDelete(invoiceId);
   } catch (error) {
     console.error("Database Error:", error);
@@ -131,6 +124,8 @@ export async function deleteInvoice(invoiceId: string) {
   }
   revalidatePath("/database");
   revalidatePath("/dashboard");
+  revalidatePath("/invoices");
+  revalidatePath("/schedule");
 }
 
 export async function createInvoice(
