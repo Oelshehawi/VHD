@@ -121,9 +121,27 @@ export default function ScheduleWizardModal({
         return;
       }
 
-      const startDateTimeISO = data.startDateTime instanceof Date
-        ? data.startDateTime.toISOString()
-        : new Date(data.startDateTime).toISOString();
+      const dateValue =
+        data.startDateTime instanceof Date
+          ? data.startDateTime
+          : new Date(data.startDateTime);
+      if (Number.isNaN(dateValue.getTime())) {
+        toast.error("Invalid start date and time");
+        return;
+      }
+
+      // Match Add/Edit Schedule convention: preserve picked wall-clock time as UTC components.
+      const normalizedStartDateTime = new Date(
+        Date.UTC(
+          dateValue.getFullYear(),
+          dateValue.getMonth(),
+          dateValue.getDate(),
+          dateValue.getHours(),
+          dateValue.getMinutes(),
+          dateValue.getSeconds(),
+        ),
+      );
+      const startDateTimeISO = normalizedStartDateTime.toISOString();
 
       const result = await createInvoiceAndScheduleFromJob(
         sourceScheduleJobId,
@@ -150,12 +168,11 @@ export default function ScheduleWizardModal({
   };
 
   const canProceedToStep2 = jobTitle && location;
-  const canProceedToStep3 =
-    startDateTime && assignedTechnicians.length > 0;
+  const canProceedToStep3 = startDateTime && assignedTechnicians.length > 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Scheduling Wizard</DialogTitle>
           <DialogDescription>
@@ -169,7 +186,7 @@ export default function ScheduleWizardModal({
           {/* Step 1: Review Invoice */}
           {currentStep === 1 && (
             <div className="space-y-4">
-              <div className="rounded-lg border bg-muted/50 p-4">
+              <div className="bg-muted/50 rounded-lg border p-4">
                 <h3 className="mb-3 font-medium">Invoice Details</h3>
                 <div className="space-y-2 text-sm">
                   <div>
@@ -179,7 +196,7 @@ export default function ScheduleWizardModal({
                       className="mt-1"
                     />
                     {errors.jobTitle && (
-                      <p className="text-destructive text-xs mt-1">
+                      <p className="text-destructive mt-1 text-xs">
                         Job title is required
                       </p>
                     )}
@@ -191,13 +208,15 @@ export default function ScheduleWizardModal({
                       className="mt-1"
                     />
                     {errors.location && (
-                      <p className="text-destructive text-xs mt-1">
+                      <p className="text-destructive mt-1 text-xs">
                         Location is required
                       </p>
                     )}
                   </div>
                   <div>
-                    <Label className="text-muted-foreground">Selected Date</Label>
+                    <Label className="text-muted-foreground">
+                      Selected Date
+                    </Label>
                     <p className="font-medium">
                       {formatDateStringUTC(selectedDate)}
                     </p>
@@ -218,14 +237,20 @@ export default function ScheduleWizardModal({
                   rules={{ required: true }}
                   render={({ field }) => (
                     <DatePickerWithTime
-                      date={field.value instanceof Date ? field.value : field.value ? new Date(field.value) : undefined}
+                      date={
+                        field.value instanceof Date
+                          ? field.value
+                          : field.value
+                            ? new Date(field.value)
+                            : undefined
+                      }
                       onSelect={(date) => field.onChange(date)}
                       className="mt-1"
                     />
                   )}
                 />
                 {errors.startDateTime && (
-                  <p className="text-destructive text-xs mt-1">
+                  <p className="text-destructive mt-1 text-xs">
                     Start date and time is required
                   </p>
                 )}
@@ -242,7 +267,7 @@ export default function ScheduleWizardModal({
                   error={errors.assignedTechnicians}
                 />
                 {errors.assignedTechnicians && (
-                  <p className="text-destructive text-xs mt-1">
+                  <p className="text-destructive mt-1 text-xs">
                     At least one technician must be assigned
                   </p>
                 )}
@@ -259,7 +284,9 @@ export default function ScheduleWizardModal({
               </div>
 
               <div>
-                <Label htmlFor="accessInstructions">Access Instructions (Optional)</Label>
+                <Label htmlFor="accessInstructions">
+                  Access Instructions (Optional)
+                </Label>
                 <Textarea
                   {...register("accessInstructions")}
                   placeholder="Parking, entry codes, etc..."
@@ -273,7 +300,7 @@ export default function ScheduleWizardModal({
           {/* Step 3: Confirm */}
           {currentStep === 3 && (
             <div className="space-y-4">
-              <div className="rounded-lg border bg-muted/50 p-4">
+              <div className="bg-muted/50 rounded-lg border p-4">
                 <h3 className="mb-3 font-medium">Summary</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex justify-between">
@@ -288,7 +315,10 @@ export default function ScheduleWizardModal({
                     <span className="text-muted-foreground">Date & Time:</span>
                     <span className="font-medium">
                       {startDateTime
-                        ? format(new Date(startDateTime), "MMM d, yyyy 'at' h:mm a")
+                        ? format(
+                            new Date(startDateTime),
+                            "MMM d, yyyy 'at' h:mm a",
+                          )
                         : "Not set"}
                     </span>
                   </div>
@@ -312,7 +342,8 @@ export default function ScheduleWizardModal({
                 <div className="flex items-center gap-2">
                   <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
                   <p className="text-sm font-medium">
-                    Ready to create schedule. Click &ldquo;Create Schedule&rdquo; to confirm.
+                    Ready to create schedule. Click &ldquo;Create
+                    Schedule&rdquo; to confirm.
                   </p>
                 </div>
               </div>
@@ -329,7 +360,7 @@ export default function ScheduleWizardModal({
                   onClick={handleBack}
                   disabled={isSubmitting}
                 >
-                  <ChevronLeft className="h-4 w-4 mr-1" />
+                  <ChevronLeft className="mr-1 h-4 w-4" />
                   Back
                 </Button>
               )}
@@ -346,13 +377,13 @@ export default function ScheduleWizardModal({
                   }
                 >
                   Next
-                  <ChevronRight className="h-4 w-4 ml-1" />
+                  <ChevronRight className="ml-1 h-4 w-4" />
                 </Button>
               ) : (
                 <Button type="submit" disabled={isSubmitting}>
                   {isSubmitting ? (
                     <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       Creating...
                     </>
                   ) : (

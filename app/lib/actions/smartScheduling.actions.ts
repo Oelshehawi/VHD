@@ -1,5 +1,6 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import connectMongo from "../connect";
 import {
   JobsDueSoon,
@@ -13,7 +14,6 @@ import type {
   TravelTimeRequest,
 } from "../typeDefinitions";
 import { getBatchTravelTimeSummaries } from "./travelTime.actions";
-import { getScheduleDisplayDateKey } from "../utils/scheduleDayUtils";
 import { format, parse } from "date-fns";
 import {
   parseDateParts,
@@ -22,7 +22,7 @@ import {
   calculateNextReminderDateFromParts,
 } from "../utils/datePartsUtils";
 import { createJobsDueSoonForInvoice } from "./actions";
-import { createSchedule } from "./scheduleJobs.actions";
+import { resolveHistoricalDurationForLocation } from "../historicalServiceDuration.data";
 
 export interface ScheduleJobSearchResult {
   _id: string;
@@ -73,6 +73,37 @@ export interface DaySchedulingOption {
   existingJobs: SerializedScheduleJob[];
   projectedSegments: SerializedTravelSegment[];
   isPartial: boolean;
+}
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function getStoredScheduleDateKey(value: Date | string): string {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return "";
+    return value.toISOString().slice(0, 10);
+  }
+
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/);
+  if (isoMatch) {
+    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+  }
+
+  const localeMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (localeMatch) {
+    const month = Number.parseInt(localeMatch[1] || "0", 10);
+    const day = Number.parseInt(localeMatch[2] || "0", 10);
+    const year = Number.parseInt(localeMatch[3] || "0", 10);
+    return `${year}-${pad2(month)}-${pad2(day)}`;
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+  return parsed.toISOString().slice(0, 10);
 }
 
 /**
@@ -196,7 +227,7 @@ export async function analyzeSchedulingOptions(
     Date.UTC(parsedMonth.year, parsedMonth.month, 0, 23, 59, 59, 999),
   );
 
-  const todayDateKey = getScheduleDisplayDateKey(new Date());
+  const todayDateKey = new Date().toISOString().slice(0, 10);
   const totalDaysInMonth = new Date(
     Date.UTC(parsedMonth.year, parsedMonth.month, 0),
   ).getUTCDate();
@@ -205,7 +236,7 @@ export async function analyzeSchedulingOptions(
     const dayDate = new Date(
       Date.UTC(parsedMonth.year, parsedMonth.month - 1, day, 0, 0, 0, 0),
     );
-    const dateKey = getScheduleDisplayDateKey(dayDate);
+    const dateKey = dayDate.toISOString().slice(0, 10);
     if (dateKey < todayDateKey) continue;
 
     // Exclude Friday (5) and Saturday (6)
@@ -227,7 +258,8 @@ export async function analyzeSchedulingOptions(
   const jobsByDate = new Map<string, ScheduleType[]>();
   const serializedJobsByDate = new Map<string, SerializedScheduleJob[]>();
   schedules.forEach((schedule: any) => {
-    const dateKey = getScheduleDisplayDateKey(schedule.startDateTime);
+    const dateKey = getStoredScheduleDateKey(schedule.startDateTime);
+    if (!dateKey) return;
     if (!jobsByDate.has(dateKey)) {
       jobsByDate.set(dateKey, []);
       serializedJobsByDate.set(dateKey, []);
@@ -568,41 +600,45 @@ export async function createInvoiceAndScheduleFromJob(
       dateDue,
     );
 
-    // Create schedule
-    const scheduleData: ScheduleType = {
-      _id: "" as any,
-      invoiceRef: newInvoice._id.toString(),
-      jobTitle: sourceInvoice.jobTitle,
-      location: sourceInvoice.location,
-      startDateTime: startDateTime,
-      assignedTechnicians,
+    const parsedStartDateTime = new Date(startDateTime);
+    if (Number.isNaN(parsedStartDateTime.getTime())) {
+      return { success: false, error: "Invalid startDateTime format" };
+    }
+
+    // Create schedule using the same direct-save pattern as auto scheduling requests.
+    const scheduleData: any = {
+      invoiceRef: newInvoice._id,
+      jobTitle: String(sourceInvoice.jobTitle || "").trim(),
+      location: String(sourceInvoice.location || "").trim(),
+      startDateTime: parsedStartDateTime,
+      assignedTechnicians: Array.isArray(assignedTechnicians)
+        ? assignedTechnicians
+        : [],
       confirmed: false,
       hours: sourceSchedule.actualServiceDurationMinutes
         ? Math.ceil(sourceSchedule.actualServiceDurationMinutes / 60)
         : sourceSchedule.historicalServiceDurationMinutes
           ? Math.ceil(sourceSchedule.historicalServiceDurationMinutes / 60)
           : sourceSchedule.hours || 4,
-      payrollPeriod: "",
       deadRun: false,
       technicianNotes: technicianNotes || "",
       accessInstructions: accessInstructions || "",
       onSiteContact: onSiteContact || undefined,
-    } as ScheduleType;
+    };
 
-    await createSchedule(scheduleData, "system");
+    const historicalMinutes = await resolveHistoricalDurationForLocation(
+      scheduleData.location,
+    );
+    if (historicalMinutes != null) {
+      scheduleData.historicalServiceDurationMinutes = historicalMinutes;
+    }
 
-    // Fetch the created schedule to get its ID
-    const createdSchedule = (await Schedule.findOne({
-      invoiceRef: newInvoice._id,
-      startDateTime: startDateTime,
-    })
-      .sort({ _id: -1 })
-      .lean()) as any;
+    const createdSchedule = new Schedule(scheduleData as ScheduleType);
+    await createdSchedule.save();
 
-    const scheduleId =
-      createdSchedule && !Array.isArray(createdSchedule)
-        ? String(createdSchedule._id)
-        : undefined;
+    const scheduleId = createdSchedule._id.toString();
+
+    revalidatePath("/schedule");
 
     return {
       success: true,
