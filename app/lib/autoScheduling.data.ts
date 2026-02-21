@@ -1069,6 +1069,9 @@ export async function getAvailableDays(
       ) {
         const travelMinutes = cachedTravelByHash.get(row.prevTravelHash) || 0;
         if (reqBlockedStart < row.prevJobEndMinutes + travelMinutes) {
+          const arrivalDelayMinutes = Math.ceil(
+            row.prevJobEndMinutes + travelMinutes - reqBlockedStart,
+          );
           if (AUTO_SCHEDULING_DEBUG) {
             logAutoSchedulingDebug(
               "blocked-prev-travel-gap",
@@ -1079,6 +1082,7 @@ export async function getAvailableDays(
                 requestedStartMinutes: reqBlockedStart,
                 prevJobLocation: row.prevJobLocation || null,
                 requestedLocation: normalizedRequestedLocation,
+                arrivalDelayMinutes,
               },
               row.date,
             );
@@ -1088,6 +1092,7 @@ export async function getAvailableDays(
             available: false,
             conflictReason:
               "Not enough travel time from previous job (cached route)",
+            arrivalDelayMinutes,
           };
         }
       }
@@ -1125,6 +1130,9 @@ export async function getAvailableDays(
       ) {
         const travelMinutes = cachedTravelByHash.get(row.nextTravelHash) || 0;
         if (row.nextJobStartMinutes < reqBlockedEnd + travelMinutes) {
+          const arrivalDelayMinutes = Math.ceil(
+            reqBlockedEnd + travelMinutes - row.nextJobStartMinutes,
+          );
           if (AUTO_SCHEDULING_DEBUG) {
             logAutoSchedulingDebug(
               "blocked-next-travel-gap",
@@ -1135,6 +1143,7 @@ export async function getAvailableDays(
                 requestedEndMinutes: reqBlockedEnd,
                 nextJobLocation: row.nextJobLocation || null,
                 requestedLocation: normalizedRequestedLocation,
+                arrivalDelayMinutes,
               },
               row.date,
             );
@@ -1144,6 +1153,7 @@ export async function getAvailableDays(
             available: false,
             conflictReason:
               "Not enough travel time before next job (cached route)",
+            arrivalDelayMinutes,
           };
         }
       }

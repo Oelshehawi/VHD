@@ -771,6 +771,7 @@ export interface DayAvailability {
   date: string; // YYYY-MM-DD format
   available: boolean;
   conflictReason?: string; // e.g., "Fully booked", "Technicians busy"
+  arrivalDelayMinutes?: number; // minutes late if travel-gap conflict
 }
 
 export interface ClientSchedulingPattern {

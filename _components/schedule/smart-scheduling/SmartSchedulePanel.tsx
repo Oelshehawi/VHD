@@ -200,8 +200,9 @@ export default function SmartSchedulePanel({
               Smart Scheduling
             </SheetTitle>
             <SheetDescription>
-              Search for any job and find the best day to schedule a new version
-              based on drive time optimization.
+              Search for any job and find the best day to schedule based on
+              drive time optimization. Toggle to &quot;Late Arrival&quot; to
+              review not-recommended options.
             </SheetDescription>
           </SheetHeader>
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Calendar, Car } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Calendar, Car, Clock } from "lucide-react";
 import { Badge } from "../../ui/badge";
 import { ScrollArea } from "../../ui/scroll-area";
 import { Card, CardContent } from "../../ui/card";
@@ -31,6 +31,8 @@ function getColorClass(minutes: number): string {
   return "text-red-600 dark:text-red-400";
 }
 
+type TabValue = "optimal" | "late";
+
 export default function DayRankingView({
   options,
   onSchedule,
@@ -40,6 +42,17 @@ export default function DayRankingView({
 }: DayRankingViewProps) {
   const [previewOption, setPreviewOption] =
     useState<DaySchedulingOption | null>(null);
+  const [activeTab, setActiveTab] = useState<TabValue>("optimal");
+
+  const hasDelayDays = useMemo(
+    () => options.some((o) => !o.feasible),
+    [options],
+  );
+
+  const filteredOptions = useMemo(() => {
+    if (activeTab === "optimal") return options.filter((o) => o.feasible);
+    return options.filter((o) => !o.feasible);
+  }, [options, activeTab]);
 
   return (
     <>
@@ -47,40 +60,86 @@ export default function DayRankingView({
         <div className="flex items-center justify-between">
           <h3 className="font-semibold">Best Scheduling Options</h3>
           <p className="text-muted-foreground text-sm">
-            Ranked by least total drive time
+            {activeTab === "optimal"
+              ? "Ranked by least total drive time"
+              : "Late-arrival days only"}
           </p>
         </div>
 
+        {hasDelayDays && (
+          <div className="flex gap-1 rounded-lg border p-1">
+            <button
+              type="button"
+              onClick={() => setActiveTab("optimal")}
+              className={cn(
+                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                activeTab === "optimal"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Optimal
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("late")}
+              className={cn(
+                "flex-1 rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+                activeTab === "late"
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Late Arrival
+            </button>
+          </div>
+        )}
+
         <ScrollArea className="h-[400px] rounded-md border">
           <div className="space-y-2 p-3">
-            {options.map((option, index) => {
-              const isBest = index === 0;
+            {filteredOptions.map((option, index) => {
+              const isBest = index === 0 && option.feasible;
 
               return (
                 <Card
                   key={option.date}
-                  className="cursor-pointer transition-all hover:bg-muted/50"
+                  className="hover:bg-muted/50 cursor-pointer transition-all"
                   onClick={() => setPreviewOption(option)}
                 >
                   <CardContent className="p-3">
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0 flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                        <div className="mb-1 flex items-center gap-2">
+                          <Calendar className="text-muted-foreground h-3.5 w-3.5" />
                           <span className="text-sm font-medium">
                             {option.dateFormatted}
                           </span>
                           {isBest && (
                             <Badge
                               variant="default"
-                              className="text-[10px] px-1.5 py-0"
+                              className="px-1.5 py-0 text-[10px]"
                             >
                               Best
                             </Badge>
                           )}
+                          {option.arrivalDelayMinutes != null &&
+                            option.arrivalDelayMinutes > 0 && (
+                              <Badge
+                                variant="outline"
+                                className={cn(
+                                  "gap-0.5 px-1.5 py-0 text-[10px]",
+                                  option.arrivalDelayMinutes >= 30
+                                    ? "border-red-300 text-red-600 dark:border-red-700 dark:text-red-400"
+                                    : "border-amber-300 text-amber-600 dark:border-amber-700 dark:text-amber-400",
+                                )}
+                              >
+                                <Clock className="h-2.5 w-2.5" />~
+                                {option.arrivalDelayMinutes}min late
+                              </Badge>
+                            )}
                         </div>
 
-                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                        <div className="text-muted-foreground flex items-center gap-3 text-xs">
                           <span>
                             {option.existingJobsCount} job
                             {option.existingJobsCount !== 1 ? "s" : ""}

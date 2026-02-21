@@ -81,6 +81,8 @@ export interface DaySchedulingOption {
   existingJobs: SerializedScheduleJob[];
   projectedSegments: SerializedTravelSegment[];
   isPartial: boolean;
+  feasible: boolean;
+  arrivalDelayMinutes?: number;
 }
 
 interface AnalyzeSchedulingOptionsArgs {
@@ -374,14 +376,26 @@ export async function analyzeSchedulingOptions(
     undefined,
     0,
   );
-  const unavailableDateKeys = new Set(
-    availabilityRows.filter((row) => !row.available).map((row) => row.date),
-  );
+  // Separate hard conflicts (skip entirely) from soft conflicts (include with delay)
+  const hardUnavailableDateKeys = new Set<string>();
+  const arrivalDelayByDate = new Map<string, number>();
+
+  for (const row of availabilityRows) {
+    if (!row.available) {
+      if (row.arrivalDelayMinutes != null && row.arrivalDelayMinutes > 0) {
+        // Soft conflict: arrival delay — include in results
+        arrivalDelayByDate.set(row.date, row.arrivalDelayMinutes);
+      } else {
+        // Hard conflict: overlap, weekend, past, drive limit, unknown
+        hardUnavailableDateKeys.add(row.date);
+      }
+    }
+  }
 
   // Calculate current travel times for each day
   const currentTravelRequests: TravelTimeRequest[] = [];
   for (const dateKey of dayKeys) {
-    if (unavailableDateKeys.has(dateKey)) {
+    if (hardUnavailableDateKeys.has(dateKey)) {
       continue;
     }
     const dayJobs = jobsByDate.get(dateKey) || [];
@@ -414,7 +428,7 @@ export async function analyzeSchedulingOptions(
   const projectedTravelRequests: TravelTimeRequest[] = [];
 
   for (const dateKey of dayKeys) {
-    if (unavailableDateKeys.has(dateKey)) {
+    if (hardUnavailableDateKeys.has(dateKey)) {
       continue;
     }
     const dayJobs = jobsByDate.get(dateKey) || [];
@@ -495,7 +509,7 @@ export async function analyzeSchedulingOptions(
 
   // Build options with rankings
   const options: DaySchedulingOption[] = dayKeys
-    .filter((dateKey) => !unavailableDateKeys.has(dateKey))
+    .filter((dateKey) => !hardUnavailableDateKeys.has(dateKey))
     .map((dateKey) => {
       const current = currentTravelByDate.get(dateKey) || { minutes: 0, km: 0 };
       const projected = projectedByDate.get(dateKey) || {
@@ -539,11 +553,14 @@ export async function analyzeSchedulingOptions(
         existingJobs: serializedJobsByDate.get(dateKey) || [],
         projectedSegments: projected.segments,
         isPartial: projected.isPartial,
+        feasible: !arrivalDelayByDate.has(dateKey),
+        arrivalDelayMinutes: arrivalDelayByDate.get(dateKey),
       };
     });
 
-  // Sort by projected total travel time (least total first), then by existing jobs count
+  // Sort: feasible days first, then by projected total travel time, then by job count
   options.sort((a, b) => {
+    if (a.feasible !== b.feasible) return a.feasible ? -1 : 1;
     if (a.projectedTotalTravelMinutes !== b.projectedTotalTravelMinutes) {
       return a.projectedTotalTravelMinutes - b.projectedTotalTravelMinutes;
     }
