@@ -17,6 +17,10 @@ import MobileTabInterface from "../../../_components/dashboard/MobileTabInterfac
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
 import UrgentAttention from "../../../_components/dashboard/UrgentAttention";
 
+
+export const dynamic = "force-dynamic";
+
+
 const MONTHS = [
   "January",
   "February",
