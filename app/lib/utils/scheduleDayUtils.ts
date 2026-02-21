@@ -12,12 +12,35 @@
  * This changes ordering only. Date grouping stays on the stored schedule date.
  */
 export const SERVICE_DAY_CUTOFF_HOUR = 3;
+export const BUSINESS_TIME_ZONE = "America/Vancouver";
 export const SERVICE_DAY_HOUR_ORDER = [
   ...Array.from({ length: 24 - SERVICE_DAY_CUTOFF_HOUR }, (_, idx) => {
     return idx + SERVICE_DAY_CUTOFF_HOUR;
   }),
   ...Array.from({ length: SERVICE_DAY_CUTOFF_HOUR }, (_, idx) => idx),
 ];
+
+const BUSINESS_DATE_KEY_FORMATTER = new Intl.DateTimeFormat("en-US", {
+  timeZone: BUSINESS_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+export function getBusinessDateKey(
+  value: Date | string | number = new Date(),
+): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const parts = BUSINESS_DATE_KEY_FORMATTER.formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  if (!year || !month || !day) return "";
+  return `${year}-${month}-${day}`;
+}
 
 function parseScheduleDate(value: Date | string): Date {
   if (value instanceof Date) {

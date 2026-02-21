@@ -21,9 +21,14 @@ import {
   calculateDateDueFromParts,
   calculateNextReminderDateFromParts,
 } from "../utils/datePartsUtils";
+import {
+  getBusinessDateKey,
+  getScheduleDisplayDateKey,
+} from "../utils/scheduleDayUtils";
 import { createJobsDueSoonForInvoice } from "./actions";
 import { resolveHistoricalDurationForScheduleCreate } from "../scheduleHistoricalDuration";
 import { createSchedule } from "./scheduleJobs.actions";
+import { getAvailableDays } from "../autoScheduling.data";
 
 export interface ScheduleJobSearchResult {
   _id: string;
@@ -64,6 +69,8 @@ export interface SerializedTravelSegment {
 export interface DaySchedulingOption {
   date: string;
   dateFormatted: string;
+  proposedStartDateTime: string;
+  proposedDurationMinutes: number;
   existingJobsCount: number;
   currentTotalTravelMinutes: number;
   currentTotalTravelKm: number;
@@ -74,6 +81,18 @@ export interface DaySchedulingOption {
   existingJobs: SerializedScheduleJob[];
   projectedSegments: SerializedTravelSegment[];
   isPartial: boolean;
+}
+
+interface AnalyzeSchedulingOptionsArgs {
+  scheduleJobId: string;
+  newJobLocation: string;
+  newJobTitle: string;
+  depotAddress: string | null;
+  startHour?: number;
+  startMinute?: number;
+  durationMinutes?: number;
+  lookaheadDays?: number;
+  startDateKey?: string;
 }
 
 export interface SmartScheduleJobDetails {
@@ -98,37 +117,6 @@ export interface SmartScheduleJobDetails {
     phoneNumber?: string;
     prefix?: string;
   };
-}
-
-function pad2(value: number): string {
-  return String(value).padStart(2, "0");
-}
-
-function getStoredScheduleDateKey(value: Date | string): string {
-  if (value instanceof Date) {
-    if (Number.isNaN(value.getTime())) return "";
-    return value.toISOString().slice(0, 10);
-  }
-
-  const raw = String(value || "").trim();
-  if (!raw) return "";
-
-  const isoMatch = raw.match(/^(\d{4})-(\d{2})-(\d{2})(?:$|T|\s)/);
-  if (isoMatch) {
-    return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
-  }
-
-  const localeMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-  if (localeMatch) {
-    const month = Number.parseInt(localeMatch[1] || "0", 10);
-    const day = Number.parseInt(localeMatch[2] || "0", 10);
-    const year = Number.parseInt(localeMatch[3] || "0", 10);
-    return `${year}-${pad2(month)}-${pad2(day)}`;
-  }
-
-  const parsed = new Date(raw);
-  if (Number.isNaN(parsed.getTime())) return "";
-  return parsed.toISOString().slice(0, 10);
 }
 
 /**
@@ -225,43 +213,80 @@ export async function searchScheduleJobs(
 }
 
 /**
- * Analyze scheduling options for a Schedule job across a month
+ * Analyze scheduling options for a Schedule job across a rolling forward window.
  * Returns ranked day suggestions based on drive time impact
  */
 export async function analyzeSchedulingOptions(
-  scheduleJobId: string,
-  monthDate: string, // YYYY-MM-DD format
-  newJobLocation: string,
-  newJobTitle: string,
-  depotAddress: string | null,
-  startHour: number = 8,
-  startMinute: number = 0,
-  durationMinutes: number = 240,
+  args: AnalyzeSchedulingOptionsArgs,
 ): Promise<DaySchedulingOption[]> {
   await connectMongo();
 
-  const parsedMonth = parseDateParts(monthDate);
-  if (!parsedMonth) {
+  const {
+    scheduleJobId,
+    newJobLocation,
+    newJobTitle,
+    depotAddress,
+    startHour = 8,
+    startMinute = 0,
+    durationMinutes = 240,
+    lookaheadDays = 90,
+    startDateKey,
+  } = args;
+
+  const todayDateKey = getBusinessDateKey(new Date());
+  if (!todayDateKey) return [];
+
+  const requestedStartDateKey =
+    startDateKey && parseDateParts(startDateKey) ? startDateKey : todayDateKey;
+  const effectiveStartDateKey =
+    requestedStartDateKey < todayDateKey ? todayDateKey : requestedStartDateKey;
+
+  const parsedStart = parseDateParts(effectiveStartDateKey);
+  if (!parsedStart) {
     return [];
   }
 
-  const monthStart = new Date(
-    Date.UTC(parsedMonth.year, parsedMonth.month - 1, 1, 0, 0, 0, 0),
+  const normalizedLookaheadDays = Number.isFinite(lookaheadDays)
+    ? Math.max(1, Math.min(365, Math.round(lookaheadDays)))
+    : 90;
+
+  const rangeStart = new Date(
+    Date.UTC(
+      parsedStart.year,
+      parsedStart.month - 1,
+      parsedStart.day,
+      0,
+      0,
+      0,
+      0,
+    ),
   );
-  const monthEnd = new Date(
-    Date.UTC(parsedMonth.year, parsedMonth.month, 0, 23, 59, 59, 999),
+  const rangeEnd = new Date(
+    Date.UTC(
+      parsedStart.year,
+      parsedStart.month - 1,
+      parsedStart.day + normalizedLookaheadDays - 1,
+      23,
+      59,
+      59,
+      999,
+    ),
   );
 
-  const todayDateKey = new Date().toISOString().slice(0, 10);
-  const totalDaysInMonth = new Date(
-    Date.UTC(parsedMonth.year, parsedMonth.month, 0),
-  ).getUTCDate();
   const dayKeys: string[] = [];
-  for (let day = 1; day <= totalDaysInMonth; day += 1) {
+  for (let offset = 0; offset < normalizedLookaheadDays; offset += 1) {
     const dayDate = new Date(
-      Date.UTC(parsedMonth.year, parsedMonth.month - 1, day, 0, 0, 0, 0),
+      Date.UTC(
+        parsedStart.year,
+        parsedStart.month - 1,
+        parsedStart.day + offset,
+        0,
+        0,
+        0,
+        0,
+      ),
     );
-    const dateKey = dayDate.toISOString().slice(0, 10);
+    const dateKey = getScheduleDisplayDateKey(dayDate);
     if (dateKey < todayDateKey) continue;
 
     // Exclude Friday (5) and Saturday (6)
@@ -271,11 +296,15 @@ export async function analyzeSchedulingOptions(
     dayKeys.push(dateKey);
   }
 
-  // Fetch all scheduled jobs in the month
+  if (dayKeys.length === 0) {
+    return [];
+  }
+
+  // Fetch all scheduled jobs in the selected forward range
   const schedules = await Schedule.find({
     startDateTime: {
-      $gte: monthStart,
-      $lte: monthEnd,
+      $gte: rangeStart,
+      $lte: rangeEnd,
     },
   }).lean();
 
@@ -283,7 +312,7 @@ export async function analyzeSchedulingOptions(
   const jobsByDate = new Map<string, ScheduleType[]>();
   const serializedJobsByDate = new Map<string, SerializedScheduleJob[]>();
   schedules.forEach((schedule: any) => {
-    const dateKey = getStoredScheduleDateKey(schedule.startDateTime);
+    const dateKey = getScheduleDisplayDateKey(schedule.startDateTime);
     if (!dateKey) return;
     if (!jobsByDate.has(dateKey)) {
       jobsByDate.set(dateKey, []);
@@ -319,10 +348,42 @@ export async function analyzeSchedulingOptions(
     Number.isFinite(parsedDuration) && parsedDuration > 0
       ? Math.min(24 * 60, Math.round(parsedDuration))
       : 240;
+  const normalizedStartHour = Number.isFinite(startHour)
+    ? Math.min(23, Math.max(0, Math.round(startHour)))
+    : 8;
+  const normalizedStartMinute = Number.isFinite(startMinute)
+    ? Math.min(59, Math.max(0, Math.round(startMinute)))
+    : 0;
+
+  // Use the shared auto-scheduling availability engine so feasibility is
+  // consistent everywhere: overlap + service buffer + travel to prev/next jobs.
+  const rangeEndDateKey = getScheduleDisplayDateKey(rangeEnd);
+  if (!rangeEndDateKey) {
+    return [];
+  }
+
+  const availabilityRows = await getAvailableDays(
+    effectiveStartDateKey,
+    rangeEndDateKey,
+    {
+      hour: normalizedStartHour,
+      minute: normalizedStartMinute,
+    },
+    estimatedDurationMinutes / 60,
+    newJobLocation,
+    undefined,
+    0,
+  );
+  const unavailableDateKeys = new Set(
+    availabilityRows.filter((row) => !row.available).map((row) => row.date),
+  );
 
   // Calculate current travel times for each day
   const currentTravelRequests: TravelTimeRequest[] = [];
   for (const dateKey of dayKeys) {
+    if (unavailableDateKeys.has(dateKey)) {
+      continue;
+    }
     const dayJobs = jobsByDate.get(dateKey) || [];
 
     if (dayJobs.length > 0) {
@@ -353,6 +414,9 @@ export async function analyzeSchedulingOptions(
   const projectedTravelRequests: TravelTimeRequest[] = [];
 
   for (const dateKey of dayKeys) {
+    if (unavailableDateKeys.has(dateKey)) {
+      continue;
+    }
     const dayJobs = jobsByDate.get(dateKey) || [];
     const dayParts = parseDateParts(dateKey);
     if (!dayParts) {
@@ -364,8 +428,8 @@ export async function analyzeSchedulingOptions(
         dayParts.year,
         dayParts.month - 1,
         dayParts.day,
-        startHour,
-        startMinute,
+        normalizedStartHour,
+        normalizedStartMinute,
         0,
         0,
       ),
@@ -430,35 +494,53 @@ export async function analyzeSchedulingOptions(
   });
 
   // Build options with rankings
-  const options: DaySchedulingOption[] = dayKeys.map((dateKey) => {
-    const current = currentTravelByDate.get(dateKey) || { minutes: 0, km: 0 };
-    const projected = projectedByDate.get(dateKey) || {
-      minutes: 0,
-      km: 0,
-      segments: [],
-      isPartial: false,
-    };
-    const extraMinutes = Math.round(projected.minutes - current.minutes);
-    const extraKm = Math.round((projected.km - current.km) * 10) / 10;
+  const options: DaySchedulingOption[] = dayKeys
+    .filter((dateKey) => !unavailableDateKeys.has(dateKey))
+    .map((dateKey) => {
+      const current = currentTravelByDate.get(dateKey) || { minutes: 0, km: 0 };
+      const projected = projectedByDate.get(dateKey) || {
+        minutes: 0,
+        km: 0,
+        segments: [],
+        isPartial: false,
+      };
+      const dayParts = parseDateParts(dateKey);
+      const proposedStartDateTime = dayParts
+        ? new Date(
+            Date.UTC(
+              dayParts.year,
+              dayParts.month - 1,
+              dayParts.day,
+              normalizedStartHour,
+              normalizedStartMinute,
+              0,
+              0,
+            ),
+          ).toISOString()
+        : new Date(`${dateKey}T08:00:00.000Z`).toISOString();
+      const extraMinutes = Math.round(projected.minutes - current.minutes);
+      const extraKm = Math.round((projected.km - current.km) * 10) / 10;
 
-    return {
-      date: dateKey,
-      dateFormatted: format(
-        parse(dateKey, "yyyy-MM-dd", new Date()),
-        "EEEE, MMM d",
-      ),
-      existingJobsCount: (serializedJobsByDate.get(dateKey) || []).length,
-      currentTotalTravelMinutes: Math.round(current.minutes),
-      currentTotalTravelKm: Math.round(current.km * 10) / 10,
-      projectedTotalTravelMinutes: Math.round(projected.minutes),
-      projectedTotalTravelKm: Math.round(projected.km * 10) / 10,
-      extraTravelMinutes: extraMinutes,
-      extraTravelKm: extraKm,
-      existingJobs: serializedJobsByDate.get(dateKey) || [],
-      projectedSegments: projected.segments,
-      isPartial: projected.isPartial,
-    };
-  });
+      return {
+        date: dateKey,
+        dateFormatted: format(
+          parse(dateKey, "yyyy-MM-dd", new Date()),
+          "EEEE, MMM d",
+        ),
+        proposedStartDateTime,
+        proposedDurationMinutes: estimatedDurationMinutes,
+        existingJobsCount: (serializedJobsByDate.get(dateKey) || []).length,
+        currentTotalTravelMinutes: Math.round(current.minutes),
+        currentTotalTravelKm: Math.round(current.km * 10) / 10,
+        projectedTotalTravelMinutes: Math.round(projected.minutes),
+        projectedTotalTravelKm: Math.round(projected.km * 10) / 10,
+        extraTravelMinutes: extraMinutes,
+        extraTravelKm: extraKm,
+        existingJobs: serializedJobsByDate.get(dateKey) || [],
+        projectedSegments: projected.segments,
+        isPartial: projected.isPartial,
+      };
+    });
 
   // Sort by projected total travel time (least total first), then by existing jobs count
   options.sort((a, b) => {

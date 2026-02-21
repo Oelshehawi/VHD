@@ -109,6 +109,48 @@ function formatMinutes(minutes: number): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
+function formatClockFrom24Hour(hour: number, minute: number): string {
+  const normalizedHour = ((hour % 24) + 24) % 24;
+  const meridiem = normalizedHour >= 12 ? "PM" : "AM";
+  const hour12 = normalizedHour % 12 || 12;
+  return `${hour12}:${String(minute).padStart(2, "0")} ${meridiem}`;
+}
+
+function formatStoredScheduleTime(value: Date | string): string {
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) return "";
+    return formatClockFrom24Hour(value.getUTCHours(), value.getUTCMinutes());
+  }
+
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const localeMatch = raw.match(
+    /^(\d{1,2})\/(\d{1,2})\/(\d{4}),?\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i,
+  );
+  if (localeMatch) {
+    const hour12 = Number.parseInt(localeMatch[4] || "0", 10);
+    const minute = Number.parseInt(localeMatch[5] || "0", 10);
+    const period = (localeMatch[7] || "").toUpperCase();
+    let hour24 = hour12 % 12;
+    if (period === "PM") hour24 += 12;
+    return formatClockFrom24Hour(hour24, minute);
+  }
+
+  const isoMatch = raw.match(
+    /^\d{4}-\d{2}-\d{2}(?:[T\s](\d{2}):(\d{2})(?::\d{2})?)?/,
+  );
+  if (isoMatch && isoMatch[1] && isoMatch[2]) {
+    const hour = Number.parseInt(isoMatch[1], 10);
+    const minute = Number.parseInt(isoMatch[2], 10);
+    return formatClockFrom24Hour(hour, minute);
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+  return format(parsed, "h:mm a");
+}
+
 function AutoFitBounds({ positions }: { positions: [number, number][] }) {
   const map = useMap();
 
@@ -311,10 +353,9 @@ export default function ScheduleMap({
               )}
 
               {jobMarkers.map((marker) => {
-                const startDate = new Date(marker.job.startDateTime);
-                const startLabel = Number.isNaN(startDate.getTime())
-                  ? String(marker.job.startDateTime)
-                  : format(startDate, "h:mm a");
+                const startLabel = formatStoredScheduleTime(
+                  marker.job.startDateTime,
+                );
                 const assignedTechs = marker.job.assignedTechnicians
                   .map((techId) => techNameById.get(techId) || techId)
                   .join(", ");

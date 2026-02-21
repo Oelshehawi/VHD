@@ -30,6 +30,7 @@ import {
   fakeUtcStoredToRealUtcIso,
   getEffectiveServiceDurationMinutes,
   getPlanningServiceWindowMinutes,
+  PLANNING_SERVICE_BUFFER_MINUTES,
 } from "./serviceDurationRules";
 import { SERVICE_DAY_CUTOFF_HOUR } from "./utils/scheduleDayUtils";
 import { resolveHistoricalDurationForLocation } from "./historicalServiceDuration.data";
@@ -647,6 +648,7 @@ export async function getAvailableDays(
   estimatedHours: number = 4,
   requestedLocation?: string,
   requestedHistoricalServiceDurationMinutes?: number | null,
+  planningBufferMinutes?: number,
 ): Promise<DayAvailability[]> {
   await connectMongo();
 
@@ -661,6 +663,12 @@ export async function getAvailableDays(
 
     // Default time if not provided
     const reqTime = requestedTime || { hour: 9, minute: 0 };
+    const parsedPlanningBufferMinutes = Number(planningBufferMinutes);
+    const normalizedPlanningBufferMinutes =
+      Number.isFinite(parsedPlanningBufferMinutes) &&
+      parsedPlanningBufferMinutes >= 0
+        ? Math.round(parsedPlanningBufferMinutes)
+        : PLANNING_SERVICE_BUFFER_MINUTES;
 
     // Get all schedules in the date range
     const schedules = await Schedule.find({
@@ -698,6 +706,7 @@ export async function getAvailableDays(
           .historicalServiceDurationMinutes,
         scheduleHours: (schedule as any).hours,
         fallbackHours: 4,
+        bufferMinutes: normalizedPlanningBufferMinutes,
       });
 
       // Calculate time in minutes from midnight
@@ -737,6 +746,7 @@ export async function getAvailableDays(
         requestedHistoricalServiceDurationMinutes,
       scheduleHours: estimatedHours,
       fallbackHours: 4,
+      bufferMinutes: normalizedPlanningBufferMinutes,
     });
     const requestedBaseDurationMinutes = getEffectiveServiceDurationMinutes({
       actualServiceDurationMinutes: undefined,
@@ -761,6 +771,7 @@ export async function getAvailableDays(
           estimatedHours,
           requestedHistoricalServiceDurationMinutes,
           requestedLocation: normalizedRequestedLocation,
+          planningBufferMinutes: normalizedPlanningBufferMinutes,
         },
         AUTO_SCHEDULING_DEBUG_DATE || startDate,
       );

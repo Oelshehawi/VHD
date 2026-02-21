@@ -797,7 +797,6 @@ const Header = ({
         open={smartScheduleOpen}
         onOpenChange={setSmartScheduleOpen}
         technicians={technicians}
-        currentMonth={startOfMonth(monthAnchorDate)}
         onScheduleCreated={() => {
           // Refresh the schedule data
           window.location.reload();

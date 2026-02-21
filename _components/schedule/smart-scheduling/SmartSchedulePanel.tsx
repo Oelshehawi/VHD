@@ -3,8 +3,16 @@
 import { useState, useCallback, useMemo } from "react";
 import { Wand2, RefreshCw } from "lucide-react";
 import { Button } from "../../ui/button";
+import { Checkbox } from "../../ui/checkbox";
 import { Input } from "../../ui/input";
 import { Label } from "../../ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../ui/select";
 import {
   Sheet,
   SheetContent,
@@ -23,13 +31,11 @@ import type {
   ScheduleJobSearchResult,
   DaySchedulingOption,
 } from "../../../app/lib/actions/smartScheduling.actions";
-import { format } from "date-fns";
 
 interface SmartSchedulePanelProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   technicians: { id: string; name: string; depotAddress?: string | null }[];
-  currentMonth: Date;
   onScheduleCreated?: () => void;
 }
 
@@ -58,7 +64,6 @@ export default function SmartSchedulePanel({
   open,
   onOpenChange,
   technicians,
-  currentMonth,
   onScheduleCreated,
 }: SmartSchedulePanelProps) {
   const [selectedJob, setSelectedJob] =
@@ -71,6 +76,9 @@ export default function SmartSchedulePanel({
   const [analyzedTime, setAnalyzedTime] = useState("08:00");
   const [preferredDurationMinutes, setPreferredDurationMinutes] = useState(240);
   const [analyzedDurationMinutes, setAnalyzedDurationMinutes] = useState(240);
+  const [lookaheadDays, setLookaheadDays] = useState(90);
+  const [analyzedLookaheadDays, setAnalyzedLookaheadDays] = useState(90);
+  const [includeEmptyDays, setIncludeEmptyDays] = useState(false);
 
   const depotAddress = useMemo(() => {
     return technicians.find((tech) => tech.depotAddress)?.depotAddress ?? null;
@@ -81,28 +89,29 @@ export default function SmartSchedulePanel({
       job: ScheduleJobSearchResult,
       time: string,
       durationMinutes: number,
+      selectedLookaheadDays: number,
     ) => {
       setIsAnalyzing(true);
       setDayOptions([]);
 
       try {
-        const monthDate = format(currentMonth, "yyyy-MM-dd");
         const [h, m] = time.split(":").map(Number);
 
-        const options = await analyzeSchedulingOptions(
-          job._id,
-          monthDate,
-          job.location,
-          job.jobTitle,
+        const options = await analyzeSchedulingOptions({
+          scheduleJobId: job._id,
+          newJobLocation: job.location,
+          newJobTitle: job.jobTitle,
           depotAddress,
-          h ?? 8,
-          m ?? 0,
+          startHour: h ?? 8,
+          startMinute: m ?? 0,
           durationMinutes,
-        );
+          lookaheadDays: selectedLookaheadDays,
+        });
 
         setDayOptions(options);
         setAnalyzedTime(time);
         setAnalyzedDurationMinutes(durationMinutes);
+        setAnalyzedLookaheadDays(selectedLookaheadDays);
       } catch (error) {
         console.error("Error analyzing scheduling options:", error);
         setDayOptions([]);
@@ -110,7 +119,7 @@ export default function SmartSchedulePanel({
         setIsAnalyzing(false);
       }
     },
-    [currentMonth, depotAddress],
+    [depotAddress],
   );
 
   const handleJobSelect = useCallback(
@@ -121,16 +130,27 @@ export default function SmartSchedulePanel({
       const sourceDurationMinutes = getInitialDurationMinutes(job);
       setPreferredTime(sourceTime);
       setPreferredDurationMinutes(sourceDurationMinutes);
-      await runAnalysis(job, sourceTime, sourceDurationMinutes);
+      await runAnalysis(job, sourceTime, sourceDurationMinutes, lookaheadDays);
     },
-    [runAnalysis],
+    [lookaheadDays, runAnalysis],
   );
 
   const handleReanalyze = useCallback(() => {
     if (selectedJob) {
-      runAnalysis(selectedJob, preferredTime, preferredDurationMinutes);
+      runAnalysis(
+        selectedJob,
+        preferredTime,
+        preferredDurationMinutes,
+        lookaheadDays,
+      );
     }
-  }, [selectedJob, preferredTime, preferredDurationMinutes, runAnalysis]);
+  }, [
+    selectedJob,
+    preferredTime,
+    preferredDurationMinutes,
+    lookaheadDays,
+    runAnalysis,
+  ]);
 
   const handleSchedule = useCallback((date: string) => {
     setSelectedDate(date);
@@ -155,7 +175,20 @@ export default function SmartSchedulePanel({
 
   const analysisInputsChanged =
     preferredTime !== analyzedTime ||
-    preferredDurationMinutes !== analyzedDurationMinutes;
+    preferredDurationMinutes !== analyzedDurationMinutes ||
+    lookaheadDays !== analyzedLookaheadDays;
+
+  const visibleDayOptions = useMemo(() => {
+    if (includeEmptyDays) return dayOptions;
+    return dayOptions.filter((option) => option.existingJobsCount > 0);
+  }, [dayOptions, includeEmptyDays]);
+
+  const hiddenEmptyDaysCount = useMemo(() => {
+    return dayOptions.reduce(
+      (count, option) => count + (option.existingJobsCount === 0 ? 1 : 0),
+      0,
+    );
+  }, [dayOptions]);
 
   return (
     <>
@@ -251,6 +284,28 @@ export default function SmartSchedulePanel({
                         className="w-32"
                       />
                     </div>
+                    <div className="space-y-1">
+                      <Label className="text-sm font-medium">Look Ahead</Label>
+                      <Select
+                        value={String(lookaheadDays)}
+                        onValueChange={(value) => {
+                          const parsed = Number.parseInt(value, 10);
+                          if (Number.isFinite(parsed)) {
+                            setLookaheadDays(parsed);
+                          }
+                        }}
+                      >
+                        <SelectTrigger className="w-36">
+                          <SelectValue placeholder="Select range" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="30">30 days</SelectItem>
+                          <SelectItem value="60">60 days</SelectItem>
+                          <SelectItem value="90">90 days</SelectItem>
+                          <SelectItem value="180">180 days</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                     {analysisInputsChanged && (
                       <Button
                         type="button"
@@ -267,13 +322,30 @@ export default function SmartSchedulePanel({
                     )}
                   </div>
                   <p className="text-muted-foreground text-xs">
-                    Drive times are calculated using this start time and
-                    duration.
+                    Drive times are calculated from today using this start time,
+                    duration, and look-ahead range.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className="mb-3 font-medium">Step 2: Pick a Day</h3>
+                  <div className="mb-3 flex items-center justify-between gap-3">
+                    <h3 className="font-medium">Step 2: Pick a Day</h3>
+                    <div className="flex items-center gap-2">
+                      <Checkbox
+                        id="include-empty-days"
+                        checked={includeEmptyDays}
+                        onCheckedChange={(checked) =>
+                          setIncludeEmptyDays(checked === true)
+                        }
+                      />
+                      <Label
+                        htmlFor="include-empty-days"
+                        className="text-muted-foreground cursor-pointer text-xs"
+                      >
+                        Include empty days (0 jobs)
+                      </Label>
+                    </div>
+                  </div>
                   {isAnalyzing ? (
                     <div className="flex items-center justify-center py-12">
                       <div className="text-center">
@@ -283,17 +355,24 @@ export default function SmartSchedulePanel({
                         </p>
                       </div>
                     </div>
-                  ) : dayOptions.length > 0 ? (
+                  ) : visibleDayOptions.length > 0 ? (
                     <DayRankingView
-                      options={dayOptions}
+                      options={visibleDayOptions}
                       onSchedule={handleSchedule}
                       technicians={technicians}
                       newJobLocation={selectedJob.location}
                       newJobTitle={selectedJob.jobTitle}
                     />
+                  ) : dayOptions.length > 0 && !includeEmptyDays ? (
+                    <p className="text-muted-foreground py-8 text-center text-sm">
+                      No days with existing jobs in this range.
+                      {hiddenEmptyDaysCount > 0
+                        ? ` ${hiddenEmptyDaysCount} empty day(s) are hidden.`
+                        : ""}
+                    </p>
                   ) : (
                     <p className="text-muted-foreground py-8 text-center text-sm">
-                      No scheduling options found for this month.
+                      No scheduling options found in this range.
                     </p>
                   )}
                 </div>

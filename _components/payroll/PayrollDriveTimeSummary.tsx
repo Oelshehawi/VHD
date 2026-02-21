@@ -6,6 +6,10 @@ import {
   PayrollMissingDurationJobType,
 } from "../../app/lib/typeDefinitions";
 import { formatDateFns } from "../../app/lib/utils";
+import {
+  getBusinessDateKey,
+  getScheduleDisplayDateKey,
+} from "../../app/lib/utils/scheduleDayUtils";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import {
@@ -29,16 +33,13 @@ function formatHours(value: number): string {
 function filterPastMissingJobs(
   jobs: PayrollMissingDurationJobType[],
 ): PayrollMissingDurationJobType[] {
-  const now = new Date();
-  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  const todayDateKey = getBusinessDateKey(new Date());
+  if (!todayDateKey) return jobs;
+
   return jobs.filter((job) => {
-    const jobDate = new Date(job.startDateTime);
-    const jobDateUtc = Date.UTC(
-      jobDate.getUTCFullYear(),
-      jobDate.getUTCMonth(),
-      jobDate.getUTCDate(),
-    );
-    return jobDateUtc <= todayUtc;
+    const jobDateKey = getScheduleDisplayDateKey(job.startDateTime);
+    if (!jobDateKey) return true;
+    return jobDateKey <= todayDateKey;
   });
 }
 
@@ -107,9 +108,7 @@ const PayrollDriveTimeSummary = ({
             <p className="text-muted-foreground text-xs">
               Missing Actual Duration Jobs
             </p>
-            <p className="text-lg font-semibold">
-              {filteredTotalMissing}
-            </p>
+            <p className="text-lg font-semibold">{filteredTotalMissing}</p>
           </div>
         </div>
 
