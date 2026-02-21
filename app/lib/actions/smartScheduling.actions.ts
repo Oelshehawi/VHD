@@ -23,6 +23,7 @@ import {
 } from "../utils/datePartsUtils";
 import { createJobsDueSoonForInvoice } from "./actions";
 import { resolveHistoricalDurationForScheduleCreate } from "../scheduleHistoricalDuration";
+import { createSchedule } from "./scheduleJobs.actions";
 
 export interface ScheduleJobSearchResult {
   _id: string;
@@ -657,7 +658,7 @@ export async function createInvoiceAndScheduleFromJob(
       return { success: false, error: "Invalid startDateTime format" };
     }
 
-    // Create schedule using the same direct-save pattern as auto scheduling requests.
+    // Create schedule through shared createSchedule flow for consistent side effects.
     const scheduleData: any = {
       invoiceRef: newInvoice._id,
       jobTitle: String(sourceInvoice.jobTitle || "").trim(),
@@ -687,10 +688,13 @@ export async function createInvoiceAndScheduleFromJob(
       scheduleData.historicalServiceDurationMinutes = historicalMinutes;
     }
 
-    const createdSchedule = new Schedule(scheduleData as ScheduleType);
-    await createdSchedule.save();
-
-    const scheduleId = createdSchedule._id.toString();
+    const scheduleId = await createSchedule(
+      scheduleData as ScheduleType,
+      "system:smart_scheduling",
+      {
+        source: "smart_scheduling_clone",
+      },
+    );
 
     revalidatePath("/schedule");
 

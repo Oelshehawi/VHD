@@ -196,7 +196,7 @@ const AddJob = ({
         ),
       );
       const performedBy = user?.fullName || user?.firstName || "user";
-      await createSchedule(data, performedBy);
+      await createSchedule(data, performedBy, { source: "add_job_modal" });
       onOpenChange(false);
       toast.success("Schedule has been successfully added.");
     } catch (error) {
@@ -209,13 +209,13 @@ const AddJob = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>Add New Job</DialogTitle>
-            <DialogDescription>
-              Create a new scheduled job for your calendar.
-            </DialogDescription>
-          </DialogHeader>
+      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Add New Job</DialogTitle>
+          <DialogDescription>
+            Create a new scheduled job for your calendar.
+          </DialogDescription>
+        </DialogHeader>
 
         {/* Form */}
         <form

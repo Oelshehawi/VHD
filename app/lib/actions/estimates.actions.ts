@@ -6,11 +6,11 @@ import {
   Estimate,
   Invoice,
   JobsDueSoon,
-  Schedule,
 } from "../../../models/reactDataSchema";
 import { EstimateType } from "../typeDefinitions";
 import { generateEstimateNumber } from "../estimates.data";
 import { createJobsDueSoonForInvoice } from "./actions";
+import { createSchedule } from "./scheduleJobs.actions";
 import {
   calculateDateDueFromParts,
   calculateNextReminderDateFromParts,
@@ -349,7 +349,7 @@ export async function convertEstimateToClientAndInvoice(
           location: invoiceData.location.trim(),
         });
 
-      const newSchedule = new Schedule({
+      const newSchedule = {
         invoiceRef: newInvoice._id,
         jobTitle: invoiceData.jobTitle.trim(),
         location: invoiceData.location.trim(),
@@ -360,9 +360,12 @@ export async function convertEstimateToClientAndInvoice(
         ...(historicalMinutes != null && {
           historicalServiceDurationMinutes: historicalMinutes,
         }),
-      } as any);
-      const savedSchedule = await newSchedule.save();
-      scheduleId = savedSchedule._id.toString();
+      } as any;
+      scheduleId = await createSchedule(
+        newSchedule,
+        "system:estimate_conversion",
+        { source: "estimate_conversion_optional_schedule" },
+      );
     }
 
     // Step 4: Update the estimate with the converted invoice reference

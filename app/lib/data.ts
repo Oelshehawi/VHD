@@ -330,6 +330,12 @@ export const fetchInvoiceById = async (invoiceId: string) => {
 
 const ITEMS_PER_PAGE = 9;
 
+const buildPhoneDigitsRegex = (digits: string): string => {
+  const normalized = digits.replace(/\D/g, "");
+  if (!normalized) return "";
+  return normalized.split("").join("\\D*");
+};
+
 export async function fetchFilteredClients(
   query: string,
   currentPage: number,
@@ -339,6 +345,7 @@ export async function fetchFilteredClients(
   const offset = (currentPage - 1) * ITEMS_PER_PAGE;
   const escapedQuery = escapeRegex(query);
   const queryDigits = query.replace(/\D/g, "");
+  const phoneDigitsPattern = buildPhoneDigitsRegex(queryDigits);
 
   // Build archive filter
   let archiveFilter = {};
@@ -358,7 +365,7 @@ export async function fetchFilteredClients(
   // If query contains digits, also match stripped digits against phone numbers
   if (queryDigits.length > 0) {
     orConditions.push({
-      phoneNumber: { $regex: escapeRegex(queryDigits), $options: "i" },
+      phoneNumber: { $regex: phoneDigitsPattern, $options: "i" },
     });
   }
 
@@ -392,6 +399,7 @@ export async function fetchClientsPages(
   try {
     const escapedQuery = escapeRegex(query);
     const queryDigits = query.replace(/\D/g, "");
+    const phoneDigitsPattern = buildPhoneDigitsRegex(queryDigits);
 
     // Build archive filter
     let archiveFilter = {};
@@ -409,7 +417,7 @@ export async function fetchClientsPages(
     ];
     if (queryDigits.length > 0) {
       orConditions.push({
-        phoneNumber: { $regex: escapeRegex(queryDigits), $options: "i" },
+        phoneNumber: { $regex: phoneDigitsPattern, $options: "i" },
       });
     }
 

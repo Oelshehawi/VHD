@@ -35,6 +35,7 @@ import {
 } from "../utils/datePartsUtils";
 import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
 import { resolveHistoricalDurationForScheduleCreate } from "../scheduleHistoricalDuration";
+import { createSchedule } from "./scheduleJobs.actions";
 
 const postmark = require("postmark");
 
@@ -620,9 +621,11 @@ export async function confirmSchedulingRequest(
         historicalMinutes;
     }
 
-    const schedule = new Schedule(scheduleData as unknown as ScheduleType);
-
-    await schedule.save();
+    const scheduleId = await createSchedule(
+      scheduleData as unknown as ScheduleType,
+      "system:auto_scheduling_confirm",
+      { source: "auto_scheduling_confirm_existing_invoice" },
+    );
 
     const emailResult = await sendSchedulingConfirmationEmail({
       client,
@@ -644,7 +647,7 @@ export async function confirmSchedulingRequest(
       reviewedAt: new Date(),
       reviewedBy: userId,
       reviewNotes: notes,
-      confirmedScheduleId: schedule._id,
+      confirmedScheduleId: scheduleId,
       confirmedDate: toUtcDateFromParts(confirmedParts),
       confirmedTime,
       confirmationEmailSent: emailResult.success,
@@ -652,11 +655,11 @@ export async function confirmSchedulingRequest(
     });
 
     const schedulesForInvoice = await Schedule.countDocuments({
-      invoiceRef: schedule.invoiceRef,
+      invoiceRef: scheduleData.invoiceRef,
     });
     if (schedulesForInvoice === 1) {
       await syncInvoiceDateIssuedAndJobsDueSoon({
-        invoiceId: schedule.invoiceRef.toString(),
+        invoiceId: String(scheduleData.invoiceRef),
         dateIssued: startDateTime,
       });
     }
@@ -672,7 +675,7 @@ export async function confirmSchedulingRequest(
     revalidatePath("/dashboard");
     revalidatePath("/schedule");
 
-    return { success: true, scheduleId: schedule._id.toString() };
+    return { success: true, scheduleId };
   } catch (error) {
     console.error("Error confirming scheduling request:", error);
     return { success: false, error: "Failed to confirm scheduling request" };
@@ -1013,8 +1016,11 @@ export async function confirmSchedulingWithInvoice(
         historicalMinutes2;
     }
 
-    const schedule = new Schedule(scheduleData as unknown as ScheduleType);
-    await schedule.save();
+    const scheduleId = await createSchedule(
+      scheduleData as unknown as ScheduleType,
+      "system:auto_scheduling_confirm",
+      { source: "auto_scheduling_confirm_new_invoice" },
+    );
 
     // Send confirmation email
     const emailResult = await sendSchedulingConfirmationEmail({
@@ -1037,7 +1043,7 @@ export async function confirmSchedulingWithInvoice(
       reviewedAt: new Date(),
       reviewedBy: userId,
       reviewNotes: data.internalNotes,
-      confirmedScheduleId: schedule._id,
+      confirmedScheduleId: scheduleId,
       confirmedDate: toUtcDateFromParts(confirmedParts),
       confirmedTime: data.confirmedTime,
       confirmationEmailSent: emailResult.success,
@@ -1059,7 +1065,7 @@ export async function confirmSchedulingWithInvoice(
     return {
       success: true,
       invoiceId: invoiceIdStr,
-      scheduleId: schedule._id.toString(),
+      scheduleId,
     };
   } catch (error) {
     console.error("Error confirming scheduling with invoice:", error);

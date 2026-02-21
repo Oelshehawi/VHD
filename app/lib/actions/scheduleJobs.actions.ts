@@ -217,7 +217,9 @@ export const findOrCreatePayrollPeriod = async (
 export async function createSchedule(
   scheduleData: ScheduleType,
   performedBy: string = "system",
+  options?: { source?: string },
 ) {
+  let createdScheduleId = "";
   try {
     await connectMongo();
 
@@ -282,6 +284,7 @@ export async function createSchedule(
 
     const newSchedule = new Schedule(scheduleData);
     await newSchedule.save();
+    createdScheduleId = newSchedule._id.toString();
 
     // Fetch the invoice to get the invoiceId for audit logging
     const invoice = await Invoice.findById(
@@ -305,6 +308,7 @@ export async function createSchedule(
           reason: "Schedule created for invoice",
           metadata: {
             clientId: invoice.clientId,
+            source: options?.source || "unknown",
           },
         },
         success: true,
@@ -348,6 +352,7 @@ export async function createSchedule(
   }
 
   revalidatePath("/schedule");
+  return createdScheduleId;
 }
 
 export const deleteJob = async (jobId: string) => {

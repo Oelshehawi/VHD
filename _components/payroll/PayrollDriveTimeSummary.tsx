@@ -1,6 +1,10 @@
 "use client";
 
-import { PayrollDriveMetricsType } from "../../app/lib/typeDefinitions";
+import { useMemo } from "react";
+import {
+  PayrollDriveMetricsType,
+  PayrollMissingDurationJobType,
+} from "../../app/lib/typeDefinitions";
 import { formatDateFns } from "../../app/lib/utils";
 import { Badge } from "../ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
@@ -21,9 +25,47 @@ function formatHours(value: number): string {
   return `${value.toFixed(2)}h`;
 }
 
+/** Filter out future jobs — missing actual duration is expected for jobs that haven't happened yet */
+function filterPastMissingJobs(
+  jobs: PayrollMissingDurationJobType[],
+): PayrollMissingDurationJobType[] {
+  const now = new Date();
+  const todayUtc = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return jobs.filter((job) => {
+    const jobDate = new Date(job.startDateTime);
+    const jobDateUtc = Date.UTC(
+      jobDate.getUTCFullYear(),
+      jobDate.getUTCMonth(),
+      jobDate.getUTCDate(),
+    );
+    return jobDateUtc <= todayUtc;
+  });
+}
+
 const PayrollDriveTimeSummary = ({
   payrollDriveMetrics,
 }: PayrollDriveTimeSummaryProps) => {
+  // Filter future jobs from missing duration lists
+  const filteredTechnicians = useMemo(
+    () =>
+      payrollDriveMetrics?.technicians.map((tech) => ({
+        ...tech,
+        missingActualDurationJobs: filterPastMissingJobs(
+          tech.missingActualDurationJobs,
+        ),
+      })) ?? [],
+    [payrollDriveMetrics?.technicians],
+  );
+
+  const filteredTotalMissing = useMemo(
+    () =>
+      filteredTechnicians.reduce(
+        (sum, tech) => sum + tech.missingActualDurationJobs.length,
+        0,
+      ),
+    [filteredTechnicians],
+  );
+
   if (!payrollDriveMetrics) {
     return null;
   }
@@ -66,7 +108,7 @@ const PayrollDriveTimeSummary = ({
               Missing Actual Duration Jobs
             </p>
             <p className="text-lg font-semibold">
-              {payrollDriveMetrics.totalMissingActualDurationJobs}
+              {filteredTotalMissing}
             </p>
           </div>
         </div>
@@ -87,7 +129,7 @@ const PayrollDriveTimeSummary = ({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {payrollDriveMetrics.technicians.map((technician) => (
+              {filteredTechnicians.map((technician) => (
                 <TableRow key={technician.technicianId}>
                   <TableCell className="font-medium">
                     <div className="flex flex-col gap-1">
@@ -134,13 +176,13 @@ const PayrollDriveTimeSummary = ({
           </Table>
         </div>
 
-        {payrollDriveMetrics.totalMissingActualDurationJobs > 0 && (
+        {filteredTotalMissing > 0 && (
           <div className="space-y-2">
             <p className="text-sm font-medium">
               Jobs Missing <code>actualServiceDurationMinutes</code>
             </p>
             <div className="space-y-2">
-              {payrollDriveMetrics.technicians
+              {filteredTechnicians
                 .filter(
                   (technician) =>
                     technician.missingActualDurationJobs.length > 0,

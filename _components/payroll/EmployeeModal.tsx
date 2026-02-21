@@ -91,7 +91,7 @@ const FormContent = ({
 
   return (
     <form onSubmit={handleSubmit(onSubmit)}>
-      <div className="max-h-96 space-y-4 overflow-y-auto">
+      <div className="max-h-64 space-y-3 overflow-y-auto pr-1">
         {assignedSchedules.map((schedule, index) => (
           <Card key={schedule._id.toString()}>
             <CardContent className="p-4">
@@ -169,12 +169,18 @@ const EmployeeModal = ({
   schedules,
   driveMetrics,
 }: EmployeeModalProps) => {
-  // Extract shifts assigned to the technician
+  // Extract shifts assigned to the technician, sorted most recent first
   const assignedSchedules = useMemo(
     () =>
-      schedules.filter((schedule) =>
-        schedule.assignedTechnicians.includes(technician.id),
-      ),
+      schedules
+        .filter((schedule) =>
+          schedule.assignedTechnicians.includes(technician.id),
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.startDateTime).getTime() -
+            new Date(a.startDateTime).getTime(),
+        ),
     [schedules, technician.id],
   );
 
