@@ -1032,8 +1032,21 @@ export async function getAvailableDays(
     }
 
     return dayRows.map((row) => {
+      const nextJobTravelMinutes =
+        row.nextTravelHash && cachedTravelByHash.has(row.nextTravelHash)
+          ? cachedTravelByHash.get(row.nextTravelHash)
+          : undefined;
+      const hasNextJob =
+        row.nextJobStartMinutes != null || row.nextTravelHash != null;
+
       if (!row.available) {
-        return row;
+        return {
+          date: row.date,
+          available: false,
+          conflictReason: row.conflictReason,
+          hasNextJob,
+          nextJobTravelMinutes,
+        };
       }
 
       if (
@@ -1059,6 +1072,8 @@ export async function getAvailableDays(
           available: false,
           conflictReason:
             "Travel estimate unavailable from previous job (conservative fallback)",
+          hasNextJob,
+          nextJobTravelMinutes,
         };
       }
 
@@ -1093,6 +1108,8 @@ export async function getAvailableDays(
             conflictReason:
               "Not enough travel time from previous job (cached route)",
             arrivalDelayMinutes,
+            hasNextJob,
+            nextJobTravelMinutes,
           };
         }
       }
@@ -1120,6 +1137,8 @@ export async function getAvailableDays(
           available: false,
           conflictReason:
             "Travel estimate unavailable before next job (conservative fallback)",
+          hasNextJob,
+          nextJobTravelMinutes,
         };
       }
 
@@ -1154,6 +1173,8 @@ export async function getAvailableDays(
             conflictReason:
               "Not enough travel time before next job (cached route)",
             arrivalDelayMinutes,
+            hasNextJob,
+            nextJobTravelMinutes,
           };
         }
       }
@@ -1179,6 +1200,8 @@ export async function getAvailableDays(
           available: false,
           conflictReason:
             "Travel estimate unavailable for this day (conservative fallback)",
+          hasNextJob,
+          nextJobTravelMinutes,
         };
       }
       if (existingDayTravelMinutes > DAILY_TRAVEL_LIMIT_MINUTES) {
@@ -1231,6 +1254,8 @@ export async function getAvailableDays(
             available: false,
             conflictReason:
               "Day already exceeds drive-time limit (4h) and this job is not close to that route",
+            hasNextJob,
+            nextJobTravelMinutes,
           };
         }
         if (AUTO_SCHEDULING_DEBUG) {
@@ -1290,6 +1315,8 @@ export async function getAvailableDays(
       return {
         date: row.date,
         available: true,
+        hasNextJob,
+        nextJobTravelMinutes,
       };
     });
   } catch (error) {

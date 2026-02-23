@@ -83,6 +83,8 @@ export interface DaySchedulingOption {
   isPartial: boolean;
   feasible: boolean;
   arrivalDelayMinutes?: number;
+  hasNextJob: boolean;
+  nextJobTravelMinutes?: number;
 }
 
 interface AnalyzeSchedulingOptionsArgs {
@@ -379,8 +381,16 @@ export async function analyzeSchedulingOptions(
   // Separate hard conflicts (skip entirely) from soft conflicts (include with delay)
   const hardUnavailableDateKeys = new Set<string>();
   const arrivalDelayByDate = new Map<string, number>();
+  const nextHopByDate = new Map<
+    string,
+    { hasNextJob: boolean; nextJobTravelMinutes?: number }
+  >();
 
   for (const row of availabilityRows) {
+    nextHopByDate.set(row.date, {
+      hasNextJob: row.hasNextJob === true,
+      nextJobTravelMinutes: row.nextJobTravelMinutes,
+    });
     if (!row.available) {
       if (row.arrivalDelayMinutes != null && row.arrivalDelayMinutes > 0) {
         // Soft conflict: arrival delay — include in results
@@ -519,6 +529,7 @@ export async function analyzeSchedulingOptions(
         isPartial: false,
       };
       const dayParts = parseDateParts(dateKey);
+      const nextHop = nextHopByDate.get(dateKey);
       const proposedStartDateTime = dayParts
         ? new Date(
             Date.UTC(
@@ -555,6 +566,8 @@ export async function analyzeSchedulingOptions(
         isPartial: projected.isPartial,
         feasible: !arrivalDelayByDate.has(dateKey),
         arrivalDelayMinutes: arrivalDelayByDate.get(dateKey),
+        hasNextJob: nextHop?.hasNextJob ?? false,
+        nextJobTravelMinutes: nextHop?.nextJobTravelMinutes,
       };
     });
 

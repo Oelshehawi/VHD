@@ -5,6 +5,13 @@ import { Calendar, Car, Clock } from "lucide-react";
 import { Badge } from "../../ui/badge";
 import { ScrollArea } from "../../ui/scroll-area";
 import { Card, CardContent } from "../../ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../ui/select";
 import type { DaySchedulingOption } from "../../../app/lib/actions/smartScheduling.actions";
 import { cn } from "../../../app/lib/utils";
 import RoutePreviewModal from "./RoutePreviewModal";
@@ -32,6 +39,44 @@ function getColorClass(minutes: number): string {
 }
 
 type TabValue = "optimal" | "late";
+type SortValue = "least_total_drive" | "closest_next_job" | "least_added_drive";
+
+function tieBreakDays(a: DaySchedulingOption, b: DaySchedulingOption): number {
+  if (a.existingJobsCount !== b.existingJobsCount) {
+    return b.existingJobsCount - a.existingJobsCount;
+  }
+  return a.date.localeCompare(b.date);
+}
+
+function compareDays(
+  a: DaySchedulingOption,
+  b: DaySchedulingOption,
+  sortValue: SortValue,
+): number {
+  if (sortValue === "closest_next_job") {
+    const aHasKnownNext = a.hasNextJob && a.nextJobTravelMinutes != null;
+    const bHasKnownNext = b.hasNextJob && b.nextJobTravelMinutes != null;
+    if (aHasKnownNext !== bHasKnownNext) return aHasKnownNext ? -1 : 1;
+
+    if (aHasKnownNext && bHasKnownNext) {
+      const nextDiff =
+        (a.nextJobTravelMinutes || 0) - (b.nextJobTravelMinutes || 0);
+      if (nextDiff !== 0) return nextDiff;
+    }
+
+    if (a.hasNextJob !== b.hasNextJob) return a.hasNextJob ? -1 : 1;
+  } else if (sortValue === "least_added_drive") {
+    if (a.extraTravelMinutes !== b.extraTravelMinutes) {
+      return a.extraTravelMinutes - b.extraTravelMinutes;
+    }
+  } else {
+    if (a.projectedTotalTravelMinutes !== b.projectedTotalTravelMinutes) {
+      return a.projectedTotalTravelMinutes - b.projectedTotalTravelMinutes;
+    }
+  }
+
+  return tieBreakDays(a, b);
+}
 
 export default function DayRankingView({
   options,
@@ -43,6 +88,7 @@ export default function DayRankingView({
   const [previewOption, setPreviewOption] =
     useState<DaySchedulingOption | null>(null);
   const [activeTab, setActiveTab] = useState<TabValue>("optimal");
+  const [sortBy, setSortBy] = useState<SortValue>("least_total_drive");
 
   const hasDelayDays = useMemo(
     () => options.some((o) => !o.feasible),
@@ -50,21 +96,47 @@ export default function DayRankingView({
   );
 
   const filteredOptions = useMemo(() => {
-    if (activeTab === "optimal") return options.filter((o) => o.feasible);
-    return options.filter((o) => !o.feasible);
-  }, [options, activeTab]);
+    const tabFiltered =
+      activeTab === "optimal"
+        ? options.filter((o) => o.feasible)
+        : options.filter((o) => !o.feasible);
+
+    return [...tabFiltered].sort((a, b) => compareDays(a, b, sortBy));
+  }, [options, activeTab, sortBy]);
 
   return (
     <>
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h3 className="font-semibold">Best Scheduling Options</h3>
-          <p className="text-muted-foreground text-sm">
-            {activeTab === "optimal"
-              ? "Ranked by least total drive time"
-              : "Late-arrival days only"}
-          </p>
+          <div className="flex items-center gap-2">
+            <span className="text-muted-foreground text-xs">Sort by</span>
+            <Select
+              value={sortBy}
+              onValueChange={(value) => setSortBy(value as SortValue)}
+            >
+              <SelectTrigger className="h-8 w-[180px] text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="least_total_drive">
+                  Least total drive
+                </SelectItem>
+                <SelectItem value="closest_next_job">
+                  Closest next job
+                </SelectItem>
+                <SelectItem value="least_added_drive">
+                  Least added drive
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
+        <p className="text-muted-foreground text-sm">
+          {activeTab === "optimal"
+            ? "Showing feasible days"
+            : "Late-arrival days only"}
+        </p>
 
         {hasDelayDays && (
           <div className="flex gap-1 rounded-lg border p-1">
@@ -155,6 +227,22 @@ export default function DayRankingView({
                                 option.projectedTotalTravelMinutes,
                               )}{" "}
                               total
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Clock className="h-3 w-3" />
+                            <span
+                              className={cn(
+                                option.nextJobTravelMinutes != null
+                                  ? getColorClass(option.nextJobTravelMinutes)
+                                  : "text-muted-foreground",
+                              )}
+                            >
+                              {option.hasNextJob
+                                ? option.nextJobTravelMinutes != null
+                                  ? `${formatMinutes(option.nextJobTravelMinutes)} next hop`
+                                  : "Next hop unknown"
+                                : "No next job"}
                             </span>
                           </div>
                         </div>

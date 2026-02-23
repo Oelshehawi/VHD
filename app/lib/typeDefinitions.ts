@@ -772,6 +772,8 @@ export interface DayAvailability {
   available: boolean;
   conflictReason?: string; // e.g., "Fully booked", "Technicians busy"
   arrivalDelayMinutes?: number; // minutes late if travel-gap conflict
+  hasNextJob?: boolean;
+  nextJobTravelMinutes?: number;
 }
 
 export interface ClientSchedulingPattern {
