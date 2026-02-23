@@ -12,6 +12,7 @@ import { cn } from "../../app/lib/utils";
 import { Badge } from "../../_components/ui/badge";
 import { Button } from "../../_components/ui/button";
 import TravelTimeDaySummary from "./TravelTimeDaySummary";
+import WorkTimeDaySummary from "./WorkTimeDaySummary";
 import { SERVICE_DAY_HOUR_ORDER } from "../../app/lib/utils/scheduleDayUtils";
 
 const HOURS = SERVICE_DAY_HOUR_ORDER;
@@ -54,6 +55,7 @@ const CalendarGrid = ({
           const dayJobs = selectedDayJobs(day);
           const jobCount = dayJobs.length;
           const dayKey = format(day, "yyyy-MM-dd");
+          const dayTravelSummary = travelTimeSummaries?.get(dayKey);
 
           return (
             <div
@@ -103,8 +105,15 @@ const CalendarGrid = ({
 
               {/* Travel time summary */}
               {jobCount > 0 && (
+                <WorkTimeDaySummary
+                  jobs={dayJobs}
+                  travelSummary={dayTravelSummary}
+                />
+              )}
+
+              {jobCount > 0 && (
                 <TravelTimeDaySummary
-                  summary={travelTimeSummaries?.get(format(day, "yyyy-MM-dd"))}
+                  summary={dayTravelSummary}
                   isLoading={isTravelTimeLoading}
                 />
               )}

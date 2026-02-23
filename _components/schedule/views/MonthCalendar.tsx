@@ -44,6 +44,7 @@ import {
   DialogTitle,
 } from "../../ui/dialog";
 import TravelTimeDaySummary from "../TravelTimeDaySummary";
+import WorkTimeDaySummary from "../WorkTimeDaySummary";
 
 function classNames(...classes: (string | boolean | undefined)[]) {
   return classes.filter(Boolean).join(" ");
@@ -271,6 +272,7 @@ export default function MonthCalendar({
   }, []);
 
   const selectedDayKey = format(selectedDay, "yyyy-MM-dd");
+  const selectedDayTravelSummary = travelTimeSummaries?.get(selectedDayKey);
   const mapDate = mapDateKey
     ? parse(mapDateKey, "yyyy-MM-dd", new Date())
     : null;
@@ -278,6 +280,12 @@ export default function MonthCalendar({
   const mapSummary = mapDateKey
     ? travelTimeSummaries?.get(mapDateKey)
     : undefined;
+  const dayJobsModalDateKey = dayJobsModalDate
+    ? format(dayJobsModalDate, "yyyy-MM-dd")
+    : null;
+  const dayJobsModalJobs = dayJobsModalDateKey
+    ? jobsByDate[dayJobsModalDateKey] || []
+    : [];
   const depotAddress =
     technicians.find((tech) => tech.depotAddress)?.depotAddress ?? null;
 
@@ -335,6 +343,7 @@ export default function MonthCalendar({
               const dateKey = format(day, "yyyy-MM-dd");
               const dayJobs = jobsByDate[dateKey] || [];
               const dayTimeOff = timeOffByDate[dateKey] || [];
+              const dayTravelSummary = travelTimeSummaries?.get(dateKey);
               const isCurrentMonth = isSameMonth(day, firstDayCurrentMonth);
               const isTodayDate = isToday(day);
 
@@ -391,8 +400,12 @@ export default function MonthCalendar({
                         <MapPin className="h-3 w-3" />
                       </Button>
                       <TravelTimeDaySummary
-                        summary={travelTimeSummaries?.get(dateKey)}
+                        summary={dayTravelSummary}
                         isLoading={isTravelTimeLoading}
+                      />
+                      <WorkTimeDaySummary
+                        jobs={dayJobs}
+                        travelSummary={dayTravelSummary}
                       />
                       <Badge
                         variant="secondary"
@@ -862,8 +875,14 @@ export default function MonthCalendar({
                         </Button>
                       )}
                       {selectedDayJobs.length > 0 && (
+                        <WorkTimeDaySummary
+                          jobs={selectedDayJobs}
+                          travelSummary={selectedDayTravelSummary}
+                        />
+                      )}
+                      {selectedDayJobs.length > 0 && (
                         <TravelTimeDaySummary
-                          summary={travelTimeSummaries?.get(selectedDayKey)}
+                          summary={selectedDayTravelSummary}
                           isLoading={isTravelTimeLoading}
                         />
                       )}
@@ -1004,20 +1023,28 @@ export default function MonthCalendar({
               </span>
               <div className="flex items-center gap-2">
                 {dayJobsModalDate && (
+                  <WorkTimeDaySummary
+                    jobs={dayJobsModalJobs}
+                    travelSummary={
+                      dayJobsModalDateKey
+                        ? travelTimeSummaries?.get(dayJobsModalDateKey)
+                        : undefined
+                    }
+                  />
+                )}
+                {dayJobsModalDate && (
                   <TravelTimeDaySummary
-                    summary={travelTimeSummaries?.get(
-                      format(dayJobsModalDate, "yyyy-MM-dd"),
-                    )}
+                    summary={
+                      dayJobsModalDateKey
+                        ? travelTimeSummaries?.get(dayJobsModalDateKey)
+                        : undefined
+                    }
                     isLoading={isTravelTimeLoading}
                   />
                 )}
                 {dayJobsModalDate && (
                   <Badge variant="secondary">
-                    {
-                      (jobsByDate[format(dayJobsModalDate, "yyyy-MM-dd")] || [])
-                        .length
-                    }{" "}
-                    jobs
+                    {dayJobsModalJobs.length} jobs
                   </Badge>
                 )}
               </div>
@@ -1025,10 +1052,7 @@ export default function MonthCalendar({
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto">
             <ul className="flex flex-col gap-2">
-              {(dayJobsModalDate
-                ? jobsByDate[format(dayJobsModalDate, "yyyy-MM-dd")] || []
-                : []
-              ).map((job) => (
+              {dayJobsModalJobs.map((job) => (
                 <Job
                   key={job._id as string}
                   job={job}
