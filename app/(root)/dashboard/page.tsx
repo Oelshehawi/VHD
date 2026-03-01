@@ -17,9 +17,7 @@ import MobileTabInterface from "../../../_components/dashboard/MobileTabInterfac
 import PendingAmountContainer from "../../../_components/database/PendingAmountContainer";
 import UrgentAttention from "../../../_components/dashboard/UrgentAttention";
 
-
 export const dynamic = "force-dynamic";
-
 
 const MONTHS = [
   "January",
@@ -143,7 +141,8 @@ async function ActionsFeedSection() {
     Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 0, 23, 59, 59, 999),
   );
 
-  // Fetch current month's actions - client will filter dates locally
+  // Fetch current month's actions for initial render.
+  // The client feed refetches when date filters change.
   const recentActions = await fetchRecentActionsCached(
     currentMonthStart.getTime(),
     currentMonthEnd.getTime(),

@@ -2,7 +2,11 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { DisplayAction } from "../../app/lib/dashboard.data";
+import { useQuery } from "@tanstack/react-query";
+import {
+  fetchRecentActions,
+  type DisplayAction,
+} from "../../app/lib/dashboard.data";
 import { FaCalendarAlt, FaSearch } from "react-icons/fa";
 import { format } from "date-fns";
 import type { DateRange } from "react-day-picker";
@@ -644,17 +648,73 @@ function DirectActionContent({
 }
 
 export default function ActionsFeed({ recentActions }: ActionsFeedProps) {
-  const now = new Date();
-  const defaultFrom = new Date(now.getFullYear(), now.getMonth(), 1);
-  const defaultTo = new Date(now.getFullYear(), now.getMonth() + 1, 0);
-
   // Client-side state for filters
-  const [dateRange, setDateRange] = useState<DateRange | undefined>({
-    from: defaultFrom,
-    to: defaultTo,
+  const [dateRange, setDateRange] = useState<DateRange | undefined>(() => {
+    const now = new Date();
+    return {
+      from: new Date(now.getFullYear(), now.getMonth(), 1),
+      to: new Date(now.getFullYear(), now.getMonth() + 1, 0),
+    };
   });
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
+
+  const initialQueryRange = useMemo(() => {
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    endDate.setHours(23, 59, 59, 999);
+
+    return {
+      startMs: startDate.getTime(),
+      endMs: endDate.getTime(),
+    };
+  }, []);
+
+  const queryRange = useMemo(() => {
+    const now = new Date();
+    const fallbackFrom = new Date(now.getFullYear(), now.getMonth(), 1);
+    const fallbackTo = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const fromDate = dateRange?.from ?? fallbackFrom;
+    const toDate = dateRange?.to ?? dateRange?.from ?? fallbackTo;
+
+    const startDate = new Date(fromDate);
+    startDate.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(toDate);
+    endDate.setHours(23, 59, 59, 999);
+
+    return {
+      startMs: startDate.getTime(),
+      endMs: endDate.getTime(),
+    };
+  }, [dateRange?.from, dateRange?.to]);
+
+  const {
+    data: actions = recentActions,
+    isLoading,
+    isFetching,
+    isError,
+  } = useQuery({
+    queryKey: ["recentActions", queryRange.startMs, queryRange.endMs],
+    queryFn: async () =>
+      fetchRecentActions(
+        new Date(queryRange.startMs),
+        new Date(queryRange.endMs),
+        "",
+      ),
+    initialData:
+      queryRange.startMs === initialQueryRange.startMs &&
+      queryRange.endMs === initialQueryRange.endMs
+        ? recentActions
+        : undefined,
+    placeholderData: (previousData) => previousData,
+    staleTime: 0,
+    refetchOnMount: true,
+  });
 
   // Update date range (client-side only)
   const handleDateRangeChange = (range: DateRange | undefined) => {
@@ -667,7 +727,7 @@ export default function ActionsFeed({ recentActions }: ActionsFeedProps) {
 
   // Client-side filtering by category, date range, and search query
   const filteredActions = useMemo(() => {
-    return recentActions.filter((action: DisplayAction) => {
+    return actions.filter((action: DisplayAction) => {
       // Filter by category
       if (selectedCategory !== "all") {
         if (
@@ -756,7 +816,7 @@ export default function ActionsFeed({ recentActions }: ActionsFeedProps) {
 
       return true;
     });
-  }, [recentActions, selectedCategory, dateRange, searchQuery]);
+  }, [actions, selectedCategory, dateRange, searchQuery]);
 
   return (
     <Card className="flex h-full max-h-[calc(100vh-120px)] min-h-0 flex-col gap-0 overflow-hidden py-0 shadow-sm">
@@ -856,7 +916,15 @@ export default function ActionsFeed({ recentActions }: ActionsFeedProps) {
 
       <CardContent className="flex min-h-0 flex-1 overflow-hidden p-0">
         <ScrollArea className="h-full">
-          {filteredActions.length === 0 ? (
+          {isLoading ? (
+            <div className="text-muted-foreground flex h-64 items-center justify-center p-8 text-center">
+              <p>Loading actions…</p>
+            </div>
+          ) : isError ? (
+            <div className="text-destructive flex h-64 items-center justify-center p-8 text-center">
+              <p>Failed to load actions. Please try again.</p>
+            </div>
+          ) : filteredActions.length === 0 ? (
             <div className="text-muted-foreground flex h-64 items-center justify-center p-8 text-center">
               <p>No actions found matching your criteria</p>
             </div>
@@ -872,8 +940,9 @@ export default function ActionsFeed({ recentActions }: ActionsFeedProps) {
 
       <CardFooter className="bg-muted/20 text-muted-foreground shrink-0 justify-center border-t px-4 py-2 text-xs">
         <span className="truncate">
-          Showing {filteredActions.length} of {recentActions.length} actions
+          Showing {filteredActions.length} of {actions.length} actions
         </span>
+        {isFetching ? <span className="ml-2">Updating…</span> : null}
       </CardFooter>
     </Card>
   );
