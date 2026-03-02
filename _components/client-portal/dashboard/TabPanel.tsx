@@ -16,6 +16,13 @@ import {
 import { Badge } from "../../ui/badge";
 import { ScrollArea } from "../../ui/scroll-area";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "../../ui/dialog";
+import {
   CalendarIcon,
   DocumentTextIcon,
   CreditCardIcon,
@@ -71,16 +78,27 @@ interface TabPanelProps {
   technicianDataMap: Record<string, any>;
 }
 
+interface ServiceDialogData {
+  _id: string;
+  jobTitle?: string;
+  startDateTime: Date | string;
+  location?: string;
+  dateDue?: Date | string;
+  confirmed?: boolean;
+}
+
 // Service card component for grid layout
 const ServiceGridCard = ({
   service,
   upcoming,
   onViewPhotos,
+  onOpenDetails,
   isLoadingPhotos,
 }: {
-  service: any;
+  service: ServiceDialogData;
   upcoming: boolean;
   onViewPhotos: (scheduleId: string) => void;
+  onOpenDetails: (service: ServiceDialogData) => void;
   isLoadingPhotos: boolean;
 }) => {
   const formatDateTime = (dateInput: string | Date) => {
@@ -102,7 +120,18 @@ const ServiceGridCard = ({
   };
 
   return (
-    <Card className="hover:bg-muted/30 h-full transition-colors">
+    <Card
+      className="hover:bg-muted/30 h-full cursor-pointer transition-colors"
+      role="button"
+      tabIndex={0}
+      onClick={() => onOpenDetails(service)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpenDetails(service);
+        }
+      }}
+    >
       <CardContent className="p-3 sm:p-4">
         <div className="mb-2 flex items-start justify-between gap-2">
           <h4 className="text-foreground line-clamp-1 text-sm font-medium sm:text-base">
@@ -153,7 +182,10 @@ const ServiceGridCard = ({
             variant="outline"
             size="sm"
             className="mt-3 h-8 w-full text-xs"
-            onClick={() => onViewPhotos(service._id)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onViewPhotos(service._id);
+            }}
             disabled={isLoadingPhotos}
           >
             <PhotoIcon className="mr-1.5 h-3.5 w-3.5" />
@@ -181,6 +213,9 @@ const TabPanel = ({
   const [selectedPhotos, setSelectedPhotos] = useState<PhotoType[] | null>(
     null,
   );
+  const [selectedService, setSelectedService] =
+    useState<ServiceDialogData | null>(null);
+  const [isServiceDialogOpen, setIsServiceDialogOpen] = useState(false);
   const [loadingScheduleId, setLoadingScheduleId] = useState<string | null>(
     null,
   );
@@ -202,6 +237,18 @@ const TabPanel = ({
       return bNum - aNum;
     });
   }, [allInvoices]);
+
+  const upcomingServiceIds = useMemo(
+    () =>
+      new Set(
+        upcomingServices.map((service) =>
+          typeof service._id === "string"
+            ? service._id
+            : service._id.toString(),
+        ),
+      ),
+    [upcomingServices],
+  );
 
   const normalizeServiceId = useCallback((serviceId: string | object) => {
     return typeof serviceId === "string" ? serviceId : serviceId.toString();
@@ -351,6 +398,29 @@ const TabPanel = ({
     }
   };
 
+  const getServiceStatusText = (
+    service: ServiceDialogData,
+    isUpcoming: boolean,
+  ) => {
+    if (isUpcoming) {
+      return service.confirmed ? "Confirmed" : "Scheduled";
+    }
+    return service.confirmed ? "Completed" : "Partial";
+  };
+
+  const handleOpenServiceDetails = (service: ServiceDialogData) => {
+    setSelectedService(service);
+    setIsServiceDialogOpen(true);
+  };
+
+  const handleServiceDialogOpenChange = (open: boolean) => {
+    setIsServiceDialogOpen(open);
+    if (!open) {
+      // Keep content mounted long enough for close animation to complete.
+      window.setTimeout(() => setSelectedService(null), 220);
+    }
+  };
+
   return (
     <>
       <motion.div
@@ -413,6 +483,7 @@ const TabPanel = ({
                           }}
                           upcoming={true}
                           onViewPhotos={handleViewPhotos}
+                          onOpenDetails={handleOpenServiceDetails}
                           isLoadingPhotos={
                             loadingScheduleId ===
                             normalizeServiceId(service._id)
@@ -446,6 +517,7 @@ const TabPanel = ({
                             }}
                             upcoming={false}
                             onViewPhotos={handleViewPhotos}
+                            onOpenDetails={handleOpenServiceDetails}
                             isLoadingPhotos={
                               loadingScheduleId ===
                               normalizeServiceId(service._id)
@@ -635,6 +707,71 @@ const TabPanel = ({
           />
         )}
       </motion.div>
+
+      <Dialog
+        open={isServiceDialogOpen}
+        onOpenChange={handleServiceDialogOpenChange}
+      >
+        <DialogContent className="min-h-[22rem] max-w-xl sm:min-w-[36rem]">
+          <DialogHeader>
+            <DialogTitle>
+              {selectedService?.jobTitle || "Kitchen Exhaust Service"}
+            </DialogTitle>
+            <DialogDescription>
+              Full service details for easier reading.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 text-sm">
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Service Date
+              </p>
+              <p className="text-foreground">
+                {selectedService
+                  ? formatDateTimeStringUTC(selectedService.startDateTime)
+                  : "-"}
+              </p>
+            </div>
+
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Location
+              </p>
+              <p className="text-foreground break-words">
+                {selectedService?.location || "No location provided"}
+              </p>
+            </div>
+
+            {selectedService?.dateDue && (
+              <div className="space-y-1">
+                <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                  {upcomingServiceIds.has(selectedService._id)
+                    ? "Due Date"
+                    : "Next Due Date"}
+                </p>
+                <p className="text-foreground">
+                  {formatDateStringUTC(selectedService.dateDue)}
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-1">
+              <p className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Status
+              </p>
+              <p className="text-foreground">
+                {selectedService
+                  ? getServiceStatusText(
+                      selectedService,
+                      upcomingServiceIds.has(selectedService._id),
+                    )
+                  : "-"}
+              </p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Photo Gallery Modal */}
       <PhotoGalleryModal
