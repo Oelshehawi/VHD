@@ -14,6 +14,7 @@ import { SidebarInset, SidebarProvider } from "../../_components/ui/sidebar";
 import { TopBar } from "../../_components/layout/TopBar";
 import { BreadcrumbNameProvider } from "../../_components/layout/BreadcrumbNameProvider";
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -30,6 +31,10 @@ export default async function RootLayout({
   children: React.ReactNode;
 }) {
   const { sessionClaims } = await auth();
+  const cookieStore = await cookies();
+  const sidebarStateCookie = cookieStore.get("sidebar_state")?.value;
+  const defaultSidebarOpen =
+    sidebarStateCookie === undefined ? false : sidebarStateCookie === "true";
 
   const canManage =
     (sessionClaims as any)?.isManager?.isManager === true ? true : false;
@@ -49,7 +54,10 @@ export default async function RootLayout({
               disableTransitionOnChange
             >
               <Toaster position="top-center" />
-              <SidebarProvider className="h-svh overflow-hidden">
+              <SidebarProvider
+                defaultOpen={defaultSidebarOpen}
+                className="h-svh overflow-hidden"
+              >
                 <AppSidebar
                   canManage={canManage}
                   pendingTimeOffCount={pendingTimeOffCount}

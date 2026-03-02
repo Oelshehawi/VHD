@@ -10,6 +10,7 @@ import {
   DollarSign,
   BarChart,
 } from "lucide-react";
+import Image from "next/image";
 
 import {
   Sidebar,
@@ -60,10 +61,20 @@ export function AppSidebar({
     : [];
 
   return (
-    <Sidebar {...props}>
+    <Sidebar collapsible="icon" {...props}>
       <SidebarHeader className="flex h-16 items-center justify-center border-b">
         <div className="flex items-center gap-2 font-semibold">
-          <span className="text-xl">VHD App</span>
+          <Image
+            src="/images/logo.png"
+            alt="VHD logo"
+            width={28}
+            height={28}
+            className="h-7 w-7 shrink-0 rounded-sm object-cover"
+            priority
+          />
+          <span className="text-xl group-data-[collapsible=icon]:hidden">
+            VHD App
+          </span>
         </div>
       </SidebarHeader>
       <SidebarContent>
@@ -79,12 +90,15 @@ export function AppSidebar({
                       asChild
                       isActive={active}
                       tooltip={item.title}
+                      className="hover:bg-sidebar-primary hover:text-sidebar-primary-foreground data-[state=open]:hover:bg-sidebar-primary data-[state=open]:hover:text-sidebar-primary-foreground data-[active=true]:bg-sidebar-primary data-[active=true]:text-sidebar-primary-foreground"
                     >
                       <Link href={item.url}>
                         <item.icon className="h-4 w-4" />
-                        <span>{item.title}</span>
+                        <span className="group-data-[collapsible=icon]:hidden">
+                          {item.title}
+                        </span>
                         {item.badge != null ? (
-                          <span className="bg-destructive text-destructive-foreground ml-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px]">
+                          <span className="bg-destructive text-destructive-foreground ml-auto flex h-5 w-5 items-center justify-center rounded-full text-[10px] group-data-[collapsible=icon]:hidden">
                             {item.badge}
                           </span>
                         ) : null}
