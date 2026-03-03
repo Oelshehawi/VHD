@@ -105,13 +105,11 @@ export default function ScheduleInsightsPanel({
         dateFrom,
         dateTo,
         trigger: dateFrom === dateTo ? "manual_day" : "manual_range",
-        includeAI: true,
+        includeAI: false,
       }),
     onSuccess: (result) => {
       toast.success(
-        result.aiUsed
-          ? `Analysis complete: ${result.generatedCount} insight(s) updated.`
-          : `Analysis complete in rule-only mode: ${result.generatedCount} insight(s) updated.`,
+        `Analysis complete: ${result.generatedCount} insight(s) updated.`,
       );
       queryClient.invalidateQueries({ queryKey: ["scheduleInsights"] });
       setStatus("open");
@@ -209,8 +207,8 @@ export default function ScheduleInsightsPanel({
               Schedule Insights
             </SheetTitle>
             <SheetDescription>
-              Run AI-assisted checks, review warnings, and manage insight
-              resolution.
+              Overnight turnaround alerts are future-only. Due soon unscheduled
+              also includes overdue jobs.
             </SheetDescription>
 
             <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-[1fr_1fr_auto]">
@@ -412,38 +410,13 @@ export function defaultInsightWindowFromView(params: {
   currentWeek: Date[];
   currentDate: string | null;
 }): { dateFrom: string; dateTo: string } {
-  if (params.currentView === "day") {
-    const date = toDateKey(params.currentDay);
-    return { dateFrom: date, dateTo: date };
-  }
-
-  if (params.currentView === "week") {
-    const start = params.currentWeek[0] || params.currentDay;
-    const end =
-      params.currentWeek[params.currentWeek.length - 1] || params.currentDay;
-    return {
-      dateFrom: toDateKey(start),
-      dateTo: toDateKey(end),
-    };
-  }
-
-  if (params.currentDate) {
-    const parsed = new Date(params.currentDate);
-    if (!Number.isNaN(parsed.getTime())) {
-      const firstDay = new Date(parsed.getFullYear(), parsed.getMonth(), 1);
-      const lastDay = new Date(parsed.getFullYear(), parsed.getMonth() + 1, 0);
-      return {
-        dateFrom: toDateKey(firstDay),
-        dateTo: toDateKey(lastDay),
-      };
-    }
-  }
-
+  void params;
   const today = new Date();
-  const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1);
-  const thisMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const monthAhead = new Date(today);
+  monthAhead.setMonth(monthAhead.getMonth() + 1);
+
   return {
-    dateFrom: toDateKey(thisMonthStart),
-    dateTo: toDateKey(thisMonthEnd),
+    dateFrom: toDateKey(today),
+    dateTo: toDateKey(monthAhead),
   };
 }

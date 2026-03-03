@@ -23,15 +23,11 @@ import {
 import { getBatchTravelTimeSummaries } from "./travelTime.actions";
 import { getTechnicians } from "./scheduleJobs.actions";
 import {
-  compareScheduleDisplayOrder,
+  getBusinessDateKey,
   getScheduleDisplayDateKey,
-  SERVICE_DAY_CUTOFF_HOUR,
 } from "../utils/scheduleDayUtils";
 import { formatTimeUTC, formatDateStringUTC } from "../utils";
-import {
-  getEffectiveServiceDurationHours,
-  getEffectiveServiceDurationMinutes,
-} from "../serviceDurationRules";
+import { getEffectiveServiceDurationMinutes } from "../serviceDurationRules";
 
 type ListScheduleInsightsArgs = {
   status?: ScheduleInsightStatus | "all";
@@ -40,6 +36,7 @@ type ListScheduleInsightsArgs = {
   technicianId?: string;
   kinds?: ScheduleInsightKind[];
   limit?: number;
+  futureOnly?: boolean;
 };
 
 type AnalyzeScheduleWindowArgs = {
@@ -96,12 +93,13 @@ type UnscheduledDueSoonItem = {
 };
 
 const ANALYSIS_KINDS: ScheduleInsightKind[] = [
-  SCHEDULE_INSIGHT_KINDS.TRAVEL_OVERLOAD_DAY,
   SCHEDULE_INSIGHT_KINDS.REST_GAP_WARNING,
-  SCHEDULE_INSIGHT_KINDS.SERVICE_DAY_BOUNDARY_RISK,
-  SCHEDULE_INSIGHT_KINDS.ROUTE_EFFICIENCY_OPPORTUNITY,
   SCHEDULE_INSIGHT_KINDS.DUE_SOON_UNSCHEDULED,
 ];
+
+const ACTIVE_INSIGHT_KINDS: ScheduleInsightKind[] = ANALYSIS_KINDS;
+const DUE_SOON_ALERT_MAX_DAYS = 3;
+const REST_GAP_CRITICAL_MAX_HOURS = 8;
 
 const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
 const OPENROUTER_COOLDOWN_MS = 5 * 60 * 1000;
@@ -146,22 +144,6 @@ function toUtcRangeEnd(dateKey: string): Date {
   );
 }
 
-function hoursForJob(
-  job: Pick<
-    ScheduleType,
-    | "hours"
-    | "actualServiceDurationMinutes"
-    | "historicalServiceDurationMinutes"
-  >,
-): number {
-  return getEffectiveServiceDurationHours({
-    actualServiceDurationMinutes: job.actualServiceDurationMinutes,
-    historicalServiceDurationMinutes: job.historicalServiceDurationMinutes,
-    scheduleHours: job.hours,
-    fallbackHours: 4,
-  });
-}
-
 function getJobEndIso(
   job: Pick<
     ScheduleType,
@@ -194,6 +176,24 @@ function normalizeId(value: any): string {
 
 function stableFingerprint(input: Record<string, unknown>): string {
   return createHash("sha256").update(JSON.stringify(input)).digest("hex");
+}
+
+function maxDateKey(a?: string, b?: string): string | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  return a >= b ? a : b;
+}
+
+function clampWindowToFuture(args: {
+  dateFrom: string;
+  dateTo: string;
+  todayDateKey: string;
+}): { dateFrom: string; dateTo: string } | null {
+  const from =
+    maxDateKey(args.dateFrom, args.todayDateKey) || args.todayDateKey;
+  const to = args.dateTo;
+  if (to < from) return null;
+  return { dateFrom: from, dateTo: to };
 }
 
 function severityRank(severity: ScheduleInsightSeverity): number {
@@ -588,78 +588,19 @@ async function fetchUnscheduledDueSoonInRange(args: {
   return suggestions;
 }
 
-function buildTechDayKey(techId: string, dateKey: string): string {
-  return `${techId}::${dateKey}`;
-}
+type OvernightTurnaroundCandidate = {
+  candidateKey: string;
+  techId: string;
+  current: ScheduleType;
+  next: ScheduleType;
+  currentEndMs: number;
+  nextStartMs: number;
+  nextDate: string;
+};
 
-function groupSchedulesByTechDay(
+function buildOvernightTurnaroundCandidates(
   schedules: ScheduleType[],
-): Map<string, ScheduleType[]> {
-  const map = new Map<string, ScheduleType[]>();
-
-  for (const job of schedules) {
-    const dateKey = getScheduleDisplayDateKey(job.startDateTime);
-    for (const techId of job.assignedTechnicians || []) {
-      const key = buildTechDayKey(techId, dateKey);
-      const current = map.get(key) || [];
-      current.push(job);
-      map.set(key, current);
-    }
-  }
-
-  for (const [key, jobs] of map.entries()) {
-    map.set(
-      key,
-      [...jobs].sort((a, b) =>
-        compareScheduleDisplayOrder(a.startDateTime, b.startDateTime),
-      ),
-    );
-  }
-
-  return map;
-}
-
-async function buildTravelSummaryByTechDay(args: {
-  schedules: ScheduleType[];
-  technicianDirectory: TechnicianDirectoryEntry[];
-}): Promise<
-  Map<string, { totalTravelMinutes: number; totalTravelKm: number }>
-> {
-  const byTechDay = groupSchedulesByTechDay(args.schedules);
-  const depotByTech = new Map(
-    args.technicianDirectory.map((tech) => [tech.id, tech.depotAddress]),
-  );
-
-  const requests = Array.from(byTechDay.entries()).map(([techDay, jobs]) => {
-    const [techId, dateKey] = techDay.split("::");
-    return {
-      date: `${dateKey}__${techId}`,
-      jobs,
-      depotAddress: depotByTech.get(techId || "") || null,
-    };
-  });
-
-  if (requests.length === 0) return new Map();
-
-  const summaries = await getBatchTravelTimeSummaries(requests);
-  const map = new Map<
-    string,
-    { totalTravelMinutes: number; totalTravelKm: number }
-  >();
-
-  for (const summary of summaries) {
-    const [dateKey, techId] = String(summary.date).split("__");
-    if (!dateKey || !techId) continue;
-    map.set(buildTechDayKey(techId, dateKey), {
-      totalTravelMinutes: summary.totalTravelMinutes,
-      totalTravelKm: summary.totalTravelKm,
-    });
-  }
-
-  return map;
-}
-
-function buildRestGapDrafts(schedules: ScheduleType[]): PersistInsightDraft[] {
+): OvernightTurnaroundCandidate[] {
   const byTech = new Map<string, ScheduleType[]>();
 
   for (const job of schedules) {
@@ -670,7 +611,7 @@ function buildRestGapDrafts(schedules: ScheduleType[]): PersistInsightDraft[] {
     }
   }
 
-  const drafts: PersistInsightDraft[] = [];
+  const candidates: OvernightTurnaroundCandidate[] = [];
 
   for (const [techId, jobs] of byTech.entries()) {
     const sorted = [...jobs].sort((a, b) => {
@@ -696,133 +637,146 @@ function buildRestGapDrafts(schedules: ScheduleType[]): PersistInsightDraft[] {
       const nextStartDate = getScheduleDisplayDateKey(nextStart);
       if (currentEndDate === nextStartDate) continue;
 
-      const gapHours = (nextStartMs - currentEndMs) / (1000 * 60 * 60);
-      if (gapHours >= 8 || gapHours < 0) continue;
-
       const nextDate = getScheduleDisplayDateKey(next.startDateTime);
-      const gapHoursRounded = Math.round(gapHours * 10) / 10;
-      const currentLabel = current.jobTitle?.trim() || "previous job";
-      const nextLabel = next.jobTitle?.trim() || "next job";
-      const currentEndTime = formatTimeUTC(getJobEndIso(current));
-      const nextStartTime = formatTimeUTC(next.startDateTime);
+      const currentId = normalizeId(current._id);
+      const nextId = normalizeId(next._id);
+      if (!nextDate || !currentId || !nextId) continue;
 
-      drafts.push({
-        kind: SCHEDULE_INSIGHT_KINDS.REST_GAP_WARNING,
-        severity: gapHours < 6 ? "critical" : "warning",
-        title: "Short Rest Gap Between Jobs",
-        message: `Only ${gapHoursRounded}h rest between ${currentLabel} (ends ${currentEndTime}) and ${nextLabel} (starts ${nextStartTime}).`,
-        dateKey: nextDate,
-        technicianId: techId,
-        scheduleIds: [normalizeId(current._id), normalizeId(next._id)],
-        source: "rule",
-        confidence: 0.88,
-        fingerprintData: {
-          kind: SCHEDULE_INSIGHT_KINDS.REST_GAP_WARNING,
-          technicianId: techId,
-          currentId: normalizeId(current._id),
-          nextId: normalizeId(next._id),
-          dateKey: nextDate,
-        },
+      candidates.push({
+        candidateKey: `${techId}::${currentId}::${nextId}`,
+        techId,
+        current,
+        next,
+        currentEndMs,
+        nextStartMs,
+        nextDate,
       });
     }
   }
 
-  return drafts;
+  return candidates;
 }
 
-function buildServiceDayBoundaryDrafts(
-  schedules: ScheduleType[],
-): PersistInsightDraft[] {
-  const drafts: PersistInsightDraft[] = [];
+async function getOvernightReturnToDepotMinutes(params: {
+  candidates: OvernightTurnaroundCandidate[];
+  technicianDirectory: TechnicianDirectoryEntry[];
+}): Promise<Map<string, number>> {
+  const byTechDepot = new Map(
+    params.technicianDirectory.map((tech) => [tech.id, tech.depotAddress]),
+  );
 
-  for (const job of schedules) {
-    const start = new Date(job.startDateTime);
-    if (Number.isNaN(start.getTime())) continue;
+  const requestByKey = new Map<
+    string,
+    { candidateKey: string; currentId: string }
+  >();
+  const requests: {
+    date: string;
+    jobs: ScheduleType[];
+    depotAddress: string | null;
+  }[] = [];
 
-    if (start.getUTCHours() >= SERVICE_DAY_CUTOFF_HOUR) continue;
+  for (const candidate of params.candidates) {
+    const depotAddress = byTechDepot.get(candidate.techId) || null;
+    const currentId = normalizeId(candidate.current._id);
+    if (!depotAddress || !currentId) {
+      continue;
+    }
 
-    const dateKey = getScheduleDisplayDateKey(job.startDateTime);
-
-    drafts.push({
-      kind: SCHEDULE_INSIGHT_KINDS.SERVICE_DAY_BOUNDARY_RISK,
-      severity: "warning",
-      title: "Early-Morning Boundary Job",
-      message:
-        "Job starts before 03:00 service-day cutoff. Verify sequencing and technician rest assumptions.",
-      dateKey,
-      technicianId: job.assignedTechnicians?.[0] || null,
-      scheduleIds: [normalizeId(job._id)],
-      source: "rule",
-      confidence: 0.8,
-      fingerprintData: {
-        kind: SCHEDULE_INSIGHT_KINDS.SERVICE_DAY_BOUNDARY_RISK,
-        scheduleId: normalizeId(job._id),
-        dateKey,
-      },
+    const requestKey = `overnight_return::${candidate.candidateKey}`;
+    requestByKey.set(requestKey, {
+      candidateKey: candidate.candidateKey,
+      currentId,
+    });
+    requests.push({
+      date: requestKey,
+      jobs: [candidate.current],
+      depotAddress,
     });
   }
 
-  return drafts;
+  if (requests.length === 0) return new Map();
+
+  const summaries = await getBatchTravelTimeSummaries(requests);
+  const minutesByCandidate = new Map<string, number>();
+
+  for (const summary of summaries) {
+    const key = String(summary.date || "");
+    const requestMeta = requestByKey.get(key);
+    if (!requestMeta) continue;
+
+    const returnSegment = (summary.segments || []).find((segment) => {
+      return (
+        segment.fromJobId === requestMeta.currentId &&
+        segment.fromKind === "job" &&
+        segment.toKind === "depot"
+      );
+    });
+
+    minutesByCandidate.set(
+      requestMeta.candidateKey,
+      Math.max(0, Math.round(returnSegment?.typicalMinutes || 0)),
+    );
+  }
+
+  return minutesByCandidate;
 }
 
-function buildTravelDrafts(args: {
+async function buildRestGapDrafts(args: {
   schedules: ScheduleType[];
-  travelByTechDay: Map<
-    string,
-    { totalTravelMinutes: number; totalTravelKm: number }
-  >;
-}): PersistInsightDraft[] {
-  const byTechDay = groupSchedulesByTechDay(args.schedules);
+  technicianDirectory: TechnicianDirectoryEntry[];
+}): Promise<PersistInsightDraft[]> {
+  const candidates = buildOvernightTurnaroundCandidates(args.schedules);
+  if (candidates.length === 0) return [];
+
+  const returnToDepotByCandidate = await getOvernightReturnToDepotMinutes({
+    candidates,
+    technicianDirectory: args.technicianDirectory,
+  });
+
   const drafts: PersistInsightDraft[] = [];
 
-  for (const [key, jobs] of byTechDay.entries()) {
-    const [techId, dateKey] = key.split("::");
-    const travel = args.travelByTechDay.get(key);
-    if (!travel) continue;
+  for (const candidate of candidates) {
+    const returnToDepotMinutes =
+      returnToDepotByCandidate.get(candidate.candidateKey) || 0;
+    const adjustedCurrentEndMs =
+      candidate.currentEndMs + returnToDepotMinutes * 60 * 1000;
+    const gapHours =
+      (candidate.nextStartMs - adjustedCurrentEndMs) / (1000 * 60 * 60);
 
-    const totalJobHours = jobs.reduce((sum, job) => sum + hoursForJob(job), 0);
-    const workMinutes = totalJobHours * 60;
-    const ratio = workMinutes > 0 ? travel.totalTravelMinutes / workMinutes : 0;
+    if (gapHours >= REST_GAP_CRITICAL_MAX_HOURS || gapHours < 0) continue;
 
-    if (travel.totalTravelMinutes > 150) {
-      drafts.push({
-        kind: SCHEDULE_INSIGHT_KINDS.TRAVEL_OVERLOAD_DAY,
-        severity: travel.totalTravelMinutes > 220 ? "critical" : "warning",
-        title: "High Travel Load",
-        message: `Estimated travel ${Math.round(travel.totalTravelMinutes)} min for this tech/day. Consider regrouping locations.`,
-        dateKey,
-        technicianId: techId,
-        scheduleIds: jobs.map((job) => normalizeId(job._id)),
-        source: "rule",
-        confidence: 0.92,
-        fingerprintData: {
-          kind: SCHEDULE_INSIGHT_KINDS.TRAVEL_OVERLOAD_DAY,
-          technicianId: techId,
-          dateKey,
-          roundedTravel: Math.round(travel.totalTravelMinutes / 10) * 10,
-        },
-      });
-    }
+    const gapHoursRounded = Math.round(gapHours * 10) / 10;
+    const currentLabel = candidate.current.jobTitle?.trim() || "previous job";
+    const nextLabel = candidate.next.jobTitle?.trim() || "next job";
+    const currentEndTime = formatTimeUTC(getJobEndIso(candidate.current));
+    const nextStartTime = formatTimeUTC(candidate.next.startDateTime);
+    const driveSuffix =
+      returnToDepotMinutes > 0
+        ? ` Includes ~${returnToDepotMinutes}m return-to-depot drive time.`
+        : "";
 
-    if (travel.totalTravelMinutes >= 90 && ratio >= 0.4) {
-      drafts.push({
-        kind: SCHEDULE_INSIGHT_KINDS.ROUTE_EFFICIENCY_OPPORTUNITY,
-        severity: "warning",
-        title: "Route Efficiency Opportunity",
-        message: `Travel-to-work ratio is ${(ratio * 100).toFixed(0)}%. A reorder may reduce drive time.`,
-        dateKey,
-        technicianId: techId,
-        scheduleIds: jobs.map((job) => normalizeId(job._id)),
-        source: "rule",
-        confidence: 0.84,
-        fingerprintData: {
-          kind: SCHEDULE_INSIGHT_KINDS.ROUTE_EFFICIENCY_OPPORTUNITY,
-          technicianId: techId,
-          dateKey,
-          ratioBucket: Math.round(ratio * 10) / 10,
-        },
-      });
-    }
+    drafts.push({
+      kind: SCHEDULE_INSIGHT_KINDS.REST_GAP_WARNING,
+      severity: "critical",
+      title: "Overnight Turnaround Risk",
+      message: `Only ${gapHoursRounded}h rest between ${currentLabel} (ends ${currentEndTime}) and ${nextLabel} (starts ${nextStartTime}).${driveSuffix}`,
+      dateKey: candidate.nextDate,
+      technicianId: candidate.techId,
+      scheduleIds: [
+        normalizeId(candidate.current._id),
+        normalizeId(candidate.next._id),
+      ],
+      source: "rule",
+      confidence: 0.9,
+      fingerprintData: {
+        kind: SCHEDULE_INSIGHT_KINDS.REST_GAP_WARNING,
+        technicianId: candidate.techId,
+        currentId: normalizeId(candidate.current._id),
+        nextId: normalizeId(candidate.next._id),
+        dateKey: candidate.nextDate,
+        returnToDepotMinutes,
+      },
+    });
   }
 
   return drafts;
@@ -838,6 +792,7 @@ function buildDueSoonUnscheduledDrafts(
     const daysToDue = Math.round(
       (dueDate.getTime() - Date.now()) / (1000 * 60 * 60 * 24),
     );
+    if (daysToDue > DUE_SOON_ALERT_MAX_DAYS) continue;
     const severity: ScheduleInsightSeverity =
       daysToDue <= 1 ? "critical" : "warning";
 
@@ -894,22 +849,27 @@ async function runScheduleWindowAnalysis(
   aiSkipReason?: string;
 }> {
   const startedAt = Date.now();
+  const todayDateKey = getBusinessDateKey(new Date());
+  const effectiveWindow = clampWindowToFuture({
+    dateFrom: args.dateFrom,
+    dateTo: args.dateTo,
+    todayDateKey,
+  });
 
   if (!args.skipAuth) {
     await requireAdmin();
   }
 
-  const schedules = await fetchSchedulesInRange({
-    dateFrom: args.dateFrom,
-    dateTo: args.dateTo,
-    technicianIds: args.technicianIds,
-  });
+  const schedules = effectiveWindow
+    ? await fetchSchedulesInRange({
+        dateFrom: effectiveWindow.dateFrom,
+        dateTo: effectiveWindow.dateTo,
+        technicianIds: args.technicianIds,
+      })
+    : [];
 
-  const technicians = await getTechnicianDirectory();
-  const travelByTechDay = await buildTravelSummaryByTechDay({
-    schedules,
-    technicianDirectory: technicians,
-  });
+  const technicians =
+    schedules.length > 0 ? await getTechnicianDirectory() : [];
 
   const unscheduledDueSoon = await fetchUnscheduledDueSoonInRange({
     dateFrom: args.dateFrom,
@@ -918,10 +878,20 @@ async function runScheduleWindowAnalysis(
   });
 
   let drafts: PersistInsightDraft[] = [];
-  drafts = drafts.concat(buildTravelDrafts({ schedules, travelByTechDay }));
-  drafts = drafts.concat(buildRestGapDrafts(schedules));
-  drafts = drafts.concat(buildServiceDayBoundaryDrafts(schedules));
+  if (schedules.length > 0) {
+    drafts = drafts.concat(
+      await buildRestGapDrafts({
+        schedules,
+        technicianDirectory: technicians,
+      }),
+    );
+  }
   drafts = drafts.concat(buildDueSoonUnscheduledDrafts(unscheduledDueSoon));
+  drafts = drafts.filter((draft) => {
+    if (!draft.dateKey) return false;
+    if (draft.kind === SCHEDULE_INSIGHT_KINDS.DUE_SOON_UNSCHEDULED) return true;
+    return draft.dateKey >= todayDateKey;
+  });
 
   const requestedAI = Boolean(args.includeAI);
   const aiAvailability = requestedAI ? getOpenRouterAvailability() : null;
@@ -976,6 +946,8 @@ export async function listScheduleInsights(
   await connectMongo();
 
   const match: any = {};
+  const todayDateKey = getBusinessDateKey(new Date());
+  const futureOnly = args.futureOnly ?? true;
 
   if (args.status && args.status !== "all") {
     match.status = args.status;
@@ -991,9 +963,9 @@ export async function listScheduleInsights(
     match.technicianId = args.technicianId;
   }
 
-  if (args.kinds && args.kinds.length > 0) {
-    match.kind = { $in: args.kinds };
-  }
+  const selectedKinds =
+    args.kinds && args.kinds.length > 0 ? args.kinds : ACTIVE_INSIGHT_KINDS;
+  match.kind = { $in: selectedKinds };
 
   const docs = await ScheduleInsight.find(match)
     .sort({ createdAt: -1 })
@@ -1010,6 +982,11 @@ export async function listScheduleInsights(
       ),
       invoiceIds: (doc.invoiceIds || []).map((value) => normalizeId(value)),
     }))
+    .filter((doc) => {
+      if (!futureOnly) return true;
+      if (doc.kind === SCHEDULE_INSIGHT_KINDS.DUE_SOON_UNSCHEDULED) return true;
+      return Boolean(doc.dateKey) && String(doc.dateKey) >= todayDateKey;
+    })
     .sort((a, b) => {
       const bySeverity = severityRank(b.severity) - severityRank(a.severity);
       if (bySeverity !== 0) return bySeverity;
@@ -1024,7 +1001,7 @@ export async function analyzeScheduleWindow(args: AnalyzeScheduleWindowArgs) {
   return runScheduleWindowAnalysis({
     ...args,
     trigger: args.trigger || "manual_range",
-    includeAI: args.includeAI ?? true,
+    includeAI: args.includeAI ?? false,
   });
 }
 
