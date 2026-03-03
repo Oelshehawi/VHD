@@ -180,6 +180,26 @@ export function getScheduleDisplaySortMinutes(value: Date | string): number {
   return adjustedHour * 60 + minute;
 }
 
+/**
+ * Build an in-memory timeline timestamp for service-day sequencing.
+ *
+ * Business rule:
+ * - 00:00-02:59 are treated as end-of-service-day times (+24h position).
+ * - 03:00+ stay on the stored day position.
+ *
+ * This does not mutate persisted timestamps.
+ */
+export function getServiceDayTimelineDate(value: Date | string): Date | null {
+  const parsed = parseScheduleDate(value);
+  if (Number.isNaN(parsed.getTime())) return null;
+
+  const adjusted = new Date(parsed.getTime());
+  if (adjusted.getUTCHours() < SERVICE_DAY_CUTOFF_HOUR) {
+    adjusted.setUTCDate(adjusted.getUTCDate() + 1);
+  }
+  return adjusted;
+}
+
 export function compareScheduleDisplayOrder(
   a: Date | string,
   b: Date | string,

@@ -25,6 +25,7 @@ import { getTechnicians } from "./scheduleJobs.actions";
 import {
   getBusinessDateKey,
   getScheduleDisplayDateKey,
+  getServiceDayTimelineDate,
 } from "../utils/scheduleDayUtils";
 import { formatTimeUTC, formatDateStringUTC } from "../utils";
 import { getEffectiveServiceDurationMinutes } from "../serviceDurationRules";
@@ -163,6 +164,33 @@ function getJobEndIso(
   });
   const end = new Date(start.getTime() + durationMinutes * 60 * 1000);
   return end.toISOString();
+}
+
+function getServiceTimelineStartMs(value: Date | string): number {
+  const adjusted = getServiceDayTimelineDate(value);
+  if (!adjusted) return Number.NaN;
+  return adjusted.getTime();
+}
+
+function getJobServiceTimelineEndMs(
+  job: Pick<
+    ScheduleType,
+    | "startDateTime"
+    | "hours"
+    | "actualServiceDurationMinutes"
+    | "historicalServiceDurationMinutes"
+  >,
+): number {
+  const startMs = getServiceTimelineStartMs(job.startDateTime);
+  if (!Number.isFinite(startMs)) return Number.NaN;
+
+  const durationMinutes = getEffectiveServiceDurationMinutes({
+    actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+    historicalServiceDurationMinutes: job.historicalServiceDurationMinutes,
+    scheduleHours: job.hours,
+    fallbackHours: 4,
+  });
+  return startMs + durationMinutes * 60 * 1000;
 }
 
 function normalizeId(value: any): string {
@@ -413,10 +441,21 @@ async function persistOpenInsights(
 
   await connectMongo();
 
-  const output: ScheduleInsightType[] = [];
-
+  const dedupedDrafts = new Map<
+    string,
+    {
+      draft: PersistInsightDraft;
+      fingerprint: string;
+    }
+  >();
   for (const draft of drafts) {
     const fingerprint = stableFingerprint(draft.fingerprintData);
+    dedupedDrafts.set(fingerprint, { draft, fingerprint });
+  }
+
+  const outputByFingerprint = new Map<string, ScheduleInsightType>();
+
+  for (const { draft, fingerprint } of dedupedDrafts.values()) {
     const doc = await ScheduleInsight.findOneAndUpdate(
       { fingerprint, status: "open" },
       {
@@ -448,7 +487,7 @@ async function persistOpenInsights(
     ).lean<ScheduleInsightType>();
 
     if (doc) {
-      output.push({
+      outputByFingerprint.set(fingerprint, {
         ...doc,
         _id: normalizeId(doc._id),
         scheduleIds: (doc.scheduleIds || []).map((v) => normalizeId(v)),
@@ -458,7 +497,52 @@ async function persistOpenInsights(
     }
   }
 
-  return output;
+  return [...outputByFingerprint.values()];
+}
+
+async function autoDismissDuplicateOpenInsights(
+  fingerprints: string[],
+): Promise<void> {
+  const uniqueFingerprints = [...new Set(fingerprints.filter(Boolean))];
+  if (uniqueFingerprints.length === 0) return;
+
+  await connectMongo();
+
+  const duplicates = await ScheduleInsight.aggregate<{
+    _id: string;
+    ids: any[];
+    count: number;
+  }>([
+    {
+      $match: {
+        status: "open",
+        fingerprint: { $in: uniqueFingerprints },
+      },
+    },
+    { $sort: { createdAt: -1, _id: -1 } },
+    {
+      $group: {
+        _id: "$fingerprint",
+        ids: { $push: "$_id" },
+        count: { $sum: 1 },
+      },
+    },
+    { $match: { count: { $gt: 1 } } },
+  ]);
+
+  const duplicateIds = duplicates.flatMap((group) => group.ids.slice(1));
+  if (duplicateIds.length === 0) return;
+
+  await ScheduleInsight.updateMany(
+    { _id: { $in: duplicateIds } },
+    {
+      $set: {
+        status: "dismissed",
+        resolvedAt: new Date(),
+        resolutionNote: "Auto-deduped duplicate open insight",
+      },
+    },
+  );
 }
 
 async function autoDismissMissingInsights(params: {
@@ -604,7 +688,11 @@ function buildOvernightTurnaroundCandidates(
   const byTech = new Map<string, ScheduleType[]>();
 
   for (const job of schedules) {
-    for (const techId of job.assignedTechnicians || []) {
+    const uniqueTechIds = new Set(
+      (job.assignedTechnicians || []).map((id) => normalizeId(id)),
+    );
+    for (const techId of uniqueTechIds) {
+      if (!techId) continue;
       const current = byTech.get(techId) || [];
       current.push(job);
       byTech.set(techId, current);
@@ -612,38 +700,52 @@ function buildOvernightTurnaroundCandidates(
   }
 
   const candidates: OvernightTurnaroundCandidate[] = [];
+  const seenCandidateKeys = new Set<string>();
 
   for (const [techId, jobs] of byTech.entries()) {
     const sorted = [...jobs].sort((a, b) => {
-      const aTime = new Date(a.startDateTime).getTime();
-      const bTime = new Date(b.startDateTime).getTime();
-      return aTime - bTime;
+      const aTime = getServiceTimelineStartMs(a.startDateTime);
+      const bTime = getServiceTimelineStartMs(b.startDateTime);
+
+      if (Number.isFinite(aTime) && Number.isFinite(bTime) && aTime !== bTime) {
+        return aTime - bTime;
+      }
+      if (Number.isFinite(aTime) && !Number.isFinite(bTime)) return -1;
+      if (!Number.isFinite(aTime) && Number.isFinite(bTime)) return 1;
+
+      const aRawTime = new Date(a.startDateTime).getTime();
+      const bRawTime = new Date(b.startDateTime).getTime();
+      if (Number.isFinite(aRawTime) && Number.isFinite(bRawTime)) {
+        return aRawTime - bRawTime;
+      }
+      return 0;
     });
 
     for (let idx = 0; idx < sorted.length - 1; idx += 1) {
       const current = sorted[idx]!;
       const next = sorted[idx + 1]!;
 
-      const currentEnd = new Date(getJobEndIso(current));
-      const nextStart = new Date(next.startDateTime);
-      const currentEndMs = currentEnd.getTime();
-      const nextStartMs = nextStart.getTime();
+      const currentEndMs = getJobServiceTimelineEndMs(current);
+      const nextStartMs = getServiceTimelineStartMs(next.startDateTime);
       if (!Number.isFinite(currentEndMs) || !Number.isFinite(nextStartMs))
         continue;
 
       // Only flag rest gaps that span overnight (different calendar days).
       // Same-day gaps are normal daytime breaks, not rest concerns.
-      const currentEndDate = getScheduleDisplayDateKey(currentEnd);
-      const nextStartDate = getScheduleDisplayDateKey(nextStart);
+      const currentEndDate = getScheduleDisplayDateKey(new Date(currentEndMs));
+      const nextStartDate = getScheduleDisplayDateKey(new Date(nextStartMs));
       if (currentEndDate === nextStartDate) continue;
 
-      const nextDate = getScheduleDisplayDateKey(next.startDateTime);
+      const nextDate = getScheduleDisplayDateKey(new Date(nextStartMs));
       const currentId = normalizeId(current._id);
       const nextId = normalizeId(next._id);
       if (!nextDate || !currentId || !nextId) continue;
+      const candidateKey = `${techId}::${currentId}::${nextId}`;
+      if (seenCandidateKeys.has(candidateKey)) continue;
+      seenCandidateKeys.add(candidateKey);
 
       candidates.push({
-        candidateKey: `${techId}::${currentId}::${nextId}`,
+        candidateKey,
         techId,
         current,
         next,
@@ -909,9 +1011,11 @@ async function runScheduleWindowAnalysis(
   }
 
   const insights = await persistOpenInsights(drafts);
-  const fingerprints = drafts.map((draft) =>
-    stableFingerprint(draft.fingerprintData),
-  );
+  const fingerprints = [
+    ...new Set(drafts.map((draft) => stableFingerprint(draft.fingerprintData))),
+  ];
+
+  await autoDismissDuplicateOpenInsights(fingerprints);
 
   await autoDismissMissingInsights({
     dateFrom: args.dateFrom,
@@ -972,16 +1076,36 @@ export async function listScheduleInsights(
     .limit(args.limit || 100)
     .lean<ScheduleInsightType[]>();
 
-  return docs
-    .map((doc) => ({
-      ...doc,
-      _id: normalizeId(doc._id),
-      scheduleIds: (doc.scheduleIds || []).map((value) => normalizeId(value)),
-      jobsDueSoonIds: (doc.jobsDueSoonIds || []).map((value) =>
-        normalizeId(value),
-      ),
-      invoiceIds: (doc.invoiceIds || []).map((value) => normalizeId(value)),
-    }))
+  const normalizedDocs = docs.map((doc) => ({
+    ...doc,
+    _id: normalizeId(doc._id),
+    scheduleIds: (doc.scheduleIds || []).map((value) => normalizeId(value)),
+    jobsDueSoonIds: (doc.jobsDueSoonIds || []).map((value) =>
+      normalizeId(value),
+    ),
+    invoiceIds: (doc.invoiceIds || []).map((value) => normalizeId(value)),
+  }));
+
+  const dedupedOpenDocs: ScheduleInsightType[] = [];
+  const seenOpenFingerprints = new Set<string>();
+
+  for (const doc of normalizedDocs) {
+    if (doc.status !== "open") {
+      dedupedOpenDocs.push(doc);
+      continue;
+    }
+
+    const fingerprint = String(doc.fingerprint || "");
+    if (fingerprint && seenOpenFingerprints.has(fingerprint)) {
+      continue;
+    }
+    if (fingerprint) {
+      seenOpenFingerprints.add(fingerprint);
+    }
+    dedupedOpenDocs.push(doc);
+  }
+
+  return dedupedOpenDocs
     .filter((doc) => {
       if (!futureOnly) return true;
       if (doc.kind === SCHEDULE_INSIGHT_KINDS.DUE_SOON_UNSCHEDULED) return true;
