@@ -49,6 +49,8 @@ function getActionLabel(action: string): string {
     schedule_created: "Schedule Created",
     schedule_confirmed: "Schedule Confirmed",
     schedule_unconfirmed: "Schedule Unconfirmed",
+    schedule_alternatives_sent: "Alternative Times Sent",
+    schedule_alternative_selected: "Alternative Selected",
     call_logged_job: "Job Call Logged",
     call_logged_payment: "Payment Call Logged",
     reminder_configured: "Reminder Configured",

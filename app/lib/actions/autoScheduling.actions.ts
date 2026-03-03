@@ -4,14 +4,16 @@ import { revalidatePath } from "next/cache";
 import crypto from "crypto";
 import connectMongo from "../connect";
 import { requireAdmin } from "../auth/utils";
-import { formatDateStringUTC, getEmailForPurpose } from "../utils";
+import { formatDateStringUTC, getBaseUrl, getEmailForPurpose } from "../utils";
 import {
   Client,
   Invoice,
   JobsDueSoon,
   Schedule,
   SchedulingRequest,
+  AuditLog,
 } from "../../../models/reactDataSchema";
+import { Notification } from "../../../models/notificationSchema";
 import {
   RequestedTime,
   SchedulingRequestType,
@@ -26,6 +28,7 @@ import {
   createNotification,
   dismissSchedulingRequestNotification,
 } from "./notifications.actions";
+import mongoose from "mongoose";
 import { createJobsDueSoonForInvoice } from "./actions";
 import {
   calculateDateDueFromParts,
@@ -36,6 +39,11 @@ import {
 import { syncInvoiceDateIssuedAndJobsDueSoon } from "./invoiceDateSync";
 import { resolveHistoricalDurationForScheduleCreate } from "../scheduleHistoricalDuration";
 import { createSchedule } from "./scheduleJobs.actions";
+import {
+  getPostmarkServerToken,
+  resolveEmailRecipient,
+  withEmailTestTemplateModel,
+} from "../emailDeliveryMode";
 
 const postmark = require("postmark");
 
@@ -45,6 +53,48 @@ const CONTACT_EMAIL = "scheduling@vancouverventcleaning.ca";
 const DEFAULT_CONTACT_MODEL = {
   phone_number: CONTACT_PHONE,
   contact_email: CONTACT_EMAIL,
+};
+
+const ALTERNATIVE_LINK_EXPIRY_DAYS = 7;
+
+const getAlternativeLinkSecret = () => {
+  const secret = process.env.SCHEDULING_ALT_LINK_SECRET?.trim();
+  return secret || null;
+};
+
+const createAlternativeSelectionSignature = (params: {
+  rid: string;
+  opt: 1 | 2;
+  tid: string;
+  exp: number;
+}) => {
+  const secret = getAlternativeLinkSecret();
+  if (!secret) {
+    throw new Error("SCHEDULING_ALT_LINK_SECRET is not configured");
+  }
+  const payload = `${params.rid}|${params.opt}|${params.tid}|${params.exp}`;
+  return crypto.createHmac("sha256", secret).update(payload).digest("hex");
+};
+
+const buildAlternativeSelectionLink = (params: {
+  requestId: string;
+  optionIndex: 1 | 2;
+  tokenId: string;
+  expUnix: number;
+}) => {
+  const sig = createAlternativeSelectionSignature({
+    rid: params.requestId,
+    opt: params.optionIndex,
+    tid: params.tokenId,
+    exp: params.expUnix,
+  });
+  const url = new URL("/api/scheduling/select-alternative", getBaseUrl());
+  url.searchParams.set("rid", params.requestId);
+  url.searchParams.set("opt", String(params.optionIndex));
+  url.searchParams.set("tid", params.tokenId);
+  url.searchParams.set("exp", String(params.expUnix));
+  url.searchParams.set("sig", sig);
+  return url.toString();
 };
 
 // Get manager user IDs from Clerk (users with isManager public metadata)
@@ -97,21 +147,25 @@ async function sendSchedulingConfirmationEmail(params: {
   const formattedTime = formatTimeForEmail(params.confirmedTime);
 
   try {
-    const client = new postmark.ServerClient(process.env.POSTMARK_CLIENT);
+    const recipient = resolveEmailRecipient(clientEmail);
+    const client = new postmark.ServerClient(getPostmarkServerToken());
 
     await client.sendEmailWithTemplate({
       From: CONTACT_EMAIL,
-      To: clientEmail,
+      To: recipient.resolvedTo,
       TemplateAlias: "scheduling-confirmation",
-      TemplateModel: {
-        header_title: "Your Service is Scheduled",
-        client_name: params.client.clientName,
-        job_title: params.invoice.jobTitle,
-        location: params.invoice.location,
-        confirmed_date: formattedDate,
-        confirmed_time_window: formattedTime, // Using same template field for now
-        ...DEFAULT_CONTACT_MODEL,
-      },
+      TemplateModel: withEmailTestTemplateModel(
+        {
+          header_title: "Your Service is Scheduled",
+          client_name: params.client.clientName,
+          job_title: params.invoice.jobTitle,
+          location: params.invoice.location,
+          confirmed_date: formattedDate,
+          confirmed_time_window: formattedTime, // Using same template field for now
+          ...DEFAULT_CONTACT_MODEL,
+        },
+        recipient,
+      ),
       TrackOpens: true,
       MessageStream: "outbound",
     });
@@ -130,6 +184,7 @@ async function sendSchedulingAlternativesEmail(params: {
   client: ClientType;
   invoice: InvoiceType;
   alternatives: Array<{ date: string; requestedTime: RequestedTime }>;
+  alternativeLinks: Array<string | undefined>;
 }): Promise<{ success: boolean; error?: string }> {
   const clientEmail = getEmailForPurpose(params.client, "scheduling");
 
@@ -145,23 +200,29 @@ async function sendSchedulingAlternativesEmail(params: {
   const [altOne, altTwo] = formattedAlternatives;
 
   try {
-    const client = new postmark.ServerClient(process.env.POSTMARK_CLIENT);
+    const recipient = resolveEmailRecipient(clientEmail);
+    const client = new postmark.ServerClient(getPostmarkServerToken());
 
     await client.sendEmailWithTemplate({
       From: CONTACT_EMAIL,
-      To: clientEmail,
+      To: recipient.resolvedTo,
       TemplateAlias: "scheduling-alternatives",
-      TemplateModel: {
-        header_title: "Alternative Service Times",
-        client_name: params.client.clientName,
-        job_title: params.invoice.jobTitle,
-        location: params.invoice.location,
-        alternative_1_date: altOne?.date || "",
-        alternative_1_window: altOne?.time || "",
-        alternative_2_date: altTwo?.date || "",
-        alternative_2_window: altTwo?.time || "",
-        ...DEFAULT_CONTACT_MODEL,
-      },
+      TemplateModel: withEmailTestTemplateModel(
+        {
+          header_title: "Alternative Service Times",
+          client_name: params.client.clientName,
+          job_title: params.invoice.jobTitle,
+          location: params.invoice.location,
+          alternative_1_date: altOne?.date || "",
+          alternative_1_window: altOne?.time || "",
+          alternative_1_link: params.alternativeLinks[0] || "",
+          alternative_2_date: altTwo?.date || "",
+          alternative_2_window: altTwo?.time || "",
+          alternative_2_link: params.alternativeLinks[1] || "",
+          ...DEFAULT_CONTACT_MODEL,
+        },
+        recipient,
+      ),
       TrackOpens: true,
       MessageStream: "outbound",
     });
@@ -498,8 +559,11 @@ export async function getPendingSchedulingRequests(): Promise<
 
   try {
     await requireAdmin();
-    const requests = await SchedulingRequest.find({ status: "pending" })
+    const requests = await SchedulingRequest.find({
+      status: { $in: ["pending", "alternatives_selected"] },
+    })
       .sort({ requestedAt: 1 }) // Oldest first
+      .select("-alternativesSelectionToken -alternativesSelectionExpiresAt")
       .populate("clientId", "clientName email emails phoneNumber")
       .populate("invoiceId", "jobTitle location estimatedHours")
       .lean();
@@ -524,6 +588,7 @@ export async function getSchedulingRequestById(requestId: string): Promise<{
   try {
     await requireAdmin();
     const request = await SchedulingRequest.findById(requestId)
+      .select("-alternativesSelectionToken -alternativesSelectionExpiresAt")
       .populate("clientId", "clientName email emails phoneNumber")
       .populate("invoiceId", "jobTitle location estimatedHours items notes")
       .lean();
@@ -565,7 +630,10 @@ export async function confirmSchedulingRequest(
       return { success: false, error: "Scheduling request not found" };
     }
 
-    if (request.status !== "pending") {
+    if (
+      request.status !== "pending" &&
+      request.status !== "alternatives_selected"
+    ) {
       return { success: false, error: "Request has already been processed" };
     }
 
@@ -708,17 +776,55 @@ export async function sendSchedulingAlternatives(
       return { success: false, error: "Scheduling request not found" };
     }
 
-    if (request.status !== "pending") {
-      return { success: false, error: "Request has already been processed" };
+    if (
+      request.status !== "pending" &&
+      request.status !== "alternatives_selected"
+    ) {
+      const reviewedAtText = request.reviewedAt
+        ? new Date(request.reviewedAt).toISOString()
+        : "unknown time";
+      const reviewedByText = request.reviewedBy || "unknown user";
+      return {
+        success: false,
+        error: `Request already handled by ${reviewedByText} at ${reviewedAtText} (status: ${request.status})`,
+      };
     }
 
     const invoice = request.invoiceId as InvoiceType;
     const client = request.clientId as ClientType;
+    const requestIdString = request._id?.toString();
+    if (!requestIdString) {
+      return { success: false, error: "Scheduling request ID is missing" };
+    }
+
+    const tokenId = crypto.randomBytes(24).toString("hex");
+    const selectionExpiresAt = new Date();
+    selectionExpiresAt.setDate(
+      selectionExpiresAt.getDate() + ALTERNATIVE_LINK_EXPIRY_DAYS,
+    );
+    const expUnix = Math.floor(selectionExpiresAt.getTime() / 1000);
+    const optionLinks: Array<string | undefined> = [
+      buildAlternativeSelectionLink({
+        requestId: requestIdString,
+        optionIndex: 1,
+        tokenId,
+        expUnix,
+      }),
+      alternatives.length > 1
+        ? buildAlternativeSelectionLink({
+            requestId: requestIdString,
+            optionIndex: 2,
+            tokenId,
+            expUnix,
+          })
+        : undefined,
+    ];
 
     const emailResult = await sendSchedulingAlternativesEmail({
       client,
       invoice,
       alternatives,
+      alternativeLinks: optionLinks,
     });
 
     if (!emailResult.success) {
@@ -732,19 +838,116 @@ export async function sendSchedulingAlternatives(
       };
     }
 
-    // Update request with alternatives
-    await SchedulingRequest.findByIdAndUpdate(requestId, {
-      status: "alternatives_sent",
-      reviewedAt: new Date(),
-      reviewedBy: userId,
-      reviewNotes: notes,
-      alternativesOffered: alternatives.map((alt) => ({
-        date: new Date(alt.date),
-        requestedTime: alt.requestedTime,
-      })),
-    });
+    const reviewedAt = new Date();
+    const alternativesOffered = alternatives.map((alt) => ({
+      date: new Date(alt.date),
+      requestedTime: alt.requestedTime,
+    }));
+    const invoiceMongoId =
+      (invoice as any)?._id?.toString?.() || String(request.invoiceId);
+    const clientId =
+      (client as any)?._id?.toString?.() || String(request.clientId);
+    const invoiceIdForAudit =
+      (invoice as any)?.invoiceId || String(request.invoiceId);
+    const jobTitle = (invoice as any)?.jobTitle || "Unknown Job";
+
+    const session = await mongoose.startSession();
+    let updatedRequest = null;
+    try {
+      await session.withTransaction(async () => {
+        updatedRequest = await SchedulingRequest.findOneAndUpdate(
+          {
+            _id: requestId,
+            status: { $in: ["pending", "alternatives_selected"] },
+          },
+          {
+            $set: {
+              status: "alternatives_sent",
+              reviewedAt,
+              reviewedBy: userId,
+              reviewNotes: notes,
+              alternativesOffered,
+              alternativesSelectionToken: tokenId,
+              alternativesSelectionExpiresAt: selectionExpiresAt,
+            },
+            $unset: {
+              selectedAlternative: "",
+            },
+          },
+          {
+            new: true,
+            session,
+          },
+        );
+
+        if (!updatedRequest) {
+          throw new Error("REQUEST_ALREADY_HANDLED");
+        }
+
+        await Notification.deleteMany(
+          {
+            type: NOTIFICATION_TYPES.SCHEDULING_REQUEST,
+            "metadata.schedulingRequestId": requestId,
+          },
+          { session },
+        );
+
+        await AuditLog.create(
+          [
+            {
+              invoiceId: invoiceIdForAudit,
+              action: "schedule_alternatives_sent",
+              timestamp: reviewedAt,
+              performedBy: userId,
+              details: {
+                newValue: {
+                  invoiceId: invoiceIdForAudit,
+                  invoiceMongoId,
+                  clientId,
+                  jobTitle,
+                  schedulingRequestId: requestId,
+                  alternatives: alternatives.map((alt) => ({
+                    date: alt.date,
+                    requestedTime: alt.requestedTime,
+                  })),
+                },
+                reason: notes || "Alternative times sent to client",
+                metadata: {
+                  clientId,
+                  jobTitle,
+                  schedulingRequestId: requestId,
+                },
+              },
+              success: true,
+            },
+          ],
+          { session },
+        );
+      });
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        error.message === "REQUEST_ALREADY_HANDLED"
+      ) {
+        const latestRequest = (await SchedulingRequest.findById(requestId)
+          .select("status reviewedBy reviewedAt")
+          .lean()) as SchedulingRequestType | null;
+        const reviewedAtText = latestRequest?.reviewedAt
+          ? new Date(latestRequest.reviewedAt).toISOString()
+          : "unknown time";
+        const reviewedByText = latestRequest?.reviewedBy || "unknown user";
+        return {
+          success: false,
+          error: `Request already handled by ${reviewedByText} at ${reviewedAtText} (status: ${latestRequest?.status || "unknown"})`,
+        };
+      }
+      throw error;
+    } finally {
+      await session.endSession();
+    }
 
     revalidatePath("/dashboard");
+    revalidatePath("/schedule");
 
     return { success: true };
   } catch (error) {
@@ -879,7 +1082,10 @@ export async function confirmSchedulingWithInvoice(
       return { success: false, error: "Scheduling request not found" };
     }
 
-    if (request.status !== "pending") {
+    if (
+      request.status !== "pending" &&
+      request.status !== "alternatives_selected"
+    ) {
       return { success: false, error: "Request has already been processed" };
     }
 

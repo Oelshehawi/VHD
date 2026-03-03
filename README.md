@@ -22,3 +22,4 @@ This project is an advanced Invoicing and Client Management System designed to f
 
 - Core implementation context lives under `docs/business-logic/`.
 - Start with `docs/business-logic/README.md` to choose the relevant domain overview before changing scheduling, travel-time, communications, or invoice workflow code.
+- Safe test-email setup (avoid sending to real clients): `docs/testing-safe-email-mode.md`.

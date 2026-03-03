@@ -61,6 +61,16 @@ export async function getSchedulingRequestsForJobsDueSoon(
           requestedTime: selection?.requestedTime,
         }),
       ),
+      selectedAlternative: request.selectedAlternative
+        ? {
+            optionIndex: request.selectedAlternative.optionIndex,
+            date: normalizeDate(request.selectedAlternative.date) || "",
+            requestedTime: request.selectedAlternative.requestedTime,
+            selectedAt:
+              normalizeDate(request.selectedAlternative.selectedAt) || "",
+            selectedVia: request.selectedAlternative.selectedVia,
+          }
+        : undefined,
       confirmationEmailSent: request.confirmationEmailSent,
       confirmationEmailSentAt: normalizeDate(request.confirmationEmailSentAt),
       createdAt: normalizeDate(request.createdAt),

@@ -13,6 +13,7 @@ const StatusEnum = [
   "pending",
   "confirmed",
   "alternatives_sent",
+  "alternatives_selected",
   "expired",
   "cancelled",
 ] as const;
@@ -40,6 +41,17 @@ const SuggestedUsualSchema = new Schema(
   {
     dayOfWeek: { type: Number, min: 0, max: 6 }, // 0 = Sunday, 6 = Saturday
     wasSelected: { type: Boolean },
+  },
+  { _id: false },
+);
+
+const SelectedAlternativeSchema = new Schema(
+  {
+    optionIndex: { type: Number, required: true, enum: [1, 2] },
+    date: { type: Date, required: true },
+    requestedTime: { type: RequestedTimeSchema, required: true },
+    selectedAt: { type: Date, required: true },
+    selectedVia: { type: String, enum: ["email_link"], required: true },
   },
   { _id: false },
 );
@@ -122,6 +134,12 @@ export const schedulingRequestSchema = new Schema<SchedulingRequestType>(
       type: [TimeSelectionSchema],
       default: [],
     },
+    selectedAlternative: {
+      type: SelectedAlternativeSchema,
+      required: false,
+    },
+    alternativesSelectionToken: { type: String },
+    alternativesSelectionExpiresAt: { type: Date },
 
     // Notification tracking
     confirmationEmailSent: { type: Boolean, default: false },

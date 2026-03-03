@@ -16,12 +16,18 @@ import InvoicePdfDocument, {
   type InvoiceData,
 } from "../../../_components/pdf/InvoicePdfDocument";
 import { revalidatePath } from "next/cache";
+import {
+  resolveEmailRecipient,
+  getPostmarkServerToken,
+  withEmailTestTemplateModel,
+  getEmailDeliveryMode,
+} from "../emailDeliveryMode";
 
 const postmark = require("postmark");
 
-const postmarkClient = new postmark.ServerClient(
-  process.env.POSTMARK_CLIENT || "",
-);
+function createPostmarkClient() {
+  return new postmark.ServerClient(getPostmarkServerToken());
+}
 
 export interface ProcessResult {
   processedCount: number;
@@ -528,11 +534,12 @@ export async function sendPaymentReminderEmail(
         : false,
     };
 
-    const emailResult = await postmarkClient.sendEmailWithTemplate({
+    const recipient = resolveEmailRecipient(clientEmail);
+    const emailResult = await createPostmarkClient().sendEmailWithTemplate({
       From: "payables@vancouverventcleaning.ca",
-      To: clientEmail,
+      To: recipient.resolvedTo,
       TemplateAlias: "payment-reminder-1",
-      TemplateModel: templateModel,
+      TemplateModel: withEmailTestTemplateModel(templateModel, recipient),
       Attachments: [
         {
           Name: `${invoice.jobTitle.trim()} - Invoice.pdf`,
@@ -574,6 +581,8 @@ export async function sendPaymentReminderEmail(
         newValue: {
           reminderSequence,
           emailTemplate: "payment-reminder-1",
+          emailDeliveryMode: getEmailDeliveryMode(),
+          deliveredTo: recipient.resolvedTo,
           invoiceId: invoice.invoiceId,
           jobTitle: invoice.jobTitle,
           invoiceMongoId: invoice._id?.toString?.() || invoiceId,

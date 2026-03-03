@@ -260,7 +260,9 @@ export interface AuditLogEntry {
     | "stripe_payment_link_generated"
     | "stripe_payment_initiated"
     | "stripe_payment_succeeded"
-    | "stripe_payment_failed";
+    | "stripe_payment_failed"
+    | "schedule_alternatives_sent"
+    | "schedule_alternative_selected";
   timestamp: Date;
   performedBy: string;
   details: {
@@ -704,6 +706,7 @@ export type SchedulingRequestStatus =
   | "pending"
   | "confirmed"
   | "alternatives_sent"
+  | "alternatives_selected"
   | "expired"
   | "cancelled";
 
@@ -756,6 +759,15 @@ export interface SchedulingRequestType {
 
   // Alternatives offered
   alternativesOffered?: TimeSelection[];
+  selectedAlternative?: {
+    optionIndex: 1 | 2;
+    date: Date | string;
+    requestedTime: RequestedTime;
+    selectedAt: Date | string;
+    selectedVia: "email_link";
+  };
+  alternativesSelectionToken?: string;
+  alternativesSelectionExpiresAt?: Date | string;
 
   // Notification tracking
   confirmationEmailSent?: boolean;

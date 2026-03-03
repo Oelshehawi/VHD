@@ -14,6 +14,12 @@ import { DueInvoiceType } from "../typeDefinitions";
 import { getEmailForPurpose, getBaseUrl, formatDateStringUTC } from "../utils";
 import { generateSchedulingToken } from "./autoScheduling.actions";
 import { generateClientAccessLink } from "../clerkClientPortal";
+import {
+  resolveEmailRecipient,
+  getPostmarkServerToken,
+  withEmailTestTemplateModel,
+  getEmailDeliveryMode,
+} from "../emailDeliveryMode";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -88,22 +94,26 @@ export async function sendCleaningReminderEmail(
       }
     }
 
+    const recipient = resolveEmailRecipient(clientEmail);
     // Send email using Postmark
-    const client = new postmark.ServerClient(process.env.POSTMARK_CLIENT);
+    const client = new postmark.ServerClient(getPostmarkServerToken());
     await client.sendEmailWithTemplate({
       From: "scheduling@vancouverventcleaning.ca",
-      To: clientEmail,
+      To: recipient.resolvedTo,
       TemplateAlias: "cleaning-due-reminder-1",
-      TemplateModel: {
-        due_date: formattedDate,
-        jobTitle: invoice.jobTitle,
-        phone_number: "604-273-8717",
-        contact_email: "scheduling@vancouverventcleaning.ca",
-        header_title: "Hood & Vent Cleaning Reminder",
-        email_title: "Hood & Vent Cleaning Reminder",
-        // Client self-scheduling link
-        scheduling_link: hasSchedulingLink,
-      },
+      TemplateModel: withEmailTestTemplateModel(
+        {
+          due_date: formattedDate,
+          jobTitle: invoice.jobTitle,
+          phone_number: "604-273-8717",
+          contact_email: "scheduling@vancouverventcleaning.ca",
+          header_title: "Hood & Vent Cleaning Reminder",
+          email_title: "Hood & Vent Cleaning Reminder",
+          // Client self-scheduling link
+          scheduling_link: hasSchedulingLink,
+        },
+        recipient,
+      ),
       TrackOpens: true,
       MessageStream: "outbound",
     });
@@ -116,7 +126,7 @@ export async function sendCleaningReminderEmail(
         $push: {
           emailHistory: {
             sentAt: new Date(),
-            recipient: clientEmail,
+            recipient: recipient.resolvedTo,
             includeSchedulingLink,
             templateAlias: "cleaning-due-reminder-1",
             messageStream: "outbound",
@@ -425,19 +435,21 @@ export async function sendInvoiceDeliveryEmail(
       }
     }
 
-    // Send email using Postmark with PDF attachment to all recipients
-    const postmarkClient = new postmark.ServerClient(
-      process.env.POSTMARK_CLIENT,
+    const resolvedRecipients = emailRecipients.map((recipient) =>
+      resolveEmailRecipient(recipient),
     );
+
+    // Send email using Postmark with PDF attachment to all recipients
+    const postmarkClient = new postmark.ServerClient(getPostmarkServerToken());
 
     // Send to all recipients in parallel to reduce end-to-end latency.
     const sendResults = await Promise.allSettled(
-      emailRecipients.map(async (recipient) => {
+      resolvedRecipients.map(async (recipient) => {
         await postmarkClient.sendEmailWithTemplate({
           From: "payables@vancouverventcleaning.ca",
-          To: recipient,
+          To: recipient.resolvedTo,
           TemplateAlias: "invoice-delivery-1",
-          TemplateModel: templateModel,
+          TemplateModel: withEmailTestTemplateModel(templateModel, recipient),
           Attachments: attachments,
           TrackOpens: true,
           MessageStream: "invoice-delivery",
@@ -448,8 +460,10 @@ export async function sendInvoiceDeliveryEmail(
     const failedRecipients: { recipient: string; reason: string }[] = [];
     sendResults.forEach((result, index) => {
       if (result.status === "rejected") {
+        const recipient = resolvedRecipients[index];
         failedRecipients.push({
-          recipient: emailRecipients[index] || "unknown",
+          recipient:
+            recipient?.resolvedTo || emailRecipients[index] || "unknown",
           reason:
             result.reason instanceof Error
               ? result.reason.message
@@ -478,8 +492,14 @@ export async function sendInvoiceDeliveryEmail(
           invoiceId: invoice.invoiceId,
           invoiceMongoId: invoice._id.toString(),
           jobTitle: invoice.jobTitle,
-          clientEmail: emailRecipients.join(", "),
+          clientEmail: resolvedRecipients
+            .map((recipient) => recipient.resolvedTo)
+            .join(", "),
           recipients: emailRecipients,
+          deliveredTo: resolvedRecipients.map(
+            (recipient) => recipient.resolvedTo,
+          ),
+          emailDeliveryMode: getEmailDeliveryMode(),
           includeReport: includeReport,
           clientName: clientDetails.clientName,
         },
@@ -495,7 +515,9 @@ export async function sendInvoiceDeliveryEmail(
       $push: {
         emailDeliveryHistory: {
           sentAt: new Date(),
-          recipients: emailRecipients,
+          recipients: resolvedRecipients.map(
+            (recipient) => recipient.resolvedTo,
+          ),
           includeReport,
           templateAlias: "invoice-delivery-1",
           messageStream: "invoice-delivery",

@@ -6,8 +6,17 @@ import {
   getBaseUrl,
   formatDateStringUTC,
 } from "../../lib/utils";
-import { parseDateParts, toUtcDateFromParts } from "../../lib/utils/datePartsUtils";
+import {
+  parseDateParts,
+  toUtcDateFromParts,
+} from "../../lib/utils/datePartsUtils";
 import { generateClientAccessLink } from "../../lib/clerkClientPortal";
+import {
+  resolveEmailRecipient,
+  getPostmarkServerToken,
+  withEmailTestTemplateModel,
+  getEmailDeliveryMode,
+} from "../../lib/emailDeliveryMode";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -15,10 +24,6 @@ import InvoicePdfDocument, {
 } from "../../../_components/pdf/InvoicePdfDocument";
 
 const postmark = require("postmark");
-
-const postmarkClient = new postmark.ServerClient(
-  process.env.POSTMARK_CLIENT || "",
-);
 
 export async function POST(request: Request) {
   try {
@@ -200,11 +205,13 @@ export async function POST(request: Request) {
 
     templateModel.has_client_portal = hasClientPortalBlock;
 
+    const recipient = resolveEmailRecipient(clientEmail);
+    const postmarkClient = new postmark.ServerClient(getPostmarkServerToken());
     const emailResult = await postmarkClient.sendEmailWithTemplate({
       From: "payables@vancouverventcleaning.ca",
-      To: clientEmail,
+      To: recipient.resolvedTo,
       TemplateAlias: "invoice-delivery-1",
-      TemplateModel: templateModel,
+      TemplateModel: withEmailTestTemplateModel(templateModel, recipient),
       Attachments: [
         {
           Name: `${invoiceData.jobTitle.trim()} - Invoice.pdf`,
@@ -226,7 +233,9 @@ export async function POST(request: Request) {
         newValue: {
           invoiceId: invoice.invoiceId,
           jobTitle: invoice.jobTitle,
-          clientEmail: clientEmail,
+          clientEmail: recipient.resolvedTo,
+          originalClientEmail: clientEmail,
+          emailDeliveryMode: getEmailDeliveryMode(),
           clientName: clientDetails.clientName,
         },
         reason: "Invoice sent to client via email",
@@ -241,7 +250,7 @@ export async function POST(request: Request) {
       $push: {
         emailDeliveryHistory: {
           sentAt: new Date(),
-          recipients: [clientEmail],
+          recipients: [recipient.resolvedTo],
           includeReport: false,
           templateAlias: "invoice-delivery-1",
           messageStream: "invoice-delivery",
@@ -253,7 +262,9 @@ export async function POST(request: Request) {
     return NextResponse.json({
       message: "Invoice sent successfully",
       emailMessageId: emailResult.MessageID,
-      sentTo: clientEmail,
+      sentTo: recipient.resolvedTo,
+      originalRecipient: clientEmail,
+      emailDeliveryMode: getEmailDeliveryMode(),
     });
   } catch (error) {
     console.error("Error sending invoice:", error);

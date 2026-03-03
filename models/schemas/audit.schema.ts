@@ -40,6 +40,8 @@ export const AuditLogSchema = new Schema<AuditLogEntry>({
       "stripe_payment_initiated",
       "stripe_payment_succeeded",
       "stripe_payment_failed",
+      "schedule_alternatives_sent",
+      "schedule_alternative_selected",
     ],
     required: true,
   },

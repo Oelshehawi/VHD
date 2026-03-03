@@ -23,7 +23,10 @@
     "backfill:historical-service-duration:execute": "node --env-file=.env --import=tsx scripts/backfill-historical-duration.ts --execute",
     "backfill:historical-service-duration:execute:all": "node --env-file=.env --import=tsx scripts/backfill-historical-duration.ts --execute --include-completed",
     "migrate:photos": "node --env-file=.env --import=tsx scripts/migrate-photos-collection.ts",
-    "migrate:photos:execute": "node --env-file=.env --import=tsx scripts/migrate-photos-collection.ts --execute"
+    "migrate:photos:execute": "node --env-file=.env --import=tsx scripts/migrate-photos-collection.ts --execute",
+    "mask:pii": "node --env-file=.env --import=tsx scripts/mask-client-pii.ts",
+    "mask:pii:execute": "node --env-file=.env --import=tsx scripts/mask-client-pii.ts --execute=true --confirm=MASK_PII",
+    "mask:pii:contact-only": "node --env-file=.env --import=tsx scripts/mask-client-pii.ts --execute=true --confirm=MASK_PII --keep-names=true"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.26",

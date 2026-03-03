@@ -16,6 +16,7 @@ const isPublicRoute = createRouteMatcher([
   "/api/cloudinaryUpload",
   "/api/stripe/(.*)",
   "/api/sync",
+  "/api/scheduling/select-alternative(.*)",
 ]);
 
 // Define client portal routes

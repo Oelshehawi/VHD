@@ -672,6 +672,23 @@ export const fetchRecentActions = async (
         const jobTitle = log.details.newValue.jobTitle || "Untitled";
         const clientEmail = log.details.newValue.clientEmail || "";
         description = `Invoice Sent: ${jobTitle} to ${clientEmail}`;
+      } else if (
+        log.action === "schedule_alternatives_sent" &&
+        log.details?.newValue
+      ) {
+        const jobTitle = log.details.newValue.jobTitle || "Untitled";
+        const alternatives = Array.isArray(log.details.newValue.alternatives)
+          ? log.details.newValue.alternatives
+          : [];
+        const alternativeCount = alternatives.length;
+        description = `Alternative Times Sent: ${jobTitle} (${alternativeCount} option${alternativeCount === 1 ? "" : "s"})`;
+      } else if (
+        log.action === "schedule_alternative_selected" &&
+        log.details?.newValue
+      ) {
+        const jobTitle = log.details.newValue.jobTitle || "Untitled";
+        const optionIndex = Number(log.details.newValue.optionIndex || 0);
+        description = `Client Selected Alternative: ${jobTitle} (Option ${optionIndex || "Unknown"})`;
       }
 
       return {
@@ -864,6 +881,8 @@ const formatActionDescription = (
     reminder_failed: "Reminder Failed",
     payment_status_changed: "Payment Status Changed",
     payment_info_updated: "Payment Info Updated",
+    schedule_alternatives_sent: "Alternative Times Sent",
+    schedule_alternative_selected: "Alternative Selected",
   };
   const baseLabel = labels[action] || action;
   return clientName ? `${baseLabel} for ${clientName}` : baseLabel;

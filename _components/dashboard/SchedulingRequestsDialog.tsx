@@ -37,6 +37,8 @@ const statusBadgeVariant = (status?: string) => {
       return "secondary";
     case "alternatives_sent":
       return "outline";
+    case "alternatives_selected":
+      return "default";
     case "cancelled":
     case "expired":
       return "destructive";

@@ -12,7 +12,10 @@ import {
   confirmSchedulingWithInvoice,
   sendSchedulingAlternatives,
 } from "../../app/lib/actions/autoScheduling.actions";
-import { formatDateWithWeekdayUTC } from "../../app/lib/utils";
+import {
+  formatDateStringUTC,
+  formatDateWithWeekdayUTC,
+} from "../../app/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Button } from "../ui/button";
@@ -71,6 +74,10 @@ export default function SchedulingReviewModal({
   const clientPhone = (client as any)?.phoneNumber || "";
   const jobTitle = (invoice as any)?.jobTitle || "Unknown Job";
   const location = (invoice as any)?.location || "";
+  const selectedAlternative = request.selectedAlternative;
+  const canReview =
+    request.status === "pending" || request.status === "alternatives_selected";
+  const isHandled = !canReview;
 
   const formatLocalDate = (date: Date): string => {
     const year = date.getFullYear();
@@ -79,8 +86,17 @@ export default function SchedulingReviewModal({
     return `${year}-${month}-${day}`;
   };
 
-  // Open confirmation dialog when clicking Confirm
-  const handleConfirm = (selection: "primary" | "backup") => {
+  const openConfirmDialogForTime = (selection: {
+    date: string | Date;
+    requestedTime: RequestedTime;
+  }) => {
+    if (isHandled) {
+      const message = "This request has already been handled and is read-only.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
     if (!clientId) {
       const message = "Client information is missing for this request.";
       setError(message);
@@ -94,16 +110,20 @@ export default function SchedulingReviewModal({
       return;
     }
 
+    setPendingSelection({
+      date: selection.date as string,
+      time: selection.requestedTime,
+    });
+    setShowConfirmDialog(true);
+  };
+
+  // Open confirmation dialog when clicking Confirm
+  const handleConfirm = (selection: "primary" | "backup") => {
     const selectedTime =
       selection === "primary"
         ? request.primarySelection
         : request.backupSelection;
-
-    setPendingSelection({
-      date: selectedTime.date as string,
-      time: selectedTime.requestedTime,
-    });
-    setShowConfirmDialog(true);
+    openConfirmDialogForTime(selectedTime);
   };
 
   // Handle the actual confirmation with invoice creation
@@ -150,6 +170,13 @@ export default function SchedulingReviewModal({
   };
 
   const handleSendAlternatives = async () => {
+    if (isHandled) {
+      const message = "This request has already been handled and is read-only.";
+      setError(message);
+      toast.error(message);
+      return;
+    }
+
     if (!requestId) {
       const message = "Scheduling request is missing an ID.";
       setError(message);
@@ -215,11 +242,26 @@ export default function SchedulingReviewModal({
           </DialogHeader>
 
           <div className="space-y-4">
+            {isHandled && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-950/30">
+                <p className="text-sm font-medium text-amber-900 dark:text-amber-200">
+                  This scheduling request has already been handled.
+                </p>
+                <p className="mt-1 text-xs text-amber-800 dark:text-amber-300">
+                  Status: {request.status.replaceAll("_", " ")}
+                  {request.reviewedBy ? ` • By: ${request.reviewedBy}` : ""}
+                  {request.reviewedAt
+                    ? ` • At: ${formatDateStringUTC(request.reviewedAt)}`
+                    : ""}
+                </p>
+              </div>
+            )}
+
             {/* Client & Job Info Grid */}
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
               {/* Client Card */}
               <Card className="gap-0">
-                <CardHeader className="pb-2 ">
+                <CardHeader className="pb-2">
                   <CardTitle className="text-muted-foreground flex items-center gap-2 text-sm font-medium">
                     <UserIcon className="h-4 w-4" />
                     Client
@@ -309,6 +351,37 @@ export default function SchedulingReviewModal({
                 Requested Times
               </h3>
               <div className="space-y-3">
+                {selectedAlternative && (
+                  <div className="flex items-center justify-between rounded-lg border border-blue-200 bg-blue-50 p-4 dark:border-blue-900 dark:bg-blue-950/20">
+                    <div>
+                      <span className="text-xs font-medium text-blue-700 uppercase dark:text-blue-300">
+                        Client selected option {selectedAlternative.optionIndex}
+                      </span>
+                      <p className="text-foreground font-medium">
+                        {formatDateWithWeekdayUTC(selectedAlternative.date)}
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {formatTime(selectedAlternative.requestedTime)}
+                        {selectedAlternative.selectedAt
+                          ? ` • Selected ${formatDateStringUTC(selectedAlternative.selectedAt)}`
+                          : ""}
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() =>
+                        openConfirmDialogForTime({
+                          date: selectedAlternative.date,
+                          requestedTime: selectedAlternative.requestedTime,
+                        })
+                      }
+                      disabled={isConfirming || isHandled}
+                    >
+                      <CheckCircleIcon className="mr-2 h-4 w-4" />
+                      Confirm Selected
+                    </Button>
+                  </div>
+                )}
+
                 {/* Primary Selection */}
                 <div className="flex items-center justify-between rounded-lg border border-green-200 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/30">
                   <div>
@@ -324,7 +397,7 @@ export default function SchedulingReviewModal({
                   </div>
                   <Button
                     onClick={() => handleConfirm("primary")}
-                    disabled={isConfirming}
+                    disabled={isConfirming || isHandled}
                     className="bg-green-600 hover:bg-green-700"
                   >
                     <CheckCircleIcon className="mr-2 h-4 w-4" />
@@ -348,7 +421,7 @@ export default function SchedulingReviewModal({
                   <Button
                     variant="secondary"
                     onClick={() => handleConfirm("backup")}
-                    disabled={isConfirming}
+                    disabled={isConfirming || isHandled}
                   >
                     <CheckCircleIcon className="mr-2 h-4 w-4" />
                     Confirm
@@ -361,7 +434,7 @@ export default function SchedulingReviewModal({
             {(request.parkingNotes ||
               request.accessNotes ||
               request.specialInstructions) && (
-              <Card className="border-blue-200 gap-0 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
+              <Card className="gap-0 border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-950/30">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium text-blue-900 dark:text-blue-100">
                     Client Notes
@@ -392,54 +465,81 @@ export default function SchedulingReviewModal({
 
             {/* Send Alternatives Section */}
             <div className="border-t pt-4">
-              {!showAlternatives ? (
-                <Button
-                  variant="link"
-                  onClick={() => setShowAlternatives(true)}
-                  className="h-auto p-0 text-blue-600"
-                >
-                  Neither time works? Send alternatives →
-                </Button>
-              ) : (
-                <div className="space-y-4">
-                  <h3 className="text-foreground text-sm font-medium">
-                    Send Alternative Times
-                  </h3>
-                  <p className="text-muted-foreground text-sm">
-                    Suggest up to 2 alternatives if neither choice works.
-                  </p>
+              {!isHandled ? (
+                !showAlternatives ? (
+                  <Button
+                    variant="link"
+                    onClick={() => setShowAlternatives(true)}
+                    className="h-auto p-0 text-blue-600"
+                  >
+                    Neither time works? Send alternatives →
+                  </Button>
+                ) : (
+                  <div className="space-y-4">
+                    <h3 className="text-foreground text-sm font-medium">
+                      Send Alternative Times
+                    </h3>
+                    <p className="text-muted-foreground text-sm">
+                      Suggest up to 2 alternatives if neither choice works.
+                    </p>
 
-                  {alternativeDates.map((altDate, index) => (
-                    <div key={index} className="flex items-center gap-3">
-                      <span className="text-muted-foreground w-16 shrink-0 text-sm">
-                        Alt {index + 1}:
-                      </span>
-                      <DatePickerWithTime
-                        date={altDate}
-                        onSelect={(date) => updateAlternativeDate(index, date)}
-                        datePlaceholder="Select date"
-                        minDate={new Date()}
-                      />
+                    {alternativeDates.map((altDate, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <span className="text-muted-foreground w-16 shrink-0 text-sm">
+                          Alt {index + 1}:
+                        </span>
+                        <DatePickerWithTime
+                          date={altDate}
+                          onSelect={(date) =>
+                            updateAlternativeDate(index, date)
+                          }
+                          datePlaceholder="Select date"
+                          minDate={new Date()}
+                        />
+                      </div>
+                    ))}
+
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={handleSendAlternatives}
+                        disabled={isConfirming}
+                        className="bg-orange-600 hover:bg-orange-700"
+                      >
+                        Send Alternatives to Client
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => setShowAlternatives(false)}
+                      >
+                        Cancel
+                      </Button>
                     </div>
-                  ))}
-
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={handleSendAlternatives}
-                      disabled={isConfirming}
-                      className="bg-orange-600 hover:bg-orange-700"
-                    >
-                      Send Alternatives to Client
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => setShowAlternatives(false)}
-                    >
-                      Cancel
-                    </Button>
+                  </div>
+                )
+              ) : request.alternativesOffered &&
+                request.alternativesOffered.length > 0 ? (
+                <div className="space-y-2">
+                  <h3 className="text-foreground text-sm font-medium">
+                    Alternatives Sent
+                  </h3>
+                  <div className="space-y-2">
+                    {request.alternativesOffered.map((alt, index) => (
+                      <div
+                        key={`${index}-${alt.date}`}
+                        className="bg-muted/50 rounded-md border p-3 text-sm"
+                      >
+                        <p className="font-medium">
+                          Option {index + 1}:{" "}
+                          {formatDateWithWeekdayUTC(alt.date)}
+                        </p>
+                        <p className="text-muted-foreground">
+                          {formatTime(alt.requestedTime)}
+                        </p>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              )}
+              ) : null}
             </div>
 
             {/* Internal Notes */}
