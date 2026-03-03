@@ -401,6 +401,7 @@ export default function MonthCalendar({
                       </Button>
                       <TravelTimeDaySummary
                         summary={dayTravelSummary}
+                        jobs={dayJobs}
                         isLoading={isTravelTimeLoading}
                       />
                       <WorkTimeDaySummary
@@ -883,6 +884,7 @@ export default function MonthCalendar({
                       {selectedDayJobs.length > 0 && (
                         <TravelTimeDaySummary
                           summary={selectedDayTravelSummary}
+                          jobs={selectedDayJobs}
                           isLoading={isTravelTimeLoading}
                         />
                       )}
@@ -1039,6 +1041,7 @@ export default function MonthCalendar({
                         ? travelTimeSummaries?.get(dayJobsModalDateKey)
                         : undefined
                     }
+                    jobs={dayJobsModalJobs}
                     isLoading={isTravelTimeLoading}
                   />
                 )}

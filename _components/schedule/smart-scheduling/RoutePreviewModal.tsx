@@ -20,6 +20,7 @@ import type {
 } from "../../../app/lib/typeDefinitions";
 import dynamic from "next/dynamic";
 import { cn } from "../../../app/lib/utils";
+import { getTravelLoadTextClass } from "../../../app/lib/travelTimeColorRules";
 import { compareScheduleDisplayOrder } from "../../../app/lib/utils/scheduleDayUtils";
 
 const ScheduleMap = dynamic(() => import("../map/ScheduleMap"), {
@@ -42,12 +43,6 @@ function formatMinutes(minutes: number): string {
   const hours = Math.floor(rounded / 60);
   const mins = rounded % 60;
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-}
-
-function getColorClass(minutes: number): string {
-  if (minutes < 90) return "text-green-600 dark:text-green-400";
-  if (minutes <= 150) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
 }
 
 function formatClockFrom24Hour(hour: number, minute: number): string {
@@ -226,9 +221,9 @@ export default function RoutePreviewModal({
                 <span className="text-sm font-semibold">
                   Total:{" "}
                   <span
-                    className={getColorClass(
-                      option.projectedTotalTravelMinutes,
-                    )}
+                    className={getTravelLoadTextClass({
+                      travelMinutes: option.projectedTotalTravelMinutes,
+                    })}
                   >
                     {formatMinutes(option.projectedTotalTravelMinutes)}
                   </span>
@@ -267,7 +262,9 @@ export default function RoutePreviewModal({
                         <span
                           className={cn(
                             "shrink-0 font-medium",
-                            getColorClass(seg.typicalMinutes),
+                            getTravelLoadTextClass({
+                              travelMinutes: seg.typicalMinutes,
+                            }),
                           )}
                         >
                           {formatMinutes(seg.typicalMinutes)}

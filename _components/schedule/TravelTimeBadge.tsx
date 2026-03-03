@@ -3,9 +3,15 @@
 import { Car } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipTrigger } from "../ui/tooltip";
 import { cn } from "../../app/lib/utils";
+import {
+  getTravelLoadBgClass,
+  getTravelLoadTextClass,
+  TARGET_WORKDAY_MINUTES,
+} from "../../app/lib/travelTimeColorRules";
 
 interface TravelTimeBadgeProps {
   typicalMinutes: number;
+  workMinutes?: number;
   km?: number;
   travelNotes?: string;
   isLoading?: boolean;
@@ -19,20 +25,9 @@ function formatMinutes(minutes: number): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-function getColorClass(minutes: number): string {
-  if (minutes < 90) return "text-green-600 dark:text-green-400";
-  if (minutes <= 150) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
-}
-
-function getBgClass(minutes: number): string {
-  if (minutes < 90) return "bg-green-500/10";
-  if (minutes <= 150) return "bg-amber-500/10";
-  return "bg-red-500/10";
-}
-
 export default function TravelTimeBadge({
   typicalMinutes,
+  workMinutes,
   km,
   travelNotes,
   isLoading,
@@ -51,14 +46,25 @@ export default function TravelTimeBadge({
 
   if (typicalMinutes <= 0) return null;
 
+  const combinedMinutes =
+    typeof workMinutes === "number" && Number.isFinite(workMinutes)
+      ? Math.max(0, workMinutes) + typicalMinutes
+      : null;
+
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span
           className={cn(
             "inline-flex items-center gap-0.5 rounded px-1 py-0.5 text-[10px] leading-none font-medium",
-            getBgClass(typicalMinutes),
-            getColorClass(typicalMinutes),
+            getTravelLoadBgClass({
+              travelMinutes: typicalMinutes,
+              workMinutes,
+            }),
+            getTravelLoadTextClass({
+              travelMinutes: typicalMinutes,
+              workMinutes,
+            }),
             className,
           )}
         >
@@ -70,6 +76,12 @@ export default function TravelTimeBadge({
         <div className="space-y-1 text-xs">
           <div className="font-semibold">Travel Time</div>
           <div>{formatMinutes(typicalMinutes)}</div>
+          {combinedMinutes != null && (
+            <div className="text-muted-foreground">
+              Work + Drive: {formatMinutes(combinedMinutes)} /{" "}
+              {formatMinutes(TARGET_WORKDAY_MINUTES)} target
+            </div>
+          )}
           {km !== undefined && km > 0 && (
             <div className="text-muted-foreground">{Math.round(km)} km</div>
           )}

@@ -224,6 +224,7 @@ const DayCalendar = ({
                       <div className="mt-1 flex items-center gap-2">
                         <TravelTimeDaySummary
                           summary={currentDaySummary}
+                          jobs={currentDayJobs}
                           isLoading={isTravelTimeLoading}
                         />
                         <Button
@@ -464,6 +465,7 @@ const DayCalendar = ({
                     <div className="mb-3">
                       <TravelTimeDaySummary
                         summary={daySummary}
+                        jobs={currentDayJobs}
                         isLoading={isTravelTimeLoading}
                       />
                     </div>

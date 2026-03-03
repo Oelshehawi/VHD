@@ -14,6 +14,7 @@ import {
 } from "../../ui/select";
 import type { DaySchedulingOption } from "../../../app/lib/actions/smartScheduling.actions";
 import { cn } from "../../../app/lib/utils";
+import { getTravelLoadTextClass } from "../../../app/lib/travelTimeColorRules";
 import RoutePreviewModal from "./RoutePreviewModal";
 
 interface DayRankingViewProps {
@@ -30,12 +31,6 @@ function formatMinutes(minutes: number): string {
   const hours = Math.floor(rounded / 60);
   const mins = rounded % 60;
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
-}
-
-function getColorClass(minutes: number): string {
-  if (minutes < 90) return "text-green-600 dark:text-green-400";
-  if (minutes <= 150) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
 }
 
 type TabValue = "optimal" | "late";
@@ -219,9 +214,10 @@ export default function DayRankingView({
                           <div className="flex items-center gap-1">
                             <Car className="h-3 w-3" />
                             <span
-                              className={getColorClass(
-                                option.projectedTotalTravelMinutes,
-                              )}
+                              className={getTravelLoadTextClass({
+                                travelMinutes:
+                                  option.projectedTotalTravelMinutes,
+                              })}
                             >
                               {formatMinutes(
                                 option.projectedTotalTravelMinutes,
@@ -234,7 +230,10 @@ export default function DayRankingView({
                             <span
                               className={cn(
                                 option.nextJobTravelMinutes != null
-                                  ? getColorClass(option.nextJobTravelMinutes)
+                                  ? getTravelLoadTextClass({
+                                      travelMinutes:
+                                        option.nextJobTravelMinutes,
+                                    })
                                   : "text-muted-foreground",
                               )}
                             >

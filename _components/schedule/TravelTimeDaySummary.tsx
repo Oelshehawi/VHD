@@ -1,12 +1,22 @@
 "use client";
 
+import { useMemo } from "react";
 import { Car } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { cn } from "../../app/lib/utils";
-import type { DayTravelTimeSummary } from "../../app/lib/typeDefinitions";
+import type {
+  DayTravelTimeSummary,
+  ScheduleType,
+} from "../../app/lib/typeDefinitions";
+import { getEffectiveServiceDurationMinutes } from "../../app/lib/serviceDurationRules";
+import {
+  getTravelLoadTextClass,
+  TARGET_WORKDAY_MINUTES,
+} from "../../app/lib/travelTimeColorRules";
 
 interface TravelTimeDaySummaryProps {
   summary: DayTravelTimeSummary | undefined;
+  jobs?: ScheduleType[];
   isLoading?: boolean;
   className?: string;
 }
@@ -18,17 +28,29 @@ function formatMinutes(minutes: number): string {
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
 }
 
-function getColorClass(minutes: number): string {
-  if (minutes < 90) return "text-green-600 dark:text-green-400";
-  if (minutes <= 150) return "text-amber-600 dark:text-amber-400";
-  return "text-red-600 dark:text-red-400";
-}
-
 export default function TravelTimeDaySummary({
   summary,
+  jobs,
   isLoading,
   className,
 }: TravelTimeDaySummaryProps) {
+  const totalWorkMinutes = useMemo(() => {
+    if (!jobs || jobs.length === 0) return null;
+    const minutes = jobs.reduce(
+      (sum, job) =>
+        sum +
+        getEffectiveServiceDurationMinutes({
+          actualServiceDurationMinutes: job.actualServiceDurationMinutes,
+          historicalServiceDurationMinutes:
+            job.historicalServiceDurationMinutes,
+          scheduleHours: job.hours,
+          fallbackHours: 4,
+        }),
+      0,
+    );
+    return Number.isFinite(minutes) ? minutes : null;
+  }, [jobs]);
+
   if (isLoading) {
     return (
       <span
@@ -49,7 +71,10 @@ export default function TravelTimeDaySummary({
           type="button"
           className={cn(
             "hover:bg-muted/80 inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-medium transition-colors",
-            getColorClass(summary.totalTravelMinutes),
+            getTravelLoadTextClass({
+              travelMinutes: summary.totalTravelMinutes,
+              workMinutes: totalWorkMinutes,
+            }),
             className,
           )}
         >
@@ -92,7 +117,9 @@ export default function TravelTimeDaySummary({
                   <div
                     className={cn(
                       "text-[11px] font-medium",
-                      getColorClass(seg.typicalMinutes),
+                      getTravelLoadTextClass({
+                        travelMinutes: seg.typicalMinutes,
+                      }),
                     )}
                   >
                     {formatMinutes(seg.typicalMinutes)}
@@ -115,7 +142,10 @@ export default function TravelTimeDaySummary({
                 <span
                   className={cn(
                     "text-[11px] font-semibold",
-                    getColorClass(summary.totalTravelMinutes),
+                    getTravelLoadTextClass({
+                      travelMinutes: summary.totalTravelMinutes,
+                      workMinutes: totalWorkMinutes,
+                    }),
                   )}
                 >
                   {formatMinutes(summary.totalTravelMinutes)}
@@ -123,6 +153,16 @@ export default function TravelTimeDaySummary({
                 <div className="text-muted-foreground text-[9px]">
                   {Math.round(summary.totalTravelKm)} km
                 </div>
+                {totalWorkMinutes != null && (
+                  <div className="text-muted-foreground text-[9px]">
+                    Work + Drive:{" "}
+                    {formatMinutes(
+                      totalWorkMinutes + summary.totalTravelMinutes,
+                    )}
+                    {" / "}
+                    {formatMinutes(TARGET_WORKDAY_MINUTES)} target
+                  </div>
+                )}
               </div>
             </div>
           </div>

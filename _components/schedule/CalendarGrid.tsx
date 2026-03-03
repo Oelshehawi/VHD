@@ -114,6 +114,7 @@ const CalendarGrid = ({
               {jobCount > 0 && (
                 <TravelTimeDaySummary
                   summary={dayTravelSummary}
+                  jobs={dayJobs}
                   isLoading={isTravelTimeLoading}
                 />
               )}

@@ -101,6 +101,7 @@ const JobItem = ({
               {(travelSegment || isTravelTimeLoading) && (
                 <TravelTimeBadge
                   typicalMinutes={travelSegment?.typicalMinutes ?? 0}
+                  workMinutes={durationMinutes}
                   km={travelSegment?.km}
                   travelNotes={travelSegment?.travelNotes}
                   isLoading={isTravelTimeLoading}
@@ -146,6 +147,7 @@ const JobItem = ({
               {(travelSegment || isTravelTimeLoading) && (
                 <TravelTimeBadge
                   typicalMinutes={travelSegment?.typicalMinutes ?? 0}
+                  workMinutes={durationMinutes}
                   km={travelSegment?.km}
                   travelNotes={travelSegment?.travelNotes}
                   isLoading={isTravelTimeLoading}
