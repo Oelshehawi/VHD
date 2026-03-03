@@ -342,6 +342,7 @@ function DirectActionContent({
     const hours = action.details?.newValue?.hours;
     const confirmed = action.action === "schedule_confirmed";
     const unconfirmed = action.action === "schedule_unconfirmed";
+    const alternativesSent = action.action === "schedule_alternatives_sent";
 
     return (
       <div className="space-y-2">
@@ -353,14 +354,18 @@ function DirectActionContent({
                 ? "text-green-700"
                 : unconfirmed
                   ? "text-orange-700"
-                  : "text-blue-700"
+                  : alternativesSent
+                    ? "text-amber-700"
+                    : "text-blue-700"
             }`}
           >
             {confirmed
               ? "✅ Confirmed"
               : unconfirmed
                 ? "⏸️ Unconfirmed"
-                : "📅 Scheduled"}
+                : alternativesSent
+                  ? "📨 Alternatives Sent"
+                  : "📅 Scheduled"}
           </span>
         </div>
 
