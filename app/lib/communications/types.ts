@@ -54,6 +54,11 @@ export interface JobsDueSoonContextSnapshot {
   }>;
 }
 
+export interface ClientWorkflowSnapshot {
+  portalMode: "internal" | "external" | "none";
+  externalPortalNotes?: string;
+}
+
 export interface CommunicationsContextPayload {
   contextType: "invoice" | "jobsDueSoon";
   title: string;
@@ -61,6 +66,7 @@ export interface CommunicationsContextPayload {
     invoiceNumber?: string;
   };
   emailExists: boolean;
+  workflow?: ClientWorkflowSnapshot;
   jobsDueSoon?: JobsDueSoonContextSnapshot;
   items: CommunicationItem[];
 }

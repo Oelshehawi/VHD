@@ -13,6 +13,7 @@ import {
   sortCommunicationsDescending,
 } from "./communications/adapter";
 import type {
+  ClientWorkflowSnapshot,
   CommunicationItem,
   CommunicationRecordRefs,
   CommunicationsContextInput,
@@ -28,6 +29,10 @@ type LeanClient = {
     primary?: unknown;
     accounting?: unknown;
     scheduling?: unknown;
+  };
+  workflowProfile?: {
+    portalMode?: unknown;
+    externalPortalNotes?: unknown;
   };
   isArchived?: boolean;
 };
@@ -83,6 +88,26 @@ const hasClientEmail = (client: LeanClient | null): boolean => {
     .map((entry) => entry.trim())
     .filter(Boolean);
   return emails.length > 0;
+};
+
+const buildWorkflowSnapshot = (
+  client: LeanClient | null,
+): ClientWorkflowSnapshot | undefined => {
+  if (!client) return undefined;
+  const portalMode =
+    client.workflowProfile?.portalMode === "external" ||
+    client.workflowProfile?.portalMode === "none"
+      ? client.workflowProfile.portalMode
+      : "internal";
+  const externalPortalNotes =
+    typeof client.workflowProfile?.externalPortalNotes === "string"
+      ? client.workflowProfile.externalPortalNotes.trim()
+      : "";
+
+  return {
+    portalMode,
+    externalPortalNotes: externalPortalNotes || undefined,
+  };
 };
 
 const getClientLookupMap = async (
@@ -143,6 +168,7 @@ const makeEmptyContextPayload = (
   title: "Unknown Record",
   refs: {},
   emailExists: false,
+  workflow: undefined,
   items: [],
 });
 
@@ -170,7 +196,7 @@ export async function getCommunicationsForContext(
     };
 
     const clientDoc = (await Client.findById(clientId)
-      .select("_id email emails")
+      .select("_id email emails workflowProfile")
       .lean()) as LeanClient | null;
 
     const items = sortCommunicationsDescending([
@@ -193,6 +219,7 @@ export async function getCommunicationsForContext(
         invoiceNumber: String(invoiceDoc.invoiceId || ""),
       },
       emailExists: hasClientEmail(clientDoc),
+      workflow: buildWorkflowSnapshot(clientDoc),
       items,
     };
   }
@@ -224,7 +251,7 @@ export async function getCommunicationsForContext(
 
   const [clientDoc, invoiceMeta] = await Promise.all([
     Client.findById(clientId)
-      .select("_id email emails")
+      .select("_id email emails workflowProfile")
       .lean() as Promise<LeanClient | null>,
     Invoice.findById(invoiceMongoId).select("invoiceId").lean() as Promise<{
       invoiceId?: unknown;
@@ -244,6 +271,7 @@ export async function getCommunicationsForContext(
       invoiceNumber: String(invoiceMeta?.invoiceId || ""),
     },
     emailExists: hasClientEmail(clientDoc),
+    workflow: buildWorkflowSnapshot(clientDoc),
     jobsDueSoon: buildJobsDueSoonSnapshot(jobsDueSoonDoc),
     items,
   };

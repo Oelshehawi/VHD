@@ -282,6 +282,24 @@ export async function createSchedule(
       scheduleData.historicalServiceDurationMinutes = historicalMinutes;
     }
 
+    // Auto-populate business type from the invoice if not already set.
+    if (!scheduleData.businessType) {
+      try {
+        const invoiceForWorkflow = await Invoice.findById(
+          scheduleData.invoiceRef,
+        )
+          .select("businessType")
+          .lean<{
+            businessType?: ScheduleType["businessType"];
+          }>();
+        if (invoiceForWorkflow?.businessType && !scheduleData.businessType) {
+          scheduleData.businessType = invoiceForWorkflow.businessType;
+        }
+      } catch {
+        // Non-critical, default applies via schema
+      }
+    }
+
     const newSchedule = new Schedule(scheduleData);
     await newSchedule.save();
     createdScheduleId = newSchedule._id.toString();

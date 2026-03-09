@@ -26,7 +26,8 @@
     "migrate:photos:execute": "node --env-file=.env --import=tsx scripts/migrate-photos-collection.ts --execute",
     "mask:pii": "node --env-file=.env --import=tsx scripts/mask-client-pii.ts",
     "mask:pii:execute": "node --env-file=.env --import=tsx scripts/mask-client-pii.ts --execute=true --confirm=MASK_PII",
-    "mask:pii:contact-only": "node --env-file=.env --import=tsx scripts/mask-client-pii.ts --execute=true --confirm=MASK_PII --keep-names=true"
+    "mask:pii:contact-only": "node --env-file=.env --import=tsx scripts/mask-client-pii.ts --execute=true --confirm=MASK_PII --keep-names=true",
+    "migrate:workflow-scope": "node --env-file=.env --import=tsx scripts/migrate-workflow-scope.ts"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.26",

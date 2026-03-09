@@ -44,6 +44,7 @@ import {
   resolveEmailRecipient,
   withEmailTestTemplateModel,
 } from "../emailDeliveryMode";
+import { isClientPortalEnabled } from "../utils/workflowUtils";
 
 const postmark = require("postmark");
 
@@ -280,6 +281,16 @@ export async function getSchedulingLink(jobsDueSoonId: string): Promise<{
       return { success: false, error: "Job not found" };
     }
 
+    const clientForGate = (await Client.findById(
+      jobsDueSoon.clientId,
+    ).lean()) as ClientType | null;
+    if (!isClientPortalEnabled(clientForGate)) {
+      return {
+        success: false,
+        error: "Client portal access is disabled for this client",
+      };
+    }
+
     // Check if there's an existing valid token
     const hasValidToken =
       jobsDueSoon.schedulingToken &&
@@ -335,6 +346,16 @@ export async function regenerateSchedulingLink(jobsDueSoonId: string): Promise<{
 
     if (!jobsDueSoon) {
       return { success: false, error: "Job not found" };
+    }
+
+    const clientForGate = (await Client.findById(
+      jobsDueSoon.clientId,
+    ).lean()) as ClientType | null;
+    if (!isClientPortalEnabled(clientForGate)) {
+      return {
+        success: false,
+        error: "Client portal access is disabled for this client",
+      };
     }
 
     // Cancel any existing request
@@ -1138,6 +1159,7 @@ export async function confirmSchedulingWithInvoice(
         })) || [],
       notes: sourceInvoice.notes || "",
       frequency: frequency,
+      businessType: sourceInvoice.businessType || "commercial",
       // Set new dates
       dateIssued,
       dateDue,

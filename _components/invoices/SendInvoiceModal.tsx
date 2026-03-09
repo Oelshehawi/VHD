@@ -2,10 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { ClientType, InvoiceType } from "../../app/lib/typeDefinitions";
-import {
-  calculateSubtotal,
-  calculateGST,
-} from "../../app/lib/utils";
+import { calculateSubtotal, calculateGST } from "../../app/lib/utils";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +24,7 @@ import {
   FileText,
   Calendar,
 } from "lucide-react";
+import { isResidentialWorkItem } from "../../app/lib/utils/workflowUtils";
 
 interface SendInvoiceModalProps {
   invoice: InvoiceType | null;
@@ -205,13 +203,13 @@ export default function SendInvoiceModal({
             </div>
           )}
 
-          {hasSchedule && !hasReport && (
+          {hasSchedule && !hasReport && !isResidentialWorkItem(invoice) && (
             <div className="flex items-start gap-3 rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-800 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
               <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
               <div>
                 <p className="text-sm font-medium">Report Not Completed</p>
                 <p className="mt-1 text-xs opacity-80">
-                  The cleaning report for this job has not been completed. You
+                  The service report for this job has not been completed. You
                   must complete the report before sending the invoice.
                 </p>
               </div>
@@ -410,7 +408,7 @@ export default function SendInvoiceModal({
                     htmlFor="includeReport"
                     className="cursor-pointer text-sm font-normal"
                   >
-                    Also send cleaning report with invoice
+                    Also send service report with invoice
                   </Label>
                 </div>
               </div>
@@ -433,7 +431,7 @@ export default function SendInvoiceModal({
             disabled={
               isLoading ||
               !hasSchedule ||
-              !hasReport ||
+              (!hasReport && !isResidentialWorkItem(invoice)) ||
               selectedEmails.length + additionalRecipients.length === 0
             }
             type="button"

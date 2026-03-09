@@ -58,6 +58,7 @@ interface ClientFormData {
 interface InvoiceFormData {
   jobTitle: string;
   location: string;
+  businessType: "commercial" | "residential";
   frequency: number;
   dateIssued: Date | undefined;
   notes: string;
@@ -117,6 +118,7 @@ export default function ConvertToClientInvoiceDialog({
         estimate.prospectInfo?.projectLocation ||
         estimate.prospectInfo?.address ||
         "",
+      businessType: estimate.businessType || "commercial",
       frequency: 2, // Default to semi-annual (2x/year)
       dateIssued: new Date(),
       notes: estimate.notes || "",
@@ -220,6 +222,7 @@ export default function ConvertToClientInvoiceDialog({
         {
           jobTitle: invoiceData.jobTitle,
           location: invoiceData.location,
+          businessType: invoiceData.businessType,
           frequency: invoiceData.frequency,
           dateIssued: dateIssuedStr,
           notes: invoiceData.notes,
@@ -454,6 +457,29 @@ export default function ConvertToClientInvoiceDialog({
                           invoiceErrors.dateIssued ? "border-destructive" : ""
                         }
                       />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="businessType">Business Type</Label>
+                      <Select
+                        value={invoiceForm.watch("businessType")}
+                        onValueChange={(value) =>
+                          invoiceForm.setValue(
+                            "businessType",
+                            value as InvoiceFormData["businessType"],
+                          )
+                        }
+                      >
+                        <SelectTrigger id="businessType">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="commercial">Commercial</SelectItem>
+                          <SelectItem value="residential">
+                            Residential
+                          </SelectItem>
+                        </SelectContent>
+                      </Select>
                     </div>
 
                     <div className="space-y-2">

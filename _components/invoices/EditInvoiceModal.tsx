@@ -1,6 +1,6 @@
 // @ts-nocheck
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useForm } from "react-hook-form";
 import { updateInvoice } from "../../app/lib/actions/actions";
@@ -42,6 +42,17 @@ import { format } from "date-fns";
 import { Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
+const getLocalDateFromStoredValue = (dateValue?: string | Date) => {
+  if (!dateValue) return undefined;
+
+  const dateString =
+    typeof dateValue === "string" ? dateValue.split("T")[0] : dateValue;
+  const [year, month, day] = String(dateString).split("-").map(Number);
+  const date = new Date(year, month - 1, day);
+
+  return Number.isNaN(date.getTime()) ? undefined : date;
+};
+
 const InlineEditInvoice = ({
   invoice,
   isEditing,
@@ -66,20 +77,21 @@ const InlineEditInvoice = ({
     );
   const [showPaymentModal, setShowPaymentModal] = useState<boolean>(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
-  const [dateIssuedValue, setDateIssuedValue] = useState<Date | undefined>(
-    () => {
-      if (invoice.dateIssued) {
-        // Parse as local date to avoid timezone conversion issues
-        const dateString =
-          typeof invoice.dateIssued === "string"
-            ? invoice.dateIssued.split("T")[0]
-            : invoice.dateIssued;
-        const [year, month, day] = String(dateString).split("-").map(Number);
-        const date = new Date(year, month - 1, day);
-        return isNaN(date.getTime()) ? undefined : date;
-      }
-      return undefined;
-    },
+  const [dateIssuedValue, setDateIssuedValue] = useState<Date | undefined>(() =>
+    getLocalDateFromStoredValue(invoice.dateIssued),
+  );
+  const defaultValues = useMemo(
+    () => ({
+      invoiceId: invoice.invoiceId,
+      jobTitle: invoice.jobTitle,
+      businessType: invoice.businessType || "commercial",
+      dateIssued: invoice.dateIssued,
+      dateDue: invoice.dateDue,
+      frequency: invoice.frequency,
+      location: invoice.location,
+      notes: invoice.notes,
+    }),
+    [invoice],
   );
 
   const {
@@ -87,26 +99,33 @@ const InlineEditInvoice = ({
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm({
-    defaultValues: {
-      invoiceId: invoice.invoiceId,
-      jobTitle: invoice.jobTitle,
-      dateIssued: invoice.dateIssued,
-      dateDue: invoice.dateDue,
-      frequency: invoice.frequency,
-      location: invoice.location,
-      notes: invoice.notes,
-    },
+    defaultValues,
   });
 
   const dateIssued = watch("dateIssued");
   const frequency = watch("frequency");
+  const businessType = watch("businessType");
 
   useEffect(() => {
     const updatedDateDue = calculateDueDate(dateIssued, frequency);
     setValue("dateDue", updatedDateDue);
   }, [dateIssued, frequency, setValue]);
+
+  useEffect(() => {
+    if (!isEditing) return;
+
+    reset(defaultValues);
+    setDateIssuedValue(getLocalDateFromStoredValue(invoice.dateIssued));
+  }, [defaultValues, invoice.dateIssued, isEditing, reset]);
+
+  const handleCancelEdit = () => {
+    reset(defaultValues);
+    setDateIssuedValue(getLocalDateFromStoredValue(invoice.dateIssued));
+    toggleEdit();
+  };
 
   const onSubmit = async (formData: any) => {
     try {
@@ -404,7 +423,7 @@ const InlineEditInvoice = ({
                   isLoading={isUpdatingStatus}
                 />
                 <Button
-                  onClick={toggleEdit}
+                  onClick={isEditing ? handleCancelEdit : toggleEdit}
                   variant={isEditing ? "outline" : "default"}
                   size="sm"
                 >
@@ -423,6 +442,7 @@ const InlineEditInvoice = ({
 
         <CardContent className="p-4">
           <form onSubmit={handleSubmit(onSubmit)}>
+            <input type="hidden" {...register("businessType")} />
             {/* Two-column layout */}
             <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
               <div className="space-y-4">
@@ -431,6 +451,42 @@ const InlineEditInvoice = ({
               <div className="space-y-4">
                 {rightColumnFields.map(renderField)}
               </div>
+            </div>
+
+            <div className="border-border mt-4 space-y-3 border-t pt-4">
+              <h3 className="text-foreground text-sm font-semibold">
+                Property Settings
+              </h3>
+              {isEditing ? (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Business Type</Label>
+                    <Select
+                      value={businessType || "commercial"}
+                      onValueChange={(value) => setValue("businessType", value)}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="commercial">Commercial</SelectItem>
+                        <SelectItem value="residential">Residential</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                  <div>
+                    <p className="text-muted-foreground text-xs">
+                      Business Type
+                    </p>
+                    <p className="text-foreground text-sm capitalize">
+                      {invoice.businessType || "commercial"}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Payment Information Section - Only show if invoice is paid */}
@@ -502,7 +558,7 @@ const InlineEditInvoice = ({
                 </Button>
                 <Button
                   type="button"
-                  onClick={toggleEdit}
+                  onClick={handleCancelEdit}
                   variant="outline"
                   className="flex-1"
                 >

@@ -9,6 +9,7 @@ import {
   Image,
   Link,
 } from "@react-pdf/renderer";
+import { getEstimatePreset } from "../../app/lib/estimatePresets";
 
 const styles = StyleSheet.create({
   page: {
@@ -240,6 +241,7 @@ const styles = StyleSheet.create({
 export interface EstimateData {
   estimateNumber: string;
   createdDate: string;
+  businessType?: "commercial" | "residential";
   clientName: string;
   contactPerson?: string;
   email?: string;
@@ -263,6 +265,7 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
   estimateData,
   scale = 1.0,
 }) => {
+  const preset = getEstimatePreset(estimateData.businessType || "commercial");
   // Helper function to scale numeric values
   const s = (value: number) => Math.round(value * scale);
 
@@ -555,7 +558,7 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
             </View>
           </View>
           <View style={scaledStyles.col50}>
-            <Text style={scaledStyles.label}>Business Name:</Text>
+            <Text style={scaledStyles.label}>{preset.clientNameLabel}:</Text>
             <Text style={scaledStyles.value}>{estimateData.clientName}</Text>
             <View style={{ marginTop: s(7) }}>
               <Text style={scaledStyles.label}>Contact Person:</Text>
@@ -648,7 +651,7 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
         {/* Services Section */}
         <View style={scaledStyles.servicesSection}>
           <Text style={scaledStyles.servicesTitle}>
-            Our vent cleaning service includes:
+            {preset.servicesSectionTitle}
           </Text>
           <View style={scaledStyles.servicesGrid}>
             {estimateData.services.map((service, index) => (
@@ -701,8 +704,7 @@ const EstimatePdfDocument: React.FC<EstimatePdfDocumentProps> = ({
         <View style={scaledStyles.termsSection}>
           <Text style={scaledStyles.termsTitle}>TERMS & CONDITIONS</Text>
           <Text style={scaledStyles.termsText}>
-            {estimateData.terms ||
-              "Payment is due upon completion of service. Prices subject to change if scope of work differs from initial assessment."}
+            {estimateData.terms || preset.defaultTerms}
           </Text>
         </View>
 

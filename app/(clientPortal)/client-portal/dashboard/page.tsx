@@ -54,10 +54,14 @@ export default async function ClientDashboardPage({
     }
   }
 
-  // Fetch all data in parallel to avoid waterfall pattern
-  const [client, upcomingServices, recentServices, allInvoices, allReports] =
+  const client = await fetchClientData(clientId);
+
+  if (!isAdmin && client.workflowProfile?.portalMode === "none") {
+    redirect("/client-portal/auth-error");
+  }
+
+  const [upcomingServices, recentServices, allInvoices, allReports] =
     await Promise.all([
-      fetchClientData(clientId),
       fetchClientUpcomingSchedules(clientId),
       fetchClientPastSchedules(clientId),
       fetchClientInvoices(clientId, 1000),
@@ -132,7 +136,7 @@ export default async function ClientDashboardPage({
         </div>
 
         {/* Right Column - Tab Panel for Services, Invoices, Reports */}
-        <div className="min-h-[600px] lg:col-span-8 xl:col-span-9">
+        <div className="min-h-150 lg:col-span-8 xl:col-span-9">
           <TabPanel
             upcomingServices={upcomingServices}
             recentServices={recentServices}

@@ -12,6 +12,7 @@ import { ClientType, InvoiceType } from "../typeDefinitions";
 import { calculateDueDate } from "../utils";
 import { calculateNextReminderDateFromParts } from "../utils/datePartsUtils";
 import { CallLogEntry } from "../typeDefinitions";
+import { isResidentialWorkItem } from "../utils/workflowUtils";
 
 export async function updateInvoiceScheduleStatus(invoiceId: string) {
   await connectMongo();
@@ -66,7 +67,34 @@ export async function deleteClient(clientId: string) {
 export async function updateClient(clientId: string, formData: any) {
   await connectMongo();
   try {
-    await Client.findByIdAndUpdate(clientId, formData);
+    const setData: Record<string, any> = { ...formData };
+    const unsetData: Record<string, string> = {};
+    const portalMode = formData?.workflowProfile?.portalMode;
+    const externalPortalNotes = formData?.workflowProfile?.externalPortalNotes;
+
+    delete setData.workflowProfile;
+
+    if (portalMode !== undefined) {
+      setData["workflowProfile.portalMode"] = portalMode;
+    }
+
+    if (externalPortalNotes) {
+      setData["workflowProfile.externalPortalNotes"] = externalPortalNotes;
+    } else {
+      unsetData["workflowProfile.externalPortalNotes"] = "";
+    }
+
+    if (portalMode === "none") {
+      unsetData.portalAccessToken = "";
+      unsetData.portalAccessTokenExpiry = "";
+    }
+
+    const update =
+      Object.keys(unsetData).length > 0
+        ? { $set: setData, $unset: unsetData }
+        : { $set: setData };
+
+    await Client.findByIdAndUpdate(clientId, update);
   } catch (error) {
     console.error("Database Error:", error);
     throw new Error("Failed to update client with id");
@@ -96,6 +124,13 @@ export async function createJobsDueSoonForInvoice(
 ) {
   await connectMongo();
   try {
+    const invoiceForWorkflow = await Invoice.findById(invoiceId)
+      .select("businessType")
+      .lean<InvoiceType | null>();
+    if (isResidentialWorkItem(invoiceForWorkflow)) {
+      return;
+    }
+
     await JobsDueSoon.create({
       clientId,
       invoiceId,
@@ -176,7 +211,13 @@ export async function createInvoice(
 
     const newInvoiceId = `${invoiceData.prefix}-${newInvoiceNumber.toString().padStart(3, "0")}`;
 
-    const newInvoiceData = { ...invoiceData, invoiceId: newInvoiceId };
+    const resolvedBusinessType = invoiceData.businessType || "commercial";
+
+    const newInvoiceData = {
+      ...invoiceData,
+      invoiceId: newInvoiceId,
+      businessType: resolvedBusinessType,
+    };
 
     const newInvoice = new Invoice(newInvoiceData);
     await newInvoice.save();
@@ -414,7 +455,26 @@ export async function updateInvoice(
 
     console.log(`Updating JobsDueSoon record for invoice ${invoiceId}`);
 
-    if (Object.keys(jobsDueSoonUpdate).length > 0) {
+    const nextBusinessType = (formData.businessType ??
+      currentInvoice?.businessType ??
+      "commercial") as InvoiceType["businessType"];
+
+    if (nextBusinessType === "residential") {
+      await JobsDueSoon.deleteMany({ invoiceId: invoiceId.toString() });
+    } else if (
+      currentInvoice?.businessType === "residential" &&
+      nextBusinessType === "commercial" &&
+      currentInvoice
+    ) {
+      await createJobsDueSoonForInvoice(
+        invoiceId.toString(),
+        currentInvoice.clientId.toString(),
+        formData.jobTitle ?? currentInvoice.jobTitle ?? "",
+        formData.dateDue
+          ? new Date(formData.dateDue)
+          : new Date(currentInvoice.dateDue),
+      );
+    } else if (Object.keys(jobsDueSoonUpdate).length > 0) {
       await JobsDueSoon.findOneAndUpdate(
         { invoiceId: invoiceId.toString() },
         jobsDueSoonUpdate,
@@ -472,6 +532,7 @@ export async function getClientInvoicesForAutofill(clientId: string) {
       jobTitle: invoice.jobTitle,
       frequency: invoice.frequency,
       location: invoice.location,
+      businessType: invoice.businessType,
       notes: invoice.notes,
       items: invoice.items.map((item: any) => ({
         description: item.description,

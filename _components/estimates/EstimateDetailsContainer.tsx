@@ -9,10 +9,12 @@ import {
   FaUserPlus,
   FaClipboardList,
   FaStickyNote,
+  FaHome,
 } from "react-icons/fa";
 import { type EstimateData } from "../pdf/EstimatePdfDocument";
 import { EstimateType, ClientType } from "../../app/lib/typeDefinitions";
 import { formatDateStringUTC } from "../../app/lib/utils";
+import { getEstimatePreset } from "../../app/lib/estimatePresets";
 import {
   Card,
   CardContent,
@@ -65,6 +67,9 @@ const EstimateDetailsContainer = ({
 
   // Get client name from prospect info
   const clientName = estimate.prospectInfo?.businessName || "Unknown Client";
+  const estimatePreset = getEstimatePreset(
+    estimate.businessType || "commercial",
+  );
 
   // Prepare estimate data for PDF generation
   const estimateData: EstimateData = {
@@ -84,19 +89,11 @@ const EstimateDetailsContainer = ({
     subtotal,
     gst,
     total,
+    businessType: estimate.businessType || "commercial",
     services:
       estimate.services && estimate.services.length > 0
         ? estimate.services
-        : [
-            "Hood from inside and outside",
-            "All filters",
-            "Access panels to duct work (accessible area only)",
-            "Rooftop fan (If safe access)",
-            "Fire wall behind equipment",
-            "ASTTBC Sticker",
-            "Fire Dept Report",
-            "Before/After pictures",
-          ],
+        : estimatePreset.defaultServices,
     terms: estimate.terms,
   };
 
@@ -186,6 +183,10 @@ const EstimateDetailsContainer = ({
                       <FaCalendar className="h-3 w-3" />
                       {formatDateStringUTC(estimate.createdDate)}
                     </span>
+                    <span className="flex items-center gap-2">
+                      <FaHome className="h-3 w-3" />
+                      {estimate.businessType || "commercial"}
+                    </span>
                     {estimate.convertedToInvoice && (
                       <Badge
                         variant="secondary"
@@ -252,7 +253,7 @@ const EstimateDetailsContainer = ({
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <div>
                       <p className="text-muted-foreground text-sm">
-                        Business Name
+                        {estimatePreset.clientNameLabel}
                       </p>
                       <p className="font-medium">
                         {estimate.prospectInfo?.businessName || "—"}

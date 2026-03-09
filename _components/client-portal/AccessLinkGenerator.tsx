@@ -15,6 +15,7 @@ interface AccessLinkGeneratorProps {
   defaultEmail?: string | null;
   existingAccessToken?: string | null;
   existingAccessTokenExpiry?: Date | string | null;
+  portalEnabled: boolean;
 }
 
 export default function AccessLinkGenerator({
@@ -23,6 +24,7 @@ export default function AccessLinkGenerator({
   defaultEmail,
   existingAccessToken,
   existingAccessTokenExpiry,
+  portalEnabled,
 }: AccessLinkGeneratorProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [accessLink, setAccessLink] = useState("");
@@ -36,6 +38,7 @@ export default function AccessLinkGenerator({
   }, [defaultEmail]);
 
   const existingLink = useMemo(() => {
+    if (!portalEnabled) return "";
     if (!existingAccessToken) return "";
     const baseUrl =
       typeof window !== "undefined" ? window.location.origin : getBaseUrl();
@@ -47,7 +50,7 @@ export default function AccessLinkGenerator({
     } catch {
       return "";
     }
-  }, [clientId, existingAccessToken]);
+  }, [clientId, existingAccessToken, portalEnabled]);
 
   const existingExpiryLabel = useMemo(() => {
     if (!existingAccessTokenExpiry) return "No expiry (reusable)";
@@ -63,6 +66,11 @@ export default function AccessLinkGenerator({
     // Validate email
     if (!clientEmail || !clientEmail.includes("@")) {
       setError("Please enter a valid email address for the client");
+      return;
+    }
+
+    if (!portalEnabled) {
+      setError("Client portal access is disabled for this client");
       return;
     }
 
@@ -94,6 +102,12 @@ export default function AccessLinkGenerator({
 
   return (
     <div className="space-y-4">
+      {!portalEnabled && (
+        <div className="bg-muted/30 text-muted-foreground rounded-lg border p-4 text-sm">
+          Client portal access is disabled. Change Portal Mode from `None` to
+          generate or use access links again.
+        </div>
+      )}
       <div className="space-y-2">
         <Label htmlFor="clientEmail">Client Email Address</Label>
         <div className="flex gap-2">
@@ -103,12 +117,12 @@ export default function AccessLinkGenerator({
             value={clientEmail}
             onChange={(e) => setClientEmail(e.target.value)}
             placeholder="client@example.com"
-            disabled={isGenerating}
+            disabled={isGenerating || !portalEnabled}
             className="flex-1"
           />
           <Button
             onClick={handleGenerateAccess}
-            disabled={isGenerating || !clientEmail}
+            disabled={isGenerating || !clientEmail || !portalEnabled}
           >
             {isGenerating
               ? "Generating..."

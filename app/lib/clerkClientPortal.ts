@@ -5,6 +5,7 @@ import * as crypto from "crypto";
 import { getBaseUrl } from "./utils";
 import { Client } from "@/models";
 import connectMongo from "./connect";
+import { isClientPortalEnabled } from "./utils/workflowUtils";
 
 /**
  * Generate a cryptographically secure access token
@@ -28,6 +29,17 @@ export async function generateClientAccessLink(
   try {
     await connectMongo();
     const clerk = await clerkClient();
+    const client = await Client.findById(clientId)
+      .select("workflowProfile")
+      .lean();
+
+    if (!client) {
+      throw new Error("Client not found");
+    }
+
+    if (!isClientPortalEnabled(client as any)) {
+      throw new Error("Client portal access is disabled for this client");
+    }
 
     // Check if user exists with this email
     const existingUsers = await clerk.users.getUserList({
@@ -113,6 +125,10 @@ export async function generateFreshClientToken(
 
     if (!client) {
       throw new Error("Client not found");
+    }
+
+    if (!isClientPortalEnabled(client as any)) {
+      throw new Error("Client portal access is disabled for this client");
     }
 
     if (!client.portalAccessToken) {

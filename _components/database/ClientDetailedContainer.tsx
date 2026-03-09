@@ -57,6 +57,7 @@ const ClientDetailedContainer = ({
               clientEmail={getEmailForPurpose(client, "primary")}
               portalAccessToken={client.portalAccessToken}
               portalAccessTokenExpiry={client.portalAccessTokenExpiry}
+              portalMode={client.workflowProfile?.portalMode}
             />
           </div>
         </CardContent>

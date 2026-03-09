@@ -56,7 +56,7 @@ interface AddInvoiceProps {
 // Calculate next reminder date based on dateIssued and frequency
 function calculateNextReminderDate(
   dateIssued: string,
-  frequency: string
+  frequency: string,
 ): Date {
   const days =
     frequency === "3days"
@@ -90,13 +90,14 @@ function calculateNextReminderDate(
     9,
     0,
     0,
-    0
+    0,
   );
 }
 
 interface InvoiceFormValues {
   clientId: string;
   jobTitle: string;
+  businessType: "commercial" | "residential";
   frequency: number;
   location: string;
   dateIssued: string;
@@ -139,6 +140,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
   } = useForm<InvoiceFormValues>({
     defaultValues: {
       frequency: 2, // Default to semi-annual (2x/year)
+      businessType: "commercial",
     },
   });
 
@@ -215,6 +217,10 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
       setValue("location", invoice.location);
       fieldsToUpdate.push("location");
     }
+    if (invoice.businessType) {
+      setValue("businessType", invoice.businessType);
+      fieldsToUpdate.push("businessType");
+    }
     if (invoice.notes) {
       setValue("notes", invoice.notes);
       fieldsToUpdate.push("notes");
@@ -251,7 +257,7 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
               frequency: reminderFrequency,
               nextReminderDate: calculateNextReminderDate(
                 data.dateIssued,
-                reminderFrequency
+                reminderFrequency,
               ),
             }
           : { enabled: false, frequency: "none" as const },
@@ -351,6 +357,10 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                 onSubmit={handleSubmit((data) => debouncedSubmit(data))}
                 className="space-y-4"
               >
+                <input
+                  type="hidden"
+                  {...register("businessType", { required: true })}
+                />
                 {/* Auto-fill Status */}
                 {isAutoFilling && (
                   <div className="bg-muted border-border flex items-center justify-center rounded-lg border p-3">
@@ -421,46 +431,81 @@ const AddInvoice = ({ clients }: AddInvoiceProps) => {
                   )}
                 </div>
 
-                {/* Frequency */}
-                <div className="space-y-2">
-                  <Label htmlFor="frequency" className="text-sm font-medium">
-                    Service Frequency{" "}
-                    <span className="text-destructive ml-1">*</span>
-                  </Label>
-                  <p className="text-muted-foreground text-xs">
-                    How often this service is needed
-                  </p>
-                  <Select
-                    value={frequency?.toString() || "2"}
-                    onValueChange={(value) =>
-                      setValue("frequency", Number(value))
-                    }
-                  >
-                    <SelectTrigger
-                      data-vaul-no-drag
-                      className={cn(
-                        autoFilledFields.includes("frequency") &&
-                          "border-primary/50 bg-primary/5",
-                        errors.frequency &&
-                          "border-destructive focus-visible:ring-destructive",
-                      )}
-                    >
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="12">Monthly (12x/year)</SelectItem>
-                      <SelectItem value="6">Bi-Monthly (6x/year)</SelectItem>
-                      <SelectItem value="4">Quarterly (4x/year)</SelectItem>
-                      <SelectItem value="3">Tri-Annual (3x/year)</SelectItem>
-                      <SelectItem value="2">Semi-Annual (2x/year)</SelectItem>
-                      <SelectItem value="1">Annual (1x/year)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  {errors.frequency && (
-                    <p className="text-destructive text-xs">
-                      Frequency is required
+                {/* Property Details */}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label htmlFor="frequency" className="text-sm font-medium">
+                      Service Frequency{" "}
+                      <span className="text-destructive ml-1">*</span>
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      How often this service is needed
                     </p>
-                  )}
+                    <Select
+                      value={frequency?.toString() || "2"}
+                      onValueChange={(value) =>
+                        setValue("frequency", Number(value))
+                      }
+                    >
+                      <SelectTrigger
+                        data-vaul-no-drag
+                        className={cn(
+                          autoFilledFields.includes("frequency") &&
+                            "border-primary/50 bg-primary/5",
+                          errors.frequency &&
+                            "border-destructive focus-visible:ring-destructive",
+                        )}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="12">Monthly (12x/year)</SelectItem>
+                        <SelectItem value="6">Bi-Monthly (6x/year)</SelectItem>
+                        <SelectItem value="4">Quarterly (4x/year)</SelectItem>
+                        <SelectItem value="3">Tri-Annual (3x/year)</SelectItem>
+                        <SelectItem value="2">Semi-Annual (2x/year)</SelectItem>
+                        <SelectItem value="1">Annual (1x/year)</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.frequency && (
+                      <p className="text-destructive text-xs">
+                        Frequency is required
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">
+                      Business Type{" "}
+                      <span className="text-destructive ml-1">*</span>
+                    </Label>
+                    <p className="text-muted-foreground text-xs">
+                      Which property type this invoice applies to
+                    </p>
+                    <Select
+                      value={watch("businessType")}
+                      onValueChange={(value) =>
+                        setValue(
+                          "businessType",
+                          value as InvoiceFormValues["businessType"],
+                        )
+                      }
+                    >
+                      <SelectTrigger
+                        data-vaul-no-drag
+                        className={cn(
+                          autoFilledFields.includes("businessType") &&
+                            "border-primary/50 bg-primary/5",
+                        )}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="commercial">Commercial</SelectItem>
+                        <SelectItem value="residential">Residential</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 {/* Location */}

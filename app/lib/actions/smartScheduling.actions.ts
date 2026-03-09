@@ -735,6 +735,7 @@ export async function createInvoiceAndScheduleFromJob(
       frequency: frequency,
       dateIssued: dateIssuedDate,
       dateDue,
+      businessType: sourceInvoice.businessType || "commercial",
       status: "pending",
       paymentReminders: sourceInvoice.paymentReminders
         ? {

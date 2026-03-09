@@ -9,6 +9,7 @@ interface PortalAccessManagerProps {
   clientEmail?: string | null;
   portalAccessToken?: string | null;
   portalAccessTokenExpiry?: Date | string | null;
+  portalEnabled: boolean;
 }
 
 export default function PortalAccessManager({
@@ -17,6 +18,7 @@ export default function PortalAccessManager({
   clientEmail,
   portalAccessToken,
   portalAccessTokenExpiry,
+  portalEnabled,
 }: PortalAccessManagerProps) {
   return (
     <Card className="">
@@ -30,6 +32,7 @@ export default function PortalAccessManager({
           defaultEmail={clientEmail}
           existingAccessToken={portalAccessToken}
           existingAccessTokenExpiry={portalAccessTokenExpiry}
+          portalEnabled={portalEnabled}
         />
       </CardContent>
     </Card>

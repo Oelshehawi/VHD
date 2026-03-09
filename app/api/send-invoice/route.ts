@@ -17,6 +17,7 @@ import {
   withEmailTestTemplateModel,
   getEmailDeliveryMode,
 } from "../../lib/emailDeliveryMode";
+import { isClientPortalEnabled } from "../../lib/utils/workflowUtils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -25,23 +26,17 @@ import InvoicePdfDocument, {
 
 const postmark = require("postmark");
 
+// This route is used by the phone app for on-site technicians who need to send
+// an invoice while they are still with the client. Office/admin invoice sending
+// uses app/lib/actions/email.actions.ts and follows separate workflow rules.
 export async function POST(request: Request) {
   try {
-    const { scheduleId, invoiceRef, invoiceData, technicianId, isComplete } =
+    const { scheduleId, invoiceRef, invoiceData, technicianId } =
       await request.json();
 
     if (!scheduleId || !invoiceRef) {
       return NextResponse.json(
         { message: "Schedule ID and invoice reference are required" },
-        { status: 400 },
-      );
-    }
-
-    if (!isComplete) {
-      return NextResponse.json(
-        {
-          message: "Work documentation must be complete before sending invoice",
-        },
         { status: 400 },
       );
     }
@@ -159,48 +154,51 @@ export async function POST(request: Request) {
       has_online_payment: hasOnlinePaymentBlock,
     };
 
-    try {
-      const clientMongoId = clientDetails._id?.toString?.() || "";
-      const existingAccessToken = clientDetails.portalAccessToken?.trim();
-      const portalEmail =
-        getEmailForPurpose(clientDetails, "primary") ||
-        getEmailForPurpose(clientDetails, "accounting") ||
-        getEmailForPurpose(clientDetails, "scheduling") ||
-        clientDetails.email;
+    // Include portal link for any client whose portal mode is enabled.
+    if (isClientPortalEnabled(clientDetails)) {
+      try {
+        const clientMongoId = clientDetails._id?.toString?.() || "";
+        const existingAccessToken = clientDetails.portalAccessToken?.trim();
+        const portalEmail =
+          getEmailForPurpose(clientDetails, "primary") ||
+          getEmailForPurpose(clientDetails, "accounting") ||
+          getEmailForPurpose(clientDetails, "scheduling") ||
+          clientDetails.email;
 
-      if (clientMongoId && existingAccessToken && clientDetails.clerkUserId) {
-        const existingUrl = new URL("/acceptToken", getBaseUrl());
-        existingUrl.searchParams.set("clientId", clientMongoId);
-        existingUrl.searchParams.set("accessToken", existingAccessToken);
-        const existingPortalUrl = existingUrl.toString();
-        hasClientPortalBlock = {
-          client_portal_url: existingPortalUrl,
-        };
-      } else if (clientMongoId && portalEmail) {
-        const generatedLink = await generateClientAccessLink(
-          clientMongoId,
-          clientDetails.clientName,
-          portalEmail,
-        );
-        if (generatedLink.success && generatedLink.magicLink) {
+        if (clientMongoId && existingAccessToken && clientDetails.clerkUserId) {
+          const existingUrl = new URL("/acceptToken", getBaseUrl());
+          existingUrl.searchParams.set("clientId", clientMongoId);
+          existingUrl.searchParams.set("accessToken", existingAccessToken);
+          const existingPortalUrl = existingUrl.toString();
           hasClientPortalBlock = {
-            client_portal_url: generatedLink.magicLink,
+            client_portal_url: existingPortalUrl,
+          };
+        } else if (clientMongoId && portalEmail) {
+          const generatedLink = await generateClientAccessLink(
+            clientMongoId,
+            clientDetails.clientName,
+            portalEmail,
+          );
+          if (generatedLink.success && generatedLink.magicLink) {
+            hasClientPortalBlock = {
+              client_portal_url: generatedLink.magicLink,
+            };
+          }
+        } else if (clientMongoId && existingAccessToken) {
+          const existingUrl = new URL("/acceptToken", getBaseUrl());
+          existingUrl.searchParams.set("clientId", clientMongoId);
+          existingUrl.searchParams.set("accessToken", existingAccessToken);
+          const existingPortalUrl = existingUrl.toString();
+          hasClientPortalBlock = {
+            client_portal_url: existingPortalUrl,
           };
         }
-      } else if (clientMongoId && existingAccessToken) {
-        const existingUrl = new URL("/acceptToken", getBaseUrl());
-        existingUrl.searchParams.set("clientId", clientMongoId);
-        existingUrl.searchParams.set("accessToken", existingAccessToken);
-        const existingPortalUrl = existingUrl.toString();
-        hasClientPortalBlock = {
-          client_portal_url: existingPortalUrl,
-        };
+      } catch (portalError) {
+        console.error(
+          "Failed to include client portal link in invoice email:",
+          portalError,
+        );
       }
-    } catch (portalError) {
-      console.error(
-        "Failed to include client portal link in invoice email:",
-        portalError,
-      );
     }
 
     templateModel.has_client_portal = hasClientPortalBlock;

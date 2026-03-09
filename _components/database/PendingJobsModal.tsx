@@ -33,6 +33,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
 import UnifiedCommunicationsModal from "../communications/UnifiedCommunicationsModal";
+import { isExternalPortalClient } from "../../app/lib/utils/workflowUtils";
 
 interface ExtendedPendingInvoiceType extends PendingInvoiceType {
   emailExists?: boolean;
@@ -254,6 +255,9 @@ const PendingJobsModalContent = ({
                   const communicationsCount = Number(
                     invoice.communicationsCount || 0,
                   );
+                  const isExternalPortal = isExternalPortalClient(
+                    invoice as any,
+                  );
                   return (
                     <div
                       key={invoice._id as string}
@@ -348,6 +352,12 @@ const PendingJobsModalContent = ({
                           <div className="flex justify-center">
                             {getReminderStatusBadge(invoice)}
                           </div>
+                          {isExternalPortal && (
+                            <p className="text-muted-foreground text-center text-xs whitespace-pre-wrap">
+                              {invoice.workflowProfile?.externalPortalNotes ||
+                                "This client uses an external portal. Reminder actions are handled outside this app."}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </div>

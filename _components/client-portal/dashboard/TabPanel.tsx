@@ -74,7 +74,11 @@ interface TabPanelProps {
   recentServices: AppScheduleType[];
   allInvoices: Invoice[];
   allReports: ReportType[];
-  clientData?: { clientName: string; email: string; phoneNumber: string };
+  clientData?: {
+    clientName: string;
+    email: string;
+    phoneNumber: string;
+  };
   technicianDataMap: Record<string, any>;
 }
 
@@ -228,6 +232,8 @@ const TabPanel = ({
     });
     return map;
   }, [allInvoices]);
+
+  const showReportsTab = allReports.length > 0;
 
   // Sort invoices by invoice number
   const sortedInvoices = useMemo(() => {
@@ -436,7 +442,9 @@ const TabPanel = ({
             className="flex h-full flex-col"
           >
             <CardHeader className="shrink-0 py-4">
-              <TabsList className="grid w-full grid-cols-3">
+              <TabsList
+                className={`grid w-full ${showReportsTab ? "grid-cols-3" : "grid-cols-2"}`}
+              >
                 <TabsTrigger
                   value="schedules"
                   className="flex min-w-0 items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-3"
@@ -451,13 +459,15 @@ const TabPanel = ({
                   <CreditCardIcon className="hidden h-4 w-4 shrink-0 sm:block" />
                   <span className="truncate text-xs sm:text-sm">Invoices</span>
                 </TabsTrigger>
-                <TabsTrigger
-                  value="reports"
-                  className="flex min-w-0 items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-3"
-                >
-                  <DocumentTextIcon className="hidden h-4 w-4 shrink-0 sm:block" />
-                  <span className="truncate text-xs sm:text-sm">Reports</span>
-                </TabsTrigger>
+                {showReportsTab && (
+                  <TabsTrigger
+                    value="reports"
+                    className="flex min-w-0 items-center justify-center gap-1.5 px-2 sm:gap-2 sm:px-3"
+                  >
+                    <DocumentTextIcon className="hidden h-4 w-4 shrink-0 sm:block" />
+                    <span className="truncate text-xs sm:text-sm">Reports</span>
+                  </TabsTrigger>
+                )}
               </TabsList>
             </CardHeader>
 
@@ -622,78 +632,80 @@ const TabPanel = ({
               </TabsContent>
 
               {/* Reports Tab */}
-              <TabsContent
-                value="reports"
-                className="mt-0 flex h-full flex-col"
-              >
-                <h3 className="text-foreground mb-3 shrink-0 text-base font-semibold">
-                  All Service Reports
-                </h3>
-                <Card className="min-h-0 flex-1 overflow-hidden">
-                  <ScrollArea className="h-[480px]">
-                    {allReports.length > 0 ? (
-                      <div className="divide-border divide-y">
-                        {allReports.map((report, index) => (
-                          <div
-                            key={`report-${report._id?.toString() || index}`}
-                            className="hover:bg-muted/50 flex flex-col gap-3 p-4 transition-colors sm:flex-row sm:items-center sm:justify-between"
-                          >
-                            <div className="flex-1">
-                              <div className="text-foreground font-medium">
-                                {invoiceJobTitleMap.get(
-                                  typeof report.invoiceId === "string"
-                                    ? report.invoiceId
-                                    : report.invoiceId.toString(),
-                                ) || "Service Report"}{" "}
-                                - {formatDateStringUTC(report.dateCompleted)}
-                              </div>
-                              <div className="text-muted-foreground mt-1 text-sm">
-                                {report.cleaningDetails && (
-                                  <span>
-                                    {Object.values(report.cleaningDetails).some(
-                                      (val) => val,
-                                    )
-                                      ? "Cleaning completed"
-                                      : "Inspection only"}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-2">
-                              <LazyPDFButton
-                                pdfData={createReportPDFData(report)}
-                                fileName={`${
-                                  invoiceJobTitleMap.get(
+              {showReportsTab && (
+                <TabsContent
+                  value="reports"
+                  className="mt-0 flex h-full flex-col"
+                >
+                  <h3 className="text-foreground mb-3 shrink-0 text-base font-semibold">
+                    All Service Reports
+                  </h3>
+                  <Card className="min-h-0 flex-1 overflow-hidden">
+                    <ScrollArea className="h-[480px]">
+                      {allReports.length > 0 ? (
+                        <div className="divide-border divide-y">
+                          {allReports.map((report, index) => (
+                            <div
+                              key={`report-${report._id?.toString() || index}`}
+                              className="hover:bg-muted/50 flex flex-col gap-3 p-4 transition-colors sm:flex-row sm:items-center sm:justify-between"
+                            >
+                              <div className="flex-1">
+                                <div className="text-foreground font-medium">
+                                  {invoiceJobTitleMap.get(
                                     typeof report.invoiceId === "string"
                                       ? report.invoiceId
                                       : report.invoiceId.toString(),
-                                  ) || "Service Report"
-                                } - Report.pdf`}
-                                buttonText="Download"
-                                variant="outline"
-                                size="sm"
-                                iconType="download"
-                              />
-                              <Button
-                                size="sm"
-                                onClick={() => openReportModal(report)}
-                              >
-                                <DocumentDuplicateIcon className="mr-1.5 h-4 w-4" />
-                                <span>View</span>
-                              </Button>
+                                  ) || "Service Report"}{" "}
+                                  - {formatDateStringUTC(report.dateCompleted)}
+                                </div>
+                                <div className="text-muted-foreground mt-1 text-sm">
+                                  {report.cleaningDetails && (
+                                    <span>
+                                      {Object.values(
+                                        report.cleaningDetails,
+                                      ).some((val) => val)
+                                        ? "Cleaning completed"
+                                        : "Inspection only"}
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <LazyPDFButton
+                                  pdfData={createReportPDFData(report)}
+                                  fileName={`${
+                                    invoiceJobTitleMap.get(
+                                      typeof report.invoiceId === "string"
+                                        ? report.invoiceId
+                                        : report.invoiceId.toString(),
+                                    ) || "Service Report"
+                                  } - Report.pdf`}
+                                  buttonText="Download"
+                                  variant="outline"
+                                  size="sm"
+                                  iconType="download"
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => openReportModal(report)}
+                                >
+                                  <DocumentDuplicateIcon className="mr-1.5 h-4 w-4" />
+                                  <span>View</span>
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-center">
-                        No service reports found.
-                      </div>
-                    )}
-                  </ScrollArea>
-                </Card>
-              </TabsContent>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-muted-foreground flex h-full items-center justify-center p-6 text-center">
+                          No service reports found.
+                        </div>
+                      )}
+                    </ScrollArea>
+                  </Card>
+                </TabsContent>
+              )}
             </CardContent>
           </Tabs>
         </Card>

@@ -22,6 +22,15 @@ export const ClientSchema = new Schema<ClientType>({
   portalAccessToken: { type: String, index: true },
   portalAccessTokenExpiry: { type: Date },
   clerkUserId: { type: String, index: true }, // Cache Clerk user ID for efficient lookups
+  // Workflow profile — controls portal behavior per client
+  workflowProfile: {
+    portalMode: {
+      type: String,
+      enum: ["internal", "external", "none"],
+      default: "internal",
+    },
+    externalPortalNotes: { type: String },
+  },
 });
 
 // Index for client searches

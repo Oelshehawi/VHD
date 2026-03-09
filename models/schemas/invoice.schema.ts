@@ -111,6 +111,11 @@ export const invoiceSchema = new Schema<InvoiceType>({
       },
     ],
   },
+  businessType: {
+    type: String,
+    enum: ["commercial", "residential"],
+    default: "commercial",
+  },
   callHistory: { type: [CallLogEntrySchema], default: [] },
   emailDeliveryHistory: {
     type: [
@@ -148,6 +153,11 @@ export const EstimateSchema = new Schema<EstimateType>({
     type: mongoose.Schema.Types.ObjectId,
     ref: "Client",
     required: false,
+  },
+  businessType: {
+    type: String,
+    enum: ["commercial", "residential"],
+    default: "commercial",
   },
   prospectInfo: {
     businessName: { type: String, required: false },

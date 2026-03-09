@@ -62,6 +62,7 @@ export async function fetchClientData(clientId: string): Promise<ClientType> {
       phoneNumber: client.phoneNumber,
       prefix: client.prefix,
       notes: client.notes,
+      workflowProfile: client.workflowProfile,
     };
 
     return clientData;

@@ -55,13 +55,6 @@ const PayrollPeriodSelector = ({
     router.push(`/payroll?payrollPeriodId=${value}`);
   };
 
-  const selectedTechnicianDriveMetrics =
-    selectedTechnician && payrollDriveMetrics
-      ? payrollDriveMetrics.technicians.find(
-          (tech) => tech.technicianId === selectedTechnician.id,
-        ) || null
-      : null;
-
   return (
     <>
       {/* Payroll Period Selection */}
@@ -126,7 +119,6 @@ const PayrollPeriodSelector = ({
                 s.assignedTechnicians.includes(selectedTechnician.id),
               )}
               payrollPeriod={selectedPayrollPeriod}
-              driveMetrics={selectedTechnicianDriveMetrics}
             />
           )}
         </>

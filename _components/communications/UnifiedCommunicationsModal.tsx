@@ -154,6 +154,8 @@ export default function UnifiedCommunicationsModal({
     payload?.refs.invoiceId ||
     (context?.type === "invoice" ? context.invoiceId : "");
   const canEmail = payload?.emailExists ?? false;
+  const isExternalPortal = payload?.workflow?.portalMode === "external";
+  const externalPortalNotes = payload?.workflow?.externalPortalNotes || "";
 
   const requestData = useMemo<CommunicationsContextInput | null>(() => {
     if (!context) return null;
@@ -304,6 +306,19 @@ export default function UnifiedCommunicationsModal({
           </DialogHeader>
 
           <div className="space-y-4 px-6 pt-4">
+            {isExternalPortal && (
+              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                <p className="font-medium">
+                  This client uses an external portal. Invoice sends and
+                  reminder actions are disabled in the office workflow.
+                </p>
+                {externalPortalNotes && (
+                  <p className="mt-1 whitespace-pre-wrap">
+                    {externalPortalNotes}
+                  </p>
+                )}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               {resolvedContextType === "invoice" ? (
                 <>
@@ -316,7 +331,7 @@ export default function UnifiedCommunicationsModal({
                     <PhoneCall className="mr-2 h-4 w-4" />
                     Log Payment Call
                   </Button>
-                  {!hideSendInvoice && (
+                  {!hideSendInvoice && !isExternalPortal && (
                     <Button
                       size="sm"
                       onClick={handleSendInvoice}
@@ -333,30 +348,38 @@ export default function UnifiedCommunicationsModal({
                       Send Invoice
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="secondary"
-                    onClick={handleSendPaymentReminder}
-                    disabled={isSendingPaymentReminder || !canEmail}
-                    title={canEmail ? undefined : "No client email configured"}
-                  >
-                    {isSendingPaymentReminder ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Mail className="mr-2 h-4 w-4" />
-                    )}
-                    Send Payment Reminder
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setIsReminderConfigOpen(true)}
-                    disabled={!invoiceMongoId || !canEmail}
-                    title={canEmail ? undefined : "No client email configured"}
-                  >
-                    <Clock3 className="mr-2 h-4 w-4" />
-                    Configure Reminders
-                  </Button>
+                  {!isExternalPortal && (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        onClick={handleSendPaymentReminder}
+                        disabled={isSendingPaymentReminder || !canEmail}
+                        title={
+                          canEmail ? undefined : "No client email configured"
+                        }
+                      >
+                        {isSendingPaymentReminder ? (
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        ) : (
+                          <Mail className="mr-2 h-4 w-4" />
+                        )}
+                        Send Payment Reminder
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setIsReminderConfigOpen(true)}
+                        disabled={!invoiceMongoId || !canEmail}
+                        title={
+                          canEmail ? undefined : "No client email configured"
+                        }
+                      >
+                        <Clock3 className="mr-2 h-4 w-4" />
+                        Configure Reminders
+                      </Button>
+                    </>
+                  )}
                 </>
               ) : (
                 <>
@@ -369,15 +392,19 @@ export default function UnifiedCommunicationsModal({
                     <PhoneCall className="mr-2 h-4 w-4" />
                     Log Scheduling Call
                   </Button>
-                  <Button
-                    size="sm"
-                    onClick={() => setIsCleaningReminderOpen(true)}
-                    disabled={!payload?.jobsDueSoon || !canEmail}
-                    title={canEmail ? undefined : "No client email configured"}
-                  >
-                    <Mail className="mr-2 h-4 w-4" />
-                    Send Cleaning Reminder
-                  </Button>
+                  {!isExternalPortal && (
+                    <Button
+                      size="sm"
+                      onClick={() => setIsCleaningReminderOpen(true)}
+                      disabled={!payload?.jobsDueSoon || !canEmail}
+                      title={
+                        canEmail ? undefined : "No client email configured"
+                      }
+                    >
+                      <Mail className="mr-2 h-4 w-4" />
+                      Send Cleaning Reminder
+                    </Button>
+                  )}
                 </>
               )}
 

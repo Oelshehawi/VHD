@@ -58,6 +58,7 @@ export const fetchClientById = async (
       archivedAt: client.archivedAt,
       portalAccessToken: client.portalAccessToken,
       portalAccessTokenExpiry: client.portalAccessTokenExpiry,
+      workflowProfile: client.workflowProfile,
     };
     return clientData;
   } catch (error) {

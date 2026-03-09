@@ -18,6 +18,7 @@ import {
   toUtcDateFromParts,
 } from "../utils/datePartsUtils";
 import { resolveHistoricalDurationForScheduleCreate } from "../scheduleHistoricalDuration";
+import { getEstimatePreset } from "../estimatePresets";
 
 // Type for creating new estimates (without _id)
 type CreateEstimateData = Omit<
@@ -33,6 +34,7 @@ export async function createEstimate(estimateData: CreateEstimateData) {
     // Ensure all required fields are present and properly typed
     const estimateToSave = {
       ...estimateData,
+      businessType: estimateData.businessType || "commercial",
       estimateNumber,
       createdDate: new Date(),
       // Ensure items array is properly structured
@@ -69,7 +71,14 @@ export async function createEstimate(estimateData: CreateEstimateData) {
             100,
         ) / 100,
       // Ensure services array is properly structured
-      services: estimateData.services || [],
+      services: estimateData.services?.length
+        ? estimateData.services
+        : getEstimatePreset(estimateData.businessType || "commercial")
+            .defaultServices,
+      terms:
+        estimateData.terms ||
+        getEstimatePreset(estimateData.businessType || "commercial")
+          .defaultTerms,
       // Ensure status is valid
       status: estimateData.status || "draft",
     };
@@ -173,6 +182,7 @@ export async function updateEstimateStatus(
 interface InvoiceCreationData {
   jobTitle: string;
   location: string;
+  businessType?: "commercial" | "residential";
   frequency: number;
   dateIssued?: string; // yyyy-MM-dd format
   notes?: string;
@@ -308,6 +318,7 @@ export async function convertEstimateToClientAndInvoice(
       dateIssued,
       dateDue,
       frequency: invoiceData.frequency || 2,
+      businessType: invoiceData.businessType || "commercial",
       items: invoiceData.items.map((item) => ({
         description: item.description,
         details: item.details || "",

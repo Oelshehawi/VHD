@@ -18,6 +18,7 @@ interface ClientPortalAccessProps {
   clientEmail?: string | null;
   portalAccessToken?: string | null;
   portalAccessTokenExpiry?: Date | string | null;
+  portalMode?: "internal" | "external" | "none";
 }
 
 export default function ClientPortalAccess({
@@ -26,9 +27,11 @@ export default function ClientPortalAccess({
   clientEmail,
   portalAccessToken,
   portalAccessTokenExpiry,
+  portalMode = "internal",
 }: ClientPortalAccessProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const router = useRouter();
+  const portalEnabled = portalMode !== "none";
 
   const handleViewAsClient = () => {
     router.push(`/client-portal/dashboard?clientId=${clientId}`);
@@ -43,6 +46,7 @@ export default function ClientPortalAccess({
           variant="default"
           size="sm"
           className="text-xs sm:text-sm"
+          disabled={!portalEnabled}
         >
           <span className="hidden sm:inline">Client Portal Access</span>
           <span className="sm:hidden">Portal Access</span>
@@ -60,6 +64,12 @@ export default function ClientPortalAccess({
         </Button>
       </div>
 
+      {!portalEnabled && (
+        <p className="text-muted-foreground text-xs">
+          Client portal access is disabled for this client.
+        </p>
+      )}
+
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent>
           <DialogHeader>
@@ -75,6 +85,7 @@ export default function ClientPortalAccess({
               clientEmail={clientEmail}
               portalAccessToken={portalAccessToken}
               portalAccessTokenExpiry={portalAccessTokenExpiry}
+              portalEnabled={portalEnabled}
             />
           </div>
         </DialogContent>

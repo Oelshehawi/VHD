@@ -61,6 +61,10 @@ export interface PendingInvoiceType {
   callHistory?: CallLogEntry[];
   emailDeliveryHistoryCount?: number;
   communicationsCount?: number;
+  workflowProfile?: {
+    portalMode?: "internal" | "external" | "none";
+    externalPortalNotes?: string;
+  };
 }
 
 export interface ScheduleType {
@@ -78,6 +82,7 @@ export interface ScheduleType {
   technicianNotes?: string;
   onSiteContact?: OnSiteContactType;
   accessInstructions?: string;
+  businessType?: "commercial" | "residential";
   actualServiceDurationMinutes?: number;
   actualServiceDurationSource?: "after_photo" | "mark_completed" | "admin_edit";
   historicalServiceDurationMinutes?: number;
@@ -180,6 +185,11 @@ export interface ClientType {
   portalAccessToken?: string;
   portalAccessTokenExpiry?: Date;
   clerkUserId?: string;
+  // Workflow profile
+  workflowProfile?: {
+    portalMode?: "internal" | "external" | "none";
+    externalPortalNotes?: string;
+  };
 }
 
 export interface PaymentInfo {
@@ -295,6 +305,7 @@ export interface InvoiceType {
   stripePaymentStatus?: StripePaymentStatus;
   photos?: PhotoType[];
   signature?: SignatureType;
+  businessType?: "commercial" | "residential";
   callHistory?: CallLogEntry[];
   emailDeliveryHistory?: InvoiceEmailHistoryEntry[];
 }
@@ -610,6 +621,7 @@ export interface EstimateType {
   _id: ObjectId | string;
   estimateNumber: string; // EST-2024-XXXX
   clientId?: ObjectId | string; // Optional - for existing clients
+  businessType?: "commercial" | "residential";
   prospectInfo?: {
     businessName: string;
     contactPerson?: string;

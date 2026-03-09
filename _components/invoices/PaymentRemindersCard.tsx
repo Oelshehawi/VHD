@@ -41,6 +41,10 @@ import { ScrollArea } from "../ui/scroll-area";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { Label } from "../ui/label";
+import {
+  getExternalPortalNotes,
+  isExternalPortalClient,
+} from "../../app/lib/utils/workflowUtils";
 
 interface PaymentRemindersCardProps {
   invoiceId: string;
@@ -55,6 +59,8 @@ export default function PaymentRemindersCard({
 }: PaymentRemindersCardProps) {
   const { user } = useUser();
   const router = useRouter();
+  const isExternalPortal = isExternalPortalClient(client);
+  const externalPortalNotes = getExternalPortalNotes(client);
 
   // Initialize from server-provided data (no initial fetch needed)
   const [settings, setSettings] = useState<PaymentReminderSettings>(
@@ -287,239 +293,255 @@ export default function PaymentRemindersCard({
         </div>
       </div>
 
-      <Tabs
-        value={activeTab}
-        onValueChange={handleTabChange}
-        className="w-full"
-      >
-        <TabsList className="mb-4 grid w-full grid-cols-2">
-          <TabsTrigger value="settings" className="text-xs">
-            Settings
-          </TabsTrigger>
-          <TabsTrigger value="history" className="text-xs">
-            History
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="settings" className="mt-0 space-y-4">
-          {/* Current Status */}
-          {settings.nextReminderDate && (
-            <div className="bg-muted/50 flex items-center gap-2 rounded-md border p-3">
-              <Clock
-                className="text-muted-foreground h-4 w-4"
-                aria-hidden="true"
-              />
-              <span className="text-sm">
-                Next reminder: {formatDateStringUTC(settings.nextReminderDate)}
-              </span>
-            </div>
-          )}
-
-          {/* Frequency and Start From Selection - Same Row */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-2">
-              <Label className="text-sm" htmlFor="reminder-frequency">
-                Frequency
-              </Label>
-              <Select
-                value={settings.frequency}
-                onValueChange={handleFrequencyChange}
-              >
-                <SelectTrigger id="reminder-frequency">
-                  <SelectValue placeholder="Select frequency" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">None</SelectItem>
-                  <SelectItem value="3days">Every 3 days</SelectItem>
-                  <SelectItem value="5days">Every 5 days</SelectItem>
-                  <SelectItem value="7days">Every 7 days</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-sm" htmlFor="reminder-start-from">
-                Start From
-              </Label>
-              <Select
-                value={startFrom}
-                onValueChange={(value) =>
-                  setStartFrom(value as "today" | "dateIssued")
-                }
-              >
-                <SelectTrigger id="reminder-start-from">
-                  <SelectValue placeholder="Select start" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="today">Today</SelectItem>
-                  <SelectItem value="dateIssued">Issue Date</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <p className="text-muted-foreground text-xs">
-            {startFrom === "today"
-              ? "First reminder will be sent X days from now"
-              : "Calculates from invoice issue date, skips past intervals"}
+      {isExternalPortal && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+          <p className="font-medium">
+            Payment reminders are disabled for clients using an external portal.
           </p>
+          {externalPortalNotes && (
+            <p className="mt-1 whitespace-pre-wrap">{externalPortalNotes}</p>
+          )}
+        </div>
+      )}
 
-          {/* Save Button */}
-          <Button
-            onClick={handleSaveSettings}
-            disabled={isLoading}
-            size="sm"
-            className="w-full"
-          >
-            {isLoading ? "Saving…" : "Save Settings"}
-          </Button>
+      {!isExternalPortal && (
+        <Tabs
+          value={activeTab}
+          onValueChange={handleTabChange}
+          className="w-full"
+        >
+          <TabsList className="mb-4 grid w-full grid-cols-2">
+            <TabsTrigger value="settings" className="text-xs">
+              Settings
+            </TabsTrigger>
+            <TabsTrigger value="history" className="text-xs">
+              History
+            </TabsTrigger>
+          </TabsList>
 
-          <Separator />
-
-          {/* Manual Send Button */}
-          <Button
-            disabled={isSending || availableEmails.length === 0}
-            variant="secondary"
-            size="sm"
-            className="w-full gap-2"
-            onClick={() => setShowReminderDialog(true)}
-          >
-            {isSending ? (
-              <FaPaperPlane
-                className="h-3 w-3 animate-spin"
-                aria-hidden="true"
-              />
-            ) : (
-              <FaPaperPlane className="h-3 w-3" aria-hidden="true" />
+          <TabsContent value="settings" className="mt-0 space-y-4">
+            {/* Current Status */}
+            {settings.nextReminderDate && (
+              <div className="bg-muted/50 flex items-center gap-2 rounded-md border p-3">
+                <Clock
+                  className="text-muted-foreground h-4 w-4"
+                  aria-hidden="true"
+                />
+                <span className="text-sm">
+                  Next reminder:{" "}
+                  {formatDateStringUTC(settings.nextReminderDate)}
+                </span>
+              </div>
             )}
-            Send Reminder Now
-          </Button>
 
-          {/* Reminder Dialog */}
-          <AlertDialog
-            open={showReminderDialog}
-            onOpenChange={handleDialogOpenChange}
-          >
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Send Payment Reminder?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will immediately send a payment reminder email to the
-                  client.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
+            {/* Frequency and Start From Selection - Same Row */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-sm" htmlFor="reminder-frequency">
+                  Frequency
+                </Label>
+                <Select
+                  value={settings.frequency}
+                  onValueChange={handleFrequencyChange}
+                >
+                  <SelectTrigger id="reminder-frequency">
+                    <SelectValue placeholder="Select frequency" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    <SelectItem value="3days">Every 3 days</SelectItem>
+                    <SelectItem value="5days">Every 5 days</SelectItem>
+                    <SelectItem value="7days">Every 7 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-              {availableEmails.length > 1 && (
-                <div className="px-6 pb-4">
-                  <Label
-                    className="mb-2 block text-sm font-medium"
-                    htmlFor="email-select"
-                  >
-                    Select recipient email
-                  </Label>
-                  <Select
-                    value={selectedEmailValue || ""}
-                    onValueChange={setSelectedEmail}
-                  >
-                    <SelectTrigger id="email-select">
-                      <SelectValue placeholder="Select email" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableEmails.map((emailEntry) => (
-                        <SelectItem
-                          key={emailEntry.email}
-                          value={emailEntry.email}
-                        >
-                          {emailEntry.type}: {emailEntry.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-muted-foreground mt-1 text-xs">
-                    Reminder will be sent to:{" "}
-                    <strong>{selectedEmailValue || "Select an email"}</strong>
-                  </p>
-                </div>
-              )}
-
-              {availableEmails.length === 1 && (
-                <div className="px-6 pb-4">
-                  <p className="text-muted-foreground text-sm">
-                    Reminder will be sent to: <strong>{defaultEmail}</strong>
-                  </p>
-                </div>
-              )}
-
-              {availableEmails.length === 0 && (
-                <div className="px-6 pb-4">
-                  <p className="text-muted-foreground text-sm">
-                    No recipient email is available for this client.
-                  </p>
-                </div>
-              )}
-
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  onClick={handleSendReminder}
-                  disabled={
-                    isSending ||
-                    availableEmails.length === 0 ||
-                    !selectedEmailValue
+              <div className="space-y-2">
+                <Label className="text-sm" htmlFor="reminder-start-from">
+                  Start From
+                </Label>
+                <Select
+                  value={startFrom}
+                  onValueChange={(value) =>
+                    setStartFrom(value as "today" | "dateIssued")
                   }
                 >
-                  Send Reminder
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-        </TabsContent>
-
-        <TabsContent value="history" className="mt-0">
-          {isLoadingAuditLogs ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center">
-              <div className="border-primary mb-2 h-6 w-6 animate-spin rounded-full border-b-2"></div>
-              <p className="text-muted-foreground text-sm">Loading history…</p>
-            </div>
-          ) : reminderLogs.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center">
-              <FaHistory
-                className="text-muted-foreground/50 mb-2 h-6 w-6"
-                aria-hidden="true"
-              />
-              <p className="text-muted-foreground text-sm">
-                No reminder history yet
-              </p>
-            </div>
-          ) : (
-            <ScrollArea className="h-[200px] w-full rounded-md border p-3">
-              <div className="space-y-3">
-                {reminderLogs.map((log, index) => (
-                  <div
-                    key={index}
-                    className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0"
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="text-sm font-medium">
-                        {getActionLabel(log.action)}
-                      </span>
-                      <Badge
-                        variant={log.success ? "secondary" : "destructive"}
-                        className="px-1.5 text-[10px]"
-                      >
-                        {log.success ? "✓" : "✗"}
-                      </Badge>
-                    </div>
-                    <div className="text-muted-foreground flex justify-between text-xs">
-                      <span>{formatDateStringUTC(log.timestamp)}</span>
-                      <span>by {log.performedBy}</span>
-                    </div>
-                  </div>
-                ))}
+                  <SelectTrigger id="reminder-start-from">
+                    <SelectValue placeholder="Select start" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="today">Today</SelectItem>
+                    <SelectItem value="dateIssued">Issue Date</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </ScrollArea>
-          )}
-        </TabsContent>
-      </Tabs>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {startFrom === "today"
+                ? "First reminder will be sent X days from now"
+                : "Calculates from invoice issue date, skips past intervals"}
+            </p>
+
+            {/* Save Button */}
+            <Button
+              onClick={handleSaveSettings}
+              disabled={isLoading}
+              size="sm"
+              className="w-full"
+            >
+              {isLoading ? "Saving…" : "Save Settings"}
+            </Button>
+
+            <Separator />
+
+            {/* Manual Send Button */}
+            <Button
+              disabled={isSending || availableEmails.length === 0}
+              variant="secondary"
+              size="sm"
+              className="w-full gap-2"
+              onClick={() => setShowReminderDialog(true)}
+            >
+              {isSending ? (
+                <FaPaperPlane
+                  className="h-3 w-3 animate-spin"
+                  aria-hidden="true"
+                />
+              ) : (
+                <FaPaperPlane className="h-3 w-3" aria-hidden="true" />
+              )}
+              Send Reminder Now
+            </Button>
+
+            {/* Reminder Dialog */}
+            <AlertDialog
+              open={showReminderDialog}
+              onOpenChange={handleDialogOpenChange}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Send Payment Reminder?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will immediately send a payment reminder email to the
+                    client.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+
+                {availableEmails.length > 1 && (
+                  <div className="px-6 pb-4">
+                    <Label
+                      className="mb-2 block text-sm font-medium"
+                      htmlFor="email-select"
+                    >
+                      Select recipient email
+                    </Label>
+                    <Select
+                      value={selectedEmailValue || ""}
+                      onValueChange={setSelectedEmail}
+                    >
+                      <SelectTrigger id="email-select">
+                        <SelectValue placeholder="Select email" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableEmails.map((emailEntry) => (
+                          <SelectItem
+                            key={emailEntry.email}
+                            value={emailEntry.email}
+                          >
+                            {emailEntry.type}: {emailEntry.email}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-muted-foreground mt-1 text-xs">
+                      Reminder will be sent to:{" "}
+                      <strong>{selectedEmailValue || "Select an email"}</strong>
+                    </p>
+                  </div>
+                )}
+
+                {availableEmails.length === 1 && (
+                  <div className="px-6 pb-4">
+                    <p className="text-muted-foreground text-sm">
+                      Reminder will be sent to: <strong>{defaultEmail}</strong>
+                    </p>
+                  </div>
+                )}
+
+                {availableEmails.length === 0 && (
+                  <div className="px-6 pb-4">
+                    <p className="text-muted-foreground text-sm">
+                      No recipient email is available for this client.
+                    </p>
+                  </div>
+                )}
+
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleSendReminder}
+                    disabled={
+                      isSending ||
+                      availableEmails.length === 0 ||
+                      !selectedEmailValue
+                    }
+                  >
+                    Send Reminder
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </TabsContent>
+
+          <TabsContent value="history" className="mt-0">
+            {isLoadingAuditLogs ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center">
+                <div className="border-primary mb-2 h-6 w-6 animate-spin rounded-full border-b-2"></div>
+                <p className="text-muted-foreground text-sm">
+                  Loading history…
+                </p>
+              </div>
+            ) : reminderLogs.length === 0 ? (
+              <div className="flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-6 text-center">
+                <FaHistory
+                  className="text-muted-foreground/50 mb-2 h-6 w-6"
+                  aria-hidden="true"
+                />
+                <p className="text-muted-foreground text-sm">
+                  No reminder history yet
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[200px] w-full rounded-md border p-3">
+                <div className="space-y-3">
+                  {reminderLogs.map((log, index) => (
+                    <div
+                      key={index}
+                      className="flex flex-col gap-1 border-b pb-2 last:border-0 last:pb-0"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">
+                          {getActionLabel(log.action)}
+                        </span>
+                        <Badge
+                          variant={log.success ? "secondary" : "destructive"}
+                          className="px-1.5 text-[10px]"
+                        >
+                          {log.success ? "✓" : "✗"}
+                        </Badge>
+                      </div>
+                      <div className="text-muted-foreground flex justify-between text-xs">
+                        <span>{formatDateStringUTC(log.timestamp)}</span>
+                        <span>by {log.performedBy}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </TabsContent>
+        </Tabs>
+      )}
     </Card>
   );
 }

@@ -42,6 +42,11 @@ export const scheduleSchema = new Schema<ScheduleType>({
     email: { type: String },
   },
   accessInstructions: { type: String },
+  businessType: {
+    type: String,
+    enum: ["commercial", "residential"],
+    default: "commercial",
+  },
   actualServiceDurationMinutes: { type: Number, min: 0, max: 24 * 60 },
   actualServiceDurationSource: {
     type: String,

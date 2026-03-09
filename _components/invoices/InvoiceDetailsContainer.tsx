@@ -23,6 +23,10 @@ import {
 } from "../../app/lib/utils";
 import { sendInvoiceDeliveryEmail } from "../../app/lib/actions/email.actions";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
+import {
+  getExternalPortalNotes,
+  isExternalPortalClient,
+} from "../../app/lib/utils/workflowUtils";
 import { Card } from "../ui/card";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -61,6 +65,8 @@ const InvoiceDetailsContainer = ({
 
   // Destructure report status from server-side props
   const { hasSchedule, hasReport } = initialReportStatus;
+  const isExternalPortal = isExternalPortalClient(client);
+  const externalPortalNotes = getExternalPortalNotes(client);
 
   // Email sending with debounce
   const {
@@ -94,6 +100,7 @@ const InvoiceDetailsContainer = ({
 
   // Open confirmation modal instead of sending directly
   const handleSendInvoice = () => {
+    if (isExternalPortal) return;
     setShowConfirmationModal(true);
   };
 
@@ -285,25 +292,39 @@ const InvoiceDetailsContainer = ({
             </TabsList>
 
             <TabsContent value="send-pay" className="space-y-3">
-              <div className="flex flex-wrap gap-2 sm:gap-3">
-                <Button
-                  onClick={handleSendInvoice}
-                  disabled={isSendingEmail}
-                  size="sm"
-                  className="flex-1 sm:flex-none"
-                >
-                  {isSendingEmail ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Sending...
-                    </>
-                  ) : (
-                    <>
-                      <FaPaperPlane className="mr-2 h-4 w-4" />
-                      Send Invoice
-                    </>
+              {isExternalPortal && (
+                <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                  <p className="font-medium">
+                    This client uses an external portal for invoice delivery.
+                  </p>
+                  {externalPortalNotes && (
+                    <p className="mt-1 whitespace-pre-wrap">
+                      {externalPortalNotes}
+                    </p>
                   )}
-                </Button>
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2 sm:gap-3">
+                {!isExternalPortal && (
+                  <Button
+                    onClick={handleSendInvoice}
+                    disabled={isSendingEmail}
+                    size="sm"
+                    className="flex-1 sm:flex-none"
+                  >
+                    {isSendingEmail ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        <FaPaperPlane className="mr-2 h-4 w-4" />
+                        Send Invoice
+                      </>
+                    )}
+                  </Button>
+                )}
                 <Button
                   onClick={() => setShowPaymentSettingsModal(true)}
                   variant="secondary"
@@ -322,8 +343,9 @@ const InvoiceDetailsContainer = ({
                 )}
               </div>
               <p className="text-muted-foreground text-xs">
-                Send invoice via email or generate a payment link for online
-                payments via Stripe.
+                {isExternalPortal
+                  ? "Invoice delivery is handled outside this app for this client."
+                  : "Send invoice via email or generate a payment link for online payments via Stripe."}
               </p>
             </TabsContent>
 

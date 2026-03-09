@@ -20,6 +20,11 @@ import {
   withEmailTestTemplateModel,
   getEmailDeliveryMode,
 } from "../emailDeliveryMode";
+import {
+  getExternalPortalNotes,
+  isClientPortalEnabled,
+  isExternalPortalClient,
+} from "../utils/workflowUtils";
 import { createElement } from "react";
 import { renderToBuffer } from "@react-pdf/renderer";
 import InvoicePdfDocument, {
@@ -68,6 +73,15 @@ export async function sendCleaningReminderEmail(
       return { success: false, error: "Client not found" };
     }
 
+    if (isExternalPortalClient(clientDetails)) {
+      return {
+        success: false,
+        error:
+          getExternalPortalNotes(clientDetails) ||
+          "Cleaning reminders are managed through the client's external portal",
+      };
+    }
+
     // Get appropriate email for scheduling purposes
     const clientEmail = getEmailForPurpose(clientDetails, "scheduling");
     if (!clientEmail) {
@@ -77,10 +91,10 @@ export async function sendCleaningReminderEmail(
     // Format the due date using UTC-safe utility
     const formattedDate = formatDateStringUTC(invoice.dateDue);
 
-    // Find JobsDueSoon to generate scheduling link (only if requested)
+    // Find JobsDueSoon to generate scheduling link (only if requested and portal-enabled)
     let hasSchedulingLink: any = false;
 
-    if (includeSchedulingLink) {
+    if (includeSchedulingLink && isClientPortalEnabled(clientDetails)) {
       const jobsDueSoon = await JobsDueSoon.findOne({ invoiceId: invoiceId });
       if (jobsDueSoon) {
         // Generate scheduling token and link
@@ -187,6 +201,15 @@ export async function sendInvoiceDeliveryEmail(
     // Convert to plain object
     const clientDetails = clientDetailsDoc.toObject();
 
+    if (isExternalPortalClient(clientDetails)) {
+      return {
+        success: false,
+        error:
+          getExternalPortalNotes(clientDetails) ||
+          "Invoice delivery is managed through the client's external portal",
+      };
+    }
+
     // Get appropriate email for accounting purposes (as default)
     const defaultEmail = getEmailForPurpose(clientDetails, "accounting");
 
@@ -283,46 +306,48 @@ export async function sendInvoiceDeliveryEmail(
       }
     }
 
-    // Ensure client portal link is always available for invoice emails.
+    // Include client portal link for any client whose portal mode is enabled.
     let clientPortalUrl = "";
     let hasClientPortalBlock: any = false;
-    try {
-      const clientMongoId = clientDetails._id?.toString?.() || "";
-      const existingAccessToken = clientDetails.portalAccessToken?.trim();
-      const portalEmail =
-        getEmailForPurpose(clientDetails, "primary") ||
-        getEmailForPurpose(clientDetails, "accounting") ||
-        getEmailForPurpose(clientDetails, "scheduling") ||
-        clientDetails.email;
+    if (isClientPortalEnabled(clientDetails)) {
+      try {
+        const clientMongoId = clientDetails._id?.toString?.() || "";
+        const existingAccessToken = clientDetails.portalAccessToken?.trim();
+        const portalEmail =
+          getEmailForPurpose(clientDetails, "primary") ||
+          getEmailForPurpose(clientDetails, "accounting") ||
+          getEmailForPurpose(clientDetails, "scheduling") ||
+          clientDetails.email;
 
-      if (clientMongoId && existingAccessToken && clientDetails.clerkUserId) {
-        clientPortalUrl = buildExistingPortalAccessUrl(
-          clientMongoId,
-          existingAccessToken,
-        );
-      } else if (clientMongoId && portalEmail) {
-        const accessLinkResult = await generateClientAccessLink(
-          clientMongoId,
-          clientDetails.clientName,
-          portalEmail,
-        );
-        if (accessLinkResult.success && accessLinkResult.magicLink) {
-          clientPortalUrl = accessLinkResult.magicLink;
+        if (clientMongoId && existingAccessToken && clientDetails.clerkUserId) {
+          clientPortalUrl = buildExistingPortalAccessUrl(
+            clientMongoId,
+            existingAccessToken,
+          );
+        } else if (clientMongoId && portalEmail) {
+          const accessLinkResult = await generateClientAccessLink(
+            clientMongoId,
+            clientDetails.clientName,
+            portalEmail,
+          );
+          if (accessLinkResult.success && accessLinkResult.magicLink) {
+            clientPortalUrl = accessLinkResult.magicLink;
+          }
+        } else if (clientMongoId && existingAccessToken) {
+          clientPortalUrl = buildExistingPortalAccessUrl(
+            clientMongoId,
+            existingAccessToken,
+          );
         }
-      } else if (clientMongoId && existingAccessToken) {
-        clientPortalUrl = buildExistingPortalAccessUrl(
-          clientMongoId,
-          existingAccessToken,
-        );
+      } catch (portalError) {
+        console.error("Failed to generate client portal link:", portalError);
       }
-    } catch (portalError) {
-      console.error("Failed to generate client portal link:", portalError);
-    }
 
-    if (clientPortalUrl) {
-      hasClientPortalBlock = {
-        client_portal_url: clientPortalUrl,
-      };
+      if (clientPortalUrl) {
+        hasClientPortalBlock = {
+          client_portal_url: clientPortalUrl,
+        };
+      }
     }
 
     // Prepare template model

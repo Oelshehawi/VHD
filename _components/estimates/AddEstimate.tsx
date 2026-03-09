@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useForm, useFieldArray, useWatch } from "react-hook-form";
 import {
   FaPlus,
@@ -8,10 +8,15 @@ import {
   FaDollarSign,
   FaTrash,
   FaEdit,
+  FaHome,
 } from "react-icons/fa";
 import { createEstimate } from "../../app/lib/actions/estimates.actions";
 import { ClientType } from "../../app/lib/typeDefinitions";
 import { useDebounceSubmit } from "../../app/hooks/useDebounceSubmit";
+import {
+  EstimateBusinessType,
+  getEstimatePreset,
+} from "../../app/lib/estimatePresets";
 import {
   Drawer,
   DrawerClose,
@@ -29,12 +34,20 @@ import { Label } from "../ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
 import { Separator } from "../ui/separator";
 import { MultiSelect } from "../ui/multi-select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 interface AddEstimateProps {
   clients: ClientType[];
 }
 
 interface EstimateFormValues {
+  businessType: EstimateBusinessType;
   prospectInfo?: {
     businessName?: string;
     contactPerson?: string;
@@ -50,34 +63,25 @@ interface EstimateFormValues {
 
 const AddEstimate = ({ clients }: AddEstimateProps) => {
   const [open, setOpen] = useState(false);
-
-  // Default services list
-  const defaultServices = [
-    "Hood from inside and outside",
-    "All filters",
-    "Access panels to duct work (accessible area only)",
-    "Rooftop fan (If safe access)",
-    "Fire wall behind equipment",
-    "ASTTBC Sticker",
-    "Fire Dept Report",
-    "Before/After pictures",
-    "Eco unit maintenance",
-    "Filter replacement",
-  ];
-
-  const [selectedServices, setSelectedServices] =
-    useState<string[]>(defaultServices);
+  const defaultBusinessType: EstimateBusinessType = "commercial";
+  const defaultPreset = getEstimatePreset(defaultBusinessType);
+  const [selectedServices, setSelectedServices] = useState<string[]>(
+    defaultPreset.defaultServices,
+  );
 
   const {
     register,
     handleSubmit,
     reset,
     control,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<EstimateFormValues>({
     defaultValues: {
+      businessType: defaultBusinessType,
       items: [{ description: "", details: "", price: 0 }],
-      services: selectedServices,
+      services: defaultPreset.defaultServices,
     },
   });
 
@@ -88,6 +92,17 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
 
   // Watch items for live total calculation
   const watchedItems = useWatch({ control, name: "items" });
+  const businessType = watch("businessType");
+  const activePreset = useMemo(
+    () => getEstimatePreset(businessType || defaultBusinessType),
+    [businessType],
+  );
+
+  useEffect(() => {
+    const nextPreset = getEstimatePreset(businessType || defaultBusinessType);
+    setSelectedServices(nextPreset.defaultServices);
+    setValue("services", nextPreset.defaultServices);
+  }, [businessType, setValue]);
 
   const { isProcessing, debouncedSubmit } = useDebounceSubmit({
     onSubmit: async (data: EstimateFormValues) => {
@@ -117,10 +132,8 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
 
       // Process services field (use selectedServices state)
       processedData.services = selectedServices;
-
-      // Add default terms
-      processedData.terms =
-        "Payment is due upon completion of service. Prices subject to change if scope of work differs from initial assessment.";
+      processedData.businessType = data.businessType;
+      processedData.terms = getEstimatePreset(data.businessType).defaultTerms;
 
       // Process items array - ensure proper structure and calculate totals
       if (data.items) {
@@ -145,8 +158,12 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
 
       await createEstimate(processedData);
       setOpen(false);
-      reset();
-      setSelectedServices(defaultServices);
+      reset({
+        businessType: defaultBusinessType,
+        items: [{ description: "", details: "", price: 0 }],
+        services: defaultPreset.defaultServices,
+      });
+      setSelectedServices(defaultPreset.defaultServices);
     },
     successMessage: "Estimate has been successfully created",
   });
@@ -197,11 +214,34 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="businessName">Business Name</Label>
+                    <Label htmlFor="businessType">Business Type</Label>
+                    <Select
+                      value={businessType}
+                      onValueChange={(value) =>
+                        setValue(
+                          "businessType",
+                          value as EstimateFormValues["businessType"],
+                        )
+                      }
+                    >
+                      <SelectTrigger id="businessType">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="commercial">Commercial</SelectItem>
+                        <SelectItem value="residential">Residential</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="businessName">
+                      {activePreset.clientNameLabel}
+                    </Label>
                     <Input
                       id="businessName"
                       {...register("prospectInfo.businessName")}
-                      placeholder="Business or company name"
+                      placeholder="Client or business name"
                     />
                   </div>
 
@@ -259,17 +299,17 @@ const AddEstimate = ({ clients }: AddEstimateProps) => {
             <Card className="">
               <CardHeader>
                 <CardTitle className="text-base">
-                  Our vent cleaning service includes:
+                  {activePreset.servicesSectionTitle}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <MultiSelect
-                  options={defaultServices.map((service) => ({
+                  options={activePreset.defaultServices.map((service) => ({
                     label: service,
                     value: service,
                   }))}
                   onValueChange={setSelectedServices}
-                  defaultValue={selectedServices}
+                  value={selectedServices}
                   placeholder="Select services included"
                   maxCount={3}
                 />

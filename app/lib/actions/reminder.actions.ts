@@ -2,7 +2,7 @@
 
 import connectMongo from "../connect";
 import { Invoice, Client, AuditLog } from "../../../models/reactDataSchema";
-import { InvoiceType } from "../typeDefinitions";
+import { ClientType, InvoiceType } from "../typeDefinitions";
 import { getEmailForPurpose } from "../utils";
 import {
   formatAmount,
@@ -22,6 +22,10 @@ import {
   withEmailTestTemplateModel,
   getEmailDeliveryMode,
 } from "../emailDeliveryMode";
+import {
+  getExternalPortalNotes,
+  isExternalPortalClient,
+} from "../utils/workflowUtils";
 
 const postmark = require("postmark");
 
@@ -101,6 +105,18 @@ export async function configurePaymentReminders(
     const currentInvoice = await Invoice.findById(invoiceId);
     if (!currentInvoice) {
       return { success: false, error: "Invoice not found" };
+    }
+
+    const clientDetails = (await Client.findById(currentInvoice.clientId)
+      .select("workflowProfile")
+      .lean()) as ClientType | null;
+    if (isExternalPortalClient(clientDetails)) {
+      return {
+        success: false,
+        error:
+          getExternalPortalNotes(clientDetails) ||
+          "Payment reminders are managed through the client's external portal",
+      };
     }
 
     // Calculate next reminder date based on frequency
@@ -385,6 +401,15 @@ export async function sendPaymentReminderEmail(
     const clientDetails = await Client.findOne({ _id: invoice.clientId });
     if (!clientDetails) {
       return { success: false, error: "Client not found" };
+    }
+
+    if (isExternalPortalClient(clientDetails)) {
+      return {
+        success: false,
+        error:
+          getExternalPortalNotes(clientDetails) ||
+          "Payment reminders are managed through the client's external portal",
+      };
     }
 
     const allowedEmails = [

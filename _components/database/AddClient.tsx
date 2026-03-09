@@ -6,6 +6,7 @@ import {
   FaUser,
   FaEnvelope,
   FaPhone,
+  FaGlobe,
   FaStickyNote,
   FaTag,
 } from "react-icons/fa";
@@ -17,6 +18,13 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 import {
   Drawer,
   DrawerClose,
@@ -33,12 +41,31 @@ import { cn } from "@/lib/utils";
 const AddClient = () => {
   const [open, setOpen] = useState(false);
   const isMobile = useIsMobile();
+  const [portalMode, setPortalMode] = useState<
+    "internal" | "external" | "none"
+  >("internal");
   const {
     register,
     handleSubmit,
     reset,
     formState: { errors },
   } = useForm();
+
+  const resetWorkflowProfileState = () => {
+    setPortalMode("internal");
+  };
+
+  const resetClientFormState = () => {
+    reset();
+    resetWorkflowProfileState();
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      resetClientFormState();
+    }
+  };
 
   const { isProcessing, debouncedSubmit } = useDebounceSubmit({
     onSubmit: async (values: any) => {
@@ -52,16 +79,24 @@ const AddClient = () => {
         },
         // Keep the old email field for backward compatibility
         email: values.primaryEmail,
+        workflowProfile: {
+          portalMode,
+          externalPortalNotes:
+            portalMode === "external"
+              ? values.externalPortalNotes || ""
+              : undefined,
+        },
       };
 
       // Remove the individual email fields from the data
       delete clientData.primaryEmail;
       delete clientData.schedulingEmail;
       delete clientData.accountingEmail;
+      delete clientData.externalPortalNotes;
 
       await createClient(clientData);
       setOpen(false);
-      reset();
+      resetClientFormState();
     },
     successMessage: "New client has been successfully added",
   });
@@ -87,7 +122,7 @@ const AddClient = () => {
       onKeyDown: isTextKey,
       icon: FaTag,
       label: "Invoice Prefix",
-      description: "3-letter code for invoice numbering (e.g., ABC-001)",
+      description: "3-letter code for invoices (e.g., ABC-001)",
     },
     {
       name: "primaryEmail",
@@ -144,6 +179,11 @@ const AddClient = () => {
     debouncedSubmit(values);
   };
 
+  const clientNameField = inputFields.find(
+    (field) => field.name === "clientName",
+  );
+  const prefixField = inputFields.find((field) => field.name === "prefix");
+
   return (
     <>
       {/* Header Section */}
@@ -163,7 +203,7 @@ const AddClient = () => {
         </div>
         <Drawer
           open={open}
-          onOpenChange={setOpen}
+          onOpenChange={handleOpenChange}
           direction={isMobile ? "bottom" : "right"}
         >
           <DrawerTrigger asChild>
@@ -220,79 +260,223 @@ const AddClient = () => {
             </DrawerHeader>
             <div className="bg-background flex-1 overflow-y-auto p-4 sm:p-6">
               <form onSubmit={handleSubmit(handleSave)} className="space-y-4">
-                {inputFields.map(
-                  ({
-                    name,
-                    type,
-                    placeholder,
-                    isRequired,
-                    maxLength,
-                    minLength,
-                    onKeyDown,
-                    label,
-                    description,
-                    icon: Icon,
-                  }) => (
-                    <div key={name} className="space-y-2">
+                {clientNameField && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <clientNameField.icon className="text-muted-foreground h-4 w-4" />
+                      <Label
+                        htmlFor={clientNameField.name}
+                        className="text-sm font-medium"
+                      >
+                        {clientNameField.label}
+                        {clientNameField.isRequired && (
+                          <span className="text-destructive ml-1">*</span>
+                        )}
+                      </Label>
+                    </div>
+                    {clientNameField.description && (
+                      <p className="text-muted-foreground ml-6 text-xs">
+                        {clientNameField.description}
+                      </p>
+                    )}
+                    <Input
+                      id={clientNameField.name}
+                      {...register(clientNameField.name, {
+                        required: clientNameField.isRequired,
+                        minLength: clientNameField.minLength as number,
+                        maxLength: clientNameField.maxLength as number,
+                      })}
+                      type={clientNameField.type}
+                      placeholder={clientNameField.placeholder}
+                      onKeyDown={clientNameField.onKeyDown}
+                      data-vaul-no-drag
+                      className={cn(
+                        errors[clientNameField.name] &&
+                          "border-destructive focus-visible:ring-destructive",
+                      )}
+                    />
+                    {errors[clientNameField.name] && (
+                      <p className="text-destructive ml-6 text-xs">
+                        {errors[clientNameField.name]?.type === "required" &&
+                          `${clientNameField.label} is required`}
+                        {errors[clientNameField.name]?.type === "minLength" &&
+                          `${clientNameField.label} must be at least ${clientNameField.minLength} characters`}
+                        {errors[clientNameField.name]?.type === "maxLength" &&
+                          `${clientNameField.label} cannot exceed ${clientNameField.maxLength} characters`}
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2 md:justify-between">
+                  {prefixField && (
+                    <div className="space-y-2">
                       <div className="flex items-center gap-2">
-                        <Icon className="text-muted-foreground h-4 w-4" />
-                        <Label htmlFor={name} className="text-sm font-medium">
-                          {label}
-                          {isRequired && (
+                        <prefixField.icon className="text-muted-foreground h-4 w-4" />
+                        <Label
+                          htmlFor={prefixField.name}
+                          className="text-sm font-medium"
+                        >
+                          {prefixField.label}
+                          {prefixField.isRequired && (
                             <span className="text-destructive ml-1">*</span>
                           )}
                         </Label>
                       </div>
-                      {description && (
+                      {prefixField.description && (
                         <p className="text-muted-foreground ml-6 text-xs">
-                          {description}
+                          {prefixField.description}
                         </p>
                       )}
-                      {type === "textarea" ? (
-                        <Textarea
-                          id={name}
-                          {...register(name, { required: isRequired })}
-                          placeholder={placeholder}
-                          data-vaul-no-drag
-                          className={cn(
-                            "min-h-[80px]",
-                            errors[name] &&
-                              "border-destructive focus-visible:ring-destructive",
-                          )}
-                        />
-                      ) : (
-                        <Input
-                          id={name}
-                          {...register(name, {
-                            required: isRequired,
-                            minLength: minLength as number,
-                            maxLength: maxLength as number,
-                          })}
-                          type={type}
-                          placeholder={placeholder}
-                          onKeyDown={onKeyDown}
-                          data-vaul-no-drag
-                          className={cn(
-                            name === "prefix" &&
-                              "font-mono tracking-wider uppercase",
-                            errors[name] &&
-                              "border-destructive focus-visible:ring-destructive",
-                          )}
-                        />
-                      )}
-                      {errors[name] && (
+                      <Input
+                        id={prefixField.name}
+                        {...register(prefixField.name, {
+                          required: prefixField.isRequired,
+                          minLength: prefixField.minLength as number,
+                          maxLength: prefixField.maxLength as number,
+                        })}
+                        type={prefixField.type}
+                        placeholder={prefixField.placeholder}
+                        onKeyDown={prefixField.onKeyDown}
+                        data-vaul-no-drag
+                        className={cn(
+                          "font-mono tracking-wider uppercase",
+                          errors[prefixField.name] &&
+                            "border-destructive focus-visible:ring-destructive",
+                        )}
+                      />
+                      {errors[prefixField.name] && (
                         <p className="text-destructive ml-6 text-xs">
-                          {errors[name]?.type === "required" &&
-                            `${label} is required`}
-                          {errors[name]?.type === "minLength" &&
-                            `${label} must be at least ${minLength} characters`}
-                          {errors[name]?.type === "maxLength" &&
-                            `${label} cannot exceed ${maxLength} characters`}
+                          {errors[prefixField.name]?.type === "required" &&
+                            `${prefixField.label} is required`}
+                          {errors[prefixField.name]?.type === "minLength" &&
+                            `${prefixField.label} must be at least ${prefixField.minLength} characters`}
+                          {errors[prefixField.name]?.type === "maxLength" &&
+                            `${prefixField.label} cannot exceed ${prefixField.maxLength} characters`}
                         </p>
                       )}
                     </div>
-                  ),
+                  )}
+
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <FaGlobe className="text-muted-foreground h-4 w-4" />
+                      <Label className="text-sm font-medium">Portal Mode</Label>
+                    </div>
+                    <p className="text-muted-foreground ml-6 text-xs">
+                      Controls portal access and office communication workflow
+                    </p>
+                    <div className="ml-6">
+                      <Select
+                        value={portalMode}
+                        onValueChange={(v) =>
+                          setPortalMode(v as "internal" | "external" | "none")
+                        }
+                      >
+                        <SelectTrigger data-vaul-no-drag className="w-full">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="internal">Internal</SelectItem>
+                          <SelectItem value="external">External</SelectItem>
+                          <SelectItem value="none">None</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {portalMode === "external" && (
+                  <div className="space-y-2 pb-3">
+                    <div className="flex items-center gap-2">
+                      <FaStickyNote className="text-muted-foreground h-4 w-4" />
+                      <Label className="text-xs">External Portal Notes</Label>
+                    </div>
+                    <Textarea
+                      {...register("externalPortalNotes")}
+                      placeholder="e.g., Use ServiceChannel for billing/reminders. Contact Jane at..."
+                      data-vaul-no-drag
+                      className="ml-6 min-h-[60px]"
+                    />
+                  </div>
                 )}
+
+                {inputFields
+                  .filter(
+                    (field) =>
+                      field.name !== "clientName" && field.name !== "prefix",
+                  )
+                  .map(
+                    ({
+                      name,
+                      type,
+                      placeholder,
+                      isRequired,
+                      maxLength,
+                      minLength,
+                      onKeyDown,
+                      label,
+                      description,
+                      icon: Icon,
+                    }) => (
+                      <div key={name} className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Icon className="text-muted-foreground h-4 w-4" />
+                          <Label htmlFor={name} className="text-sm font-medium">
+                            {label}
+                            {isRequired && (
+                              <span className="text-destructive ml-1">*</span>
+                            )}
+                          </Label>
+                        </div>
+                        {description && (
+                          <p className="text-muted-foreground ml-6 text-xs">
+                            {description}
+                          </p>
+                        )}
+                        {type === "textarea" ? (
+                          <Textarea
+                            id={name}
+                            {...register(name, { required: isRequired })}
+                            placeholder={placeholder}
+                            data-vaul-no-drag
+                            className={cn(
+                              "min-h-[80px]",
+                              errors[name] &&
+                                "border-destructive focus-visible:ring-destructive",
+                            )}
+                          />
+                        ) : (
+                          <Input
+                            id={name}
+                            {...register(name, {
+                              required: isRequired,
+                              minLength: minLength as number,
+                              maxLength: maxLength as number,
+                            })}
+                            type={type}
+                            placeholder={placeholder}
+                            onKeyDown={onKeyDown}
+                            data-vaul-no-drag
+                            className={cn(
+                              errors[name] &&
+                                "border-destructive focus-visible:ring-destructive",
+                            )}
+                          />
+                        )}
+                        {errors[name] && (
+                          <p className="text-destructive ml-6 text-xs">
+                            {errors[name]?.type === "required" &&
+                              `${label} is required`}
+                            {errors[name]?.type === "minLength" &&
+                              `${label} must be at least ${minLength} characters`}
+                            {errors[name]?.type === "maxLength" &&
+                              `${label} cannot exceed ${maxLength} characters`}
+                          </p>
+                        )}
+                      </div>
+                    ),
+                  )}
               </form>
             </div>
             <DrawerFooter className="bg-background border-t">

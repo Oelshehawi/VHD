@@ -276,6 +276,10 @@ export const getPendingInvoicesData = async () => {
                     { $ne: [{ $type: "$email" }, "missing"] },
                   ],
                 },
+                workflowProfile: {
+                  portalMode: "$workflowProfile.portalMode",
+                  externalPortalNotes: "$workflowProfile.externalPortalNotes",
+                },
                 isArchived: 1,
               },
             },
@@ -418,6 +422,13 @@ const formatPendingInvoices = (invoices: any[]) => {
       emailDeliveryHistoryCount,
       communicationsCount:
         callHistoryCount + reminderHistoryCount + emailDeliveryHistoryCount,
+      workflowProfile: {
+        portalMode:
+          invoice.client?.[0]?.workflowProfile?.portalMode || "internal",
+        externalPortalNotes:
+          invoice.client?.[0]?.workflowProfile?.externalPortalNotes ||
+          undefined,
+      },
     };
   });
 };

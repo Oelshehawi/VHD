@@ -1,11 +1,12 @@
 "use client";
 
 import { useForm } from "react-hook-form";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { FaSave, FaTimes, FaFileInvoice } from "react-icons/fa";
 import { toast } from "sonner";
 import { updateEstimate } from "../../app/lib/actions/estimates.actions";
 import { EstimateType } from "../../app/lib/typeDefinitions";
+import { getEstimatePreset } from "../../app/lib/estimatePresets";
 import {
   Dialog,
   DialogContent,
@@ -35,21 +36,9 @@ interface EditEstimateDetailsDialogProps {
   estimate: EstimateType;
 }
 
-const DEFAULT_SERVICES = [
-  "Hood from inside and outside",
-  "All filters",
-  "Access panels to duct work (accessible area only)",
-  "Rooftop fan (If safe access)",
-  "Fire wall behind equipment",
-  "ASTTBC Sticker",
-  "Fire Dept Report",
-  "Before/After pictures",
-  "Eco unit maintenance",
-  "Filter replacement",
-];
-
 interface FormData {
   status: EstimateType["status"];
+  businessType: "commercial" | "residential";
   prospectInfo: {
     businessName?: string;
     contactPerson?: string;
@@ -68,8 +57,11 @@ export default function EditEstimateDetailsDialog({
   estimate,
 }: EditEstimateDetailsDialogProps) {
   const [isUpdating, setIsUpdating] = useState(false);
+  const businessType = estimate.businessType || "commercial";
   const [selectedServices, setSelectedServices] = useState<string[]>(
-    estimate.services?.length > 0 ? estimate.services : DEFAULT_SERVICES,
+    estimate.services?.length > 0
+      ? estimate.services
+      : getEstimatePreset(businessType).defaultServices,
   );
 
   const updateEstimateWithId = updateEstimate.bind(
@@ -80,6 +72,7 @@ export default function EditEstimateDetailsDialog({
   const { register, handleSubmit, setValue, watch } = useForm<FormData>({
     defaultValues: {
       status: estimate.status,
+      businessType,
       prospectInfo: {
         businessName: estimate.prospectInfo?.businessName || "",
         contactPerson: estimate.prospectInfo?.contactPerson || "",
@@ -108,6 +101,7 @@ export default function EditEstimateDetailsDialog({
 
       await updateEstimateWithId({
         status: formData.status,
+        businessType: formData.businessType,
         prospectInfo,
         services: selectedServices,
         notes: formData.notes,
@@ -129,6 +123,40 @@ export default function EditEstimateDetailsDialog({
       onClose();
     }
   };
+
+  const watchedBusinessType = watch("businessType");
+  const previousBusinessTypeRef =
+    useRef<FormData["businessType"]>(businessType);
+
+  useEffect(() => {
+    const previousBusinessType = previousBusinessTypeRef.current;
+    if (previousBusinessType === watchedBusinessType) return;
+
+    const previousPreset = getEstimatePreset(previousBusinessType);
+    const nextPreset = getEstimatePreset(watchedBusinessType);
+    const selectedMatchesPreviousDefault =
+      selectedServices.length === previousPreset.defaultServices.length &&
+      selectedServices.every((service) =>
+        previousPreset.defaultServices.includes(service),
+      );
+
+    if (selectedMatchesPreviousDefault || selectedServices.length === 0) {
+      setSelectedServices(nextPreset.defaultServices);
+    }
+
+    previousBusinessTypeRef.current = watchedBusinessType;
+  }, [selectedServices, watchedBusinessType]);
+
+  const serviceOptions = useMemo(() => {
+    const presetServices =
+      getEstimatePreset(watchedBusinessType).defaultServices;
+    return [...new Set([...presetServices, ...selectedServices])].map(
+      (service) => ({
+        label: service,
+        value: service,
+      }),
+    );
+  }, [selectedServices, watchedBusinessType]);
 
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
@@ -174,6 +202,24 @@ export default function EditEstimateDetailsDialog({
                 </Select>
               </div>
 
+              <div className="space-y-2">
+                <Label htmlFor="businessType">Business Type</Label>
+                <Select
+                  value={watchedBusinessType}
+                  onValueChange={(value) =>
+                    setValue("businessType", value as FormData["businessType"])
+                  }
+                >
+                  <SelectTrigger id="businessType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="commercial">Commercial</SelectItem>
+                    <SelectItem value="residential">Residential</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               <Separator />
 
               {/* Prospect Information */}
@@ -183,11 +229,13 @@ export default function EditEstimateDetailsDialog({
                 </h4>
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div className="space-y-2">
-                    <Label htmlFor="businessName">Business Name</Label>
+                    <Label htmlFor="businessName">
+                      {getEstimatePreset(watchedBusinessType).clientNameLabel}
+                    </Label>
                     <Input
                       id="businessName"
                       {...register("prospectInfo.businessName")}
-                      placeholder="Company name"
+                      placeholder="Client or business name"
                     />
                   </div>
                   <div className="space-y-2">
@@ -239,14 +287,13 @@ export default function EditEstimateDetailsDialog({
 
               {/* Services */}
               <div className="space-y-2">
-                <Label>Services Included</Label>
+                <Label>
+                  {getEstimatePreset(watchedBusinessType).servicesSectionTitle}
+                </Label>
                 <MultiSelect
-                  options={DEFAULT_SERVICES.map((service) => ({
-                    label: service,
-                    value: service,
-                  }))}
+                  options={serviceOptions}
                   onValueChange={setSelectedServices}
-                  defaultValue={selectedServices}
+                  value={selectedServices}
                   placeholder="Select services"
                   maxCount={3}
                 />
