@@ -176,6 +176,43 @@ export default function EstimatePhotosTab({
         counter={{
           container: { style: { top: "unset", bottom: 0 } },
         }}
+        download={
+          lightboxSlides.length > 0
+            ? {
+                download: ({ slide }) => {
+                  const downloadUrl = slide.downloadUrl || slide.src;
+                  const filename = slide.downloadFilename || "image.jpg";
+
+                  void (async () => {
+                    try {
+                      const response = await fetch(downloadUrl);
+                      if (!response.ok) {
+                        throw new Error("Failed to fetch image");
+                      }
+
+                      const blob = await response.blob();
+                      const objectUrl = URL.createObjectURL(blob);
+                      const link = document.createElement("a");
+                      link.href = objectUrl;
+                      link.download = filename;
+                      document.body.appendChild(link);
+                      link.click();
+                      document.body.removeChild(link);
+                      URL.revokeObjectURL(objectUrl);
+                    } catch {
+                      window.open(downloadUrl, "_blank", "noopener,noreferrer");
+                    }
+                  })();
+                },
+              }
+            : undefined
+        }
+        styles={{
+          root: {
+            "--yarl__portal_zindex": 10000,
+            pointerEvents: "auto",
+          },
+        }}
       />
     </>
   );
